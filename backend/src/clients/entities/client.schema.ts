@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { Document } from 'mongoose';
+import mongoose, { Document, Types } from 'mongoose';
 
 export type ClientDocument = Client & Document;
 
@@ -13,7 +13,13 @@ export class Client {
   name: string;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Subsidiary', required: true })
-  subsidiaryId: mongoose.Schema.Types.ObjectId;
+  subsidiaryId: Types.ObjectId;
+
+  @Prop({ required: true, default: true })
+  isActive: boolean;
+
+  @Prop({ required: true, default: false })
+  isDeleted: boolean;
 }
 
 export const ClientSchema = SchemaFactory.createForClass(Client);

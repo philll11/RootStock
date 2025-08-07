@@ -1,99 +1,169 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User, UserDocument } from './entities/user.schema';
+import { UserQueryBuilder } from './builders/user-query.builder';
 
 @Injectable()
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) { }
 
+  /**
+   * Creates a new user based on the provided DTO.
+   * Converts string IDs to ObjectId types for role and client associations.
+   * @param createUserDto - The DTO containing user creation data.
+   * @returns The created user document.
+   */
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const createdUser = new this.userModel(createUserDto);
+    const payload = this._prepareCreatePayload(createUserDto);
+
+    const createdUser = new this.userModel(payload);
     return createdUser.save();
   }
 
-  async findAll(query: QueryUserDto): Promise<User[]> {
-    const filter: any = {};
-
-    // --- Layer 1: Mandatory & Default Filters ---
-    filter.isDeleted = query.isDeleted === true;
-    if (!query.includeInactives) {
-      filter.isActive = true;
-    }
-
-    // --- Layer 2: Optional Client-Driven Search Filters ---
-
-    if (query.name) {
-      filter.name = { $regex: query.name, $options: 'i' }; // i = Case-insensitive
-    }
-
-    if (query.userType) {
-      filter.userType = query.userType;
-    }
+  /**
+   * Finds all users based on the provided query parameters.
+   * @param query - The query parameters to filter users.
+   * @returns A list of users matching the query.
+   */
+  async findAll(query: QueryUserDto, loggedInUserRole: string): Promise<User[]> {
+    const queryBuilder = new UserQueryBuilder(query, loggedInUserRole);
+    const filter = queryBuilder.build();
 
     return this.userModel.find(filter).exec();
   }
 
-  async findOne(id: string): Promise<User> {
-    const user = await this.userModel.findOne({ _id: id, isDeleted: false }).exec();
+  /**
+   * Finds a user by their ID, ensuring they are active and not deleted.
+   * @param userId - The ID of the user to find.
+   * @returns The found user document.
+   */
+  async findOne(userId: string): Promise<User> {
+    const user = await this.userModel.findOne({ _id: userId, isDeleted: false, isActive: true }).exec();
 
     if (!user) {
-      throw new NotFoundException(`User with ID "${id}" not found`);
+      throw new NotFoundException(`Active user with ID "${userId}" not found`);
     }
 
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    const existingUser = await this.userModel.findOne({ _id: id, isDeleted: false });
+  /**
+   * Updates a user based on the provided DTO and the role of the logged-in user.
+   * Handles permissions for changing active status and updates name based on first and last names.
+   * @param userId - The ID of the user to update.
+   * @param updateUserDto - The DTO containing update data.
+   * @param loggedInUserRole - The role of the user performing the update.
+   * @returns The updated user document.
+   */
+  async update(userId: string, updateUserDto: UpdateUserDto, loggedInUserRole: string): Promise<User> {
+    const existingUser = await this._findUserForUpdate(userId, loggedInUserRole);
 
-    if (!existingUser) {
-      throw new NotFoundException(`User with ID "${id}" not found`);
-    }
-
-    const { roleId, clientId, ...restOfDto } = updateUserDto;
-    const updatePayload: Partial<User> = { ...restOfDto };
-
-    if (roleId) {
-      updatePayload.roleId = new Types.ObjectId(roleId);
-    }
-    if (clientId) {
-      updatePayload.clientId = new Types.ObjectId(clientId);
-    }
-
-    if (updatePayload.firstName || updatePayload.lastName) {
-      const newFirstName = updatePayload.firstName || existingUser.firstName;
-      const newLastName = updatePayload.lastName || existingUser.lastName;
-      updatePayload.name = `${newFirstName} ${newLastName}`;
-    }
+    const updatePayload = this._prepareUpdatePayload(updateUserDto, existingUser, loggedInUserRole);
 
     const updatedUser = await this.userModel.findByIdAndUpdate(
-      id,
-      { $set: updatePayload }, // PATCH-like operation to update only the field values found in updatePayload
+      userId,
+      { $set: updatePayload },
       { new: true }
     ).exec();
 
     if (!updatedUser) {
-      throw new NotFoundException(`User with ID "${id}" could not be updated.`);
+      throw new NotFoundException(`User with ID "${userId}" could not be updated.`);
     }
 
     return updatedUser;
   }
 
-  async remove(id: string): Promise<User> {
+  /**
+   * Deletes a user by marking them as deleted and inactive.
+   * @param userId - The ID of the user to delete.
+   * @returns The deleted user document.
+   */
+  async remove(userId: string): Promise<User> {
     const deletedUser = await this.userModel.findByIdAndUpdate(
-      id,
+      userId,
       { isDeleted: true, isActive: false },
       { new: true },
     ).exec();
 
     if (!deletedUser) {
-      throw new NotFoundException(`User with ID "${id}" not found`);
+      throw new NotFoundException(`User with ID "${userId}" not found`);
     }
 
     return deletedUser;
+  }
+
+  /**
+ * Finds a user for an update operation, applying role-based permissions.
+ * Throws a NotFoundException if the user doesn't exist or permissions fail.
+ * @private
+ */
+  private async _findUserForUpdate(userId: string, loggedInUserRole: string): Promise<UserDocument> {
+    const queryCondition: any = {
+      _id: userId,
+      isDeleted: false,
+    };
+
+    // Only admins can view inactive master records.
+    if (loggedInUserRole !== 'Administrator') {
+      queryCondition.isActive = true;
+    }
+
+    const user = await this.userModel.findOne(queryCondition).exec();
+
+    if (!user) {
+      throw new NotFoundException(
+        `User with ID "${userId}" not found.`,
+      );
+    }
+    return user;
+  }
+
+  /**
+ * Prepares the payload for a NEW user.
+ * Derives 'name' and transforms string IDs to ObjectIds.
+ * @private
+ */
+  private _prepareCreatePayload(dto: CreateUserDto): Partial<User> {
+    const { roleId, clientIds, ...restOfDto } = dto;
+    const payload: Partial<User> = { ...restOfDto };
+
+    payload.name = `${dto.firstName} ${dto.lastName}`;
+
+    if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
+    if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
+
+    return payload;
+  }
+
+  /**
+ * Prepares the payload for an EXISTING user update.
+ * Handles partial updates, derived fields, and authorization for sensitive fields.
+ * @private
+ */
+  private _prepareUpdatePayload(dto: UpdateUserDto, existingUser: User, loggedInUserRole: string,): Partial<User> {
+    const { roleId, clientIds, isActive, ...restOfDto } = dto;
+    const payload: Partial<User> = { ...restOfDto };
+
+    if (payload.firstName || payload.lastName) {
+      const newFirstName = payload.firstName || existingUser.firstName;
+      const newLastName = payload.lastName || existingUser.lastName;
+      payload.name = `${newFirstName} ${newLastName}`;
+    }
+
+    if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
+    if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
+
+    if ('isActive' in dto) {
+      if (loggedInUserRole !== 'Administrator') {
+        throw new ForbiddenException('You do not have permission to change the isActive status.');
+      }
+      payload.isActive = isActive;
+    }
+
+    return payload;
   }
 }

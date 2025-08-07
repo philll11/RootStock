@@ -14,14 +14,14 @@ export class User {
   @Prop({ required: true, unique: true, index: true })
   recordId: string;
 
+  @Prop({ required: true, index: true })
+  name: string;
+
   @Prop({ required: true })
   firstName: string;
 
   @Prop({ required: true })
   lastName: string;
-
-  @Prop({ required: true, index: true })
-  name: string;
 
   @Prop({ required: true, enum: UserType })
   userType: UserType;
@@ -29,8 +29,8 @@ export class User {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Role', required: false })
   roleId: Types.ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: false })
-  clientId: Types.ObjectId;
+  @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Client' }], required: false, default: [] })
+  clientIds: Types.ObjectId[];
 
   @Prop({ required: true, default: true })
   isActive: boolean;
@@ -40,9 +40,3 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
-
-// On save, set the name field to a combination of firstName and lastName
-UserSchema.pre<UserDocument>('save', function (next) {
-  this.name = `${this.firstName} ${this.lastName}`;
-  next();
-});

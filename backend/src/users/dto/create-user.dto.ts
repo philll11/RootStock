@@ -1,4 +1,5 @@
-import { IsEnum, IsMongoId, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsMongoId, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsExistingRole } from '../../common/decorators/is-existing-role.decorator';
 import { UserType } from '../entities/user.schema';
 
 export class CreateUserDto {
@@ -19,10 +20,12 @@ export class CreateUserDto {
     readonly userType: UserType;
 
     @IsMongoId()
+    @IsExistingRole()
     @IsOptional()
     readonly roleId?: string;
 
-    @IsMongoId()
+    @IsArray()
+    @IsString({ each: true })
     @IsOptional()
-    readonly clientId?: string;
+    readonly clientIds?: string[];
 }

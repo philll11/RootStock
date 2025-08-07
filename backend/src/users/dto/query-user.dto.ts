@@ -8,6 +8,10 @@ export class QueryUserDto {
 
     @IsString()
     @IsOptional()
+    readonly recordId?: string;
+
+    @IsString()
+    @IsOptional()
     readonly name?: string;
 
     @IsEnum(UserType)
