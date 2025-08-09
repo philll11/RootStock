@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsString, IsMongoId } from 'class-validator';
+import { IsNotEmpty, IsString, IsMongoId, ValidateIf } from 'class-validator';
+import { IsExistingSubsidiary } from '../../subsidiaries/decorators/is-existing-subsidiary.decorator';
 
 export class CreateClientDto {
   @IsString()
@@ -10,6 +11,8 @@ export class CreateClientDto {
   readonly name: string;
 
   @IsMongoId()
+  @IsExistingSubsidiary()
   @IsNotEmpty()
+  @ValidateIf((o) => o.subsidiaryId !== null)
   readonly subsidiaryId: string; 
 }

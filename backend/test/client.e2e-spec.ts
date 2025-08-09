@@ -11,10 +11,15 @@ import { ClientsModule } from '../src/clients/clients.module';
 import { Client, ClientDocument } from '../src/clients/entities/client.schema';
 import { CreateClientDto } from '../src/clients/dto/create-client.dto';
 
+import { SubsidiariesModule } from '../src/subsidiaries/subsidiaries.module';
+import { Subsidiary, SubsidiaryDocument } from '../src/subsidiaries/entities/subsidiary.schema';
+
 describe('ClientsController (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryServer;
     let clientModel: Model<ClientDocument>;
+    let subsidiaryModel: Model<SubsidiaryDocument>;
+    let validSubsidiaryId: string;
     let createdClientId: string;
 
     jest.setTimeout(60000);
@@ -26,7 +31,8 @@ describe('ClientsController (e2e)', () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [
                 MongooseModule.forRoot(uri),
-                ClientsModule
+                ClientsModule,
+                SubsidiariesModule
             ],
         }).compile();
 
@@ -43,6 +49,7 @@ describe('ClientsController (e2e)', () => {
         await app.init();
 
         clientModel = moduleFixture.get<Model<ClientDocument>>(getModelToken(Client.name));
+        subsidiaryModel = moduleFixture.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
 
         await clientModel.syncIndexes();
     });
@@ -54,6 +61,13 @@ describe('ClientsController (e2e)', () => {
 
     beforeEach(async () => {
         await clientModel.deleteMany({});
+        await subsidiaryModel.deleteMany({});
+
+        const subsidiary = await new subsidiaryModel({
+            recordId: 'SUB_E2E_VALID',
+            name: 'Valid Test Subsidiary'
+        }).save();
+        validSubsidiaryId = subsidiary._id.toString();
     });
 
     describe('POST /clients', () => {
@@ -62,7 +76,7 @@ describe('ClientsController (e2e)', () => {
             const createClientDto: CreateClientDto = {
                 recordId: 'CLI_E2E_CLI001',
                 name: 'E2E Test Client',
-                subsidiaryId: '63b4c5d6e7f8a9b0c1d2e3f4',
+                subsidiaryId: null as any
             };
 
             const response = await request(app.getHttpServer())
@@ -84,6 +98,58 @@ describe('ClientsController (e2e)', () => {
                 .expect(400);
         });
     });
+
+    describe('POST /clients (Subsidiary Validation)', () => {
+        it('should create a client successfully with a VALID subsidiaryId', () => {
+            const createDto: CreateClientDto = {
+                recordId: 'CLI_VALID_SUB',
+                name: 'Client with Valid Sub',
+                subsidiaryId: validSubsidiaryId,
+            };
+
+            return request(app.getHttpServer())
+                .post('/clients')
+                .send(createDto)
+                .expect(201)
+                .then(response => {
+                    expect(response.body.subsidiaryId).toEqual(validSubsidiaryId);
+                });
+        });
+
+        it('should create a client successfully with a NULL subsidiaryId', () => {
+            const createDto = {
+                recordId: 'CLI_NULL_SUB',
+                name: 'Client with Null Sub',
+                subsidiaryId: null,
+            };
+
+            return request(app.getHttpServer())
+                .post('/clients')
+                .send(createDto)
+                .expect(201)
+                .then(response => {
+                    expect(response.body.subsidiaryId).toBeNull();
+                });
+        });
+
+        it('should FAIL with a 400 Bad Request if subsidiaryId does NOT exist', () => {
+            const nonExistentMongoId = '60f8f1b3b5f9f1b3b5f9f1b4';
+            const createDto: CreateClientDto = {
+                recordId: 'CLI_INVALID_SUB',
+                name: 'Client with Invalid Sub',
+                subsidiaryId: nonExistentMongoId,
+            };
+
+            return request(app.getHttpServer())
+                .post('/clients')
+                .send(createDto)
+                .expect(400)
+                .then(response => {
+                    expect(response.body.message).toContain(`Subsidiary with ID "${nonExistentMongoId}" does not exist, is inactive, or has been deleted.`);
+                });
+        });
+    });
+
 
     describe('GET /clients', () => {
         beforeEach(async () => {

@@ -120,4 +120,17 @@ export class SubsidiariesService {
 
     return updatePayload;
   }
+
+  /**
+ * Checks if a subsidiary exists, is active, and is not deleted.
+ * This is used by custom validators to verify relationships.
+ * @param subsidiaryId - The ID of the subsidiary to check.
+ * @returns A boolean indicating if the subsidiary is valid.
+ */
+  async isExistingAndActive(subsidiaryId: string): Promise<boolean> {
+    const count = await this.subsidiaryModel
+      .countDocuments({ _id: subsidiaryId, isDeleted: false, isActive: true })
+      .exec();
+    return count > 0;
+  }
 }
