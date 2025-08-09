@@ -1,10 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { useContainer } from 'class-validator';
+
+import { DatabaseModule } from '../src/database/database.module';
+
+import { UsersModule } from '../src/users/users.module';
+import { User, UserDocument, UserType } from '../src/users/entities/user.schema';
 
 import { RolesModule } from '../src/roles/roles.module';
 import { Role, VisibilityScope, RoleDocument } from '../src/roles/entities/role.schema';
@@ -12,20 +17,23 @@ import { CreateRoleDto } from '../src/roles/dto/create-role.dto';
 
 describe('RolesController (e2e)', () => {
     let app: INestApplication;
-    let mongod: MongoMemoryServer;
+    let mongod: MongoMemoryReplSet;
     let roleModel: Model<RoleDocument>;
+    let userModel: Model<UserDocument>;
     let createdRoleId: string;
 
     jest.setTimeout(60000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryServer.create();
+        mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
         const uri = mongod.getUri();
 
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [
                 MongooseModule.forRoot(uri),
+                DatabaseModule,
                 RolesModule,
+                UsersModule
             ],
         }).compile();
 
@@ -42,8 +50,10 @@ describe('RolesController (e2e)', () => {
         await app.init();
 
         roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
+        userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
 
         await roleModel.syncIndexes();
+        await userModel.syncIndexes();
     });
 
     afterAll(async () => {
@@ -53,6 +63,7 @@ describe('RolesController (e2e)', () => {
 
     beforeEach(async () => {
         await roleModel.deleteMany({});
+        await userModel.deleteMany({});
     });
 
     describe('POST /roles', () => {
@@ -165,11 +176,7 @@ describe('RolesController (e2e)', () => {
 
     describe('DELETE /roles/:roleId', () => {
         beforeEach(async () => {
-            const role: RoleDocument = await new roleModel({
-                recordId: 'ROL_E2E_ROL006',
-                name: 'ROL Delete Me',
-                visibilityScope: VisibilityScope.CLIENT
-            }).save();
+            const role: RoleDocument = await new roleModel({ recordId: 'ROL_E2E_ROL006', name: 'ROL Delete Me', visibilityScope: VisibilityScope.CLIENT }).save();
             createdRoleId = role._id.toString();
         });
 
@@ -242,6 +249,28 @@ describe('RolesController (e2e)', () => {
             expect(deletedRoles.body.length).toBe(2);
             expect(deletedRoles.body[0].name).toEqual(roleName);
             expect(deletedRoles.body[1].name).toEqual(roleName);
+        });
+
+        it('should atomically unassign all linked users when a role is deleted', async () => {
+            const otherRole = await new roleModel({ recordId: 'ROL-OTHER', name: 'Other Role', visibilityScope: VisibilityScope.CLIENT }).save();
+            // Create a user assigned to the role that will be deleted
+            const user1 = await new userModel({ recordId: 'U1', firstName: 'Test', lastName: 'User1', name: 'Test User1', userType: UserType.EMPLOYEE, roleId: createdRoleId }).save();
+            // Create another user that is not assigned to this role
+            const user2 = await new userModel({ recordId: 'U2', firstName: 'Test', lastName: 'User2', name: 'Test User2', userType: UserType.EMPLOYEE, roleId: otherRole._id }).save();
+
+            await request(app.getHttpServer())
+                .delete(`/roles/${createdRoleId}`)
+                .expect(200);
+
+            const updatedUser1 = await userModel.findById(user1._id);
+            const unaffectedUser2 = await userModel.findById(user2._id);
+
+            // Assert User 1's roleId is now null
+            expect(updatedUser1).not.toBeNull();
+            expect(updatedUser1!.roleId).toBeNull();
+            // Assert User 2's roleId was not changed
+            expect(unaffectedUser2).not.toBeNull();
+            expect(unaffectedUser2!.roleId.toString()).toEqual(otherRole._id.toString());
         });
     });
 });

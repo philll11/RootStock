@@ -9,7 +9,7 @@ export class IsExistingRoleConstraint implements ValidatorConstraintInterface {
 
   async validate(roleId: string, args: ValidationArguments) {
     if (!roleId) return true;
-    return await this.rolesService._isRoleExistingAndActive(roleId);
+    return await this.rolesService.isRoleExistingAndActive(roleId);
   }
 
   defaultMessage(args: ValidationArguments) {

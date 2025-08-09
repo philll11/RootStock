@@ -1,21 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { useContainer } from 'class-validator';
 
+import { DatabaseModule } from '../src/database/database.module';
+
 import { UsersModule } from '../src/users/users.module';
 import { CreateUserDto } from '../src/users/dto/create-user.dto';
 import { User, UserDocument, UserType } from '../src/users/entities/user.schema';
+
+import { ClientsModule } from '../src/clients/clients.module';
+import { Client, ClientDocument } from '../src/clients/entities/client.schema';
+
 import { Role, RoleDocument, VisibilityScope } from '../src/roles/entities/role.schema';
 
 describe('UsersController (e2e)', () => {
     let app: INestApplication;
-    let mongod: MongoMemoryServer;
+    let mongod: MongoMemoryReplSet;
     let userModel: Model<UserDocument>;
     let roleModel: Model<RoleDocument>;
+    let clientModel: Model<ClientDocument>;
+    let validClientId1: string;
+    let validClientId2: string;
     let testAdminRoleId: string;
     let testGrowerRole: string;
     let createdUserId: string;
@@ -23,13 +32,15 @@ describe('UsersController (e2e)', () => {
     jest.setTimeout(60000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryServer.create();
+        mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
         const uri = mongod.getUri();
 
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [
                 MongooseModule.forRoot(uri),
-                UsersModule
+                DatabaseModule,
+                UsersModule,
+                ClientsModule
             ],
         }).compile();
 
@@ -47,9 +58,11 @@ describe('UsersController (e2e)', () => {
 
         userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
         roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
+        clientModel = moduleFixture.get<Model<ClientDocument>>(getModelToken(Client.name));
 
         await userModel.syncIndexes();
         await roleModel.syncIndexes();
+        await clientModel.syncIndexes();
     });
 
     afterAll(async () => {
@@ -60,20 +73,18 @@ describe('UsersController (e2e)', () => {
     beforeEach(async () => {
         await userModel.deleteMany({});
         await roleModel.deleteMany({});
+        await clientModel.deleteMany({});
 
-        const adminRole: RoleDocument = await new roleModel({
-            recordId: 'USER_E2E_ROL001',
-            name: 'USER Administrator',
-            visibilityScope: VisibilityScope.GLOBAL,
-        }).save();
+        const adminRole: RoleDocument = await new roleModel({ recordId: 'USER_E2E_ROL001', name: 'USER Administrator', visibilityScope: VisibilityScope.GLOBAL, }).save();
         testAdminRoleId = adminRole._id.toString();
 
-        const growerRole: RoleDocument = await new roleModel({
-            recordId: 'USER_E2E_ROL003',
-            name: 'USER Grower',
-            visibilityScope: VisibilityScope.CLIENT,
-        }).save();
+        const growerRole: RoleDocument = await new roleModel({ recordId: 'USER_E2E_ROL003', name: 'USER Grower', visibilityScope: VisibilityScope.CLIENT, }).save();
         testGrowerRole = growerRole._id.toString();
+
+        const client1 = await new clientModel({ recordId: 'VALID-C1', name: 'Valid Client 1' }).save();
+        const client2 = await new clientModel({ recordId: 'VALID-C2', name: 'Valid Client 2' }).save();
+        validClientId1 = client1._id.toString();
+        validClientId2 = client2._id.toString();
     });
 
     describe('POST /users', () => {
@@ -136,14 +147,13 @@ describe('UsersController (e2e)', () => {
         });
 
         it('should SUCCEED with 201 Created when creating a "contact" user successfully when clientIds has exactly one element', () => {
-            const fakeClientId = '63b4c5d6e7f8a9b0c1d2e3f5';
             const createUserDto: CreateUserDto = {
                 recordId: 'USER_E2E_USER00X2',
                 firstName: 'Good',
                 lastName: 'Contact',
                 userType: UserType.CONTACT,
                 roleId: testGrowerRole,
-                clientIds: [fakeClientId],
+                clientIds: [validClientId1],
             };
 
             return request(app.getHttpServer())
@@ -152,7 +162,49 @@ describe('UsersController (e2e)', () => {
                 .expect(201)
                 .then((response) => {
                     expect(response.body.userType).toEqual(UserType.CONTACT);
-                    expect(response.body.clientIds).toEqual([fakeClientId]);
+                    expect(response.body.clientIds).toEqual([validClientId1]);
+                });
+        });
+    });
+
+    describe('POST /users (Client Validation)', () => {
+        it('should SUCCEED with 201 Created when creating a user with an array of valid client IDs', () => {
+            const createUserDto: CreateUserDto = {
+                recordId: 'U-VALID-01',
+                firstName: 'Test',
+                lastName: 'User',
+                userType: UserType.EMPLOYEE,
+                roleId: testAdminRoleId,
+                clientIds: [validClientId1, validClientId2],
+            };
+
+            return request(app.getHttpServer())
+                .post('/users')
+                .send(createUserDto)
+                .expect(201)
+                .then(res => {
+                    expect(res.body.clientIds).toEqual([validClientId1, validClientId2]);
+                });
+        });
+
+        it('should FAIL with 400 Bad Request if one of the clientIds in the array does not exist', () => {
+            const invalidId = '60f8f1b3b5f9f1b3b5f9f1b5';
+            const createUserDto: CreateUserDto = {
+                recordId: 'U-INVALID-01',
+                firstName: 'Test',
+                lastName: 'User',
+                userType: UserType.EMPLOYEE,
+                roleId: testAdminRoleId,
+                clientIds: [validClientId1, invalidId],
+            };
+
+            return request(app.getHttpServer())
+                .post('/users')
+                .send(createUserDto)
+                .expect(400)
+                .then(res => {
+                    expect(res.body.message[0]).toContain('One or more client IDs');
+                    expect(res.body.message[0]).toContain('do not exist, are inactive, or have been deleted');
                 });
         });
     });

@@ -1,15 +1,20 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { Connection, Model } from 'mongoose';
 import { Subsidiary, SubsidiaryDocument } from './entities/subsidiary.schema';
 import { CreateSubsidiaryDto } from './dto/create-subsidiary.dto';
 import { UpdateSubsidiaryDto } from './dto/update-subsidiary.dto';
 import { QuerySubsidiaryDto } from './dto/query-subsidiary.dto';
 import { SubsidiaryQueryBuilder } from './builders/subsidiary-query.builder';
+import { Client, ClientDocument } from '../clients/entities/client.schema';
 
 @Injectable()
 export class SubsidiariesService {
-  constructor(@InjectModel(Subsidiary.name) private subsidiaryModel: Model<SubsidiaryDocument>) { }
+  constructor(
+    @InjectModel(Subsidiary.name) private subsidiaryModel: Model<SubsidiaryDocument>,
+    @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
+    @InjectConnection() private connection: Connection
+  ) { }
 
   async create(createSubsidiaryDto: CreateSubsidiaryDto): Promise<Subsidiary> {
     const createdSubsidiary = new this.subsidiaryModel(createSubsidiaryDto);
@@ -56,19 +61,39 @@ export class SubsidiariesService {
   }
 
   async remove(subsidiaryId: string): Promise<Subsidiary> {
-    const deletedSubsidiary = await this.subsidiaryModel
-      .findByIdAndUpdate(
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      // Sever Subsidiary->Client references
+      await this.clientModel.updateMany(
+        { subsidiaryId: subsidiaryId },
+        { $set: { subsidiaryId: null } },
+        { session },
+      ).exec();
+
+      // Soft-delete Subsidiary
+      const deletedSubsidiary = await this.subsidiaryModel.findByIdAndUpdate(
         subsidiaryId,
         { isDeleted: true, isActive: false },
-        { new: true },
-      )
-      .exec();
+        { session, new: true },
+      ).exec();
 
-    if (!deletedSubsidiary) {
-      throw new NotFoundException(`Subsidiary with ID "${subsidiaryId}" not found`);
+      // Throw error if Subsidiary doesn't exist
+      if (!deletedSubsidiary) {
+        await session.abortTransaction();
+        throw new NotFoundException(`Subsidiary with ID "${subsidiaryId}" not found`);
+      }
+
+      await session.commitTransaction();
+      return deletedSubsidiary;
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-
-    return deletedSubsidiary;
   }
 
   /**

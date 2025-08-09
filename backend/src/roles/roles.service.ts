@@ -1,15 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Connection, Model, Types } from 'mongoose';
+
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { QueryRoleDto } from './dto/query-role.dto';
 import { Role, RoleDocument } from './entities/role.schema';
 import { RoleQueryBuilder } from './builders/roles-query.builder';
 
+import { User, UserDocument } from '../users/entities/user.schema';
+
 @Injectable()
 export class RolesService {
-  constructor(@InjectModel(Role.name) private roleModel: Model<RoleDocument>) { }
+  constructor(
+    @InjectModel(Role.name) private roleModel: Model<RoleDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectConnection() private connection: Connection,
+  ) { }
 
   async create(createRoleDto: CreateRoleDto): Promise<Role> {
     const createdRole = new this.roleModel(createRoleDto);
@@ -46,19 +53,49 @@ export class RolesService {
   }
 
   async remove(roleId: string): Promise<Role> {
-    const deletedRole = await this.roleModel.findByIdAndUpdate(
-      roleId,
-      { isDeleted: true, isActive: false },
-      { new: true },
-    ).exec();
+    const session = await this.connection.startSession();
+    session.startTransaction();
 
-    if (!deletedRole) {
-      throw new NotFoundException(`Role with ID "${roleId}" not found`);
+    try {
+      // Server Role->User references
+      await this.userModel.updateMany(
+        { roleId: roleId },
+        { $set: { roleId: null } },
+        { session },
+      ).exec();
+
+      // Soft-delete Role
+      const deletedRole = await this.roleModel.findByIdAndUpdate(
+        roleId,
+        { isDeleted: true, isActive: false },
+        { session, new: true },
+      ).exec();
+
+      // Throw error if Role doesn't exist
+      if (!deletedRole) {
+        await session.abortTransaction();
+        throw new NotFoundException(`Role with ID "${roleId}" not found`);
+      }
+
+      await session.commitTransaction();
+      return deletedRole;
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-    return deletedRole;
   }
 
-  async _isRoleExistingAndActive(roleId: string): Promise<boolean> {
+
+  /**
+ * Checks if a role exists, is active, and is not deleted.
+ * This is used by custom validators to verify relationships.
+ * @param roleId - The ID of the role to check.
+ * @returns A boolean indicating if the role is valid.
+ */
+  async isRoleExistingAndActive(roleId: string): Promise<boolean> {
     const count = await this.roleModel.countDocuments({ _id: roleId, isDeleted: false, isActive: true }).exec();
     return count > 0;
   }

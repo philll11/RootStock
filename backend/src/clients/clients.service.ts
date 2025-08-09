@@ -1,24 +1,31 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Connection, Model, Types } from 'mongoose';
+
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { QueryClientDto } from './dto/query-client.dto';
 import { Client, ClientDocument } from './entities/client.schema';
 import { ClientQueryBuilder } from './builders/clients-query.builder';
 
+import { User, UserDocument } from '../users/entities/user.schema';
+
 @Injectable()
 export class ClientsService {
-  constructor(@InjectModel(Client.name) private clientModel: Model<ClientDocument>) { }
+  constructor(
+    @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectConnection() private connection: Connection
+  ) { }
 
-  
+
   async create(createClientDto: CreateClientDto): Promise<Client> {
     const createdClient = new this.clientModel(createClientDto);
     return createdClient.save();
   }
 
   async findAll(query: QueryClientDto, loggedInUserRole: string): Promise<Client[]> {
-    
+
     const queryBuilder = new ClientQueryBuilder(query, loggedInUserRole);
     const filter = queryBuilder.build();
 
@@ -54,17 +61,57 @@ export class ClientsService {
   }
 
   async remove(clientId: string): Promise<Client> {
-    const deletedClient = await this.clientModel.findByIdAndUpdate(
-      clientId,
-      { isDeleted: true, isActive: false },
-      { new: true },
-    ).exec();
+    const session = await this.connection.startSession();
+    session.startTransaction();
 
-    if (!deletedClient) {
-      throw new NotFoundException(`Client with ID "${clientId}" not found`);
+    try {
+      // Sever Client->User references
+      await this.userModel.updateMany(
+        { clientIds: clientId },
+        { $pull: { clientIds: clientId } },
+        { session },
+      ).exec();
+
+      // Soft-delete Client
+      const deletedClient = await this.clientModel.findByIdAndUpdate(
+        clientId,
+        { isDeleted: true, isActive: false },
+        { session, new: true },
+      ).exec();
+
+      // Throw error if Client doesn't exist
+      if (!deletedClient) {
+        await session.abortTransaction();
+        throw new NotFoundException(`Client with ID "${clientId}" not found`);
+      }
+
+      await session.commitTransaction();
+      return deletedClient;
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
+  }
 
-    return deletedClient;
+
+  /**
+ * Validates that all client IDs in an array exist, are active, and not deleted.
+ * @param clientIds - An array of client IDs to validate.
+ * @returns `true` if all IDs are valid, `false` otherwise.
+ */
+  async validateClientIds(clientIds: string[]): Promise<boolean> {
+    if (!clientIds || clientIds.length === 0) {
+      return true;
+    }
+    const activeClientsCount = await this.clientModel.countDocuments({
+      _id: { $in: clientIds },
+      isActive: true,
+      isDeleted: false,
+    });
+    return activeClientsCount === clientIds.length;
   }
 
   /**

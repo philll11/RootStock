@@ -1,17 +1,13 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { ClientsService } from './clients.service';
 import { ClientsController } from './clients.controller';
-import { Client, ClientSchema } from './entities/client.schema';
 import { SubsidiariesModule } from '../subsidiaries/subsidiaries.module';
+import { IsExistingClientsConstraint } from "./validators/is-existing-clients.validator";
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([{ name: Client.name, schema: ClientSchema }]),
-    SubsidiariesModule
-  ],
+  imports: [SubsidiariesModule],
   controllers: [ClientsController],
-  providers: [ClientsService],
-  exports: [MongooseModule, ClientsService],
+  providers: [ClientsService, IsExistingClientsConstraint],
+  exports: [ClientsService],
 })
 export class ClientsModule {}

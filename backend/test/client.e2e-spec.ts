@@ -1,38 +1,51 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { MongooseModule } from '@nestjs/mongoose';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { useContainer } from 'class-validator';
 
+import { DatabaseModule } from '../src/database/database.module';
+
 import { ClientsModule } from '../src/clients/clients.module';
 import { Client, ClientDocument } from '../src/clients/entities/client.schema';
 import { CreateClientDto } from '../src/clients/dto/create-client.dto';
+
+import { UsersModule } from '../src/users/users.module';
+import { User, UserDocument, UserType } from '../src/users/entities/user.schema';
 
 import { SubsidiariesModule } from '../src/subsidiaries/subsidiaries.module';
 import { Subsidiary, SubsidiaryDocument } from '../src/subsidiaries/entities/subsidiary.schema';
 
 describe('ClientsController (e2e)', () => {
     let app: INestApplication;
-    let mongod: MongoMemoryServer;
+    let mongod: MongoMemoryReplSet;
     let clientModel: Model<ClientDocument>;
     let subsidiaryModel: Model<SubsidiaryDocument>;
+    let userModel: Model<UserDocument>;
     let validSubsidiaryId: string;
     let createdClientId: string;
 
     jest.setTimeout(60000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryServer.create();
+        mongod = await MongoMemoryReplSet.create({
+            replSet: {
+                count: 1,
+                dbName: 'jest'
+            }
+        });
         const uri = mongod.getUri();
 
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [
                 MongooseModule.forRoot(uri),
+                DatabaseModule,
                 ClientsModule,
-                SubsidiariesModule
+                SubsidiariesModule,
+                UsersModule
             ],
         }).compile();
 
@@ -50,8 +63,11 @@ describe('ClientsController (e2e)', () => {
 
         clientModel = moduleFixture.get<Model<ClientDocument>>(getModelToken(Client.name));
         subsidiaryModel = moduleFixture.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
+        userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
 
         await clientModel.syncIndexes();
+        await subsidiaryModel.syncIndexes();
+        await userModel.syncIndexes();
     });
 
     afterAll(async () => {
@@ -62,6 +78,7 @@ describe('ClientsController (e2e)', () => {
     beforeEach(async () => {
         await clientModel.deleteMany({});
         await subsidiaryModel.deleteMany({});
+        await userModel.deleteMany({});
 
         const subsidiary = await new subsidiaryModel({
             recordId: 'SUB_E2E_VALID',
@@ -271,22 +288,44 @@ describe('ClientsController (e2e)', () => {
 
     describe('DELETE /clients/:clientId', () => {
         beforeEach(async () => {
-            const client: ClientDocument = await new clientModel({
-                recordId: 'CLI_E2E_CLI007',
-                name: 'Delete Me',
-                subsidiaryId: '63b4c5d6e7f8a9b0c1d2e3f4',
-            }).save();
+            const client = await new clientModel({ recordId: 'CLI-TO-DELETE', name: 'Delete Me' }).save();
             createdClientId = client._id.toString();
         });
-        // Test Case: Soft-deleting a client.
-        it('should soft-delete a client successfully', () => {
-            return request(app.getHttpServer())
+
+        it('should soft-delete a client successfully', async () => {
+            await request(app.getHttpServer())
                 .delete(`/clients/${createdClientId}`)
                 .expect(200)
-                .then((response) => {
+                .then(response => {
                     expect(response.body.isDeleted).toBe(true);
                     expect(response.body.isActive).toBe(false);
                 });
+
+            // Verify it cannot be fetched via findOne anymore
+            await request(app.getHttpServer())
+                .get(`/clients/${createdClientId}`)
+                .expect(404);
+        });
+
+        it('should atomically disassociate all linked users when a client is deleted', async () => {
+            const otherClient = await new clientModel({ recordId: 'OTHER-CLI', name: 'Other Client' }).save();
+            // User 1: Linked to the client-to-be-deleted AND another client
+            const user1 = await new userModel({ recordId: 'U1', firstName: 'User', lastName: 'One', name: 'User One', userType: UserType.EMPLOYEE, clientIds: [createdClientId, otherClient._id] }).save();
+            // User 2: Linked ONLY to the client-to-be-deleted
+            const user2 = await new userModel({ recordId: 'U2', firstName: 'User', lastName: 'Two', name: 'User Two', userType: UserType.EMPLOYEE, clientIds: [createdClientId] }).save();
+
+            await request(app.getHttpServer())
+                .delete(`/clients/${createdClientId}`)
+                .expect(200);
+
+            const updatedUser1 = await userModel.findById(user1._id);
+            const updatedUser2 = await userModel.findById(user2._id);
+
+            // User 1 should now only be linked to the "other" client
+            expect(updatedUser1!.clientIds.map(id => id.toString())).toEqual([otherClient._id.toString()]);
+            // User 2 should now be linked to no clients
+            expect(updatedUser2!.clientIds).toEqual([]);
         });
     });
+
 });

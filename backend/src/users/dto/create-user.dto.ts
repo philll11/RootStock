@@ -1,7 +1,8 @@
 import { IsArray, Validate, IsEnum, IsMongoId, IsNotEmpty, IsOptional, IsString,  } from 'class-validator';
 import { IsExistingRole } from '../../roles/decorators/is-existing-role.decorator';
-import { IsClientIdsValidForUserTypeConstraint } from '../validators/is-client-ids-valid-for-user-type.validator';
 import { UserType } from '../entities/user.schema';
+import { IsClientIdsValidForUserTypeConstraint } from '../validators/is-client-ids-valid-for-user-type.validator';
+import { IsExistingClients } from "../../clients/decorators/is-existing-clients.decorator";
 
 export class CreateUserDto {
     @IsString()
@@ -25,6 +26,7 @@ export class CreateUserDto {
     @IsOptional()
     readonly roleId?: string;
 
+    @IsExistingClients()
     @Validate(IsClientIdsValidForUserTypeConstraint)
     @IsArray()
     @IsMongoId({ each: true })

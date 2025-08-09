@@ -30,7 +30,7 @@ export class UsersService {
    * @returns A list of users matching the query.
    */
   async findAll(query: QueryUserDto, loggedInUserRole: string): Promise<User[]> {
-    
+
     const queryBuilder = new UserQueryBuilder(query, loggedInUserRole);
     const filter = queryBuilder.build();
 
@@ -101,6 +101,21 @@ export class UsersService {
     }
 
     return deletedUser;
+  }
+
+  /**
+   * Checks if a user exists, is active, and is not deleted.
+   * This can be used by custom validators in other modules.
+   * @param userId - The ID of the user to check.
+   * @returns `true` if the user is valid, `false` otherwise.
+   */
+  async isUserExistingAndActive(userId: string): Promise<boolean> {
+    const count = await this.userModel.countDocuments({
+      _id: userId,
+      isActive: true,
+      isDeleted: false,
+    });
+    return count > 0;
   }
 
   /**
