@@ -4,7 +4,7 @@ import { Model, Types } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User, UserDocument } from './entities/user.schema';
+import { User, UserDocument, UserType } from './entities/user.schema';
 import { UserQueryBuilder } from './builders/user-query.builder';
 
 @Injectable()
@@ -30,6 +30,7 @@ export class UsersService {
    * @returns A list of users matching the query.
    */
   async findAll(query: QueryUserDto, loggedInUserRole: string): Promise<User[]> {
+    
     const queryBuilder = new UserQueryBuilder(query, loggedInUserRole);
     const filter = queryBuilder.build();
 
@@ -61,6 +62,12 @@ export class UsersService {
    */
   async update(userId: string, updateUserDto: UpdateUserDto, loggedInUserRole: string): Promise<User> {
     const existingUser = await this._findUserForUpdate(userId, loggedInUserRole);
+
+    if (existingUser.userType === UserType.CONTACT && 'clientIds' in updateUserDto) {
+      throw new ForbiddenException(
+        'The client assignment for a contact user cannot be changed. Please delete and recreate the user to reassign.',
+      );
+    }
 
     const updatePayload = this._prepareUpdatePayload(updateUserDto, existingUser, loggedInUserRole);
 

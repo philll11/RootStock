@@ -1,6 +1,6 @@
 import { Controller, Get, Query, Post, Body, Patch, Param, Delete, UseGuards, UseFilters } from '@nestjs/common';
-import { QueryUserDto } from './dto/query-user.dto';
 import { UsersService } from './users.service';
+import { QueryUserDto } from './dto/query-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
@@ -21,7 +21,7 @@ export class UsersController {
   }
 
   @Get()
-  findAll(@Query() query: QueryUserDto/*, @CurrentUser() user: User */) {
+  findAll(@Query() query: QueryUserDto, /**@LoggedInUser() user: UserDocument**/) {
     const fakeAdminRole = 'Administrator';
     return this.usersService.findAll(query, fakeAdminRole);
   }
@@ -38,7 +38,7 @@ export class UsersController {
     // @CurrentUser() loggedInUser: User, // This is our future goal
   ) {
     // For testing, create a fake user object that simulates a populated roleId.
-    const fakeAdminoRle = 'Grower';
+    const fakeAdminoRle = 'Administrator';
     return this.usersService.update(userId, updateUserDto, fakeAdminoRle);
   }
 

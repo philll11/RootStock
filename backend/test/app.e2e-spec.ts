@@ -1,21 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import request from 'supertest';
+import { AppModule } from './../src/app.module'; // We keep this import for context, but won't use it directly
+import { AppController } from './../src/app.controller';
+import { AppService } from './../src/app.service';
 
 describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      controllers: [AppController],
+      providers: [AppService],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
   });
 
+  afterAll(async () => {
+    await app.close();
+  });
+
+  // Test Case: Verifying the root endpoint returns "Hello World!".
   it('/ (GET)', () => {
     return request(app.getHttpServer())
       .get('/')

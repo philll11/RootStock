@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
 
 export enum VisibilityScope {
     CLIENT = 'Client',
@@ -7,14 +7,14 @@ export enum VisibilityScope {
     GLOBAL = 'Global',
 }
 
-export type RoleDocument = Role & Document;
+export type RoleDocument = HydratedDocument<Role>;
 
 @Schema({ timestamps: true })
 export class Role {
     @Prop({ required: true, unique: true, index: true })
     recordId: string;
 
-    @Prop({ required: true, index: true })
+    @Prop({ required: true })
     name: string;
 
     @Prop({ required: false })
@@ -36,4 +36,5 @@ export class Role {
 
 export const RoleSchema = SchemaFactory.createForClass(Role);
 
-RoleSchema.index({ name: 1, isDeleted: 1 }, { unique: true });
+// Enforces name uniqueness on roles that are not deleted
+RoleSchema.index({ name: 1 },{ unique: true, partialFilterExpression: { isDeleted: false } });

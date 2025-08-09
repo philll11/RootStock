@@ -11,6 +11,5 @@ export class UserQueryBuilder extends BaseQueryBuilder {
     if (this.query.userType) {
       this.filter.userType = this.query.userType;
     }
-    
   }
 }
