@@ -1,12 +1,13 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { RolesController } from './roles.controller';
-import { IsExistingRoleConstraint } from "../roles/validators/is-existing-role.validator"
+import { IsExistingRoleConstraint } from "./validators/is-existing-role.validator";
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [],
+  imports: [forwardRef(() => UsersModule)],
   controllers: [RolesController],
   providers: [RolesService, IsExistingRoleConstraint],
-  exports: [RolesService]
+  exports: [RolesService],
 })
-export class RolesModule { }
+export class RolesModule {}

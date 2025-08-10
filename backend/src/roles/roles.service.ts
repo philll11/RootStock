@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 
@@ -9,6 +9,7 @@ import { Role, RoleDocument } from './entities/role.schema';
 import { RoleQueryBuilder } from './builders/roles-query.builder';
 
 import { User, UserDocument } from '../users/entities/user.schema';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class RolesService {
@@ -16,6 +17,7 @@ export class RolesService {
     @InjectModel(Role.name) private roleModel: Model<RoleDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectConnection() private connection: Connection,
+    private readonly usersService: UsersService,
   ) { }
 
   async create(createRoleDto: CreateRoleDto): Promise<Role> {
@@ -40,6 +42,16 @@ export class RolesService {
   }
 
   async update(roleId: string, updateRoleDto: UpdateRoleDto): Promise<Role> {
+    // Apply "clean on, clean off" principle
+    if (updateRoleDto.isActive === false) {
+      const activeUserCount = await this.usersService.countActiveByRoleId(roleId);
+      if (activeUserCount > 0) {
+        throw new ConflictException(
+          `This role cannot be deactivated because it has ${activeUserCount} active user(s) assigned to it. Please reassign the users first.`,
+        );
+      }
+    }
+
     const existingRole = await this.roleModel.findOneAndUpdate(
       { _id: roleId, isDeleted: false, isActive: true },
       { $set: updateRoleDto },
@@ -51,6 +63,7 @@ export class RolesService {
     }
     return existingRole;
   }
+
 
   async remove(roleId: string): Promise<Role> {
     const session = await this.connection.startSession();

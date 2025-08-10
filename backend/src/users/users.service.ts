@@ -52,6 +52,20 @@ export class UsersService {
   }
 
   /**
+ * Finds all users associated with a specific role.
+ * @param roleId - The ID of the parent role.
+ * @param query - The query parameters to filter users.
+ * @param loggedInUserRole - The role of the user performing the query.
+ * @returns A list of users assigned to the role.
+ */
+  async findAllByRoleId(roleId: string, query: QueryUserDto, loggedInUserRole: string): Promise<User[]> {
+    const queryBuilder = new UserQueryBuilder(query, loggedInUserRole);
+    const filter = queryBuilder.build();
+    filter.roleId = roleId;
+    return this.userModel.find(filter).exec();
+  }
+
+  /**
    * Finds a user by their ID, ensuring they are active and not deleted.
    * @param userId - The ID of the user to find.
    * @returns The found user document.
@@ -141,6 +155,20 @@ export class UsersService {
   async countActiveByClientId(clientId: string): Promise<number> {
     return this.userModel.countDocuments({
       clientIds: clientId,
+      isActive: true,
+      isDeleted: false,
+    }).exec();
+  }
+
+  /**
+ * Counts active, non-deleted users associated with a specific role.
+ * Used as a pre-condition check before deactivating a role.
+ * @param roleId The ID of the parent role.
+ * @returns The number of active users assigned to the role.
+ */
+  async countActiveByRoleId(roleId: string): Promise<number> {
+    return this.userModel.countDocuments({
+      roleId: roleId,
       isActive: true,
       isDeleted: false,
     }).exec();

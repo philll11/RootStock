@@ -56,6 +56,7 @@ export class ClientsService {
 async update(clientId: string, updateClientDto: UpdateClientDto, loggedInUserRole: string): Promise<Client> {
     await this._findClientForUpdate(clientId, loggedInUserRole);
 
+    // Apply "clean on, clean off" principle
     if (updateClientDto.isActive === false) {
       const activeUserCount = await this.usersService.countActiveByClientId(clientId);
       if (activeUserCount > 0) {
