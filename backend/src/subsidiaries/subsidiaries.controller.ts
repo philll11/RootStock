@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, UseFilters } from '@nestjs/common';
-import { SubsidiariesService } from './subsidiaries.service';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, UseFilters, Req } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+import { SubsidiariesService } from './subsidiaries.service';
 import { CreateSubsidiaryDto } from './dto/create-subsidiary.dto';
 import { UpdateSubsidiaryDto } from './dto/update-subsidiary.dto';
 import { QuerySubsidiaryDto } from './dto/query-subsidiary.dto';
@@ -15,7 +16,7 @@ import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
 import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
 
 @Controller('subsidiaries')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @UseFilters(MongoExceptionFilter)
 export class SubsidiariesController {
   constructor(
@@ -30,42 +31,40 @@ export class SubsidiariesController {
   }
 
   @Get()
-  findAll(@Query() query: QuerySubsidiaryDto) {
-    // Using a placeholder for the logged-in user's role, as per existing patterns.
-    const fakeAdminRole = 'Administrator';
-    return this.subsidiariesService.findAll(query, fakeAdminRole);
+  findAll(@Query() query: QuerySubsidiaryDto, @Req() req) {
+    return this.subsidiariesService.findAll(query, req.user);
   }
 
   @Get(':subsidiaryId')
-  findOne(@Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string) {
-    return this.subsidiariesService.findOne(subsidiaryId);
+  findOne(@Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string, @Req() req) {
+    return this.subsidiariesService.findOne(subsidiaryId, req.user);
   }
 
   @Get(':subsidiaryId/clients')
   async findAllClientsForSubsidiary(
     @Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string,
     @Query() query: QueryClientDto,
+    @Req() req,
   ) {
-    await this.subsidiariesService.findOne(subsidiaryId); // Is subsidiary ID active
+    // First, ensure the user has permission to see the parent subsidiary.
+    await this.subsidiariesService.findOne(subsidiaryId, req.user);
 
-    // For now, we continue to use a placeholder for the user role
-    const fakeAdminRole = 'Administrator';
-    return this.clientsService.findAllBySubsidiaryId(subsidiaryId, query, fakeAdminRole);
+    // Then, list the clients using the already-refactored, secure method.
+    return this.clientsService.findAllBySubsidiaryId(subsidiaryId, query, req.user);
   }
 
   @Patch(':subsidiaryId')
   update(
     @Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string,
     @Body() updateSubsidiaryDto: UpdateSubsidiaryDto,
+    @Req() req,
   ) {
-    // Using a placeholder for the logged-in user's role.
-    const fakeAdminRole = 'Administrator';
-    return this.subsidiariesService.update(subsidiaryId, updateSubsidiaryDto, fakeAdminRole);
+    return this.subsidiariesService.update(subsidiaryId, updateSubsidiaryDto, req.user);
   }
 
   @Delete(':subsidiaryId')
   @Roles('Administrator')
-  remove(@Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string) {
-    return this.subsidiariesService.remove(subsidiaryId);
+  remove(@Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string, @Req() req) {
+    return this.subsidiariesService.remove(subsidiaryId, req.user);
   }
 }

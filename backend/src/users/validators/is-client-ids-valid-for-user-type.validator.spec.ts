@@ -1,6 +1,6 @@
 import { ValidationArguments } from 'class-validator';
 import { CreateUserDto } from '../dto/create-user.dto';
-import { UserType } from '../entities/user.schema';
+import { UserType } from '../schemas/user.schema';
 import { IsClientIdsValidForUserTypeConstraint } from './is-client-ids-valid-for-user-type.validator';
 
 describe('IsClientIdsValidForUserTypeConstraint', () => {

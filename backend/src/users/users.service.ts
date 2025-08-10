@@ -4,12 +4,17 @@ import { Model, Types } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User, UserDocument, UserType } from './entities/user.schema';
+import { User, UserDocument, UserType } from './schemas/user.schema';
 import { UserQueryBuilder } from './builders/user-query.builder';
+
+import { Client, ClientDocument } from '../clients/schemas/client.schema';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) { }
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
+  ) { }
 
   /**
    * Creates a new user based on the provided DTO.
@@ -19,85 +24,63 @@ export class UsersService {
    */
   async create(createUserDto: CreateUserDto): Promise<User> {
     const payload = this._prepareCreatePayload(createUserDto);
-
     const createdUser = new this.userModel(payload);
     return createdUser.save();
   }
 
-  /**
-   * Finds all users based on the provided query parameters.
-   * @param query - The query parameters to filter users.
-   * @returns A list of users matching the query.
-   */
-  async findAll(query: QueryUserDto, loggedInUserRole: string): Promise<User[]> {
+  async findAll(query: QueryUserDto, user: User): Promise<User[]> {
+    const queryBuilder = new UserQueryBuilder(query, user, this.clientModel);
+    const filter = await queryBuilder.build();
+    return this.userModel.find(filter).exec();
+  }
 
-    const queryBuilder = new UserQueryBuilder(query, loggedInUserRole);
-    const filter = queryBuilder.build();
+  async findAllByClientId(clientId: string, queryDto: QueryUserDto, user: User): Promise<User[]> {
+    const queryBuilder = new UserQueryBuilder(queryDto, user, this.clientModel);
+    const filter = await queryBuilder.build();
+    filter.clientIds = new Types.ObjectId(clientId);
+    return this.userModel.find(filter).exec();
+  }
 
+  async findAllByRoleId(roleId: string, queryDto: QueryUserDto, user: User): Promise<User[]> {
+    const queryBuilder = new UserQueryBuilder(queryDto, user, this.clientModel);
+    const filter = await queryBuilder.build();
+    filter.roleId = new Types.ObjectId(roleId);
     return this.userModel.find(filter).exec();
   }
 
   /**
- * Finds all users associated with a specific client.
- * @param clientId - The ID of the parent client.
- * @param query - The query parameters to filter users.
- * @param loggedInUserRole - The role of the user performing the query.
- * @returns A list of users assigned to the client.
- */
-  async findAllByClientId(clientId: string, query: QueryUserDto, loggedInUserRole: string): Promise<User[]> {
-    const queryBuilder = new UserQueryBuilder(query, loggedInUserRole);
-    const filter = queryBuilder.build();
-    filter.clientIds = clientId;
-    return this.userModel.find(filter).exec();
-  }
-
-  /**
- * Finds all users associated with a specific role.
- * @param roleId - The ID of the parent role.
- * @param query - The query parameters to filter users.
- * @param loggedInUserRole - The role of the user performing the query.
- * @returns A list of users assigned to the role.
- */
-  async findAllByRoleId(roleId: string, query: QueryUserDto, loggedInUserRole: string): Promise<User[]> {
-    const queryBuilder = new UserQueryBuilder(query, loggedInUserRole);
-    const filter = queryBuilder.build();
-    filter.roleId = roleId;
-    return this.userModel.find(filter).exec();
-  }
-
-  /**
-   * Finds a user by their ID, ensuring they are active and not deleted.
+   * Finds a single user by their ID, ensuring the requesting user has permission to view them.
    * @param userId - The ID of the user to find.
+   * @param user - The authenticated user making the request.
    * @returns The found user document.
    */
-  async findOne(userId: string): Promise<User> {
-    const user = await this.userModel.findOne({ _id: userId, isDeleted: false, isActive: true }).exec();
+  async findOne(userId: string, user: User): Promise<User> {
+    const queryBuilder = new UserQueryBuilder({}, user, this.clientModel);
+    const filter = await queryBuilder.build();
+    filter._id = new Types.ObjectId(userId);
 
-    if (!user) {
-      throw new NotFoundException(`Active user with ID "${userId}" not found`);
+    const targetUser = await this.userModel.findOne(filter).exec();
+    if (!targetUser) {
+      throw new NotFoundException(`User with ID "${userId}" not found or you do not have permission to view it.`);
     }
-
-    return user;
+    return targetUser;
   }
 
   /**
-   * Updates a user based on the provided DTO and the role of the logged-in user.
-   * Handles permissions for changing active status and updates name based on first and last names.
+   * Updates a user, ensuring the requesting user has permission to modify them.
    * @param userId - The ID of the user to update.
    * @param updateUserDto - The DTO containing update data.
-   * @param loggedInUserRole - The role of the user performing the update.
+   * @param user - The authenticated user making the request.
    * @returns The updated user document.
    */
-  async update(userId: string, updateUserDto: UpdateUserDto, loggedInUserRole: string): Promise<User> {
-    const existingUser = await this._findUserForUpdate(userId, loggedInUserRole);
+  async update(userId: string, updateUserDto: UpdateUserDto, user: User): Promise<User> {
+    const existingUser = await this.findOne(userId, user); // Secure findOne doubles as authorization check
 
     if (existingUser.userType === UserType.CONTACT && 'clientIds' in updateUserDto) {
-      throw new ForbiddenException(
-        'The client assignment for a contact user cannot be changed. Please delete and recreate the user to reassign.',
-      );
+      throw new ForbiddenException('The client assignment for a contact user cannot be changed.');
     }
 
-    const updatePayload = this._prepareUpdatePayload(updateUserDto, existingUser, loggedInUserRole);
+    const updatePayload = this._prepareUpdatePayload(updateUserDto, existingUser, user);
 
     const updatedUser = await this.userModel.findByIdAndUpdate(
       userId,
@@ -108,16 +91,18 @@ export class UsersService {
     if (!updatedUser) {
       throw new NotFoundException(`User with ID "${userId}" could not be updated.`);
     }
-
     return updatedUser;
   }
 
   /**
-   * Deletes a user by marking them as deleted and inactive.
+   * Deletes a user, ensuring the requesting user has permission to do so.
    * @param userId - The ID of the user to delete.
-   * @returns The deleted user document.
+   * @param user - The authenticated user making the request.
+   * @returns The soft-deleted user document.
    */
-  async remove(userId: string): Promise<User> {
+  async remove(userId: string, user: User): Promise<User> {
+    await this.findOne(userId, user); // Secure authorization check
+
     const deletedUser = await this.userModel.findByIdAndUpdate(
       userId,
       { isDeleted: true, isActive: false },
@@ -127,23 +112,7 @@ export class UsersService {
     if (!deletedUser) {
       throw new NotFoundException(`User with ID "${userId}" not found`);
     }
-
     return deletedUser;
-  }
-
-  /**
-   * Checks if a user exists, is active, and is not deleted.
-   * This can be used by custom validators in other modules.
-   * @param userId - The ID of the user to check.
-   * @returns `true` if the user is valid, `false` otherwise.
-   */
-  async isUserExistingAndActive(userId: string): Promise<boolean> {
-    const count = await this.userModel.countDocuments({
-      _id: userId,
-      isActive: true,
-      isDeleted: false,
-    });
-    return count > 0;
   }
 
   /**
@@ -172,6 +141,22 @@ export class UsersService {
       isActive: true,
       isDeleted: false,
     }).exec();
+  }
+
+  /**
+ * Finds a single user by their unique recordId and populates their role.
+ * This is specifically used for authentication lookups.
+ * @param recordId The user's unique recordId (from JWT `sub` claim)
+ * @returns A user document with the role populated, or null if not found.
+ */
+  async findOneByRecordIdAndPopulateRole(recordId: string): Promise<User | null> {
+    return this.userModel
+      .findOne({ recordId })
+      .populate({
+        path: 'roleId',
+        model: 'Role',
+      })
+      .exec();
   }
 
   /**
@@ -222,9 +207,10 @@ export class UsersService {
  * Handles partial updates, derived fields, and authorization for sensitive fields.
  * @private
  */
-  private _prepareUpdatePayload(dto: UpdateUserDto, existingUser: User, loggedInUserRole: string,): Partial<User> {
+  private _prepareUpdatePayload(dto: UpdateUserDto, existingUser: User, loggedInUser: User): Partial<User> {
     const { roleId, clientIds, isActive, ...restOfDto } = dto;
     const payload: Partial<User> = { ...restOfDto };
+    const loggedInUserRoleName = (loggedInUser.roleId as any)?.name;
 
     if (payload.firstName || payload.lastName) {
       const newFirstName = payload.firstName || existingUser.firstName;
@@ -236,12 +222,11 @@ export class UsersService {
     if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
 
     if ('isActive' in dto) {
-      if (loggedInUserRole !== 'Administrator') {
+      if (loggedInUserRoleName !== 'Administrator') {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
       payload.isActive = isActive;
     }
-
     return payload;
   }
 }

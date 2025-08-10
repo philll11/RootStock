@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, UseFilters } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, UseFilters, Req } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
 import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
@@ -14,7 +15,7 @@ import { UsersService } from '../users/users.service';
 import { QueryUserDto } from '../users/dto/query-user.dto';
 
 @Controller('roles')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('Administrator')
 @UseFilters(new MongoExceptionFilter())
 export class RolesController {
@@ -29,33 +30,32 @@ export class RolesController {
   }
 
   @Get()
-  findAll(@Query() query: QueryRoleDto/*, @CurrentUser() user: User */) {
-    const fakeAdminRole = 'Administrator';
-    return this.rolesService.findAll(query, fakeAdminRole);
+  findAll(@Query() query: QueryRoleDto, @Req() req) {
+    return this.rolesService.findAll(query, req.user);
   }
 
   @Get(':roleId')
-  findOne(@Param('roleId', ParseMongoIdPipe) roleId: string) {
-    return this.rolesService.findOne(roleId);
+  findOne(@Param('roleId', ParseMongoIdPipe) roleId: string, @Req() req) {
+    return this.rolesService.findOne(roleId, req.user);
   }
 
   @Get(':roleId/users')
   async findAllUsersForRole(
     @Param('roleId', ParseMongoIdPipe) roleId: string,
     @Query() query: QueryUserDto,
+    @Req() req,
   ) {
-    await this.rolesService.findOne(roleId); // Is Roles active check
-    const fakeAdminRole = 'Administrator';
-    return this.usersService.findAllByRoleId(roleId, query, fakeAdminRole);
+    await this.rolesService.findOne(roleId, req.user); // Secure check
+    return this.usersService.findAllByRoleId(roleId, query, req.user);
   }
 
   @Patch(':roleId')
-  update(@Param('roleId', ParseMongoIdPipe) roleId: string, @Body() updateRoleDto: UpdateRoleDto) {
-    return this.rolesService.update(roleId, updateRoleDto);
+  update(@Param('roleId', ParseMongoIdPipe) roleId: string, @Body() updateRoleDto: UpdateRoleDto, @Req() req) {
+    return this.rolesService.update(roleId, updateRoleDto, req.user);
   }
 
   @Delete(':roleId')
-  remove(@Param('roleId', ParseMongoIdPipe) roleId: string) {
-    return this.rolesService.remove(roleId);
+  remove(@Param('roleId', ParseMongoIdPipe) roleId: string, @Req() req) {
+    return this.rolesService.remove(roleId, req.user);
   }
 }

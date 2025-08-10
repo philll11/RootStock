@@ -1,9 +1,9 @@
 import { Global, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Client, ClientSchema } from '../clients/entities/client.schema';
-import { Role, RoleSchema } from '../roles/entities/role.schema';
-import { Subsidiary, SubsidiarySchema } from '../subsidiaries/entities/subsidiary.schema';
-import { User, UserSchema } from '../users/entities/user.schema';
+import { Client, ClientSchema } from '../clients/schemas/client.schema';
+import { Role, RoleSchema } from '../roles/schemas/role.schema';
+import { Subsidiary, SubsidiarySchema } from '../subsidiaries/schemas/subsidiary.schema';
+import { User, UserSchema } from '../users/schemas/user.schema';
 
 @Global()
 @Module({

@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { SubsidiariesModule } from './subsidiaries/subsidiaries.module';
 import { DatabaseModule } from './database/database.module';
+import { AuthModule } from './auth/auth.module'; 
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { DatabaseModule } from './database/database.module';
       inject: [ConfigService],
     }),
     DatabaseModule,
+    AuthModule,
     ClientsModule,
     UsersModule,
     RolesModule,

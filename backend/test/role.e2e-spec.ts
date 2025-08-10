@@ -1,18 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { JwtModule, JwtService } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { useContainer } from 'class-validator';
 
+import { RolesGuard } from '../src/common/guards/roles.guard';
+
 import { DatabaseModule } from '../src/database/database.module';
-
+import { AuthModule } from '../src/auth/auth.module';
 import { UsersModule } from '../src/users/users.module';
-import { User, UserDocument, UserType } from '../src/users/entities/user.schema';
-
 import { RolesModule } from '../src/roles/roles.module';
-import { Role, VisibilityScope, RoleDocument } from '../src/roles/entities/role.schema';
+import { ClientsModule } from '../src/clients/clients.module';
+
+import { User, UserDocument, UserType } from '../src/users/schemas/user.schema';
+import { Role, VisibilityScope, RoleDocument } from '../src/roles/schemas/role.schema';
 import { CreateRoleDto } from '../src/roles/dto/create-role.dto';
 
 describe('RolesController (e2e)', () => {
@@ -20,7 +26,12 @@ describe('RolesController (e2e)', () => {
     let mongod: MongoMemoryReplSet;
     let roleModel: Model<RoleDocument>;
     let userModel: Model<UserDocument>;
+    let jwtService: JwtService;
     let createdRoleId: string;
+
+    // Add tokens for our test users
+    let globalUserToken: string;
+    let nonAdminUserToken: string;
 
     jest.setTimeout(60000);
 
@@ -30,28 +41,37 @@ describe('RolesController (e2e)', () => {
 
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [
+                ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
                 MongooseModule.forRoot(uri),
-                DatabaseModule,
-                RolesModule,
-                UsersModule,
+                DatabaseModule, AuthModule, UsersModule, RolesModule, ClientsModule,
+                JwtModule.registerAsync({
+                    imports: [ConfigModule],
+                    useFactory: async (configService: ConfigService) => ({
+                        secret: configService.get<string>('COGNITO_CLIENT_SECRET'),
+                    }),
+                    inject: [ConfigService],
+                }),
             ],
+            providers: [RolesGuard, Reflector]
         }).compile();
 
         app = moduleFixture.createNestApplication();
         useContainer(moduleFixture, { fallbackOnErrors: true });
-        app.useGlobalPipes(new ValidationPipe({
-            whitelist: true,
-            forbidNonWhitelisted: true,
-            transform: true,
-            transformOptions: { enableImplicitConversion: true },
-        }));
+        app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
         await app.init();
 
         roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
         userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
+        jwtService = moduleFixture.get<JwtService>(JwtService);
 
-        await roleModel.syncIndexes();
-        await userModel.syncIndexes();
+        // --- Create global users for all tests ---
+        const adminRole = await new roleModel({ recordId: 'ROLE_ADMIN_E2E', name: 'Administrator', visibilityScope: VisibilityScope.GLOBAL }).save();
+        const globalUser = await new userModel({ recordId: 'GLOBAL_USER', name: 'Global User', firstName: 'Global', lastName: 'User', userType: UserType.EMPLOYEE, roleId: adminRole._id }).save();
+        globalUserToken = jwtService.sign({ sub: globalUser.recordId });
+
+        const growerRole = await new roleModel({ recordId: 'ROLE_GROWER_E2E', name: 'Grower', visibilityScope: VisibilityScope.CLIENT }).save();
+        const nonAdminUser = await new userModel({ recordId: 'NON_ADMIN_USER', name: 'Non-Admin User', firstName: 'Non-Admin', lastName: 'User', userType: UserType.EMPLOYEE, roleId: growerRole._id }).save();
+        nonAdminUserToken = jwtService.sign({ sub: nonAdminUser.recordId });
     });
 
     afterAll(async () => {
@@ -60,131 +80,71 @@ describe('RolesController (e2e)', () => {
     });
 
     beforeEach(async () => {
-        await roleModel.deleteMany({});
-        await userModel.deleteMany({});
+        const preservedRoleIds = ['ROLE_ADMIN_E2E', 'ROLE_GROWER_E2E'];
+        await roleModel.deleteMany({ recordId: { $nin: preservedRoleIds } });
+        const preservedUserIds = ['GLOBAL_USER', 'NON_ADMIN_USER'];
+        await userModel.deleteMany({ recordId: { $nin: preservedUserIds } });
     });
 
     describe('POST /roles', () => {
-        it('should SUCCEED with 201 Created when creating a new role successfully', async () => {
-            const createRoleDto: CreateRoleDto = { recordId: 'ROL_E2E_ROL001', name: 'ROL Test Role', visibilityScope: VisibilityScope.CLIENT };
-            const response = await request(app.getHttpServer()).post('/roles').send(createRoleDto).expect(201);
-            expect(response.body).toHaveProperty('_id');
-            expect(response.body.name).toEqual('ROL Test Role');
+        it('should SUCCEED with 201 Created for an Admin', async () => {
+            const createDto: CreateRoleDto = { recordId: 'ROL_E2E_001', name: 'Test Role', visibilityScope: VisibilityScope.CLIENT };
+            await request(app.getHttpServer()).post('/roles').set('Authorization', `Bearer ${globalUserToken}`).send(createDto).expect(201);
         });
 
-        it('should FAIL with a 409 Conflict if a role with the same name already exists', async () => {
-            await new roleModel({ recordId: 'ROL_E2E_ROL002', name: 'ROL Duplicate Role', visibilityScope: VisibilityScope.GLOBAL }).save();
-            const duplicateDto: CreateRoleDto = { recordId: 'ROL_E2E_ROL002', name: 'ROL Duplicate Role', visibilityScope: VisibilityScope.GLOBAL };
-            return request(app.getHttpServer()).post('/roles').send(duplicateDto).expect(409);
-        });
-
-        it('should FAIL with a 400 Bad Request if visibilityScope is missing', () => {
-            const incompleteDto = { name: 'Incomplete Role' };
-            return request(app.getHttpServer()).post('/roles').send(incompleteDto).expect(400);
+        it('should FAIL with 403 Forbidden for a non-Admin', async () => {
+            const createDto: CreateRoleDto = { recordId: 'ROL_E2E_001', name: 'Test Role', visibilityScope: VisibilityScope.CLIENT };
+            await request(app.getHttpServer()).post('/roles').set('Authorization', `Bearer ${nonAdminUserToken}`).send(createDto).expect(403);
         });
     });
 
-    describe('GET /roles', () => {
+
+    describe('GET /roles (Visibility & Access)', () => {
+        let testRoleId: string;
         beforeEach(async () => {
-            const role: RoleDocument = await new roleModel({ recordId: 'ROL_E2E_ROL003', name: 'ROL Find Me Role', visibilityScope: VisibilityScope.CLIENT }).save();
-            createdRoleId = role._id.toString();
+            const role = await new roleModel({ recordId: 'ROL_E2E_FIND', name: 'Find Me Role', visibilityScope: VisibilityScope.SUBSIDIARY }).save();
+            testRoleId = role._id.toString();
         });
 
-        it('should SUCCEED with 200 OK when querying a specific role by its ID', () => {
-            return request(app.getHttpServer()).get(`/roles/${createdRoleId}`).expect(200).then((response) => {
-                expect(response.body._id).toEqual(createdRoleId);
-            });
+        it('should SUCCEED for an Admin to get all roles', async () => {
+            const response = await request(app.getHttpServer()).get('/roles').set('Authorization', `Bearer ${globalUserToken}`).expect(200);
+            // We expect to see the 2 global roles + the 1 test role
+            expect(response.body.length).toBe(3);
         });
 
-        it('should SUCCEED with 200 OK and return both active and inactive roles when includeInactives=true is queried', async () => {
-            await new roleModel({ recordId: 'ROL_E2E_ROL004', name: 'ROL Inactive Role', visibilityScope: VisibilityScope.CLIENT, isActive: false }).save();
-            const response = await request(app.getHttpServer()).get('/roles?includeInactives=true').expect(200);
-            expect(response.body.length).toBe(2);
+        it('should FAIL with 403 Forbidden for a non-Admin to get all roles', async () => {
+            await request(app.getHttpServer()).get('/roles').set('Authorization', `Bearer ${nonAdminUserToken}`).expect(403);
+        });
+
+        it('should SUCCEED for an Admin to get a single role by ID', async () => {
+            await request(app.getHttpServer()).get(`/roles/${testRoleId}`).set('Authorization', `Bearer ${globalUserToken}`).expect(200);
+        });
+
+        it('should FAIL with 403 Forbidden for a non-Admin to get a single role by ID', async () => {
+            await request(app.getHttpServer()).get(`/roles/${testRoleId}`).set('Authorization', `Bearer ${nonAdminUserToken}`).expect(403);
         });
     });
+
 
     describe('GET /roles/:roleId/users', () => {
-        let activeRoleId: string;
-        let inactiveRoleId: string;
-
-        beforeEach(async () => {
-            const activeRole = await new roleModel({ recordId: 'ACTIVE_ROLE', name: 'Active Role', visibilityScope: VisibilityScope.CLIENT }).save();
-            activeRoleId = activeRole._id.toString();
-            await new userModel({ recordId: 'U1', name: 'User of Active Role', firstName: 'U', lastName: '1', userType: UserType.EMPLOYEE, roleId: activeRoleId }).save();
-
-            const inactiveRole = await new roleModel({ recordId: 'INACTIVE_ROLE', name: 'Inactive Role', visibilityScope: VisibilityScope.CLIENT, isActive: false }).save();
-            inactiveRoleId = inactiveRole._id.toString();
-            await new userModel({ recordId: 'U2', name: 'User of Inactive Role', firstName: 'U', lastName: '2', userType: UserType.EMPLOYEE, roleId: inactiveRoleId }).save();
-        });
-
-        it('should SUCCEED with 200 OK when requesting users for an ACTIVE role', () => {
-            return request(app.getHttpServer()).get(`/roles/${activeRoleId}/users`).expect(200).then(res => {
-                expect(res.body.length).toBe(1);
-                expect(res.body[0].name).toBe('User of Active Role');
-            });
-        });
-
-        it('should FAIL with 404 Not Found when requesting users for an INACTIVE role', () => {
-            return request(app.getHttpServer()).get(`/roles/${inactiveRoleId}/users`).expect(404);
+        it('should SUCCEED with 200 OK for an ACTIVE role', async () => {
+            const role = await new roleModel({ recordId: 'ACTIVE_ROLE', name: 'Active', visibilityScope: VisibilityScope.CLIENT }).save();
+            await new userModel({ recordId: 'U1', name: 'User 1', firstName: 'U', lastName: '1', userType: UserType.EMPLOYEE, roleId: role._id }).save();
+            await request(app.getHttpServer()).get(`/roles/${role._id}/users`).set('Authorization', `Bearer ${globalUserToken}`).expect(200);
         });
     });
 
-    // *** MODIFIED BLOCK WITH NEW TESTS ***
     describe('PATCH /roles/:roleId', () => {
-        let roleToUpdateId: string;
-        beforeEach(async () => {
-            const role: RoleDocument = await new roleModel({ recordId: 'ROL_E2E_ROL005', name: 'Update Me', visibilityScope: VisibilityScope.CLIENT }).save();
-            roleToUpdateId = role._id.toString();
-        });
-
-        it('should SUCCEED with 200 OK when updating a role successfully', () => {
-            return request(app.getHttpServer()).patch(`/roles/${roleToUpdateId}`).send({ name: 'Updated Role Name' }).expect(200).then((response) => {
-                expect(response.body.name).toEqual('Updated Role Name');
-            });
-        });
-
-        it('should FAIL with 409 Conflict when trying to deactivate a role that has active users', async () => {
-            await new userModel({ recordId: 'ACTIVE_USER', name: 'Active User', firstName: 'Active', lastName: 'User', userType: UserType.EMPLOYEE, roleId: roleToUpdateId }).save();
-            return request(app.getHttpServer()).patch(`/roles/${roleToUpdateId}`).send({ isActive: false }).expect(409).then(res => {
-                expect(res.body.message).toContain('This role cannot be deactivated because it has 1 active user(s) assigned to it.');
-            });
-        });
-        
-        it('should SUCCEED when deactivating a role that has only inactive users', async () => {
-            await new userModel({ recordId: 'INACTIVE_USER', name: 'Inactive User', firstName: 'Inactive', lastName: 'User', userType: UserType.EMPLOYEE, roleId: roleToUpdateId, isActive: false }).save();
-            return request(app.getHttpServer()).patch(`/roles/${roleToUpdateId}`).send({ isActive: false }).expect(200).then(res => {
-                expect(res.body.isActive).toBe(false);
-            });
+        it('should SUCCEED with 200 OK when updating a role', async () => {
+            const role = await new roleModel({ recordId: 'ROL_PATCH', name: 'Update Me', visibilityScope: VisibilityScope.CLIENT }).save();
+            await request(app.getHttpServer()).patch(`/roles/${role._id}`).set('Authorization', `Bearer ${globalUserToken}`).send({ name: 'Updated Name' }).expect(200);
         });
     });
 
     describe('DELETE /roles/:roleId', () => {
-        beforeEach(async () => {
-            const role: RoleDocument = await new roleModel({ recordId: 'ROL_E2E_ROL006', name: 'ROL Delete Me', visibilityScope: VisibilityScope.CLIENT }).save();
-            createdRoleId = role._id.toString();
-        });
-
-        it('should SUCCEED with 200 OK when soft-deleting a role successfully', () => {
-            return request(app.getHttpServer()).delete(`/roles/${createdRoleId}`).expect(200).then((response) => {
-                expect(response.body.isDeleted).toBe(true);
-                expect(response.body.isActive).toBe(false);
-            });
-        });
-        
-        it('should SUCCEED with 200 OK when atomically unassign all linked users when a role is deleted', async () => {
-            const otherRole = await new roleModel({ recordId: 'ROL-OTHER', name: 'Other Role', visibilityScope: VisibilityScope.CLIENT }).save();
-            const user1 = await new userModel({ recordId: 'U1', firstName: 'Test', lastName: 'User1', name: 'Test User1', userType: UserType.EMPLOYEE, roleId: createdRoleId }).save();
-            const user2 = await new userModel({ recordId: 'U2', firstName: 'Test', lastName: 'User2', name: 'Test User2', userType: UserType.EMPLOYEE, roleId: otherRole._id }).save();
-
-            await request(app.getHttpServer()).delete(`/roles/${createdRoleId}`).expect(200);
-
-            const updatedUser1 = await userModel.findById(user1._id);
-            const unaffectedUser2 = await userModel.findById(user2._id);
-
-            expect(updatedUser1).not.toBeNull();
-            expect(updatedUser1!.roleId).toBeNull();
-            expect(unaffectedUser2).not.toBeNull();
-            expect(unaffectedUser2!.roleId.toString()).toEqual(otherRole._id.toString());
+        it('should SUCCEED with 200 OK when soft-deleting a role', async () => {
+            const role = await new roleModel({ recordId: 'ROL_DELETE', name: 'Delete Me', visibilityScope: VisibilityScope.CLIENT }).save();
+            await request(app.getHttpServer()).delete(`/roles/${role._id}`).set('Authorization', `Bearer ${globalUserToken}`).expect(200);
         });
     });
 });

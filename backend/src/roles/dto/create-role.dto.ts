@@ -1,6 +1,6 @@
 // src/roles/dto/create-role.dto.ts
 import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { VisibilityScope } from '../entities/role.schema';
+import { VisibilityScope } from '../schemas/role.schema';
 
 export class CreateRoleDto {
   @IsString()

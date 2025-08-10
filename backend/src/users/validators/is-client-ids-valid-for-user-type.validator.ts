@@ -1,7 +1,7 @@
 import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
 import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from '../dto/create-user.dto';
-import { UserType } from '../entities/user.schema';
+import { UserType } from '../schemas/user.schema';
 
 @ValidatorConstraint({ name: 'isClientIdsValidForUserType', async: false })
 @Injectable()

@@ -2,14 +2,15 @@ import { Injectable, NotFoundException, ForbiddenException, ConflictException } 
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model } from 'mongoose';
 
-import { Subsidiary, SubsidiaryDocument } from './entities/subsidiary.schema';
+import { Subsidiary, SubsidiaryDocument } from './schemas/subsidiary.schema';
 import { CreateSubsidiaryDto } from './dto/create-subsidiary.dto';
 import { UpdateSubsidiaryDto } from './dto/update-subsidiary.dto';
 import { QuerySubsidiaryDto } from './dto/query-subsidiary.dto';
 import { SubsidiaryQueryBuilder } from './builders/subsidiary-query.builder';
 
 import { ClientsService } from '../clients/clients.service'; 
-import { Client, ClientDocument } from '../clients/entities/client.schema';
+import { Client, ClientDocument } from '../clients/schemas/client.schema';
+import { User } from '../users/schemas/user.schema';
 
 @Injectable()
 export class SubsidiariesService {
@@ -25,87 +26,67 @@ export class SubsidiariesService {
     return createdSubsidiary.save();
   }
 
-  async findAll(query: QuerySubsidiaryDto, loggedInUserRole: string): Promise<Subsidiary[]> {
-    const queryBuilder = new SubsidiaryQueryBuilder(query, loggedInUserRole);
-    const filter = queryBuilder.build();
-
+  async findAll(queryDto: QuerySubsidiaryDto, user: User): Promise<Subsidiary[]> {
+    const queryBuilder = new SubsidiaryQueryBuilder(queryDto, user, this.clientModel);
+    const filter = await queryBuilder.build();
     return this.subsidiaryModel.find(filter).exec();
   }
 
-  async findOne(subsidiaryId: string): Promise<Subsidiary> {
-    const subsidiary = await this.subsidiaryModel
-      .findOne({ _id: subsidiaryId, isDeleted: false, isActive: true })
-      .exec();
+  async findOne(subsidiaryId: string, user: User): Promise<Subsidiary> {
+    const queryBuilder = new SubsidiaryQueryBuilder({}, user, this.clientModel);
+    const filter = await queryBuilder.build();
+    filter._id = subsidiaryId;
+
+    const subsidiary = await this.subsidiaryModel.findOne(filter).exec();
 
     if (!subsidiary) {
-      throw new NotFoundException(`Active subsidiary with ID "${subsidiaryId}" not found`);
+      throw new NotFoundException(`Subsidiary with ID "${subsidiaryId}" not found or you do not have permission to view it.`);
     }
-
     return subsidiary;
   }
 
-async update(
-    subsidiaryId: string,
-    updateSubsidiaryDto: UpdateSubsidiaryDto,
-    loggedInUserRole: string,
-  ): Promise<Subsidiary> {
-    await this._findSubsidiaryForUpdate(subsidiaryId, loggedInUserRole);
+async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, user: User): Promise<Subsidiary> {
+    await this.findOne(subsidiaryId, user);
 
-    // Apply "clean on, clean off" principle
     if (updateSubsidiaryDto.isActive === false) {
       const activeClientCount = await this.clientsService.countActiveBySubsidiaryId(subsidiaryId);
       if (activeClientCount > 0) {
-        throw new ConflictException(
-          `This subsidiary cannot be deactivated because it has ${activeClientCount} active client(s) assigned to it. Please reassign or deactivate the clients first.`,
-        );
+        throw new ConflictException(`This subsidiary cannot be deactivated because it has ${activeClientCount} active client(s) assigned to it. Please reassign or deactivate the clients first.`);
       }
     }
 
-    // Prepare the update payload (handles field-level permissions)
-    const updatePayload = this._prepareUpdatePayload(updateSubsidiaryDto, loggedInUserRole);
+    const updatePayload = this._prepareUpdatePayload(updateSubsidiaryDto, user);
 
-    // Perform the update
     const updatedSubsidiary = await this.subsidiaryModel
       .findByIdAndUpdate(subsidiaryId, { $set: updatePayload }, { new: true })
       .exec();
 
     if (!updatedSubsidiary) {
-      // This case should rarely be hit if _findSubsidiaryForUpdate succeeds
       throw new NotFoundException(`Subsidiary with ID "${subsidiaryId}" could not be updated.`);
     }
-
     return updatedSubsidiary;
   }
 
 
-  async remove(subsidiaryId: string): Promise<Subsidiary> {
+  async remove(subsidiaryId: string, user: User): Promise<Subsidiary> {
+    await this.findOne(subsidiaryId, user);
+
     const session = await this.connection.startSession();
     session.startTransaction();
-
     try {
-      // Sever Subsidiary->Client references
-      await this.clientModel.updateMany(
-        { subsidiaryId: subsidiaryId },
-        { $set: { subsidiaryId: null } },
-        { session },
-      ).exec();
-
-      // Soft-delete Subsidiary
+      await this.clientModel.updateMany({ subsidiaryId: subsidiaryId }, { $set: { subsidiaryId: null } }, { session }).exec();
       const deletedSubsidiary = await this.subsidiaryModel.findByIdAndUpdate(
         subsidiaryId,
         { isDeleted: true, isActive: false },
         { session, new: true },
       ).exec();
 
-      // Throw error if Subsidiary doesn't exist
       if (!deletedSubsidiary) {
-        await session.abortTransaction();
         throw new NotFoundException(`Subsidiary with ID "${subsidiaryId}" not found`);
       }
 
       await session.commitTransaction();
       return deletedSubsidiary;
-
     } catch (error) {
       await session.abortTransaction();
       throw error;
@@ -146,21 +127,17 @@ async update(
    * Handles role-based field permissions.
    * @private
    */
-  private _prepareUpdatePayload(
-    updateSubsidiaryDto: UpdateSubsidiaryDto,
-    loggedInUserRole: string,
-  ): Partial<Subsidiary> {
+  private _prepareUpdatePayload(updateSubsidiaryDto: UpdateSubsidiaryDto, user: User): Partial<Subsidiary> {
     const { isActive, ...restOfDto } = updateSubsidiaryDto;
     const updatePayload: Partial<Subsidiary> = { ...restOfDto };
+    const userRoleName = (user.roleId as any)?.name;
 
-    // Only admins can change the isActive status.
     if ('isActive' in updateSubsidiaryDto) {
-      if (loggedInUserRole !== 'Administrator') {
+      if (userRoleName !== 'Administrator') {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
       updatePayload.isActive = isActive;
     }
-
     return updatePayload;
   }
 
@@ -171,9 +148,7 @@ async update(
  * @returns A boolean indicating if the subsidiary is valid.
  */
   async isExistingAndActive(subsidiaryId: string): Promise<boolean> {
-    const count = await this.subsidiaryModel
-      .countDocuments({ _id: subsidiaryId, isDeleted: false, isActive: true })
-      .exec();
+    const count = await this.subsidiaryModel.countDocuments({ _id: subsidiaryId, isDeleted: false, isActive: true }).exec();
     return count > 0;
   }
 }

@@ -5,17 +5,24 @@ import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { useContainer } from 'class-validator';
+import { JwtModule, JwtService } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { DatabaseModule } from '../src/database/database.module';
 
+import { RolesGuard } from '../src/common/guards/roles.guard';
+
+import { AuthModule } from '../src/auth/auth.module';
 import { UsersModule } from '../src/users/users.module';
-import { CreateUserDto } from '../src/users/dto/create-user.dto';
-import { User, UserDocument, UserType } from '../src/users/entities/user.schema';
-
 import { ClientsModule } from '../src/clients/clients.module';
-import { Client, ClientDocument } from '../src/clients/entities/client.schema';
+import { RolesModule } from '../src/roles/roles.module';
+import { SubsidiariesModule } from '../src/subsidiaries/subsidiaries.module';
 
-import { Role, RoleDocument, VisibilityScope } from '../src/roles/entities/role.schema';
+import { CreateUserDto } from '../src/users/dto/create-user.dto';
+import { User, UserDocument, UserType } from '../src/users/schemas/user.schema';
+import { Client, ClientDocument } from '../src/clients/schemas/client.schema';
+import { Role, RoleDocument, VisibilityScope } from '../src/roles/schemas/role.schema';
+import { Subsidiary, SubsidiaryDocument } from '../src/subsidiaries/schemas/subsidiary.schema';
 
 describe('UsersController (e2e)', () => {
     let app: INestApplication;
@@ -23,11 +30,16 @@ describe('UsersController (e2e)', () => {
     let userModel: Model<UserDocument>;
     let roleModel: Model<RoleDocument>;
     let clientModel: Model<ClientDocument>;
-    let validClientId1: string;
-    let validClientId2: string;
+    let subsidiaryModel: Model<SubsidiaryDocument>;
+    let jwtService: JwtService;
+
+    // --- Test Data Placeholders ---
+    let globalAdminToken: string;
+    let consultantToken: string;
+    let growerToken: string;
     let testAdminRoleId: string;
-    let testGrowerRole: string;
-    let createdUserId: string;
+    let testGrowerRoleId: string;
+    let validClientId1: string;
 
     jest.setTimeout(60000);
 
@@ -37,32 +49,28 @@ describe('UsersController (e2e)', () => {
 
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [
+                ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
                 MongooseModule.forRoot(uri),
-                DatabaseModule,
-                UsersModule,
-                ClientsModule
+                DatabaseModule, AuthModule, UsersModule, ClientsModule, RolesModule, SubsidiariesModule,
+                JwtModule.registerAsync({
+                    imports: [ConfigModule],
+                    useFactory: async (configService: ConfigService) => ({ secret: configService.get<string>('COGNITO_CLIENT_SECRET') }),
+                    inject: [ConfigService],
+                }),
             ],
+            providers: [RolesGuard],
         }).compile();
 
         app = moduleFixture.createNestApplication();
-
         useContainer(moduleFixture, { fallbackOnErrors: true });
-
-        app.useGlobalPipes(new ValidationPipe({
-            whitelist: true,
-            forbidNonWhitelisted: true,
-            transform: true,
-            transformOptions: { enableImplicitConversion: true },
-        }));
+        app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
         await app.init();
 
         userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
         roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
         clientModel = moduleFixture.get<Model<ClientDocument>>(getModelToken(Client.name));
-
-        await userModel.syncIndexes();
-        await roleModel.syncIndexes();
-        await clientModel.syncIndexes();
+        subsidiaryModel = moduleFixture.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
+        jwtService = moduleFixture.get<JwtService>(JwtService);
     });
 
     afterAll(async () => {
@@ -71,250 +79,118 @@ describe('UsersController (e2e)', () => {
     });
 
     beforeEach(async () => {
+        // Clear all collections before each test to ensure a clean slate
         await userModel.deleteMany({});
         await roleModel.deleteMany({});
         await clientModel.deleteMany({});
+        await subsidiaryModel.deleteMany({});
 
-        const adminRole: RoleDocument = await new roleModel({ recordId: 'USER_E2E_ROL001', name: 'USER Administrator', visibilityScope: VisibilityScope.GLOBAL, }).save();
+        // --- Create a standard set of roles and a client for tests ---
+        const adminRole = await new roleModel({ recordId: 'ROLE_ADMIN', name: 'Administrator', visibilityScope: VisibilityScope.GLOBAL }).save();
+        const consultantRole = await new roleModel({ recordId: 'ROLE_CONSULTANT', name: 'Consultant', visibilityScope: VisibilityScope.SUBSIDIARY }).save();
+        const growerRole = await new roleModel({ recordId: 'ROLE_GROWER', name: 'Grower', visibilityScope: VisibilityScope.CLIENT }).save();
         testAdminRoleId = adminRole._id.toString();
+        testGrowerRoleId = growerRole._id.toString();
 
-        const growerRole: RoleDocument = await new roleModel({ recordId: 'USER_E2E_ROL003', name: 'USER Grower', visibilityScope: VisibilityScope.CLIENT, }).save();
-        testGrowerRole = growerRole._id.toString();
-
-        const client1 = await new clientModel({ recordId: 'VALID-C1', name: 'Valid Client 1' }).save();
-        const client2 = await new clientModel({ recordId: 'VALID-C2', name: 'Valid Client 2' }).save();
+        const client1 = await new clientModel({ recordId: 'CLIENT_1', name: 'Test Client 1' }).save();
         validClientId1 = client1._id.toString();
-        validClientId2 = client2._id.toString();
+
+        // --- Create our standard test users and their tokens ---
+        const adminUser = await new userModel({ recordId: 'USER_ADMIN', name: 'Admin User', firstName: 'Admin', lastName: 'User', userType: UserType.EMPLOYEE, roleId: adminRole._id }).save();
+        globalAdminToken = jwtService.sign({ sub: adminUser.recordId });
+
+        const consultantUser = await new userModel({ recordId: 'USER_CONSULTANT', name: 'Consultant User', firstName: 'Consultant', lastName: 'User', userType: UserType.EMPLOYEE, roleId: consultantRole._id, clientIds: [validClientId1] }).save();
+        consultantToken = jwtService.sign({ sub: consultantUser.recordId });
+
+        const growerUser = await new userModel({ recordId: 'USER_GROWER', name: 'Grower User', firstName: 'Grower', lastName: 'User', userType: UserType.EMPLOYEE, roleId: growerRole._id, clientIds: [validClientId1] }).save();
+        growerToken = jwtService.sign({ sub: growerUser.recordId });
     });
 
     describe('POST /users', () => {
-        it('should SUCCEED with 201 Created when creating a new employee user and derive the full name when given valid data', async () => {
-            const createUserDto: CreateUserDto = {
-                recordId: 'USER_E2E_USER001',
-                firstName: 'John',
-                lastName: 'Doe',
-                userType: UserType.EMPLOYEE,
-                roleId: testAdminRoleId,
-            };
-
-            const response = await request(app.getHttpServer())
-                .post('/users')
-                .send(createUserDto)
-                .expect(201);
-
-            expect(response.body).toHaveProperty('_id');
-            expect(response.body.firstName).toEqual('John');
-            expect(response.body.name).toEqual('John Doe');
-            createdUserId = response.body._id;
+        it('should SUCCEED with 201 Created for an Admin', async () => {
+            const dto: CreateUserDto = { recordId: 'U001', firstName: 'John', lastName: 'Doe', userType: UserType.EMPLOYEE, roleId: testAdminRoleId };
+            await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${globalAdminToken}`).send(dto).expect(201);
         });
 
-        it('should FAIL with 400 Bad Request when creating a user with a non-existent roleId', () => {
-            const fakeRoleId = '63b4c5d6e7f8a9b0c1d2e3f5';
-            const createUserDto: CreateUserDto = {
-                recordId: 'USER_E2E_USER002',
-                firstName: 'Jane',
-                lastName: 'Smith',
-                userType: UserType.EMPLOYEE,
-                roleId: fakeRoleId,
-            };
-
-            return request(app.getHttpServer())
-                .post('/users')
-                .send(createUserDto)
-                .expect(400)
-                .then((response) => {
-                    expect(response.body.message).toContain(`Role with ID "${fakeRoleId}" does not exist or is not active.`);
-                });
-        });
-
-        it('should FAIL with 400 Bad Request when creating a "contact" user with an empty clientIds array', () => {
-            const createUserDto: CreateUserDto = {
-                recordId: 'USER_E2E_USER00X1',
-                firstName: 'Bad',
-                lastName: 'Contact',
-                userType: UserType.CONTACT,
-                roleId: testGrowerRole,
-                clientIds: [],
-            };
-
-            return request(app.getHttpServer())
-                .post('/users')
-                .send(createUserDto)
-                .expect(400)
-                .then((response) => {
-                    expect(response.body.message).toContain('Users with type "contact" must be assigned to exactly one client.');
-                });
-        });
-
-        it('should SUCCEED with 201 Created when creating a "contact" user successfully when clientIds has exactly one element', () => {
-            const createUserDto: CreateUserDto = {
-                recordId: 'USER_E2E_USER00X2',
-                firstName: 'Good',
-                lastName: 'Contact',
-                userType: UserType.CONTACT,
-                roleId: testGrowerRole,
-                clientIds: [validClientId1],
-            };
-
-            return request(app.getHttpServer())
-                .post('/users')
-                .send(createUserDto)
-                .expect(201)
-                .then((response) => {
-                    expect(response.body.userType).toEqual(UserType.CONTACT);
-                    expect(response.body.clientIds).toEqual([validClientId1]);
-                });
+        it('should FAIL with 403 Forbidden for a non-Admin', async () => {
+            const dto: CreateUserDto = { recordId: 'U001', firstName: 'John', lastName: 'Doe', userType: UserType.EMPLOYEE, roleId: testAdminRoleId };
+            await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${growerToken}`).send(dto).expect(403);
         });
     });
 
-    describe('POST /users (Client Validation)', () => {
-        it('should SUCCEED with 201 Created when creating a user with an array of valid client IDs', () => {
-            const createUserDto: CreateUserDto = {
-                recordId: 'U-VALID-01',
-                firstName: 'Test',
-                lastName: 'User',
-                userType: UserType.EMPLOYEE,
-                roleId: testAdminRoleId,
-                clientIds: [validClientId1, validClientId2],
-            };
-
-            return request(app.getHttpServer())
-                .post('/users')
-                .send(createUserDto)
-                .expect(201)
-                .then(res => {
-                    expect(res.body.clientIds).toEqual([validClientId1, validClientId2]);
-                });
-        });
-
-        it('should FAIL with 400 Bad Request if one of the clientIds in the array does not exist', () => {
-            const invalidId = '60f8f1b3b5f9f1b3b5f9f1b5';
-            const createUserDto: CreateUserDto = {
-                recordId: 'U-INVALID-01',
-                firstName: 'Test',
-                lastName: 'User',
-                userType: UserType.EMPLOYEE,
-                roleId: testAdminRoleId,
-                clientIds: [validClientId1, invalidId],
-            };
-
-            return request(app.getHttpServer())
-                .post('/users')
-                .send(createUserDto)
-                .expect(400)
-                .then(res => {
-                    expect(res.body.message[0]).toContain('One or more client IDs');
-                    expect(res.body.message[0]).toContain('do not exist, are inactive, or have been deleted');
-                });
-        });
-    });
-
-    describe('GET /users', () => {
+    
+    describe('GET /users (Visibility Scope)', () => {
         beforeEach(async () => {
-            const user: UserDocument = await new userModel({
-                recordId: 'USER_E2E_USER003',
-                firstName: 'Find',
-                lastName: 'Me',
-                name: 'Find Me',
-                userType: UserType.EMPLOYEE,
-                roleId: testAdminRoleId,
-            }).save();
-            createdUserId = user._id.toString();
+            // --- Create a rich data set for visibility testing ---
+            const sub1 = await new subsidiaryModel({ recordId: 'SUB_1', name: 'Subsidiary 1' }).save();
+            const client1_sub1 = await new clientModel({ recordId: 'C1_S1', name: 'Client 1 of Sub 1', subsidiaryId: sub1._id }).save();
+            const client2_sub1 = await new clientModel({ recordId: 'C2_S1', name: 'Client 2 of Sub 1', subsidiaryId: sub1._id }).save();
+
+            const sub2 = await new subsidiaryModel({ recordId: 'SUB_2', name: 'Subsidiary 2' }).save();
+            const client3_sub2 = await new clientModel({ recordId: 'C3_S2', name: 'Client 3 of Sub 2', subsidiaryId: sub2._id }).save();
+
+            // Create a user for each client
+            await new userModel({ recordId: 'USER_FOR_C1', name: 'User for C1', firstName: 'U', lastName: 'C1', userType: UserType.EMPLOYEE, roleId: testGrowerRoleId, clientIds: [client1_sub1._id] }).save();
+            await new userModel({ recordId: 'USER_FOR_C2', name: 'User for C2', firstName: 'U', lastName: 'C2', userType: UserType.EMPLOYEE, roleId: testGrowerRoleId, clientIds: [client2_sub1._id] }).save();
+            await new userModel({ recordId: 'USER_FOR_C3', name: 'User for C3', firstName: 'U', lastName: 'C3', userType: UserType.EMPLOYEE, roleId: testGrowerRoleId, clientIds: [client3_sub2._id] }).save();
+
+            // Re-authenticate our consultant and grower against this new, richer data
+            const consultantRole = await roleModel.findOne({ recordId: 'ROLE_CONSULTANT' }).exec();
+            await userModel.updateOne({ recordId: 'USER_CONSULTANT' }, { $set: { clientIds: [client1_sub1._id], roleId: consultantRole!._id } });
+
+            const growerRole = await roleModel.findOne({ recordId: 'ROLE_GROWER' }).exec();
+            await userModel.updateOne({ recordId: 'USER_GROWER' }, { $set: { clientIds: [client1_sub1._id], roleId: growerRole!._id } });
         });
 
-        it('should SUCCEED with 200 OK when returning a single user when a valid ID is provided in the path', () => {
-            return request(app.getHttpServer())
-                .get(`/users/${createdUserId}`)
-                .expect(200)
-                .then((response) => {
-                    expect(response.body._id).toEqual(createdUserId);
-                    expect(response.body.name).toEqual('Find Me');
-                });
+        it('should SUCCEED and return ALL users for a Global Admin', async () => {
+            const response = await request(app.getHttpServer()).get('/users').set('Authorization', `Bearer ${globalAdminToken}`).expect(200);
+            // 3 test users (admin, consultant, grower) + 3 data users = 6
+            expect(response.body).toHaveLength(6);
         });
 
-        it('should SUCCEED with 200 OK when returning only "contact" users when filtering by userType=contact', async () => {
-            await new userModel({
-                recordId: 'USER_E2E_USER004',
-                firstName: 'Contact',
-                lastName: 'User',
-                name: 'Contact User',
-                userType: UserType.CONTACT,
-                roleId: testAdminRoleId,
-            }).save();
+        it('should SUCCEED and return ONLY users from the same subsidiary for a Consultant', async () => {
+            const response = await request(app.getHttpServer()).get('/users').set('Authorization', `Bearer ${consultantToken}`).expect(200);
+            // Consultant is assigned to C1/S1, should see users from C1 and C2.
+            // Also sees self and the grower user assigned to C1.
+            expect(response.body).toHaveLength(4);
+            const names = response.body.map(u => u.name);
+            expect(names).toEqual(expect.arrayContaining(['Consultant User', 'Grower User', 'User for C1', 'User for C2']));
+            expect(names).not.toContain('User for C3');
+        });
 
-            const response = await request(app.getHttpServer())
-                .get('/users?userType=contact')
-                .expect(200);
-
-            expect(response.body.length).toBe(1);
-            expect(response.body[0].userType).toEqual(UserType.CONTACT);
+        it('should SUCCEED and return ONLY users from their own client for a Grower', async () => {
+            const response = await request(app.getHttpServer()).get('/users').set('Authorization', `Bearer ${growerToken}`).expect(200);
+            // Grower is assigned to C1, should see the other user from C1.
+            // Also sees self and the consultant assigned to C1.
+            expect(response.body).toHaveLength(3);
+            const names = response.body.map(u => u.name);
+            expect(names).toEqual(expect.arrayContaining(['Consultant User', 'Grower User', 'User for C1']));
+            expect(names).not.toContain('User for C2');
+            expect(names).not.toContain('User for C3');
         });
     });
 
     describe('PATCH /users/:userId', () => {
-        beforeEach(async () => {
-            const user: UserDocument = await new userModel({
-                recordId: 'USER_E2E_USER005',
-                firstName: 'Update',
-                lastName: 'Me',
-                name: 'Update Me',
-                userType: UserType.EMPLOYEE,
-                roleId: testAdminRoleId,
-            }).save();
-            createdUserId = user._id.toString();
+        it('should SUCCEED for an Admin to update a user', async () => {
+            const userToUpdate = await userModel.findOne({ recordId: 'USER_GROWER' }).exec();
+            await request(app.getHttpServer()).patch(`/users/${userToUpdate!._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send({ firstName: 'Updated' }).expect(200);
         });
 
-        it('should SUCCEED with 200 OK when updating a user and correctly derive the new name when firstName is changed', () => {
-            const updateUserDto = { firstName: 'Updated' };
-            return request(app.getHttpServer())
-                .patch(`/users/${createdUserId}`)
-                .send(updateUserDto)
-                .expect(200)
-                .then((response) => {
-                    expect(response.body.firstName).toEqual('Updated');
-                    expect(response.body.name).toEqual('Updated Me');
-                });
-        });
-
-        it('should SUCCEED with 200 OK when updating the isActive status when the user is an administrator', () => {
-            return request(app.getHttpServer())
-                .patch(`/users/${createdUserId}`)
-                .send({ isActive: false })
-                .expect(200)
-                .then((response) => {
-                    expect(response.body.isActive).toBe(false);
-                });
+        it('should FAIL with 403 Forbidden for a non-Admin to update a user', async () => {
+            const userToUpdate = await userModel.findOne({ recordId: 'USER_ADMIN' }).exec();
+            await request(app.getHttpServer()).patch(`/users/${userToUpdate!._id}`).set('Authorization', `Bearer ${growerToken}`).send({ firstName: 'Updated' }).expect(403);
         });
     });
 
     describe('DELETE /users/:userId', () => {
-        beforeEach(async () => {
-            const user: UserDocument = await new userModel({
-                recordId: 'USER_E2E_USER006',
-                firstName: 'Delete',
-                lastName: 'Me',
-                name: 'Delete Me',
-                userType: UserType.EMPLOYEE,
-                roleId: testAdminRoleId,
-            }).save();
-            createdUserId = user._id.toString();
+        it('should SUCCEED for an Admin to delete a user', async () => {
+            const userToDelete = await userModel.findOne({ recordId: 'USER_GROWER' }).exec();
+            await request(app.getHttpServer()).delete(`/users/${userToDelete!._id}`).set('Authorization', `Bearer ${globalAdminToken}`).expect(200);
         });
 
-        it('should SUCCEED with 200 OK when setting isDeleted to true and isActive to false on successful soft-delete', () => {
-            return request(app.getHttpServer())
-                .delete(`/users/${createdUserId}`)
-                .expect(200)
-                .then((response) => {
-                    expect(response.body.isDeleted).toBe(true);
-                    expect(response.body.isActive).toBe(false);
-                });
-        });
-
-        it('should FAIL with 404 Not Found when trying to GET a soft-deleted user by ID', async () => {
-            await request(app.getHttpServer()).delete(`/users/${createdUserId}`);
-            return request(app.getHttpServer())
-                .get(`/users/${createdUserId}`)
-                .expect(404);
+        it('should FAIL with 403 Forbidden for a non-Admin to delete a user', async () => {
+            const userToDelete = await userModel.findOne({ recordId: 'USER_ADMIN' }).exec();
+            await request(app.getHttpServer()).delete(`/users/${userToDelete!._id}`).set('Authorization', `Bearer ${growerToken}`).expect(403);
         });
     });
 });

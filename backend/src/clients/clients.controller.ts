@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseFilters, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseFilters, Query, Req } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
 import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
@@ -15,7 +16,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 
 @Controller('clients')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @UseFilters(MongoExceptionFilter)
 export class ClientsController {
   constructor(
@@ -30,41 +31,38 @@ export class ClientsController {
   }
 
   @Get()
-  findAll(@Query() query: QueryClientDto/*, @CurrentUser() user: User */) {
-    const fakeAdminRole = 'Administrator';
-    return this.clientsService.findAll(query, fakeAdminRole);
+  findAll(@Query() query: QueryClientDto, @Req() req) {
+    return this.clientsService.findAll(query, req.user);
   }
 
   @Get(':clientId')
-  findOne(@Param('clientId', ParseMongoIdPipe) clientId: string) {
-    return this.clientsService.findOne(clientId);
+  findOne(@Param('clientId', ParseMongoIdPipe) clientId: string, @Req() req) {
+    return this.clientsService.findOne(clientId, req.user);
   }
 
   @Get(':clientId/users')
   async findAllUsersForClient(
     @Param('clientId', ParseMongoIdPipe) clientId: string,
     @Query() query: QueryUserDto,
+    @Req() req,
   ) {
-    await this.clientsService.findOne(clientId); // Is Client active check
-
-    const fakeAdminRole = 'Administrator';
-    return this.usersService.findAllByClientId(clientId, query, fakeAdminRole);
+    // This check is now secure because it uses the refactored, user-aware findOne method.
+    await this.clientsService.findOne(clientId, req.user);
+    return this.usersService.findAllByClientId(clientId, query, req.user);
   }
 
   @Patch(':clientId')
   update(
     @Param('clientId', ParseMongoIdPipe) clientId: string,
-    @Body() updateClientDto: UpdateClientDto
-    // @CurrentUser() loggedInUser: User, // This is our future goal
+    @Body() updateClientDto: UpdateClientDto,
+    @Req() req,
   ) {
-    // For testing, create a fake user object that simulates a populated roleId.
-    const fakeAdminoRle = 'Administrator';
-    return this.clientsService.update(clientId, updateClientDto, fakeAdminoRle);
+    return this.clientsService.update(clientId, updateClientDto, req.user);
   }
 
   @Delete(':clientId')
   @Roles('Administrator')
-  remove(@Param('clientId', ParseMongoIdPipe) clientId: string) {
-    return this.clientsService.remove(clientId);
+  remove(@Param('clientId', ParseMongoIdPipe) clientId: string, @Req() req) {
+    return this.clientsService.remove(clientId, req.user);
   }
 }

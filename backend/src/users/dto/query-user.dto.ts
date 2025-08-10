@@ -1,6 +1,6 @@
 import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { UserType } from '../entities/user.schema';
+import { UserType } from '../schemas/user.schema';
 
 const toBoolean = (value: string) => value === 'true';
 

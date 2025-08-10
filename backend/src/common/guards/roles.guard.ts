@@ -1,6 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { User } from '../../users/schemas/user.schema';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -13,13 +14,24 @@ export class RolesGuard implements CanActivate {
     ]);
 
     if (!requiredRoles) {
-      return true; // If no roles are required, allow access
+      return true; // If no @Roles decorator is used, allow access.
     }
 
-    // For now, our user role is faked. In the future, this will come from the request.
-    // const { user } = context.switchToHttp().getRequest();
-    const user = { role: 'Administrator' }; // FAKE USER FOR NOW
+    const { user }: { user: User } = context.switchToHttp().getRequest();
 
-    return requiredRoles.some((role) => user.role?.includes(role));
+    // If JwtAuthGuard didn't run or failed, there will be no user. Deny access.
+    if (!user) {
+      return false;
+    }
+
+    const userRoleName = (user.roleId as any)?.name;
+
+    // If the user doesn't have a role name, deny access.
+    if (!userRoleName) {
+      return false;
+    }
+
+    // This is the correct logic: check if the user's actual role name is in the required list.
+    return requiredRoles.includes(userRoleName);
   }
 }

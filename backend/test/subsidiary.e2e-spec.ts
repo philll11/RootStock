@@ -5,66 +5,83 @@ import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { useContainer } from 'class-validator';
+import { JwtModule, JwtService } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { DatabaseModule } from '../src/database/database.module';
+import { AuthModule } from '../src/auth/auth.module';
+import { UsersModule } from '../src/users/users.module';
+import { RolesModule } from '../src/roles/roles.module';
 
 import { SubsidiariesModule } from '../src/subsidiaries/subsidiaries.module';
-import { Subsidiary, SubsidiaryDocument } from '../src/subsidiaries/entities/subsidiary.schema';
+import { Subsidiary, SubsidiaryDocument } from '../src/subsidiaries/schemas/subsidiary.schema';
 import { CreateSubsidiaryDto } from '../src/subsidiaries/dto/create-subsidiary.dto';
 
 import { ClientsModule } from '../src/clients/clients.module';
-import { Client, ClientDocument } from '../src/clients/entities/client.schema';
+import { Client, ClientDocument } from '../src/clients/schemas/client.schema';
+
+import { User, UserDocument, UserType } from '../src/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../src/roles/schemas/role.schema';
 
 describe('SubsidiariesController (e2e)', () => {
   let app: INestApplication;
   let mongod: MongoMemoryReplSet;
   let subsidiaryModel: Model<SubsidiaryDocument>;
   let clientModel: Model<ClientDocument>;
+  let userModel: Model<UserDocument>;
+  let roleModel: Model<RoleDocument>;
+  let jwtService: JwtService;
   let createdSubsidiaryId: string;
 
-  // Increase timeout for initial MongoDB download
+  let globalUserToken: string;
+  let nonAdminUserToken: string;
+  let clientUserToken: string;
+
   jest.setTimeout(60000);
 
   beforeAll(async () => {
-    mongod = await MongoMemoryReplSet.create({
-      replSet: {
-        count: 1,
-        dbName: 'jest'
-      }
-    });
+    mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
     const uri = mongod.getUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
         MongooseModule.forRoot(uri),
         DatabaseModule,
+        AuthModule,
+        UsersModule,
+        RolesModule,
         SubsidiariesModule,
         ClientsModule,
+        JwtModule.registerAsync({
+          imports: [ConfigModule],
+          useFactory: async (configService: ConfigService) => ({
+            secret: configService.get<string>('COGNITO_CLIENT_SECRET'),
+          }),
+          inject: [ConfigService],
+        }),
       ],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     useContainer(moduleFixture, { fallbackOnErrors: true });
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-        transformOptions: { enableImplicitConversion: true },
-      }),
-    );
-
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
     await app.init();
 
-    subsidiaryModel = moduleFixture.get<Model<SubsidiaryDocument>>(
-      getModelToken(Subsidiary.name),
-    );
-    clientModel = moduleFixture.get<Model<ClientDocument>>(
-      getModelToken(Client.name),
-    );
+    subsidiaryModel = moduleFixture.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
+    clientModel = moduleFixture.get<Model<ClientDocument>>(getModelToken(Client.name));
+    userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
+    roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
+    jwtService = moduleFixture.get<JwtService>(JwtService);
 
-    await subsidiaryModel.syncIndexes();
-    await clientModel.syncIndexes();
+    // --- One-Time Global User Setup ---
+    const globalAdminRole = await new roleModel({ recordId: 'ROLE_ADMIN_E2E', name: 'Administrator', visibilityScope: VisibilityScope.GLOBAL }).save();
+    const globalUser = await new userModel({ recordId: 'GLOBAL_USER', name: 'Global User', firstName: 'Global', lastName: 'User', userType: UserType.EMPLOYEE, roleId: globalAdminRole._id }).save();
+    globalUserToken = jwtService.sign({ sub: globalUser.recordId });
+
+    const clientRole = await new roleModel({ recordId: 'ROLE_CLIENT_E2E', name: 'Client Role', visibilityScope: VisibilityScope.CLIENT }).save();
+    const nonAdminUser = await new userModel({ recordId: 'NON_ADMIN_USER', name: 'Non-Admin User', firstName: 'Non-Admin', lastName: 'User', userType: UserType.EMPLOYEE, roleId: clientRole._id }).save();
+    nonAdminUserToken = jwtService.sign({ sub: nonAdminUser.recordId });
   });
 
   afterAll(async () => {
@@ -75,31 +92,36 @@ describe('SubsidiariesController (e2e)', () => {
   beforeEach(async () => {
     await subsidiaryModel.deleteMany({});
     await clientModel.deleteMany({});
+    // Clean users but preserve our global test users
+    const preservedUserIds = ['GLOBAL_USER', 'NON_ADMIN_USER'];
+    await userModel.deleteMany({ recordId: { $nin: preservedUserIds } });
+
+    const preservedRoleIds = ['ROLE_ADMIN_E2E', 'ROLE_CLIENT_E2E'];
+    await roleModel.deleteMany({ recordId: { $nin: preservedRoleIds } });
   });
 
   describe('POST /subsidiaries', () => {
-    it('should SUCCEED with 201 Created when creating a new subsidiary successfully', async () => {
-      const createSubsidiaryDto: CreateSubsidiaryDto = {
-        recordId: 'SUB_E2E_001',
-        name: 'E2E Test Subsidiary',
-      };
-
-      const response = await request(app.getHttpServer())
+    it('should SUCCEED with 201 Created', async () => {
+      const createSubsidiaryDto: CreateSubsidiaryDto = { recordId: 'SUB_E2E_001', name: 'E2E Test Subsidiary' };
+      await request(app.getHttpServer())
         .post('/subsidiaries')
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .send(createSubsidiaryDto)
-        .expect(201);
-
-      expect(response.body).toHaveProperty('_id');
-      expect(response.body.name).toEqual(createSubsidiaryDto.name);
-      expect(response.body.recordId).toEqual(createSubsidiaryDto.recordId);
-      expect(response.body.isActive).toBe(true);
-      expect(response.body.isDeleted).toBe(false);
+        .expect(201)
+        .then((response) => {
+          expect(response.body).toHaveProperty('_id');
+          expect(response.body.name).toEqual(createSubsidiaryDto.name);
+          expect(response.body.recordId).toEqual(createSubsidiaryDto.recordId);
+          expect(response.body.isActive).toBe(true);
+          expect(response.body.isDeleted).toBe(false);
+        });
     });
 
     it('should FAIL with 400 Bad Request if required fields are missing', () => {
       const incompleteDto = { name: 'Incomplete Subsidiary' };
       return request(app.getHttpServer())
         .post('/subsidiaries')
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .send(incompleteDto)
         .expect(400);
     });
@@ -112,6 +134,7 @@ describe('SubsidiariesController (e2e)', () => {
       };
       return request(app.getHttpServer())
         .post('/subsidiaries')
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .send(extraFieldDto)
         .expect(400);
     });
@@ -129,6 +152,7 @@ describe('SubsidiariesController (e2e)', () => {
     it('should SUCCEED with 200 OK when querying for a specific subsidiary by its ID', () => {
       return request(app.getHttpServer())
         .get(`/subsidiaries/${createdSubsidiaryId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(200)
         .then((response) => {
           expect(response.body._id).toEqual(createdSubsidiaryId);
@@ -140,12 +164,14 @@ describe('SubsidiariesController (e2e)', () => {
       const fakeMongoId = '63b4c5d6e7f8a9b0c1d2e3f5';
       return request(app.getHttpServer())
         .get(`/subsidiaries/${fakeMongoId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(404);
     });
 
     it('should SUCCEED with 200 OK when querying for all active, non-deleted subsidiaries by default', () => {
       return request(app.getHttpServer())
         .get('/subsidiaries')
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(200)
         .then((response) => {
           expect(Array.isArray(response.body)).toBe(true);
@@ -162,10 +188,11 @@ describe('SubsidiariesController (e2e)', () => {
         name: 'Deleted Subsidiary',
       }).save();
 
-      await request(app.getHttpServer()).delete(`/subsidiaries/${subsidiary._id}`);
+      await request(app.getHttpServer()).delete(`/subsidiaries/${subsidiary._id}`).set('Authorization', `Bearer ${globalUserToken}`);
 
       const response = await request(app.getHttpServer())
         .get('/subsidiaries?isDeleted=true')
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(200);
 
       expect(response.body.length).toBe(1);
@@ -182,11 +209,67 @@ describe('SubsidiariesController (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get('/subsidiaries?includeInactives=true')
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(200);
 
       expect(response.body.length).toBe(2);
     });
   });
+
+  describe('GET /subsidiaries (Visibility Scope)', () => {
+    let subA: SubsidiaryDocument;
+    let subB: SubsidiaryDocument;
+
+    beforeEach(async () => {
+      subA = await new subsidiaryModel({ recordId: 'SUB_A', name: 'Subsidiary A' }).save();
+      subB = await new subsidiaryModel({ recordId: 'SUB_B', name: 'Subsidiary B' }).save();
+      const clientA = await new clientModel({ recordId: 'CLI_A', name: 'Client of Sub A', subsidiaryId: subA._id }).save();
+
+      const clientRole = await roleModel.findOne({ recordId: 'ROLE_CLIENT_E2E' }).exec();
+      const clientUser = await new userModel({
+        recordId: 'SPECIFIC_CLIENT_USER',
+        name: 'Specific Client User',
+        firstName: 'Specific',
+        lastName: 'User',
+        userType: UserType.EMPLOYEE,
+        roleId: clientRole!._id,
+        clientIds: [clientA._id], // This user is only assigned to one client
+      }).save();
+      clientUserToken = jwtService.sign({ sub: clientUser.recordId });
+    });
+
+    it('should SUCCEED and return ALL subsidiaries for a user with Global scope', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/subsidiaries')
+        .set('Authorization', `Bearer ${globalUserToken}`)
+        .expect(200);
+
+      expect(response.body).toHaveLength(2);
+      const names = response.body.map(s => s.name);
+      expect(names).toEqual(expect.arrayContaining(['Subsidiary A', 'Subsidiary B']));
+    });
+
+    it('should SUCCEED and return ONLY the parent subsidiary for a user with Client scope', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/subsidiaries')
+        .set('Authorization', `Bearer ${clientUserToken}`)
+        .expect(200);
+
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].name).toBe('Subsidiary A');
+    });
+
+    it('should SUCCEED and return an empty array for a Client-scoped user who is not assigned to any clients with a subsidiary', async () => {
+      // Use the general non-admin user who has no client assignments
+      const response = await request(app.getHttpServer())
+        .get('/subsidiaries')
+        .set('Authorization', `Bearer ${nonAdminUserToken}`)
+        .expect(200);
+
+      expect(response.body).toHaveLength(0);
+    });
+  });
+
 
   describe('GET /subsidiaries/:subsidiaryId/clients', () => {
     let sub1_id: string;
@@ -206,6 +289,7 @@ describe('SubsidiariesController (e2e)', () => {
     it('should SUCCEED with 200 OK and return only the clients belonging to the specified subsidiary', async () => {
       const response = await request(app.getHttpServer())
         .get(`/subsidiaries/${sub1_id}/clients`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
@@ -222,6 +306,7 @@ describe('SubsidiariesController (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get(`/subsidiaries/${sub3._id}/clients`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
@@ -231,6 +316,7 @@ describe('SubsidiariesController (e2e)', () => {
     it('should SUCCEED with 200 OK when testing client related query parameters like ?name=', async () => {
       const response = await request(app.getHttpServer())
         .get(`/subsidiaries/${sub1_id}/clients?name=Client A`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(200);
 
       expect(response.body.length).toBe(1);
@@ -255,6 +341,7 @@ describe('SubsidiariesController (e2e)', () => {
     it('should SUCCEED with 200 OK when requesting clients for an ACTIVE subsidiary', () => {
       return request(app.getHttpServer())
         .get(`/subsidiaries/${activeSubId}/clients`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(200)
         .then(res => {
           expect(res.body.length).toBe(1);
@@ -265,6 +352,7 @@ describe('SubsidiariesController (e2e)', () => {
     it('should FAIL with 404 Not Found when requesting clients for an INACTIVE subsidiary', () => {
       return request(app.getHttpServer())
         .get(`/subsidiaries/${inactiveSubId}/clients`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(404);
     });
 
@@ -272,6 +360,7 @@ describe('SubsidiariesController (e2e)', () => {
       const fakeId = '60f8f1b3b5f9f1b3b5f9f1b5';
       return request(app.getHttpServer())
         .get(`/subsidiaries/${fakeId}/clients`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(404);
     });
   });
@@ -290,6 +379,7 @@ describe('SubsidiariesController (e2e)', () => {
       const updateDto = { name: 'Updated E2E Subsidiary' };
       return request(app.getHttpServer())
         .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .send(updateDto)
         .expect(200)
         .then((response) => {
@@ -301,6 +391,7 @@ describe('SubsidiariesController (e2e)', () => {
       const updateDto = { isActive: false };
       return request(app.getHttpServer())
         .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .send(updateDto)
         .expect(200)
         .then((response) => {
@@ -312,6 +403,7 @@ describe('SubsidiariesController (e2e)', () => {
       const updateDto = { name: 'Updated E2E Subsidiary' };
       return request(app.getHttpServer())
         .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .send(updateDto)
         .expect(200);
     });
@@ -320,6 +412,7 @@ describe('SubsidiariesController (e2e)', () => {
       const updateDto = { name: 'Updated E2E Subsidiary' };
       return request(app.getHttpServer())
         .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .send(updateDto)
         .expect(200);
     });
@@ -329,6 +422,7 @@ describe('SubsidiariesController (e2e)', () => {
       const updateDto = { isActive: false };
       return request(app.getHttpServer())
         .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .send(updateDto)
         .expect(409)
         .then(res => {
@@ -341,6 +435,7 @@ describe('SubsidiariesController (e2e)', () => {
       const updateDto = { isActive: false };
       return request(app.getHttpServer())
         .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .send(updateDto)
         .expect(200)
         .then(res => {
@@ -362,6 +457,7 @@ describe('SubsidiariesController (e2e)', () => {
     it('should SUCCEED with 200 OK when soft-deleting a subsidiary successfully', async () => {
       const response = await request(app.getHttpServer())
         .delete(`/subsidiaries/${createdSubsidiaryId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(200);
 
       expect(response.body.isDeleted).toBe(true);
@@ -369,6 +465,7 @@ describe('SubsidiariesController (e2e)', () => {
 
       await request(app.getHttpServer())
         .get(`/subsidiaries/${createdSubsidiaryId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(404);
     });
 
@@ -380,6 +477,7 @@ describe('SubsidiariesController (e2e)', () => {
 
       await request(app.getHttpServer())
         .delete(`/subsidiaries/${createdSubsidiaryId}`)
+        .set('Authorization', `Bearer ${globalUserToken}`)
         .expect(200);
 
       const clientOne = await clientModel.findOne({ recordId: 'CLI-001' });
