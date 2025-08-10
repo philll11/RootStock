@@ -1,11 +1,14 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model } from 'mongoose';
+
 import { Subsidiary, SubsidiaryDocument } from './entities/subsidiary.schema';
 import { CreateSubsidiaryDto } from './dto/create-subsidiary.dto';
 import { UpdateSubsidiaryDto } from './dto/update-subsidiary.dto';
 import { QuerySubsidiaryDto } from './dto/query-subsidiary.dto';
 import { SubsidiaryQueryBuilder } from './builders/subsidiary-query.builder';
+
+import { ClientsService } from '../clients/clients.service'; 
 import { Client, ClientDocument } from '../clients/entities/client.schema';
 
 @Injectable()
@@ -13,7 +16,8 @@ export class SubsidiariesService {
   constructor(
     @InjectModel(Subsidiary.name) private subsidiaryModel: Model<SubsidiaryDocument>,
     @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
-    @InjectConnection() private connection: Connection
+    @InjectConnection() private connection: Connection,
+    private readonly clientsService: ClientsService, 
   ) { }
 
   async create(createSubsidiaryDto: CreateSubsidiaryDto): Promise<Subsidiary> {
@@ -40,25 +44,39 @@ export class SubsidiariesService {
     return subsidiary;
   }
 
-  async update(
+async update(
     subsidiaryId: string,
     updateSubsidiaryDto: UpdateSubsidiaryDto,
     loggedInUserRole: string,
   ): Promise<Subsidiary> {
     await this._findSubsidiaryForUpdate(subsidiaryId, loggedInUserRole);
 
+    // Apply "clean on, clean off" principle
+    if (updateSubsidiaryDto.isActive === false) {
+      const activeClientCount = await this.clientsService.countActiveBySubsidiaryId(subsidiaryId);
+      if (activeClientCount > 0) {
+        throw new ConflictException(
+          `This subsidiary cannot be deactivated because it has ${activeClientCount} active client(s) assigned to it. Please reassign or deactivate the clients first.`,
+        );
+      }
+    }
+
+    // Prepare the update payload (handles field-level permissions)
     const updatePayload = this._prepareUpdatePayload(updateSubsidiaryDto, loggedInUserRole);
 
+    // Perform the update
     const updatedSubsidiary = await this.subsidiaryModel
       .findByIdAndUpdate(subsidiaryId, { $set: updatePayload }, { new: true })
       .exec();
 
     if (!updatedSubsidiary) {
+      // This case should rarely be hit if _findSubsidiaryForUpdate succeeds
       throw new NotFoundException(`Subsidiary with ID "${subsidiaryId}" could not be updated.`);
     }
 
     return updatedSubsidiary;
   }
+
 
   async remove(subsidiaryId: string): Promise<Subsidiary> {
     const session = await this.connection.startSession();

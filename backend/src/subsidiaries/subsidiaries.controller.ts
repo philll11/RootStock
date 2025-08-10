@@ -1,10 +1,16 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, UseFilters } from '@nestjs/common';
 import { SubsidiariesService } from './subsidiaries.service';
+
 import { CreateSubsidiaryDto } from './dto/create-subsidiary.dto';
 import { UpdateSubsidiaryDto } from './dto/update-subsidiary.dto';
 import { QuerySubsidiaryDto } from './dto/query-subsidiary.dto';
+
+import { ClientsService } from '../clients/clients.service';
+import { QueryClientDto } from '../clients/dto/query-client.dto';
+
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+
 import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
 import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
 
@@ -12,7 +18,10 @@ import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
 @UseGuards(RolesGuard)
 @UseFilters(MongoExceptionFilter)
 export class SubsidiariesController {
-  constructor(private readonly subsidiariesService: SubsidiariesService) { }
+  constructor(
+    private readonly subsidiariesService: SubsidiariesService,
+    private readonly clientsService: ClientsService,
+  ) { }
 
   @Post()
   @Roles('Administrator')
@@ -30,6 +39,18 @@ export class SubsidiariesController {
   @Get(':subsidiaryId')
   findOne(@Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string) {
     return this.subsidiariesService.findOne(subsidiaryId);
+  }
+
+  @Get(':subsidiaryId/clients')
+  async findAllClientsForSubsidiary(
+    @Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string,
+    @Query() query: QueryClientDto,
+  ) {
+    await this.subsidiariesService.findOne(subsidiaryId); // Is subsidiary ID active
+
+    // For now, we continue to use a placeholder for the user role
+    const fakeAdminRole = 'Administrator';
+    return this.clientsService.findAllBySubsidiaryId(subsidiaryId, query, fakeAdminRole);
   }
 
   @Patch(':subsidiaryId')

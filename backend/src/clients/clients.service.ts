@@ -32,6 +32,15 @@ export class ClientsService {
     return this.clientModel.find(filter).exec();
   }
 
+  async findAllBySubsidiaryId(subsidiaryId: string, query: QueryClientDto, loggedInUserRole: string): Promise<Client[]> {
+    const queryBuilder = new ClientQueryBuilder(query, loggedInUserRole);
+    const filter = queryBuilder.build();
+
+    filter.subsidiaryId = subsidiaryId;
+
+    return this.clientModel.find(filter).exec();
+  }
+
   async findOne(clientId: string): Promise<Client> {
     const client = await this.clientModel.findOne({ _id: clientId, isDeleted: false, isActive: true }).exec();
 
@@ -112,6 +121,20 @@ export class ClientsService {
       isDeleted: false,
     });
     return activeClientsCount === clientIds.length;
+  }
+
+  /**
+ * Counts active, non-deleted clients associated with a specific subsidiary.
+ * This is used as a pre-condition check before deactivating a subsidiary.
+ * @param subsidiaryId The ID of the parent subsidiary.
+ * @returns The number of active clients.
+ */
+  async countActiveBySubsidiaryId(subsidiaryId: string): Promise<number> {
+    return this.clientModel.countDocuments({
+      subsidiaryId: subsidiaryId,
+      isActive: true,
+      isDeleted: false,
+    }).exec();
   }
 
   /**

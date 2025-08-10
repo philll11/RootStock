@@ -8,7 +8,7 @@ import { IsExistingClientsConstraint } from "../clients/validators/is-existing-c
 import { IsExistingUserConstraint } from './validators/is-existing-user.validator';
 
 @Module({
-  imports: [ClientsModule],
+  imports: [RolesModule, ClientsModule],
   controllers: [UsersController],
   providers: [
     UsersService, 

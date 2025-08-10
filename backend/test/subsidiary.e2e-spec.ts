@@ -26,11 +26,11 @@ describe('SubsidiariesController (e2e)', () => {
   jest.setTimeout(60000);
 
   beforeAll(async () => {
-    mongod = await MongoMemoryReplSet.create({ 
-      replSet: { 
+    mongod = await MongoMemoryReplSet.create({
+      replSet: {
         count: 1,
         dbName: 'jest'
-      } 
+      }
     });
     const uri = mongod.getUri();
 
@@ -78,7 +78,7 @@ describe('SubsidiariesController (e2e)', () => {
   });
 
   describe('POST /subsidiaries', () => {
-    it('should create a new subsidiary successfully', async () => {
+    it('should SUCCEED with 201 Created when creating a new subsidiary successfully', async () => {
       const createSubsidiaryDto: CreateSubsidiaryDto = {
         recordId: 'SUB_E2E_001',
         name: 'E2E Test Subsidiary',
@@ -96,7 +96,7 @@ describe('SubsidiariesController (e2e)', () => {
       expect(response.body.isDeleted).toBe(false);
     });
 
-    it('should fail with a 400 Bad Request if required fields are missing', () => {
+    it('should FAIL with 400 Bad Request if required fields are missing', () => {
       const incompleteDto = { name: 'Incomplete Subsidiary' };
       return request(app.getHttpServer())
         .post('/subsidiaries')
@@ -104,7 +104,7 @@ describe('SubsidiariesController (e2e)', () => {
         .expect(400);
     });
 
-    it('should fail with a 400 Bad Request if a non-whitelisted field is provided', () => {
+    it('should FAIL with a 400 Bad Request if a non-whitelisted field is provided', () => {
       const extraFieldDto = {
         name: 'Extra Field Sub',
         recordId: 'SUB_E2E_002',
@@ -126,7 +126,7 @@ describe('SubsidiariesController (e2e)', () => {
       createdSubsidiaryId = subsidiary._id.toString();
     });
 
-    it('should find a specific subsidiary by its ID', () => {
+    it('should SUCCEED with 200 OK when querying for a specific subsidiary by its ID', () => {
       return request(app.getHttpServer())
         .get(`/subsidiaries/${createdSubsidiaryId}`)
         .expect(200)
@@ -136,14 +136,14 @@ describe('SubsidiariesController (e2e)', () => {
         });
     });
 
-    it('should return a 404 Not Found for a non-existent subsidiary ID', () => {
+    it('should FAIL with a 404 Not Found for a non-existent subsidiary ID', () => {
       const fakeMongoId = '63b4c5d6e7f8a9b0c1d2e3f5';
       return request(app.getHttpServer())
         .get(`/subsidiaries/${fakeMongoId}`)
         .expect(404);
     });
 
-    it('should find all active, non-deleted subsidiaries by default', () => {
+    it('should SUCCEED with 200 OK when querying for all active, non-deleted subsidiaries by default', () => {
       return request(app.getHttpServer())
         .get('/subsidiaries')
         .expect(200)
@@ -156,7 +156,7 @@ describe('SubsidiariesController (e2e)', () => {
   });
 
   describe('GET /subsidiaries (Advanced Queries)', () => {
-    it('should return soft-deleted records when isDeleted=true is queried (Admin)', async () => {
+    it('should SUCCEED with 200 OK and return soft-deleted records when isDeleted=true is queried (Admin)', async () => {
       const subsidiary: SubsidiaryDocument = await new subsidiaryModel({
         recordId: 'SUB_E2E_004',
         name: 'Deleted Subsidiary',
@@ -172,7 +172,7 @@ describe('SubsidiariesController (e2e)', () => {
       expect(response.body[0].name).toEqual('Deleted Subsidiary');
     });
 
-    it('should return both active and inactive records when includeInactives=true is queried', async () => {
+    it('should SUCCEED with 200 OK and return both active and inactive records when includeInactives=true is queried', async () => {
       await new subsidiaryModel({ recordId: 'SUB_E2E_005', name: 'Active Sub' }).save();
       await new subsidiaryModel({
         recordId: 'SUB_E2E_006',
@@ -188,19 +188,108 @@ describe('SubsidiariesController (e2e)', () => {
     });
   });
 
-  describe('PATCH /subsidiaries/:subsidiaryId', () => {
+  describe('GET /subsidiaries/:subsidiaryId/clients', () => {
+    let sub1_id: string;
+    let sub2_id: string;
+
     beforeEach(async () => {
-      const subsidiary: SubsidiaryDocument = await new subsidiaryModel({
-        recordId: 'SUB_E2E_007',
-        name: 'Update Me Subsidiary',
-      }).save();
-      createdSubsidiaryId = subsidiary._id.toString();
+      const sub1 = await new subsidiaryModel({ recordId: 'SUB1', name: 'Subsidiary One' }).save();
+      const sub2 = await new subsidiaryModel({ recordId: 'SUB2', name: 'Subsidiary Two' }).save();
+      sub1_id = sub1._id.toString();
+      sub2_id = sub2._id.toString();
+
+      await new clientModel({ recordId: 'C1', name: 'Client A (Sub 1)', subsidiaryId: sub1_id }).save();
+      await new clientModel({ recordId: 'C2', name: 'Client B (Sub 1)', subsidiaryId: sub1_id }).save();
+      await new clientModel({ recordId: 'C3', name: 'Client C (Sub 2)', subsidiaryId: sub2_id }).save();
     });
 
-    it('should update a subsidiary successfully', () => {
+    it('should SUCCEED with 200 OK and return only the clients belonging to the specified subsidiary', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/subsidiaries/${sub1_id}/clients`)
+        .expect(200);
+
+      expect(response.body).toBeInstanceOf(Array);
+      expect(response.body.length).toBe(2);
+
+      const names = response.body.map(client => client.name);
+      expect(names).toContain('Client A (Sub 1)');
+      expect(names).toContain('Client B (Sub 1)');
+      expect(names).not.toContain('Client C (Sub 2)');
+    });
+
+    it('should SUCCEED with 200 OK and return an empty array if the subsidiary exists but has no clients', async () => {
+      const sub3 = await new subsidiaryModel({ recordId: 'SUB3', name: 'Subsidiary Three (No Clients)' }).save();
+
+      const response = await request(app.getHttpServer())
+        .get(`/subsidiaries/${sub3._id}/clients`)
+        .expect(200);
+
+      expect(response.body).toBeInstanceOf(Array);
+      expect(response.body.length).toBe(0);
+    });
+
+    it('should SUCCEED with 200 OK when testing client related query parameters like ?name=', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/subsidiaries/${sub1_id}/clients?name=Client A`)
+        .expect(200);
+
+      expect(response.body.length).toBe(1);
+      expect(response.body[0].name).toEqual('Client A (Sub 1)');
+    });
+  });
+
+  describe('GET /subsidiaries/:subsidiaryId/clients (Guard Logic)', () => {
+    let activeSubId: string;
+    let inactiveSubId: string;
+
+    beforeEach(async () => {
+      const activeSub = await new subsidiaryModel({ recordId: 'ACTIVE_SUB', name: 'Active Sub' }).save();
+      activeSubId = activeSub._id.toString();
+      await new clientModel({ recordId: 'C1', name: 'Client of Active Sub', subsidiaryId: activeSubId }).save();
+
+      const inactiveSub = await new subsidiaryModel({ recordId: 'INACTIVE_SUB', name: 'Inactive Sub', isActive: false }).save();
+      inactiveSubId = inactiveSub._id.toString();
+      await new clientModel({ recordId: 'C2', name: 'Client of Inactive Sub', subsidiaryId: inactiveSubId }).save();
+    });
+
+    it('should SUCCEED with 200 OK when requesting clients for an ACTIVE subsidiary', () => {
+      return request(app.getHttpServer())
+        .get(`/subsidiaries/${activeSubId}/clients`)
+        .expect(200)
+        .then(res => {
+          expect(res.body.length).toBe(1);
+          expect(res.body[0].name).toBe('Client of Active Sub');
+        });
+    });
+
+    it('should FAIL with 404 Not Found when requesting clients for an INACTIVE subsidiary', () => {
+      return request(app.getHttpServer())
+        .get(`/subsidiaries/${inactiveSubId}/clients`)
+        .expect(404);
+    });
+
+    it('should FAIL with 404 Not Found when requesting clients for a non-existent subsidiary ID', () => {
+      const fakeId = '60f8f1b3b5f9f1b3b5f9f1b5';
+      return request(app.getHttpServer())
+        .get(`/subsidiaries/${fakeId}/clients`)
+        .expect(404);
+    });
+  });
+
+
+
+  describe('PATCH /subsidiaries/:subsidiaryId', () => {
+    let subsidiaryToUpdateId: string;
+
+    beforeEach(async () => {
+      const subsidiary: SubsidiaryDocument = await new subsidiaryModel({ recordId: 'SUB_E2E_007', name: 'Update Me Subsidiary', }).save();
+      subsidiaryToUpdateId = subsidiary._id.toString();
+    });
+
+    it('should SUCCEED with 200 OK when updating a subsidiary successfully', () => {
       const updateDto = { name: 'Updated E2E Subsidiary' };
       return request(app.getHttpServer())
-        .patch(`/subsidiaries/${createdSubsidiaryId}`)
+        .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
         .send(updateDto)
         .expect(200)
         .then((response) => {
@@ -208,17 +297,58 @@ describe('SubsidiariesController (e2e)', () => {
         });
     });
 
-    it('should allow an admin to set isActive to false', () => {
+    it('should SUCCEED with 200 OK when allowing an admin to set isActive to false', () => {
       const updateDto = { isActive: false };
       return request(app.getHttpServer())
-        .patch(`/subsidiaries/${createdSubsidiaryId}`)
+        .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
         .send(updateDto)
         .expect(200)
         .then((response) => {
           expect(response.body.isActive).toBe(false);
         });
     });
+
+    it('should SUCCEED with 200 OK when updating a subsidiary successfully', () => {
+      const updateDto = { name: 'Updated E2E Subsidiary' };
+      return request(app.getHttpServer())
+        .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
+        .send(updateDto)
+        .expect(200);
+    });
+
+    it('should update a subsidiary successfully', () => {
+      const updateDto = { name: 'Updated E2E Subsidiary' };
+      return request(app.getHttpServer())
+        .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
+        .send(updateDto)
+        .expect(200);
+    });
+
+    it('should FAIL with 409 Conflict when trying to deactivate a subsidiary that has active clients', async () => {
+      await new clientModel({ recordId: 'ACTIVE_CHILD', name: 'Active Child Client', subsidiaryId: subsidiaryToUpdateId }).save();
+      const updateDto = { isActive: false };
+      return request(app.getHttpServer())
+        .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
+        .send(updateDto)
+        .expect(409)
+        .then(res => {
+          expect(res.body.message).toContain('This subsidiary cannot be deactivated because it has 1 active client(s) assigned to it.');
+        });
+    });
+
+    it('should SUCCEED 200 OK when deactivating a subsidiary that has only inactive clients', async () => {
+      await new clientModel({ recordId: 'INACTIVE_CHILD', name: 'Inactive Child Client', subsidiaryId: subsidiaryToUpdateId, isActive: false }).save();
+      const updateDto = { isActive: false };
+      return request(app.getHttpServer())
+        .patch(`/subsidiaries/${subsidiaryToUpdateId}`)
+        .send(updateDto)
+        .expect(200)
+        .then(res => {
+          expect(res.body.isActive).toBe(false);
+        });
+    });
   });
+
 
   describe('DELETE /subsidiaries/:subsidiaryId', () => {
     beforeEach(async () => {
@@ -229,7 +359,7 @@ describe('SubsidiariesController (e2e)', () => {
       createdSubsidiaryId = subsidiary._id.toString();
     });
 
-    it('should soft-delete a subsidiary successfully', async () => {
+    it('should SUCCEED with 200 OK when soft-deleting a subsidiary successfully', async () => {
       const response = await request(app.getHttpServer())
         .delete(`/subsidiaries/${createdSubsidiaryId}`)
         .expect(200);
@@ -242,7 +372,7 @@ describe('SubsidiariesController (e2e)', () => {
         .expect(404);
     });
 
-    it('should atomically disassociate all child clients when a subsidiary is deleted', async () => {
+    it('should SUCCEED with 200 OK when atomically disassociate all child clients when a subsidiary is deleted', async () => {
       // Use the subsidiary created in the beforeEach hook to link clients
       await new clientModel({ recordId: 'CLI-001', name: 'Client One', subsidiaryId: createdSubsidiaryId }).save();
       await new clientModel({ recordId: 'CLI-002', name: 'Client Two', subsidiaryId: createdSubsidiaryId }).save();
