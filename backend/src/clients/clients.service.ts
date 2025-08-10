@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 
@@ -8,6 +8,7 @@ import { QueryClientDto } from './dto/query-client.dto';
 import { Client, ClientDocument } from './entities/client.schema';
 import { ClientQueryBuilder } from './builders/clients-query.builder';
 
+import { UsersService } from '../users/users.service';
 import { User, UserDocument } from '../users/entities/user.schema';
 
 @Injectable()
@@ -15,7 +16,8 @@ export class ClientsService {
   constructor(
     @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectConnection() private connection: Connection
+    @InjectConnection() private connection: Connection,
+    private readonly usersService: UsersService,
   ) { }
 
 
@@ -51,8 +53,17 @@ export class ClientsService {
     return client;
   }
 
-  async update(clientId: string, updateClientDto: UpdateClientDto, loggedInUserRole: string): Promise<Client> {
-    const existingClient = await this._findClientForUpdate(clientId, loggedInUserRole);
+async update(clientId: string, updateClientDto: UpdateClientDto, loggedInUserRole: string): Promise<Client> {
+    await this._findClientForUpdate(clientId, loggedInUserRole);
+
+    if (updateClientDto.isActive === false) {
+      const activeUserCount = await this.usersService.countActiveByClientId(clientId);
+      if (activeUserCount > 0) {
+        throw new ConflictException(
+          `This client cannot be deactivated because it has ${activeUserCount} active user(s) assigned to it. Please reassign or deactivate the users first.`,
+        );
+      }
+    }
 
     const updatePayload = this._prepareUpdatePayload(updateClientDto, loggedInUserRole);
 
@@ -68,6 +79,7 @@ export class ClientsService {
 
     return updatedClient;
   }
+
 
   async remove(clientId: string): Promise<Client> {
     const session = await this.connection.startSession();

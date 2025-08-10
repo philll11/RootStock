@@ -89,7 +89,7 @@ describe('ClientsController (e2e)', () => {
 
     describe('POST /clients', () => {
         // Test Case: Creating a new client with valid data.
-        it('should create a new client successfully', async () => {
+        it('should SUCCEED 201 Created when creating a new client successfully', async () => {
             const createClientDto: CreateClientDto = {
                 recordId: 'CLI_E2E_CLI001',
                 name: 'E2E Test Client',
@@ -107,7 +107,7 @@ describe('ClientsController (e2e)', () => {
         });
 
         // Test Case: Attempting to create a client with missing required fields.
-        it('should fail with a 400 Bad Request if required fields are missing', () => {
+        it('should FAIL with 400 Bad Request if required fields are missing', () => {
             const incompleteDto = { name: 'Incomplete Client' };
             return request(app.getHttpServer())
                 .post('/clients')
@@ -117,7 +117,7 @@ describe('ClientsController (e2e)', () => {
     });
 
     describe('POST /clients (Subsidiary Validation)', () => {
-        it('should create a client successfully with a VALID subsidiaryId', () => {
+        it('should SUCCEED with 201 Created when creating a client successfully with a VALID subsidiaryId', () => {
             const createDto: CreateClientDto = {
                 recordId: 'CLI_VALID_SUB',
                 name: 'Client with Valid Sub',
@@ -133,7 +133,7 @@ describe('ClientsController (e2e)', () => {
                 });
         });
 
-        it('should create a client successfully with a NULL subsidiaryId', () => {
+        it('should SUCCEED with 201 Created when creating a client successfully with a NULL subsidiaryId', () => {
             const createDto = {
                 recordId: 'CLI_NULL_SUB',
                 name: 'Client with Null Sub',
@@ -149,7 +149,7 @@ describe('ClientsController (e2e)', () => {
                 });
         });
 
-        it('should FAIL with a 400 Bad Request if subsidiaryId does NOT exist', () => {
+        it('should FAIL with 400 Bad Request if subsidiaryId does NOT exist', () => {
             const nonExistentMongoId = '60f8f1b3b5f9f1b3b5f9f1b4';
             const createDto: CreateClientDto = {
                 recordId: 'CLI_INVALID_SUB',
@@ -179,7 +179,7 @@ describe('ClientsController (e2e)', () => {
         });
 
         // Test Case: Finding a single client by its unique ID.
-        it('should find a specific client by its ID', () => {
+        it('should SUCCEED with 200 Created when finding a specific client by its ID', () => {
             return request(app.getHttpServer())
                 .get(`/clients/${createdClientId}`)
                 .expect(200)
@@ -190,7 +190,7 @@ describe('ClientsController (e2e)', () => {
         });
 
         // Test Case: Attempting to find a client with a non-existent ID.
-        it('should return a 404 Not Found for a non-existent client ID', () => {
+        it('should FAIL with 404 Not Found when querying for a non-existent client ID', () => {
             const fakeId = '63b4c5d6e7f8a9b0c1d2e3f5';
             return request(app.getHttpServer())
                 .get(`/clients/${fakeId}`)
@@ -198,7 +198,7 @@ describe('ClientsController (e2e)', () => {
         });
 
         // Test Case: Getting the default list of all active, non-deleted clients.
-        it('should find all active, non-deleted clients by default', () => {
+        it('should SUCCEED with 200 Created when finding all active, non-deleted clients by default', () => {
             return request(app.getHttpServer())
                 .get('/clients')
                 .expect(200)
@@ -212,7 +212,7 @@ describe('ClientsController (e2e)', () => {
 
     describe('GET /clients (Advanced Queries)', () => {
         // Test Case: Verifying an admin can retrieve soft-deleted records.
-        it('should return soft-deleted records when isDeleted=true is queried (Admin)', async () => {
+        it('should SUCCEED with 200 Created when returning soft-deleted records when isDeleted=true is queried (Admin)', async () => {
             const client: ClientDocument = await new clientModel({
                 recordId: 'UCLI_E2E_CLI003',
                 name: 'Deleted Client',
@@ -232,7 +232,7 @@ describe('ClientsController (e2e)', () => {
         // Test Case: Verifying a regular user CANNOT retrieve soft-deleted records.
         // NOTE: This test will fail until we can change the mock user in RolesGuard.
         // We will write it now to be ready for our full auth implementation.
-        it.skip('should return a 403 Forbidden when a non-admin queries for deleted records', () => {
+        it.skip('should FAIL with 403 Forbidden when a non-admin queries for deleted records', () => {
             // This test is skipped because we cannot currently change the mock user in the guard.
             // In a real implementation, we would set a header with a non-admin JWT.
             return request(app.getHttpServer())
@@ -242,7 +242,7 @@ describe('ClientsController (e2e)', () => {
         });
 
         // Test Case: Verifying the 'includeInactives' filter works correctly.
-        it('should return both active and inactive records when includeInactives=true is queried', async () => {
+        it('should SUCCEED with 200 Created and return both active and inactive records when includeInactives=true is queried', async () => {
             await new clientModel({
                 recordId: 'CLI_E2E_CLI004',
                 name: 'Active Client',
@@ -264,6 +264,50 @@ describe('ClientsController (e2e)', () => {
         });
     });
 
+    
+    describe('GET /clients/:clientId/users', () => {
+        let activeClientId: string;
+        let inactiveClientId: string;
+
+        beforeEach(async () => {
+            const activeClient = await new clientModel({ recordId: 'ACTIVE_CLI', name: 'Active Client' }).save();
+            activeClientId = activeClient._id.toString();
+            await new userModel({ recordId: 'U1', name: 'User of Active', firstName: 'U', lastName: '1', userType: UserType.EMPLOYEE, clientIds: [activeClientId] }).save();
+
+            const inactiveClient = await new clientModel({ recordId: 'INACTIVE_CLI', name: 'Inactive Client', isActive: false }).save();
+            inactiveClientId = inactiveClient._id.toString();
+            await new userModel({ recordId: 'U2', name: 'User of Inactive', firstName: 'U', lastName: '2', userType: UserType.EMPLOYEE, clientIds: [inactiveClientId] }).save();
+        });
+
+        it('should SUCCEED with 200 OK when requesting users for an ACTIVE client', () => {
+            return request(app.getHttpServer())
+                .get(`/clients/${activeClientId}/users`)
+                .expect(200)
+                .then(res => {
+                    expect(res.body.length).toBe(1);
+                    expect(res.body[0].name).toBe('User of Active');
+                });
+        });
+
+        it('should FAIL with 404 Not Found when requesting users for an INACTIVE client', () => {
+            return request(app.getHttpServer())
+                .get(`/clients/${inactiveClientId}/users`)
+                .expect(404);
+        });
+
+        it('should SUCCEED with 200 OK and return an empty array for an active client with no users', async () => {
+            const clientWithNoUsers = await new clientModel({ recordId: 'NO_USERS_CLI', name: 'Client With No Users' }).save();
+
+            return request(app.getHttpServer())
+                .get(`/clients/${clientWithNoUsers._id}/users`)
+                .expect(200)
+                .then(res => {
+                    expect(res.body.length).toBe(0);
+                });
+        });
+    });
+
+
     describe('PATCH /clients/:clientId', () => {
         beforeEach(async () => {
             const client: ClientDocument = await new clientModel({
@@ -274,7 +318,7 @@ describe('ClientsController (e2e)', () => {
             createdClientId = client._id.toString();
         });
         // Test Case: Updating a client's data.
-        it('should update a client successfully', () => {
+        it('should SUCCEED with 200 Created when updating a client successfully', () => {
             const updateDto = { name: 'Updated E2E Client' };
             return request(app.getHttpServer())
                 .patch(`/clients/${createdClientId}`)
@@ -286,13 +330,14 @@ describe('ClientsController (e2e)', () => {
         });
     });
 
+
     describe('DELETE /clients/:clientId', () => {
         beforeEach(async () => {
             const client = await new clientModel({ recordId: 'CLI-TO-DELETE', name: 'Delete Me' }).save();
             createdClientId = client._id.toString();
         });
 
-        it('should soft-delete a client successfully', async () => {
+        it('should SUCCEED with 200 Created and then FAIL with a 404 Not Found when soft-deleting a client', async () => {
             await request(app.getHttpServer())
                 .delete(`/clients/${createdClientId}`)
                 .expect(200)
@@ -307,7 +352,7 @@ describe('ClientsController (e2e)', () => {
                 .expect(404);
         });
 
-        it('should atomically disassociate all linked users when a client is deleted', async () => {
+        it('should SUCCEED with 200 Created when atomically disassociate all linked users when a client is deleted', async () => {
             const otherClient = await new clientModel({ recordId: 'OTHER-CLI', name: 'Other Client' }).save();
             // User 1: Linked to the client-to-be-deleted AND another client
             const user1 = await new userModel({ recordId: 'U1', firstName: 'User', lastName: 'One', name: 'User One', userType: UserType.EMPLOYEE, clientIds: [createdClientId, otherClient._id] }).save();

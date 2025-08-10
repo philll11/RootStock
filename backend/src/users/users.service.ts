@@ -38,6 +38,20 @@ export class UsersService {
   }
 
   /**
+ * Finds all users associated with a specific client.
+ * @param clientId - The ID of the parent client.
+ * @param query - The query parameters to filter users.
+ * @param loggedInUserRole - The role of the user performing the query.
+ * @returns A list of users assigned to the client.
+ */
+  async findAllByClientId(clientId: string, query: QueryUserDto, loggedInUserRole: string): Promise<User[]> {
+    const queryBuilder = new UserQueryBuilder(query, loggedInUserRole);
+    const filter = queryBuilder.build();
+    filter.clientIds = clientId;
+    return this.userModel.find(filter).exec();
+  }
+
+  /**
    * Finds a user by their ID, ensuring they are active and not deleted.
    * @param userId - The ID of the user to find.
    * @returns The found user document.
@@ -116,6 +130,20 @@ export class UsersService {
       isDeleted: false,
     });
     return count > 0;
+  }
+
+  /**
+ * Counts active, non-deleted users associated with a specific client.
+ * Used as a pre-condition check before deactivating a client.
+ * @param clientId The ID of the parent client.
+ * @returns The number of active users assigned to the client.
+ */
+  async countActiveByClientId(clientId: string): Promise<number> {
+    return this.userModel.countDocuments({
+      clientIds: clientId,
+      isActive: true,
+      isDeleted: false,
+    }).exec();
   }
 
   /**

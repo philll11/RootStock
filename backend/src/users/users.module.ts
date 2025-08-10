@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { RolesModule } from '../roles/roles.module';
@@ -8,7 +8,7 @@ import { IsExistingClientsConstraint } from "../clients/validators/is-existing-c
 import { IsExistingUserConstraint } from './validators/is-existing-user.validator';
 
 @Module({
-  imports: [RolesModule, ClientsModule],
+  imports: [RolesModule, forwardRef(() => ClientsModule)],
   controllers: [UsersController],
   providers: [
     UsersService, 
