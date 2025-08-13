@@ -3,6 +3,7 @@ import { BaseQueryBuilder } from '../../common/builders/base-query.builder';
 import { QuerySubsidiaryDto } from '../dto/query-subsidiary.dto';
 import { User } from '../../users/schemas/user.schema';
 import { ClientDocument } from '../../clients/schemas/client.schema';
+import { VisibilityScope } from '../../roles/schemas/role.schema';
 
 export class SubsidiaryQueryBuilder extends BaseQueryBuilder {
   constructor(
@@ -23,11 +24,11 @@ export class SubsidiaryQueryBuilder extends BaseQueryBuilder {
     const scope = (this.user.roleId as any).visibilityScope;
 
     switch (scope) {
-      case 'Global':
+      case VisibilityScope.GLOBAL:
         break;
 
-      case 'Client':
-      case 'Subsidiary':
+      case VisibilityScope.CLIENT:
+      case VisibilityScope.SUBSIDIARY:
         // For both Client and Subsidiary scopes, the logic is the same:
         // users can only see the parent subsidiaries of the clients they are assigned to.
         const accessibleSubsidiaryIds = await this.getAccessibleSubsidiaryIds();

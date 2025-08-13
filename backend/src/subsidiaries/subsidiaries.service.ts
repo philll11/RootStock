@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Connection, Model } from 'mongoose';
+import { Connection, Model, Types } from 'mongoose';
 
 import { Subsidiary, SubsidiaryDocument } from './schemas/subsidiary.schema';
 import { CreateSubsidiaryDto } from './dto/create-subsidiary.dto';
@@ -8,9 +8,10 @@ import { UpdateSubsidiaryDto } from './dto/update-subsidiary.dto';
 import { QuerySubsidiaryDto } from './dto/query-subsidiary.dto';
 import { SubsidiaryQueryBuilder } from './builders/subsidiary-query.builder';
 
-import { ClientsService } from '../clients/clients.service'; 
+import { ClientsService } from '../clients/clients.service';
 import { Client, ClientDocument } from '../clients/schemas/client.schema';
 import { User } from '../users/schemas/user.schema';
+import { PERMISSIONS } from '../common/constants/permissions.constants';
 
 @Injectable()
 export class SubsidiariesService {
@@ -18,7 +19,7 @@ export class SubsidiariesService {
     @InjectModel(Subsidiary.name) private subsidiaryModel: Model<SubsidiaryDocument>,
     @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
     @InjectConnection() private connection: Connection,
-    private readonly clientsService: ClientsService, 
+    private readonly clientsService: ClientsService,
   ) { }
 
   async create(createSubsidiaryDto: CreateSubsidiaryDto): Promise<Subsidiary> {
@@ -34,10 +35,16 @@ export class SubsidiariesService {
 
   async findOne(subsidiaryId: string, user: User): Promise<Subsidiary> {
     const queryBuilder = new SubsidiaryQueryBuilder({}, user, this.clientModel);
-    const filter = await queryBuilder.build();
-    filter._id = subsidiaryId;
+    const securityFilter = await queryBuilder.build();
 
-    const subsidiary = await this.subsidiaryModel.findOne(filter).exec();
+    const finalFilter = {
+      $and: [
+        securityFilter,
+        { _id: new Types.ObjectId(subsidiaryId) }
+      ]
+    };
+
+    const subsidiary = await this.subsidiaryModel.findOne(finalFilter).exec();
 
     if (!subsidiary) {
       throw new NotFoundException(`Subsidiary with ID "${subsidiaryId}" not found or you do not have permission to view it.`);
@@ -45,7 +52,7 @@ export class SubsidiariesService {
     return subsidiary;
   }
 
-async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, user: User): Promise<Subsidiary> {
+  async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, user: User): Promise<Subsidiary> {
     await this.findOne(subsidiaryId, user);
 
     if (updateSubsidiaryDto.isActive === false) {
@@ -96,33 +103,6 @@ async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, use
   }
 
   /**
-   * Finds a subsidiary for an update operation, applying role-based permissions.
-   * Throws a NotFoundException if the subsidiary doesn't exist or permissions fail.
-   * @private
-   */
-  private async _findSubsidiaryForUpdate(
-    subsidiaryId: string,
-    loggedInUserRole: string,
-  ): Promise<SubsidiaryDocument> {
-    const queryCondition: any = {
-      _id: subsidiaryId,
-      isDeleted: false,
-    };
-
-    // Only admins can view/edit inactive records.
-    if (loggedInUserRole !== 'Administrator') {
-      queryCondition.isActive = true;
-    }
-
-    const subsidiary = await this.subsidiaryModel.findOne(queryCondition).exec();
-
-    if (!subsidiary) {
-      throw new NotFoundException(`Subsidiary with ID "${subsidiaryId}" not found.`);
-    }
-    return subsidiary;
-  }
-
-  /**
    * Prepares the final, type-safe payload for a subsidiary update operation.
    * Handles role-based field permissions.
    * @private
@@ -130,10 +110,10 @@ async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, use
   private _prepareUpdatePayload(updateSubsidiaryDto: UpdateSubsidiaryDto, user: User): Partial<Subsidiary> {
     const { isActive, ...restOfDto } = updateSubsidiaryDto;
     const updatePayload: Partial<Subsidiary> = { ...restOfDto };
-    const userRoleName = (user.roleId as any)?.name;
+    const userPermissions = (user.roleId as any)?.permissions || [];
 
-    if ('isActive' in updateSubsidiaryDto) {
-      if (userRoleName !== 'Administrator') {
+    if (updateSubsidiaryDto.isActive !== undefined) {
+      if (!userPermissions.includes(PERMISSIONS.SUBSIDIARY_EDIT_STATUS)) {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
       updatePayload.isActive = isActive;

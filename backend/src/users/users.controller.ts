@@ -1,38 +1,40 @@
-import { Controller, Get, Query, Post, Body, Patch, Param, Delete, UseGuards, UseFilters, Req } from '@nestjs/common';
+import { Controller, Get, Query, Post, Body, Patch, Param, Delete, UseFilters, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { QueryUserDto } from './dto/query-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
 import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
-import { Roles } from '../common/decorators/roles.decorator';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+import { RequirePermission } from '../common/decorators/permissions.decorator';
+import { PERMISSIONS } from '../common/constants/permissions.constants';
+
 
 @Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard) // Apply guards globally to this controller
 @UseFilters(new MongoExceptionFilter())
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
   @Post()
-  @Roles('Administrator')
+  @RequirePermission(PERMISSIONS.USER_CREATE)
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
   @Get()
+  @RequirePermission(PERMISSIONS.USER_VIEW)
   findAll(@Query() query: QueryUserDto, @Req() req) {
     return this.usersService.findAll(query, req.user);
   }
 
   @Get(':userId')
+  @RequirePermission(PERMISSIONS.USER_VIEW)
   findOne(@Param('userId', ParseMongoIdPipe) userId: string, @Req() req) {
     return this.usersService.findOne(userId, req.user);
   }
 
   @Patch(':userId')
-  @Roles('Administrator')
+  @RequirePermission(PERMISSIONS.USER_EDIT)
   update(
     @Param('userId', ParseMongoIdPipe) userId: string,
     @Body() updateUserDto: UpdateUserDto,
@@ -42,7 +44,7 @@ export class UsersController {
   }
 
   @Delete(':userId')
-  @Roles('Administrator')
+  @RequirePermission(PERMISSIONS.USER_DELETE)
   remove(@Param('userId', ParseMongoIdPipe) userId: string, @Req() req) {
     return this.usersService.remove(userId, req.user);
   }

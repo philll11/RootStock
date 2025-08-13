@@ -1,4 +1,5 @@
 import { IsBoolean, IsMongoId, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class QueryClientDto {
 
@@ -12,13 +13,16 @@ export class QueryClientDto {
 
     @IsMongoId()
     @IsOptional()
+    @Type(() => Boolean)
     readonly subsidiaryId?: string;
-    
+
     @IsBoolean()
     @IsOptional()
+    @Type(() => Boolean)
     readonly isDeleted?: boolean;
 
     @IsBoolean()
     @IsOptional()
+    @Type(() => Boolean)
     readonly includeInactives?: boolean;
 }

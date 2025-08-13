@@ -11,6 +11,8 @@ import { ClientQueryBuilder } from './builders/clients-query.builder';
 import { UsersService } from '../users/users.service';
 import { User, UserDocument } from '../users/schemas/user.schema';
 
+import { PERMISSIONS } from '../common/constants/permissions.constants';
+
 @Injectable()
 export class ClientsService {
   constructor(
@@ -46,11 +48,16 @@ export class ClientsService {
    */
   async findOne(clientId: string, user: User): Promise<Client> {
     const queryBuilder = new ClientQueryBuilder({}, user, this.clientModel);
-    const filter = await queryBuilder.build();
+    const securityFilter = await queryBuilder.build();
 
-    filter._id = new Types.ObjectId(clientId);
+    const finalFilter = {
+      $and: [
+        securityFilter,
+        { _id: new Types.ObjectId(clientId) }
+      ]
+    };
 
-    const client = await this.clientModel.findOne(filter).exec();
+    const client = await this.clientModel.findOne(finalFilter).exec();
     if (!client) {
       throw new NotFoundException(`Client with ID "${clientId}" not found or you do not have permission to view it.`);
     }
@@ -154,43 +161,20 @@ export class ClientsService {
   }
 
   /**
- * Finds a client for an update operation, applying role-based permissions.
- * Throws a NotFoundException if the client doesn't exist or permissions fail.
- * @private
- */
-  private async _findClientForUpdate(clientId: string, loggedInUserRole: string): Promise<ClientDocument> {
-    const queryCondition: any = {
-      _id: clientId,
-      isDeleted: false,
-    };
-
-    // Only admins can view inactive master records.
-    if (loggedInUserRole !== 'Administrator') {
-      queryCondition.isActive = true;
-    }
-
-    const client = await this.clientModel.findOne(queryCondition).exec();
-
-    if (!client) {
-      throw new NotFoundException(
-        `Client with ID "${clientId}" not found.`,
-      );
-    }
-    return client;
-  }
-
-  /**
- * Prepares the final, type-safe payload for a client update operation.
- * Handles role-based field permissions.
- * @private
- */
+   * Prepares the final, type-safe payload for a client update operation.
+   * Handles permission-based field-level security.
+   * @private
+   */
   private _prepareUpdatePayload(updateClientDto: UpdateClientDto, user: User): Partial<Client> {
     const { subsidiaryId, isActive, ...restOfDto } = updateClientDto;
     const updatePayload: Partial<Client> = { ...restOfDto };
-    const userRoleName = (user.roleId as any)?.name;
 
-    if ('isActive' in updateClientDto) {
-      if (userRoleName !== 'Administrator') {
+    const userPermissions = (user.roleId as any)?.permissions || [];
+
+    // System Constraint: Only roles with CLIENT_EDIT_STATUS permissions can change Client status.
+    // This prevents non-admin users from turning off key master data records
+    if (updateClientDto.isActive !== undefined) {
+      if (!userPermissions.includes(PERMISSIONS.CLIENT_EDIT_STATUS)) {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
       updatePayload.isActive = isActive;

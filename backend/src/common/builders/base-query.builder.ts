@@ -4,6 +4,8 @@ import { User } from '../../users/schemas/user.schema';
 import { Client, ClientDocument } from '../../clients/schemas/client.schema';
 import { VisibilityScope } from '../../roles/schemas/role.schema';
 
+import { PERMISSIONS } from '../constants/permissions.constants'
+
 export class BaseQueryBuilder {
   protected filter: any = {};
   protected queryDto: any;
@@ -49,19 +51,23 @@ export class BaseQueryBuilder {
   }
 
   protected buildStatusFilters() {
-    const userRoleName = (this.user.roleId as any)?.name;
+    const userPermissions = (this.user.roleId as any)?.permissions || [];
 
     if (this.queryDto.isDeleted === true) {
-      if (userRoleName !== 'Administrator') {
+      if (!userPermissions.includes(PERMISSIONS.VIEW_DELETED)) {
         throw new ForbiddenException('You do not have permission to view deleted records.');
       }
       this.filter.isDeleted = true;
       return;
     }
 
+    // Default behavior: filter out deleted records.
     this.filter.isDeleted = false;
 
+    // Default behavior: only include active records.
     this.filter.isActive = true;
+
+    // Allow overriding the isActive filter if the DTO specifies it.
     if (this.queryDto.includeInactives) {
       this.filter.isActive = { $in: [true, false] };
     } else if (this.queryDto.isActive !== undefined) {

@@ -1,4 +1,5 @@
 import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class QueryRoleDto {
 
@@ -12,13 +13,16 @@ export class QueryRoleDto {
 
     @IsBoolean()
     @IsOptional()
+    @Type(() => Boolean)
     readonly isDeleted?: boolean;
 
     @IsBoolean()
     @IsOptional()
+    @Type(() => Boolean)
     readonly isActive?: boolean;
 
     @IsBoolean()
     @IsOptional()
+    @Type(() => Boolean)
     readonly includeInactives?: boolean;
 }

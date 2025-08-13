@@ -9,6 +9,8 @@ import { UserQueryBuilder } from './builders/user-query.builder';
 
 import { Client, ClientDocument } from '../clients/schemas/client.schema';
 
+import { PERMISSIONS } from '../common/constants/permissions.constants'; 
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -56,10 +58,16 @@ export class UsersService {
    */
   async findOne(userId: string, user: User): Promise<User> {
     const queryBuilder = new UserQueryBuilder({}, user, this.clientModel);
-    const filter = await queryBuilder.build();
-    filter._id = new Types.ObjectId(userId);
+    const securityFilter = await queryBuilder.build();
 
-    const targetUser = await this.userModel.findOne(filter).exec();
+    const finalFilter = {
+      $and: [
+        securityFilter,
+        { _id: new Types.ObjectId(userId) }
+      ]
+    };
+
+    const targetUser = await this.userModel.findOne(finalFilter).exec();
     if (!targetUser) {
       throw new NotFoundException(`User with ID "${userId}" not found or you do not have permission to view it.`);
     }
@@ -160,32 +168,6 @@ export class UsersService {
   }
 
   /**
- * Finds a user for an update operation, applying role-based permissions.
- * Throws a NotFoundException if the user doesn't exist or permissions fail.
- * @private
- */
-  private async _findUserForUpdate(userId: string, loggedInUserRole: string): Promise<UserDocument> {
-    const queryCondition: any = {
-      _id: userId,
-      isDeleted: false,
-    };
-
-    // Only admins can view inactive master records.
-    if (loggedInUserRole !== 'Administrator') {
-      queryCondition.isActive = true;
-    }
-
-    const user = await this.userModel.findOne(queryCondition).exec();
-
-    if (!user) {
-      throw new NotFoundException(
-        `User with ID "${userId}" not found.`,
-      );
-    }
-    return user;
-  }
-
-  /**
  * Prepares the payload for a NEW user.
  * Derives 'name' and transforms string IDs to ObjectIds.
  * @private
@@ -210,7 +192,8 @@ export class UsersService {
   private _prepareUpdatePayload(dto: UpdateUserDto, existingUser: User, loggedInUser: User): Partial<User> {
     const { roleId, clientIds, isActive, ...restOfDto } = dto;
     const payload: Partial<User> = { ...restOfDto };
-    const loggedInUserRoleName = (loggedInUser.roleId as any)?.name;
+    
+    const loggedInUserPermissions = (loggedInUser.roleId as any)?.permissions || [];
 
     if (payload.firstName || payload.lastName) {
       const newFirstName = payload.firstName || existingUser.firstName;
@@ -221,8 +204,8 @@ export class UsersService {
     if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
     if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
 
-    if ('isActive' in dto) {
-      if (loggedInUserRoleName !== 'Administrator') {
+    if (dto.isActive !== undefined) {
+      if (!loggedInUserPermissions.includes(PERMISSIONS.USER_EDIT_STATUS)) {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
       payload.isActive = isActive;

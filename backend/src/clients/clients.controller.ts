@@ -1,5 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseFilters, Query, Req } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseFilters, Query, Req } from '@nestjs/common';
 
 import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
 import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
@@ -12,11 +11,11 @@ import { QueryClientDto } from './dto/query-client.dto';
 import { UsersService } from '../users/users.service';
 import { QueryUserDto } from '../users/dto/query-user.dto';
 
-import { Roles } from '../common/decorators/roles.decorator';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { RequirePermission } from '../common/decorators/permissions.decorator';
+
+import { PERMISSIONS } from '../common/constants/permissions.constants';
 
 @Controller('clients')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @UseFilters(MongoExceptionFilter)
 export class ClientsController {
   constructor(
@@ -25,33 +24,36 @@ export class ClientsController {
   ) { }
 
   @Post()
-  @Roles('Administrator')
+  @RequirePermission(PERMISSIONS.CLIENT_CREATE)
   create(@Body() createClientDto: CreateClientDto) {
     return this.clientsService.create(createClientDto);
   }
 
   @Get()
+  @RequirePermission(PERMISSIONS.CLIENT_VIEW)
   findAll(@Query() query: QueryClientDto, @Req() req) {
     return this.clientsService.findAll(query, req.user);
   }
 
   @Get(':clientId')
+  @RequirePermission(PERMISSIONS.CLIENT_VIEW)
   findOne(@Param('clientId', ParseMongoIdPipe) clientId: string, @Req() req) {
     return this.clientsService.findOne(clientId, req.user);
   }
 
   @Get(':clientId/users')
+  @RequirePermission(PERMISSIONS.CLIENT_VIEW)
   async findAllUsersForClient(
     @Param('clientId', ParseMongoIdPipe) clientId: string,
     @Query() query: QueryUserDto,
     @Req() req,
   ) {
-    // This check is now secure because it uses the refactored, user-aware findOne method.
     await this.clientsService.findOne(clientId, req.user);
     return this.usersService.findAllByClientId(clientId, query, req.user);
   }
 
   @Patch(':clientId')
+  @RequirePermission(PERMISSIONS.CLIENT_EDIT)
   update(
     @Param('clientId', ParseMongoIdPipe) clientId: string,
     @Body() updateClientDto: UpdateClientDto,
@@ -61,7 +63,7 @@ export class ClientsController {
   }
 
   @Delete(':clientId')
-  @Roles('Administrator')
+  @RequirePermission(PERMISSIONS.CLIENT_DELETE)
   remove(@Param('clientId', ParseMongoIdPipe) clientId: string, @Req() req) {
     return this.clientsService.remove(clientId, req.user);
   }

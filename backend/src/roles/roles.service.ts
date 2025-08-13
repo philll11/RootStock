@@ -33,10 +33,17 @@ export class RolesService {
 
   async findOne(roleId: string, user: User): Promise<Role> {
     const queryBuilder = new RoleQueryBuilder({}, user);
-    const filter = await queryBuilder.build();
-    filter._id = new Types.ObjectId(roleId);
+    const securityFilter = await queryBuilder.build();
 
-    const role = await this.roleModel.findOne(filter).exec();
+    const finalFilter = {
+      $and: [
+        securityFilter,
+        { _id: new Types.ObjectId(roleId) }
+      ]
+    };
+
+    const role = await this.roleModel.findOne(finalFilter).exec();
+
 
     if (!role) {
       throw new NotFoundException(`Role with ID "${roleId}" not found or you do not have permission to view it.`);

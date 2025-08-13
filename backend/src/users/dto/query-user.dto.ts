@@ -1,8 +1,6 @@
 import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Type } from 'class-transformer';
 import { UserType } from '../schemas/user.schema';
-
-const toBoolean = (value: string) => value === 'true';
 
 export class QueryUserDto {
 
@@ -18,13 +16,13 @@ export class QueryUserDto {
     @IsOptional()
     readonly userType?: UserType;
 
-    @Transform(({ value }) => toBoolean(value))
     @IsBoolean()
     @IsOptional()
+    @Type(() => Boolean)
     readonly isDeleted?: boolean;
 
-    @Transform(({ value }) => toBoolean(value))
     @IsBoolean()
     @IsOptional()
+    @Type(() => Boolean)
     readonly includeInactives?: boolean;
 }
