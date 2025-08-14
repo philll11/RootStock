@@ -1,8 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
-import { Model, Types } from 'mongoose';
 import { User } from '../../users/schemas/user.schema';
-import { Client, ClientDocument } from '../../clients/schemas/client.schema';
 import { VisibilityScope } from '../../roles/schemas/role.schema';
+import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
 
 import { PERMISSIONS } from '../constants/permissions.constants'
 
@@ -11,13 +10,13 @@ export class BaseQueryBuilder {
   protected queryDto: any;
   protected user: User;
 
-  protected readonly clientModel: Model<ClientDocument>;
+  protected readonly clientResolverService: ClientResolverService;
 
-  constructor(queryDto: any, user: User, clientModel?: Model<ClientDocument>) {
+  constructor(queryDto: any, user: User, clientResolverService: ClientResolverService) {
     this.queryDto = queryDto;
     this.user = user;
-    if (clientModel) {
-      this.clientModel = clientModel;
+    if (clientResolverService) {
+      this.clientResolverService = clientResolverService;
     }
   }
 
@@ -44,7 +43,7 @@ export class BaseQueryBuilder {
         break;
 
       case VisibilityScope.SUBSIDIARY:
-        const accessibleClientIds = await this.getAccessibleClientIdsForSubsidiaryScope();
+        const accessibleClientIds = await this.clientResolverService.getAccessibleClientIdsForSubsidiaryScope(this.user);
         this.filter[resourceIdField] = { $in: accessibleClientIds };
         break;
     }
@@ -84,17 +83,4 @@ export class BaseQueryBuilder {
     }
   }
 
-  private async getAccessibleClientIdsForSubsidiaryScope(): Promise<Types.ObjectId[]> {
-    if (!this.clientModel) {
-        throw new Error('ClientModel must be provided to the builder for Subsidiary scope resolution.');
-    }
-    if (!this.user.clientIds || this.user.clientIds.length === 0) {
-      return [];
-    }
-
-    const assignedClients = await this.clientModel.find({ _id: { $in: this.user.clientIds } }).select('subsidiaryId').exec();
-    const subsidiaryIds = [...new Set(assignedClients.map(c => c.subsidiaryId))];
-    const accessibleClients = await this.clientModel.find({ subsidiaryId: { $in: subsidiaryIds } }).select('_id').exec();
-    return accessibleClients.map(c => c._id);
-  }
 }

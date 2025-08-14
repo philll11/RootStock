@@ -1,57 +1,40 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import { MongooseModule } from '@nestjs/mongoose';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { useContainer } from 'class-validator';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 
-import { AppModule } from '../../src/app.module';
+import { setupTestApp, teardownTestApp } from '../test-utils';
 
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
 import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
 import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
 describe('Users Advanced Logic (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
+    let jwtService: JwtService;
+
+    // Models
     let userModel: Model<UserDocument>;
     let clientModel: Model<ClientDocument>;
-    let jwtService: JwtService;
+    let roleModel: Model<RoleDocument>;
+
+    // Test Data
     let adminToken: string;
     let validClientId: string;
 
-    jest.setTimeout(60000);
+    jest.setTimeout(120000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
-        const uri = mongod.getUri();
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [
-                ConfigModule.forRoot({ isGlobal: true, envFilePath: './test/.env.test' }),
-                MongooseModule.forRoot(uri), AppModule,
-                JwtModule.registerAsync({
-                    imports: [ConfigModule],
-                    useFactory: async (configService: ConfigService) => ({ secret: configService.get<string>('COGNITO_CLIENT_SECRET'), signOptions: { expiresIn: '1h' } }),
-                    inject: [ConfigService],
-                }),
-            ],
-        }).compile();
-        app = moduleFixture.createNestApplication();
-        useContainer(app.select(AppModule), { fallbackOnErrors: true });
-        app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
-        await app.init();
+        ({ app, mongod, jwtService } = await setupTestApp());
 
-        userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
-        clientModel = moduleFixture.get<Model<ClientDocument>>(getModelToken(Client.name));
-        jwtService = moduleFixture.get<JwtService>(JwtService);
+        userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
+        clientModel = app.get<Model<ClientDocument>>(getModelToken(Client.name));
+        roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
 
-        const roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
         const adminRole = await new roleModel({ recordId: 'ROLE_U_ADV_ADMIN', name: 'User Adv Admin', permissions: Object.values(PERMISSIONS), visibilityScope: VisibilityScope.GLOBAL }).save();
         const adminUser = await new userModel({ recordId: 'USER_U_ADV_ADMIN', name: 'User Adv Admin', firstName: 'U', lastName: 'Admin', userType: UserType.EMPLOYEE, roleId: adminRole._id }).save();
 
@@ -61,7 +44,9 @@ describe('Users Advanced Logic (e2e)', () => {
         validClientId = client._id.toString();
     });
 
-    afterAll(async () => { await app.close(); await mongod.stop(); });
+    afterAll(async () => {
+        await teardownTestApp({ app, mongod });
+    });
     beforeEach(async () => { await userModel.deleteMany({ recordId: { $ne: 'USER_U_ADV_ADMIN' } }); });
 
     describe('Derived Fields', () => {

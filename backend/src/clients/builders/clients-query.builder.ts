@@ -1,13 +1,13 @@
 import { BaseQueryBuilder } from '../../common/builders/base-query.builder';
-import { Model, Types } from 'mongoose';
+import { Types } from 'mongoose';
 import { User } from '../../users/schemas/user.schema';
-import { ClientDocument } from '../schemas/client.schema';
 import { QueryClientDto } from '../dto/query-client.dto';
+import { ClientResolverService } from '../client-resolver/client-resolver.service';
 
 
 export class ClientQueryBuilder extends BaseQueryBuilder {
-  constructor(queryDto: QueryClientDto, user: User, clientModel: Model<ClientDocument>) {
-    super(queryDto, user, clientModel);
+  constructor(queryDto: QueryClientDto, user: User, clientResolverService: ClientResolverService) {
+    super(queryDto, user, clientResolverService);
   }
 
   protected buildSearchFilters() {

@@ -1,15 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import { MongooseModule } from '@nestjs/mongoose';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { useContainer } from 'class-validator';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 
-import { AppModule } from '../../src/app.module';
+import { setupTestApp, teardownTestApp } from '../test-utils';
+
 import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
 import { CreateRoleDto } from '../../src/roles/dto/create-role.dto';
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
@@ -18,43 +15,34 @@ import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 describe('Roles CRUD (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
-    let roleModel: Model<RoleDocument>;
     let jwtService: JwtService;
+
+    // Models
+    let roleModel: Model<RoleDocument>;
+    let userModel: Model<UserDocument>;
+
+    // Test Data
     let adminToken: string;
 
     jest.setTimeout(60000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
-        const uri = mongod.getUri();
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [
-                ConfigModule.forRoot({ isGlobal: true, envFilePath: './test/.env.test' }),
-                MongooseModule.forRoot(uri), AppModule,
-                JwtModule.registerAsync({
-                    imports: [ConfigModule],
-                    useFactory: async (configService: ConfigService) => ({ secret: configService.get<string>('COGNITO_CLIENT_SECRET'), signOptions: { expiresIn: '1h' } }),
-                    inject: [ConfigService],
-                }),
-            ],
-        }).compile();
+        ({ app, mongod, jwtService } = await setupTestApp());
 
-        app = moduleFixture.createNestApplication();
-        useContainer(app.select(AppModule), { fallbackOnErrors: true });
-        app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-        await app.init();
+        roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
+        userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
 
-        roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
-        jwtService = moduleFixture.get<JwtService>(JwtService);
-        const userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
-
+        // Create a single admin role/user with all permissions for these tests
         const adminPerms = [PERMISSIONS.ROLE_CREATE, PERMISSIONS.ROLE_VIEW, PERMISSIONS.ROLE_EDIT, PERMISSIONS.ROLE_DELETE];
         const adminRole = await new roleModel({ recordId: 'ROLE_CRUD_ADMIN', name: 'Role CRUD Admin', permissions: adminPerms, visibilityScope: VisibilityScope.GLOBAL }).save();
         const adminUser = await new userModel({ recordId: 'USER_ROLE_CRUD_ADMIN', name: 'Role CRUD Admin', firstName: 'Role', lastName: 'Admin', userType: UserType.EMPLOYEE, roleId: adminRole._id }).save();
         adminToken = jwtService.sign({ sub: adminUser.recordId });
     });
 
-    afterAll(async () => { await app.close(); await mongod.stop(); });
+    afterAll(async () => {
+        await teardownTestApp({ app, mongod });
+    });
+    
     beforeEach(async () => { await roleModel.deleteMany({ recordId: { $ne: 'ROLE_CRUD_ADMIN' } }); });
 
     describe('POST /roles', () => {

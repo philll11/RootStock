@@ -1,14 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import { MongooseModule } from '@nestjs/mongoose';
 import { getModelToken } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { useContainer } from 'class-validator';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AppModule } from '../../src/app.module';
+import { Model } from 'mongoose';
+import { JwtService } from '@nestjs/jwt';
+
+import { setupTestApp, teardownTestApp } from '../test-utils';
+
 import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
 import { CreateRoleDto } from '../../src/roles/dto/create-role.dto';
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
@@ -17,9 +15,13 @@ import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 describe('Roles Authorization (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
-    let roleModel: Model<RoleDocument>;
     let jwtService: JwtService;
-    
+
+    // Models
+    let roleModel: Model<RoleDocument>;
+    let userModel: Model<UserDocument>;
+
+    // Test Data
     let adminToken: string;
     let viewOnlyToken: string;
     let noPermissionsToken: string;
@@ -27,31 +29,16 @@ describe('Roles Authorization (e2e)', () => {
     jest.setTimeout(60000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
-        const uri = mongod.getUri();
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [
-                ConfigModule.forRoot({ isGlobal: true, envFilePath: './test/.env.test' }),
-                MongooseModule.forRoot(uri), AppModule,
-                JwtModule.registerAsync({
-                    imports: [ConfigModule],
-                    useFactory: async (configService: ConfigService) => ({ secret: configService.get<string>('COGNITO_CLIENT_SECRET'), signOptions: { expiresIn: '1h' } }),
-                    inject: [ConfigService],
-                }),
-            ],
-        }).compile();
-        app = moduleFixture.createNestApplication();
-        useContainer(app.select(AppModule), { fallbackOnErrors: true });
-        app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
-        await app.init();
-        roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
-        jwtService = moduleFixture.get<JwtService>(JwtService);
-        const userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
+        ({ app, mongod, jwtService } = await setupTestApp());
 
+        roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
+        userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
+
+        // Create a set of roles and users with varying permissions
         const adminRole = await new roleModel({ recordId: 'ROLE_AUTH_ADMIN', name: 'Role Auth Admin', permissions: [PERMISSIONS.ROLE_CREATE, PERMISSIONS.ROLE_VIEW], visibilityScope: VisibilityScope.GLOBAL }).save();
         const viewRole = await new roleModel({ recordId: 'ROLE_AUTH_VIEWER', name: 'Role Auth Viewer', permissions: [PERMISSIONS.ROLE_VIEW], visibilityScope: VisibilityScope.GLOBAL }).save();
         const noPermsRole = await new roleModel({ recordId: 'ROLE_AUTH_NONE', name: 'Role Auth None', permissions: [], visibilityScope: VisibilityScope.GLOBAL }).save();
-        
+
         const adminUser = await new userModel({ recordId: 'USER_ROLE_AUTH_ADMIN', name: 'Role Auth Admin', firstName: 'R', lastName: 'Admin', userType: UserType.EMPLOYEE, roleId: adminRole._id }).save();
         adminToken = jwtService.sign({ sub: adminUser.recordId });
         const viewUser = await new userModel({ recordId: 'USER_ROLE_AUTH_VIEWER', name: 'Role Auth Viewer', firstName: 'R', lastName: 'Viewer', userType: UserType.EMPLOYEE, roleId: viewRole._id }).save();
@@ -60,7 +47,10 @@ describe('Roles Authorization (e2e)', () => {
         noPermissionsToken = jwtService.sign({ sub: noPermsUser.recordId });
     });
 
-    afterAll(async () => { await app.close(); await mongod.stop(); });
+    afterAll(async () => {
+        await teardownTestApp({ app, mongod });
+    });
+
     beforeEach(async () => { await roleModel.deleteMany({ recordId: { $nin: ['ROLE_AUTH_ADMIN', 'ROLE_AUTH_VIEWER', 'ROLE_AUTH_NONE'] } }); });
 
     describe('Action Permissions', () => {

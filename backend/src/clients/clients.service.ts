@@ -7,9 +7,12 @@ import { UpdateClientDto } from './dto/update-client.dto';
 import { QueryClientDto } from './dto/query-client.dto';
 import { Client, ClientDocument } from './schemas/client.schema';
 import { ClientQueryBuilder } from './builders/clients-query.builder';
+import { ClientResolverService } from './client-resolver/client-resolver.service';
 
 import { UsersService } from '../users/users.service';
 import { User, UserDocument } from '../users/schemas/user.schema';
+import { Orchard, OrchardDocument } from '../orchards/schemas/orchard.schema';
+
 
 import { PERMISSIONS } from '../common/constants/permissions.constants';
 
@@ -18,23 +21,24 @@ export class ClientsService {
   constructor(
     @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Orchard.name) private orchardModel: Model<OrchardDocument>,
     @InjectConnection() private connection: Connection,
     private readonly usersService: UsersService,
+    private readonly clientResolverService: ClientResolverService,
   ) { }
 
 
   async create(createClientDto: CreateClientDto): Promise<Client> {
-    const createdClient = new this.clientModel(createClientDto);
-    return createdClient.save();
+    return this.clientModel.create(createClientDto);
   }
   async findAll(query: QueryClientDto, user: User): Promise<Client[]> {
-    const queryBuilder = new ClientQueryBuilder(query, user, this.clientModel);
+    const queryBuilder = new ClientQueryBuilder(query, user, this.clientResolverService);
     const filter = await queryBuilder.build();
     return this.clientModel.find(filter).exec();
   }
 
   async findAllBySubsidiaryId(subsidiaryId: string, queryDto: QueryClientDto, user: User): Promise<Client[]> {
-    const queryBuilder = new ClientQueryBuilder(queryDto, user, this.clientModel);
+    const queryBuilder = new ClientQueryBuilder(queryDto, user, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.subsidiaryId = new Types.ObjectId(subsidiaryId);
     return this.clientModel.find(filter).exec();
@@ -47,7 +51,7 @@ export class ClientsService {
    * @returns The found client document.
    */
   async findOne(clientId: string, user: User): Promise<Client> {
-    const queryBuilder = new ClientQueryBuilder({}, user, this.clientModel);
+    const queryBuilder = new ClientQueryBuilder({}, user, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = {
@@ -75,9 +79,17 @@ export class ClientsService {
     await this.findOne(clientId, user); // Will raise error if user does not have permission to view record
 
     if (updateClientDto.isActive === false) {
+
+      // Check for child User records
       const activeUserCount = await this.usersService.countActiveByClientId(clientId);
       if (activeUserCount > 0) {
         throw new ConflictException(`This client cannot be deactivated because it has ${activeUserCount} active user(s) assigned to it. Please reassign or deactivate the users first.`);
+      }
+
+      // Check for child Orchard records
+      const activeOrchardCount = await this.orchardModel.countDocuments({ clientId: new Types.ObjectId(clientId), isActive: true, isDeleted: false });
+      if (activeOrchardCount > 0) {
+        throw new ConflictException(`This client cannot be deactivated because it has ${activeOrchardCount} active orchard(s). Please deactivate the orchards first.`);
       }
     }
 
@@ -107,7 +119,14 @@ export class ClientsService {
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
+
+      // Disassociate users from this client
       await this.userModel.updateMany({ clientIds: clientId }, { $pull: { clientIds: clientId } }, { session }).exec();
+
+      // Soft-delete associated orchards
+      await this.orchardModel.updateMany({ clientId: new Types.ObjectId(clientId) }, { isDeleted: true, isActive: false }, { session }).exec();
+
+      // Soft-delete the client itself
       const deletedClient = await this.clientModel.findByIdAndUpdate(
         clientId,
         { isDeleted: true, isActive: false },
@@ -144,6 +163,23 @@ export class ClientsService {
       isDeleted: false,
     });
     return activeClientsCount === clientIds.length;
+  }
+
+  /**
+ * Validates that a single client ID exists, is active, and not deleted.
+ * @param clientId - A single client ID string to validate.
+ * @returns `true` if the ID is valid, `false` otherwise.
+ */
+  async validateSingleClientId(clientId: string): Promise<boolean> {
+    if (!clientId) {
+      return false;
+    }
+    const client = await this.clientModel.findOne({
+      _id: new Types.ObjectId(clientId),
+      isActive: true,
+      isDeleted: false,
+    });
+    return !!client; // Returns true if client is found, false otherwise
   }
 
   /**

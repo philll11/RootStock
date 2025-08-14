@@ -11,7 +11,7 @@ export class IsExistingUserConstraint implements ValidatorConstraintInterface {
     constructor(private readonly usersService: UsersService) { }
     async validate(userId: string, args: ValidationArguments): Promise<boolean> {
         if (!userId) return true;
-        return this.usersService.isUserExistingAndActive(userId);
+        return this.usersService.validateUserId(userId);
     }
     defaultMessage(args: ValidationArguments) {
         return `User with ID "${args.value}" does not exist, is inactive, or has been deleted.`

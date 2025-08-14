@@ -1,15 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import { MongooseModule } from '@nestjs/mongoose';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { useContainer } from 'class-validator';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 
-import { AppModule } from '../../src/app.module';
+import { setupTestApp, teardownTestApp } from '../test-utils';
+
 import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
 import { CreateClientDto } from '../../src/clients/dto/create-client.dto';
 import { UpdateClientDto } from '../../src/clients/dto/update-client.dto';
@@ -21,12 +18,15 @@ import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 describe('Clients CRUD (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
+    let jwtService: JwtService;
+
+    // Models
     let clientModel: Model<ClientDocument>;
     let subsidiaryModel: Model<SubsidiaryDocument>;
     let userModel: Model<UserDocument>;
     let roleModel: Model<RoleDocument>;
-    let jwtService: JwtService;
 
+    // Test Data
     let adminToken: string; // A token with all necessary CRUD permissions
     let validSubsidiaryId: string;
     let inactiveSubsidiaryId: string;
@@ -34,36 +34,12 @@ describe('Clients CRUD (e2e)', () => {
     jest.setTimeout(60000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
-        const uri = mongod.getUri();
+        ({ app, mongod, jwtService } = await setupTestApp());
 
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [
-                ConfigModule.forRoot({ isGlobal: true, envFilePath: './test/.env.test' }),
-                MongooseModule.forRoot(uri),
-                AppModule,
-                JwtModule.registerAsync({
-                    imports: [ConfigModule],
-                    useFactory: async (configService: ConfigService) => ({
-                        secret: configService.get<string>('COGNITO_CLIENT_SECRET'),
-                        signOptions: { expiresIn: '1h' },
-                    }),
-                    inject: [ConfigService],
-                }),
-            ],
-        }).compile();
-
-        app = moduleFixture.createNestApplication();
-        useContainer(app.select(AppModule), { fallbackOnErrors: true });
-        app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-        await app.init();
-
-        // Get Models
-        clientModel = moduleFixture.get<Model<ClientDocument>>(getModelToken(Client.name));
-        subsidiaryModel = moduleFixture.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
-        userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
-        roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
-        jwtService = moduleFixture.get<JwtService>(JwtService);
+        clientModel = app.get<Model<ClientDocument>>(getModelToken(Client.name));
+        subsidiaryModel = app.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
+        userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
+        roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
 
         // Create a single admin role/user with all permissions for these tests
         const adminRole = await new roleModel({
@@ -83,13 +59,13 @@ describe('Clients CRUD (e2e)', () => {
     });
 
     afterAll(async () => {
-        await app.close();
-        await mongod.stop();
+        await teardownTestApp({ app, mongod });
     });
 
     beforeEach(async () => {
         await clientModel.deleteMany({});
         await subsidiaryModel.deleteMany({});
+        await userModel.deleteMany({ recordId: { $ne: 'USER_CRUD_ADMIN' } });
 
         const validSubsidiary = await new subsidiaryModel({ recordId: 'SUB_VALID', name: 'Valid Subsidiary' }).save();
         validSubsidiaryId = validSubsidiary._id.toString();

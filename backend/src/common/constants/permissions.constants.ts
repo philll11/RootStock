@@ -31,6 +31,17 @@ export const PERMISSIONS = {
    */
   CLIENT_EDIT_STATUS: 'Client:EditStatus',
 
+  // --- Orchard Management ---
+  // Permissions for managing orchard entities.
+  ORCHARD_CREATE: 'Orchard:Create',
+  ORCHARD_VIEW: 'Orchard:View',
+  ORCHARD_EDIT: 'Orchard:Edit',
+  ORCHARD_DELETE: 'Orchard:Delete',
+  /**
+   * Grants the ability to change a client's `isActive` status.
+   */
+  ORCHARD_EDIT_STATUS: 'Orchard:EditStatus',
+
   // --- Role Management ---
   // Permissions for managing user roles and their associated permissions.
   // These are typically restricted to top-level administrators.

@@ -35,8 +35,7 @@ async function bootstrap() {
         name: 'Administrator',
         description: 'Super administrator with access to all system features and data.',
         visibilityScope: VisibilityScope.GLOBAL,
-        // Grants every permission defined in the system.
-        permissions: Object.values(PERMISSIONS),
+        permissions: Object.values(PERMISSIONS), // Grants every permission defined in the system.
         isActive: true,
       },
       {
@@ -48,6 +47,7 @@ async function bootstrap() {
         permissions: [
           PERMISSIONS.CLIENT_VIEW,
           PERMISSIONS.USER_VIEW,
+          PERMISSIONS.ORCHARD_VIEW,
           // Add other permissions a consultant might need by default.
         ],
         isActive: true,
@@ -61,6 +61,7 @@ async function bootstrap() {
         permissions: [
             PERMISSIONS.CLIENT_VIEW,
             PERMISSIONS.USER_VIEW,
+            PERMISSIONS.ORCHARD_VIEW,
         ],
         isActive: true,
       },
@@ -72,9 +73,13 @@ async function bootstrap() {
     // - If a role with the `recordId` exists, it will be updated with the latest permissions.
     // - If it does not exist, it will be created.
     for (const roleData of seedRoles) {
-      const { recordId } = roleData;
-      await roleModel.findOneAndUpdate({ recordId }, roleData, { upsert: true, new: true });
-      console.log(`Successfully seeded/updated role: ${roleData.name}`);
+      const { recordId, permissions, ...restOfRoleData } = roleData;
+      const result = await roleModel.findOneAndUpdate(
+          { recordId },
+          { ...restOfRoleData, $addToSet: { permissions: { $each: permissions } } },
+          { upsert: true, new: true }
+      );
+      console.log(`Successfully seeded/updated role: ${result.name}`);
     }
 
     console.log('Database seeding completed successfully.');

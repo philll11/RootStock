@@ -8,6 +8,9 @@ import { Model, Types } from 'mongoose';
 import { useContainer } from 'class-validator';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+
+import { setupTestApp, teardownTestApp } from '../test-utils';
+
 import { AppModule } from '../../src/app.module';
 import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
 import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
@@ -18,37 +21,29 @@ import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 describe('Subsidiaries Advanced Logic (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
+    let jwtService: JwtService;
+
+    // Models
     let subsidiaryModel: Model<SubsidiaryDocument>;
     let clientModel: Model<ClientDocument>;
-    let jwtService: JwtService;
+    let userModel: Model<UserDocument>;
+    let roleModel: Model<RoleDocument>;
+
+    // Test Data
     let adminToken: string;
 
     jest.setTimeout(60000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
-        const uri = mongod.getUri();
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [
-                ConfigModule.forRoot({ isGlobal: true, envFilePath: './test/.env.test' }),
-                MongooseModule.forRoot(uri), AppModule,
-                JwtModule.registerAsync({
-                    imports: [ConfigModule],
-                    useFactory: async (configService: ConfigService) => ({ secret: configService.get<string>('COGNITO_CLIENT_SECRET'), signOptions: { expiresIn: '1h' } }),
-                    inject: [ConfigService],
-                }),
-            ],
-        }).compile();
-        app = moduleFixture.createNestApplication();
-        useContainer(app.select(AppModule), { fallbackOnErrors: true });
-        app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
-        await app.init();
+        ({ app, mongod, jwtService } = await setupTestApp());
 
-        subsidiaryModel = moduleFixture.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
-        clientModel = moduleFixture.get<Model<ClientDocument>>(getModelToken(Client.name));
-        jwtService = moduleFixture.get<JwtService>(JwtService);
-        const roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
-        const userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
+        // Get Models directly from the app instance
+        subsidiaryModel = app.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
+        clientModel = app.get<Model<ClientDocument>>(getModelToken(Client.name));
+        userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
+        roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
+
+        // Create a global admin role and user
         const adminRole = await new roleModel({ recordId: 'ROLE_SUB_ADV_ADMIN', name: 'Sub Adv Admin', permissions: Object.values(PERMISSIONS), visibilityScope: VisibilityScope.GLOBAL }).save();
         const adminUser = await new userModel({ recordId: 'USER_SUB_ADV_ADMIN', name: 'Sub Adv Admin', firstName: 'Sub', lastName: 'Adv', userType: UserType.EMPLOYEE, roleId: adminRole._id }).save();
         adminToken = jwtService.sign({ sub: adminUser.recordId });

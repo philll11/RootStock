@@ -17,7 +17,12 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e:subsidiaries": "jest --config ./test/jest-e2e.json --testPathPatterns=test/subsidiary",
+    "test:e2e:roles": "jest --config ./test/jest-e2e.json --testPathPatterns=test/role",
+    "test:e2e:clients": "jest --config ./test/jest-e2e.json --testPathPatterns=test/client",
+    "test:e2e:users": "jest --config ./test/jest-e2e.json --testPathPatterns=test/user",
+    "test:e2e:orchards": "jest --config ./test/jest-e2e.json --testPathPatterns=test/orchard",
+    "test:e2e": "npm run test:e2e:subsidiaries && npm run test:e2e:roles && npm run test:e2e:clients && npm run test:e2e:users && npm run test:e2e:orchards",
     "seed": "ts-node src/seed.ts"
   },
   "dependencies": {

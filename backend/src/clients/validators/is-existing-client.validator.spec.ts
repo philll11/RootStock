@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ValidationArguments } from 'class-validator';
-import { IsExistingClientsConstraint } from './is-existing-clients.validator';
+import { IsExistingClientConstraint } from './is-existing-client.validator';
 import { ClientsService } from '../clients.service';
 
 const mockClientsService = {
   validateClientIds: jest.fn(),
 };
 
-describe('IsExistingClientsConstraint', () => {
-  let validator: IsExistingClientsConstraint;
+describe('IsExistingClientConstraint', () => {
+  let validator: IsExistingClientConstraint;
 
   const mockArgs: ValidationArguments = {
     value: [],
@@ -21,7 +21,7 @@ describe('IsExistingClientsConstraint', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        IsExistingClientsConstraint,
+        IsExistingClientConstraint,
         {
           provide: ClientsService,
           useValue: mockClientsService,
@@ -29,7 +29,7 @@ describe('IsExistingClientsConstraint', () => {
       ],
     }).compile();
 
-    validator = module.get<IsExistingClientsConstraint>(IsExistingClientsConstraint);
+    validator = module.get<IsExistingClientConstraint>(IsExistingClientConstraint);
     jest.clearAllMocks();
   });
 

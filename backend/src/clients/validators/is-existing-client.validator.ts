@@ -4,7 +4,7 @@ import { ClientsService } from '../clients.service';
 
 @ValidatorConstraint({ name: 'isExistingClients', async: true })
 @Injectable()
-export class IsExistingClientsConstraint implements ValidatorConstraintInterface {
+export class IsExistingClientConstraint implements ValidatorConstraintInterface {
   constructor(private readonly clientsService: ClientsService) {}
 
   async validate(clientIds: string[], args: ValidationArguments): Promise<boolean> {

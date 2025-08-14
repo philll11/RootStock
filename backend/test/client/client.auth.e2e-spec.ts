@@ -1,14 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import { MongooseModule } from '@nestjs/mongoose';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { useContainer } from 'class-validator';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AppModule } from '../../src/app.module';
+import { JwtService } from '@nestjs/jwt';
+
+import { setupTestApp, teardownTestApp } from '../test-utils';
+
 import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
 import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
@@ -18,12 +16,15 @@ import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 describe('Clients Authorization (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
+    let jwtService: JwtService;
+
+    // Models
     let clientModel: Model<ClientDocument>;
     let subsidiaryModel: Model<SubsidiaryDocument>;
     let userModel: Model<UserDocument>;
     let roleModel: Model<RoleDocument>;
-    let jwtService: JwtService;
 
+    // Test Data
     let adminToken: string;
     let editorToken: string;
     let viewOnlyToken: string;
@@ -32,36 +33,15 @@ describe('Clients Authorization (e2e)', () => {
     jest.setTimeout(60000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
-        const uri = mongod.getUri();
+        ({ app, mongod, jwtService } = await setupTestApp());
+        
+        // Get Models directly from the app instance
+        clientModel = app.get<Model<ClientDocument>>(getModelToken(Client.name));
+        subsidiaryModel = app.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
+        userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
+        roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
 
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [
-                ConfigModule.forRoot({ isGlobal: true, envFilePath: './test/.env.test' }),
-                MongooseModule.forRoot(uri),
-                AppModule,
-                JwtModule.registerAsync({
-                    imports: [ConfigModule],
-                    useFactory: async (configService: ConfigService) => ({
-                        secret: configService.get<string>('COGNITO_CLIENT_SECRET'),
-                        signOptions: { expiresIn: '1h' },
-                    }),
-                    inject: [ConfigService],
-                }),
-            ],
-        }).compile();
-
-        app = moduleFixture.createNestApplication();
-        useContainer(app.select(AppModule), { fallbackOnErrors: true });
-        app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-        await app.init();
-
-        clientModel = moduleFixture.get<Model<ClientDocument>>(getModelToken(Client.name));
-        subsidiaryModel = moduleFixture.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
-        userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
-        roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
-        jwtService = moduleFixture.get<JwtService>(JwtService);
-
+        // Create roles and users for testing different permission levels
         const adminRole = await new roleModel({ recordId: 'ROLE_ADMIN', name: 'Admin', permissions: Object.values(PERMISSIONS), visibilityScope: VisibilityScope.GLOBAL }).save();
         const editorRole = await new roleModel({ recordId: 'ROLE_EDITOR', name: 'Editor', permissions: [PERMISSIONS.CLIENT_VIEW, PERMISSIONS.CLIENT_EDIT], visibilityScope: VisibilityScope.GLOBAL }).save();
         const viewOnlyRole = await new roleModel({ recordId: 'ROLE_VIEWER', name: 'Viewer', permissions: [PERMISSIONS.CLIENT_VIEW], visibilityScope: VisibilityScope.GLOBAL }).save();
@@ -81,8 +61,7 @@ describe('Clients Authorization (e2e)', () => {
     });
 
     afterAll(async () => {
-        await app.close();
-        await mongod.stop();
+        await teardownTestApp({ app, mongod });
     });
 
     beforeEach(async () => {

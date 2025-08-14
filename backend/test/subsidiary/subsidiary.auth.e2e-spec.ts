@@ -8,6 +8,9 @@ import { Model, Types } from 'mongoose';
 import { useContainer } from 'class-validator';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+
+import { setupTestApp, teardownTestApp } from '../test-utils';
+
 import { AppModule } from '../../src/app.module';
 import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
 import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
@@ -18,41 +21,31 @@ import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 describe('Subsidiaries Authorization (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
+    let jwtService: JwtService;
+
+    // Models
     let subsidiaryModel: Model<SubsidiaryDocument>;
     let clientModel: Model<ClientDocument>;
     let userModel: Model<UserDocument>;
     let roleModel: Model<RoleDocument>;
-    let jwtService: JwtService;
 
-    let adminToken: string, editorToken: string, viewOnlyToken: string, noPermissionsToken: string;
+    // Test Data
+    let adminToken: string;
+    let editorToken: string;
+    let viewOnlyToken: string
+    let noPermissionsToken: string;
 
     jest.setTimeout(60000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
-        const uri = mongod.getUri();
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [
-                ConfigModule.forRoot({ isGlobal: true, envFilePath: './test/.env.test' }),
-                MongooseModule.forRoot(uri), AppModule,
-                JwtModule.registerAsync({
-                    imports: [ConfigModule],
-                    useFactory: async (configService: ConfigService) => ({ secret: configService.get<string>('COGNITO_CLIENT_SECRET'), signOptions: { expiresIn: '1h' } }),
-                    inject: [ConfigService],
-                }),
-            ],
-        }).compile();
-        app = moduleFixture.createNestApplication();
-        useContainer(app.select(AppModule), { fallbackOnErrors: true });
-        app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
-        await app.init();
+        ({ app, mongod, jwtService } = await setupTestApp());
 
-        subsidiaryModel = moduleFixture.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
-        clientModel = moduleFixture.get<Model<ClientDocument>>(getModelToken(Client.name));
-        userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
-        roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
-        jwtService = moduleFixture.get<JwtService>(JwtService);
+        subsidiaryModel = app.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
+        clientModel = app.get<Model<ClientDocument>>(getModelToken(Client.name));
+        userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
+        roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
 
+        // Create a set of roles and users with varying permissions
         const adminRole = await new roleModel({ recordId: 'ROLE_ADMIN_SUB_AUTH', name: 'Sub Auth Admin', permissions: Object.values(PERMISSIONS), visibilityScope: VisibilityScope.GLOBAL }).save();
         const editorRole = await new roleModel({ recordId: 'ROLE_EDITOR_SUB_AUTH', name: 'Sub Auth Editor', permissions: [PERMISSIONS.SUBSIDIARY_VIEW, PERMISSIONS.SUBSIDIARY_EDIT], visibilityScope: VisibilityScope.GLOBAL }).save();
         const viewOnlyRole = await new roleModel({ recordId: 'ROLE_VIEWER_SUB_AUTH', name: 'Sub Auth Viewer', permissions: [PERMISSIONS.SUBSIDIARY_VIEW], visibilityScope: VisibilityScope.GLOBAL }).save();
@@ -68,7 +61,10 @@ describe('Subsidiaries Authorization (e2e)', () => {
         noPermissionsToken = jwtService.sign({ sub: noPermsUser.recordId });
     });
 
-    afterAll(async () => { await app.close(); await mongod.stop(); });
+    afterAll(async () => {
+        await teardownTestApp({ app, mongod });
+    });
+    
     beforeEach(async () => { await subsidiaryModel.deleteMany({}); await clientModel.deleteMany({}); });
 
     describe('Action Permissions', () => {

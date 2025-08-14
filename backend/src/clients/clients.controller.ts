@@ -11,6 +11,9 @@ import { QueryClientDto } from './dto/query-client.dto';
 import { UsersService } from '../users/users.service';
 import { QueryUserDto } from '../users/dto/query-user.dto';
 
+import { OrchardsService } from '../orchards/orchards.service';
+import { QueryOrchardDto } from '../orchards/dto/query-orchard.dto';
+
 import { RequirePermission } from '../common/decorators/permissions.decorator';
 
 import { PERMISSIONS } from '../common/constants/permissions.constants';
@@ -21,6 +24,7 @@ export class ClientsController {
   constructor(
     private readonly clientsService: ClientsService,
     private readonly usersService: UsersService,
+    private readonly orchardsService: OrchardsService,
   ) { }
 
   @Post()
@@ -50,6 +54,19 @@ export class ClientsController {
   ) {
     await this.clientsService.findOne(clientId, req.user);
     return this.usersService.findAllByClientId(clientId, query, req.user);
+  }
+
+  @Get(':clientId/orchards')
+  @RequirePermission(PERMISSIONS.ORCHARD_VIEW) // Secure with Orchard permission
+  async findAllOrchardsForClient(
+    @Param('clientId', ParseMongoIdPipe) clientId: string,
+    @Query() query: QueryOrchardDto,
+    @Req() req,
+  ) {
+    // First, validate that the user has access to the parent client.
+    await this.clientsService.findOne(clientId, req.user);
+    // Then, fetch the orchards for that client.
+    return this.orchardsService.findAllByClientId(clientId, query, req.user);
   }
 
   @Patch(':clientId')

@@ -10,6 +10,8 @@ import { SubsidiaryQueryBuilder } from './builders/subsidiary-query.builder';
 
 import { ClientsService } from '../clients/clients.service';
 import { Client, ClientDocument } from '../clients/schemas/client.schema';
+import { ClientResolverService } from '../clients/client-resolver/client-resolver.service';
+
 import { User } from '../users/schemas/user.schema';
 import { PERMISSIONS } from '../common/constants/permissions.constants';
 
@@ -19,22 +21,22 @@ export class SubsidiariesService {
     @InjectModel(Subsidiary.name) private subsidiaryModel: Model<SubsidiaryDocument>,
     @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
     @InjectConnection() private connection: Connection,
+    private readonly clientResolverService: ClientResolverService,
     private readonly clientsService: ClientsService,
   ) { }
 
   async create(createSubsidiaryDto: CreateSubsidiaryDto): Promise<Subsidiary> {
-    const createdSubsidiary = new this.subsidiaryModel(createSubsidiaryDto);
-    return createdSubsidiary.save();
+    return this.subsidiaryModel.create(createSubsidiaryDto);
   }
 
   async findAll(queryDto: QuerySubsidiaryDto, user: User): Promise<Subsidiary[]> {
-    const queryBuilder = new SubsidiaryQueryBuilder(queryDto, user, this.clientModel);
+    const queryBuilder = new SubsidiaryQueryBuilder(queryDto, user, this.clientResolverService);
     const filter = await queryBuilder.build();
     return this.subsidiaryModel.find(filter).exec();
   }
 
   async findOne(subsidiaryId: string, user: User): Promise<Subsidiary> {
-    const queryBuilder = new SubsidiaryQueryBuilder({}, user, this.clientModel);
+    const queryBuilder = new SubsidiaryQueryBuilder({}, user, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = {

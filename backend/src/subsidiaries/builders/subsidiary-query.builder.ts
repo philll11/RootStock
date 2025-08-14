@@ -2,16 +2,12 @@ import { Model, Types } from 'mongoose';
 import { BaseQueryBuilder } from '../../common/builders/base-query.builder';
 import { QuerySubsidiaryDto } from '../dto/query-subsidiary.dto';
 import { User } from '../../users/schemas/user.schema';
-import { ClientDocument } from '../../clients/schemas/client.schema';
+import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
 import { VisibilityScope } from '../../roles/schemas/role.schema';
 
 export class SubsidiaryQueryBuilder extends BaseQueryBuilder {
-  constructor(
-    queryDto: QuerySubsidiaryDto,
-    user: User,
-    clientModel: Model<ClientDocument>,
-  ) {
-    super(queryDto, user, clientModel);
+  constructor(queryDto: QuerySubsidiaryDto, user: User, clientResolverService: ClientResolverService) {
+    super(queryDto, user, clientResolverService);
   }
 
   /**
@@ -31,33 +27,9 @@ export class SubsidiaryQueryBuilder extends BaseQueryBuilder {
       case VisibilityScope.SUBSIDIARY:
         // For both Client and Subsidiary scopes, the logic is the same:
         // users can only see the parent subsidiaries of the clients they are assigned to.
-        const accessibleSubsidiaryIds = await this.getAccessibleSubsidiaryIds();
+        const accessibleSubsidiaryIds = await this.clientResolverService.getAccessibleSubsidiaryIdsForUser(this.user);
         this.filter._id = { $in: accessibleSubsidiaryIds };
         break;
     }
-  }
-
-  /**
-   * Finds the unique parent subsidiary IDs based on the user's assigned clients.
-   * @returns An array of subsidiary ObjectIds.
-   */
-  private async getAccessibleSubsidiaryIds(): Promise<Types.ObjectId[]> {
-    if (!this.user.clientIds || this.user.clientIds.length === 0) {
-      return []; // If a user has no assigned clients, they can see no subsidiaries.
-    }
-
-    // Find all clients the user is assigned to
-    const assignedClients = await this.clientModel
-      .find({ _id: { $in: this.user.clientIds } })
-      .select('subsidiaryId')
-      .exec();
-
-    const definedIds = assignedClients
-      .map(client => client.subsidiaryId)
-      .filter((id): id is Types.ObjectId => !!id);
-
-    // Get a unique set of their parent subsidiary IDs
-    const uniqueIdStrings = new Set(definedIds.map(id => id.toString()));
-    return Array.from(uniqueIdStrings).map(str => new Types.ObjectId(str));
   }
 }

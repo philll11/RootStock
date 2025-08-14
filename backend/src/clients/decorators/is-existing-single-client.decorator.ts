@@ -1,14 +1,14 @@
 import { registerDecorator, ValidationOptions } from 'class-validator';
-import { IsExistingClientsConstraint } from '../validators/is-existing-clients.validator';
+import { IsExistingSingleClientConstraint } from '../validators/is-existing-single-client.validator';
 
-export function IsExistingClients(validationOptions?: ValidationOptions) {
+export function IsExistingSingleClient(validationOptions?: ValidationOptions) {
   return function (object: Object, propertyName: string) {
     registerDecorator({
+      name: 'isExistingSingleClient',
       target: object.constructor,
       propertyName: propertyName,
       options: validationOptions,
-      constraints: [],
-      validator: IsExistingClientsConstraint,
+      validator: IsExistingSingleClientConstraint,
     });
   };
 }

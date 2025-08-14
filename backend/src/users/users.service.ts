@@ -8,14 +8,16 @@ import { User, UserDocument, UserType } from './schemas/user.schema';
 import { UserQueryBuilder } from './builders/user-query.builder';
 
 import { Client, ClientDocument } from '../clients/schemas/client.schema';
+import { ClientResolverService } from '../clients/client-resolver/client-resolver.service';
 
-import { PERMISSIONS } from '../common/constants/permissions.constants'; 
+import { PERMISSIONS } from '../common/constants/permissions.constants';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
+    private readonly clientResolverService: ClientResolverService,
   ) { }
 
   /**
@@ -26,25 +28,24 @@ export class UsersService {
    */
   async create(createUserDto: CreateUserDto): Promise<User> {
     const payload = this._prepareCreatePayload(createUserDto);
-    const createdUser = new this.userModel(payload);
-    return createdUser.save();
+    return this.userModel.create(payload);
   }
 
   async findAll(query: QueryUserDto, user: User): Promise<User[]> {
-    const queryBuilder = new UserQueryBuilder(query, user, this.clientModel);
+    const queryBuilder = new UserQueryBuilder(query, user, this.clientResolverService);
     const filter = await queryBuilder.build();
     return this.userModel.find(filter).exec();
   }
 
   async findAllByClientId(clientId: string, queryDto: QueryUserDto, user: User): Promise<User[]> {
-    const queryBuilder = new UserQueryBuilder(queryDto, user, this.clientModel);
+    const queryBuilder = new UserQueryBuilder(queryDto, user, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.clientIds = new Types.ObjectId(clientId);
     return this.userModel.find(filter).exec();
   }
 
   async findAllByRoleId(roleId: string, queryDto: QueryUserDto, user: User): Promise<User[]> {
-    const queryBuilder = new UserQueryBuilder(queryDto, user, this.clientModel);
+    const queryBuilder = new UserQueryBuilder(queryDto, user, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.roleId = new Types.ObjectId(roleId);
     return this.userModel.find(filter).exec();
@@ -57,7 +58,7 @@ export class UsersService {
    * @returns The found user document.
    */
   async findOne(userId: string, user: User): Promise<User> {
-    const queryBuilder = new UserQueryBuilder({}, user, this.clientModel);
+    const queryBuilder = new UserQueryBuilder({}, user, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = {
@@ -152,6 +153,42 @@ export class UsersService {
   }
 
   /**
+* Validates that all client IDs in an array exist, are active, and not deleted.
+* @param userIds - An array of client IDs to validate.
+* @returns `true` if all IDs are valid, `false` otherwise.
+*/
+  async validateUserId(userIds: string): Promise<boolean> {
+    if (!userIds || userIds.length === 0) {
+      return true;
+    }
+    const activeUsersCount = await this.userModel.countDocuments({
+      _id: { $in: userIds },
+      isActive: true,
+      isDeleted: false,
+    });
+    return activeUsersCount === userIds.length;
+  }
+
+  /**
+ * Validates that all user IDs in an array exist, are active, not deleted,
+ * and are of the 'contact' UserType.
+ * @param userIds - An array of user IDs to validate.
+ * @returns `true` if all IDs are valid contact users, `false` otherwise.
+ */
+  async validateContactUserIds(userIds: string[]): Promise<boolean> {
+    if (!userIds || userIds.length === 0) {
+      return true;
+    }
+    const activeContactUsersCount = await this.userModel.countDocuments({
+      _id: { $in: userIds.map(id => new Types.ObjectId(id)) },
+      userType: UserType.CONTACT,
+      isActive: true,
+      isDeleted: false,
+    });
+    return activeContactUsersCount === userIds.length;
+  }
+
+  /**
  * Finds a single user by their unique recordId and populates their role.
  * This is specifically used for authentication lookups.
  * @param recordId The user's unique recordId (from JWT `sub` claim)
@@ -192,7 +229,7 @@ export class UsersService {
   private _prepareUpdatePayload(dto: UpdateUserDto, existingUser: User, loggedInUser: User): Partial<User> {
     const { roleId, clientIds, isActive, ...restOfDto } = dto;
     const payload: Partial<User> = { ...restOfDto };
-    
+
     const loggedInUserPermissions = (loggedInUser.roleId as any)?.permissions || [];
 
     if (payload.firstName || payload.lastName) {

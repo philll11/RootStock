@@ -8,6 +8,9 @@ import { Model } from 'mongoose';
 import { useContainer } from 'class-validator';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+
+import { setupTestApp, teardownTestApp } from '../test-utils';
+
 import { AppModule } from '../../src/app.module';
 import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
@@ -16,42 +19,34 @@ import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 describe('Roles Advanced Logic (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
+    let jwtService: JwtService;
+
+    // Models
     let roleModel: Model<RoleDocument>;
     let userModel: Model<UserDocument>;
-    let jwtService: JwtService;
+
+    // Test Data
     let adminToken: string;
 
     jest.setTimeout(60000);
 
     beforeAll(async () => {
-        mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, dbName: 'jest' } });
-        const uri = mongod.getUri();
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [
-                ConfigModule.forRoot({ isGlobal: true, envFilePath: './test/.env.test' }),
-                MongooseModule.forRoot(uri), AppModule,
-                JwtModule.registerAsync({
-                    imports: [ConfigModule],
-                    useFactory: async (configService: ConfigService) => ({ secret: configService.get<string>('COGNITO_CLIENT_SECRET'), signOptions: { expiresIn: '1h' } }),
-                    inject: [ConfigService],
-                }),
-            ],
-        }).compile();
-        app = moduleFixture.createNestApplication();
-        useContainer(app.select(AppModule), { fallbackOnErrors: true });
-        app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
-        await app.init();
-        roleModel = moduleFixture.get<Model<RoleDocument>>(getModelToken(Role.name));
-        userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
-        jwtService = moduleFixture.get<JwtService>(JwtService);
-        
+        ({ app, mongod, jwtService } = await setupTestApp());
+
+        roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
+        userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
+
         // This admin needs all role permissions to test all advanced logic paths
         const adminRole = await new roleModel({ recordId: 'ROLE_ADV_ADMIN', name: 'Role Adv Admin', permissions: Object.values(PERMISSIONS), visibilityScope: VisibilityScope.GLOBAL }).save();
         const adminUser = await new userModel({ recordId: 'USER_ROLE_ADV_ADMIN', name: 'Role Adv Admin', firstName: 'Role', lastName: 'Adv', userType: UserType.EMPLOYEE, roleId: adminRole._id }).save();
         adminToken = jwtService.sign({ sub: adminUser.recordId });
     });
 
-    afterAll(async () => { await app.close(); await mongod.stop(); });
+
+    afterAll(async () => {
+        await teardownTestApp({ app, mongod });
+    });
+
     beforeEach(async () => {
         await roleModel.deleteMany({ recordId: { $ne: 'ROLE_ADV_ADMIN' } });
         await userModel.deleteMany({ recordId: { $ne: 'USER_ROLE_ADV_ADMIN' } });
