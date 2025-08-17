@@ -6,6 +6,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { useContainer } from 'class-validator';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import mongoose, { Connection } from 'mongoose';
+import { getConnectionToken } from '@nestjs/mongoose';
 
 /**
  * Sets up a full NestJS application instance for end-to-end testing,
@@ -37,24 +39,28 @@ export const setupTestApp = async (): Promise<{
   }).compile();
 
   const app = moduleFixture.createNestApplication();
-  
-  // Ensure class-validator uses Nest's DI container
+
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
-  
-  // Apply the same global validation pipe as in main.ts
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-  
   await app.init();
-
   const jwtService = moduleFixture.get<JwtService>(JwtService);
-
   return { app, mongod, jwtService };
 };
 
 /**
- * Tears down the test application and stops the in-memory database.
+ * Tears down the test application and stops the in-memory database gracefully.
  */
-export const teardownTestApp = async (options: { app: INestApplication; mongod: MongoMemoryReplSet }): Promise<void> => {
-  if (options.app) await options.app.close();
-  if (options.mongod) await options.mongod.stop();
+export const teardownTestApp = async (options: {
+  app: INestApplication;
+  mongod: MongoMemoryReplSet;
+}): Promise<void> => {
+  if (options.app) {
+    await options.app.close();
+  }
+
+  await mongoose.disconnect();
+
+  if (options.mongod) {
+    await options.mongod.stop();
+  }
 };

@@ -7,17 +7,17 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { User, UserDocument, UserType } from './schemas/user.schema';
 import { UserQueryBuilder } from './builders/user-query.builder';
 
-import { Client, ClientDocument } from '../clients/schemas/client.schema';
 import { ClientResolverService } from '../clients/client-resolver/client-resolver.service';
 
 import { PERMISSIONS } from '../common/constants/permissions.constants';
+import { CountersService } from '../counters/counters.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
     private readonly clientResolverService: ClientResolverService,
+    private readonly countersService: CountersService
   ) { }
 
   /**
@@ -27,8 +27,24 @@ export class UsersService {
    * @returns The created user document.
    */
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const payload = this._prepareCreatePayload(createUserDto);
-    return this.userModel.create(payload);
+    const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('user', 'USR');
+    const paddedSequence = sequence_value.toString().padStart(4, '0');
+    const recordId = `${prefix}${paddedSequence}`;
+
+    const { roleId, clientIds, ...restOfDto } = createUserDto;
+    const payload: Partial<User> = { ...restOfDto };
+
+    payload.name = `${createUserDto.firstName} ${createUserDto.lastName}`;
+
+    if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
+    if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
+
+    const userToCreate = new this.userModel({
+      ...payload,
+      recordId,
+    });
+
+    return userToCreate.save();
   }
 
   async findAll(query: QueryUserDto, user: User): Promise<User[]> {
@@ -202,23 +218,6 @@ export class UsersService {
         model: 'Role',
       })
       .exec();
-  }
-
-  /**
- * Prepares the payload for a NEW user.
- * Derives 'name' and transforms string IDs to ObjectIds.
- * @private
- */
-  private _prepareCreatePayload(dto: CreateUserDto): Partial<User> {
-    const { roleId, clientIds, ...restOfDto } = dto;
-    const payload: Partial<User> = { ...restOfDto };
-
-    payload.name = `${dto.firstName} ${dto.lastName}`;
-
-    if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
-    if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
-
-    return payload;
   }
 
   /**

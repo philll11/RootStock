@@ -7,10 +7,6 @@ import { IsExistingClient } from "../../clients/decorators/is-existing-client.de
 export class CreateUserDto {
     @IsString()
     @IsNotEmpty()
-    readonly recordId: string;
-
-    @IsString()
-    @IsNotEmpty()
     readonly firstName: string;
 
     @IsString()

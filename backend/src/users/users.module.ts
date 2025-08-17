@@ -10,12 +10,14 @@ import { IsClientIdsValidForUserTypeConstraint } from './validators/is-client-id
 import { IsExistingClientConstraint } from "../clients/validators/is-existing-client.validator";
 import { IsExistingUserConstraint } from './validators/is-existing-user.validator';
 import { IsExistingContactUsersConstraint } from './validators/is-existing-contact-users.validator';
+import { CountersModule } from '../counters/counters.module';
 
 @Module({
   imports: [
     forwardRef(() => RolesModule),
     forwardRef(() => ClientsModule),
-    ClientResolverModule
+    ClientResolverModule,
+    CountersModule
   ],
   controllers: [UsersController],
   providers: [

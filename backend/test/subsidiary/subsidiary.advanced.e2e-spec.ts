@@ -1,17 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import { MongooseModule } from '@nestjs/mongoose';
 import { getModelToken } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { useContainer } from 'class-validator';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Model } from 'mongoose';
+import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 
-import { AppModule } from '../../src/app.module';
 import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
 import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
@@ -49,7 +44,9 @@ describe('Subsidiaries Advanced Logic (e2e)', () => {
         adminToken = jwtService.sign({ sub: adminUser.recordId });
     });
 
-    afterAll(async () => { await app.close(); await mongod.stop(); });
+    afterAll(async () => {
+        await teardownTestApp({ app, mongod });
+    });
     beforeEach(async () => { await subsidiaryModel.deleteMany({}); await clientModel.deleteMany({}); });
 
     describe('Inactivation Pre-Condition', () => {

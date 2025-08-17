@@ -13,8 +13,8 @@ import { UsersService } from '../users/users.service';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { Orchard, OrchardDocument } from '../orchards/schemas/orchard.schema';
 
-
 import { PERMISSIONS } from '../common/constants/permissions.constants';
+import { CountersService } from '../counters/counters.service';
 
 @Injectable()
 export class ClientsService {
@@ -25,11 +25,21 @@ export class ClientsService {
     @InjectConnection() private connection: Connection,
     private readonly usersService: UsersService,
     private readonly clientResolverService: ClientResolverService,
+    private readonly countersService: CountersService,
   ) { }
 
 
   async create(createClientDto: CreateClientDto): Promise<Client> {
-    return this.clientModel.create(createClientDto);
+    const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('client', 'CLI');
+    const paddedSequence = sequence_value.toString().padStart(4, '0');
+    const recordId = `${prefix}${paddedSequence}`;
+
+    const newClient = new this.clientModel({
+      ...createClientDto,
+      recordId,
+    });
+
+    return newClient.save();
   }
   async findAll(query: QueryClientDto, user: User): Promise<Client[]> {
     const queryBuilder = new ClientQueryBuilder(query, user, this.clientResolverService);

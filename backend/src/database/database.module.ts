@@ -6,6 +6,7 @@ import { Orchard, OrchardSchema } from '../orchards/schemas/orchard.schema';
 import { Role, RoleSchema } from '../roles/schemas/role.schema';
 import { Subsidiary, SubsidiarySchema } from '../subsidiaries/schemas/subsidiary.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
+import { Counter, CounterSchema } from '../counters/schemas/counter.schema';
 
 @Global()
 @Module({
@@ -16,6 +17,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
             { name: Role.name, schema: RoleSchema },
             { name: Subsidiary.name, schema: SubsidiarySchema },
             { name: User.name, schema: UserSchema },
+            { name: Counter.name, schema: CounterSchema },
         ]),
     ],
     exports: [MongooseModule],

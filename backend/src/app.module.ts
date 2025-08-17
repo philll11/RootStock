@@ -13,6 +13,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { SubsidiariesModule } from './subsidiaries/subsidiaries.module';
 import { OrchardsModule } from './orchards/orchards.module';
+import { CountersModule } from './counters/counters.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { OrchardsModule } from './orchards/orchards.module';
     RolesModule,
     SubsidiariesModule,
     OrchardsModule,
+    CountersModule,
   ],
   controllers: [AppController],
   providers: [

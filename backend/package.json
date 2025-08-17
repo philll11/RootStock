@@ -22,7 +22,8 @@
     "test:e2e:clients": "jest --config ./test/jest-e2e.json --testPathPatterns=test/client",
     "test:e2e:users": "jest --config ./test/jest-e2e.json --testPathPatterns=test/user",
     "test:e2e:orchards": "jest --config ./test/jest-e2e.json --testPathPatterns=test/orchard",
-    "test:e2e": "npm run test:e2e:subsidiaries && npm run test:e2e:roles && npm run test:e2e:clients && npm run test:e2e:users && npm run test:e2e:orchards",
+    "test:e2e:counters": "jest --config ./test/jest-e2e.json --testPathPatterns=test/counter",
+    "test:e2e": "npm run test:e2e:subsidiaries && npm run test:e2e:roles && npm run test:e2e:clients && npm run test:e2e:users && npm run test:e2e:orchards && npm run test:e2e:counters",
     "seed": "ts-node src/seed.ts"
   },
   "dependencies": {

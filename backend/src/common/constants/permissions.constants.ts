@@ -61,6 +61,11 @@ export const PERMISSIONS = {
    */
   SUBSIDIARY_EDIT_STATUS: 'Subsidiary:EditStatus',
 
+  // --- System Configuration ---
+  // Permissions for managing system-level configurations, like recordId counters.
+  COUNTERS_VIEW: 'Counters:View',
+  COUNTERS_EDIT: 'Counters:Edit',
+
   // --- Global & System-Wide Permissions ---
   // Special permissions that are not tied to a single resource's CRUD operations.
   /**

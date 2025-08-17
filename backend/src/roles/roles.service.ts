@@ -10,6 +10,7 @@ import { RoleQueryBuilder } from './builders/roles-query.builder';
 
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
+import { CountersService } from '../counters/counters.service'; 
 
 @Injectable()
 export class RolesService {
@@ -18,10 +19,20 @@ export class RolesService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectConnection() private connection: Connection,
     private readonly usersService: UsersService,
+    private readonly countersService: CountersService,
   ) { }
 
   async create(createRoleDto: CreateRoleDto): Promise<Role> {
-    return this.roleModel.create(createRoleDto);
+    const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('role', 'ROL');
+    const paddedSequence = sequence_value.toString().padStart(4, '0');
+    const recordId = `${prefix}${paddedSequence}`;
+
+    const newRole = new this.roleModel({
+      ...createRoleDto,
+      recordId,
+    });
+
+    return newRole.save();
   }
 
   async findAll(query: QueryRoleDto, user: User): Promise<Role[]> {

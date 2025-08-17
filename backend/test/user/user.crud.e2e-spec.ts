@@ -63,25 +63,22 @@ describe('Users CRUD (e2e)', () => {
 
     describe('POST /users', () => {
         it('should SUCCEED with 201 when creating a user with valid data', () => {
-            const createDto: CreateUserDto = { recordId: 'U_VALID', firstName: 'Valid', lastName: 'User', userType: UserType.EMPLOYEE };
+            const createDto: CreateUserDto = { firstName: 'Valid', lastName: 'User', userType: UserType.EMPLOYEE };
             return request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${adminToken}`).send(createDto).expect(201)
-                .then(res => { expect(res.body.name).toEqual('Valid User'); });
+                .then(res => { 
+                    expect(res.body.name).toEqual('Valid User');
+                    expect(res.body.recordId).toMatch(/^USR\d{4,}$/);
+                });
         });
 
         it('should SUCCEED with 201 when creating a valid EMPLOYEE user', () => {
-            const createDto: CreateUserDto = { recordId: 'U_VALID_EMP', firstName: 'Valid', lastName: 'Employee', userType: UserType.EMPLOYEE, roleId: validRoleId, clientIds: [validClientId] };
+            const createDto: CreateUserDto = { firstName: 'Valid', lastName: 'Employee', userType: UserType.EMPLOYEE, roleId: validRoleId, clientIds: [validClientId] };
             return request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${adminToken}`).send(createDto).expect(201);
         });
 
         it('should SUCCEED with 201 when creating a valid CONTACT user', () => {
-            const createDto: CreateUserDto = { recordId: 'U_VALID_CON', firstName: 'Valid', lastName: 'Contact', userType: UserType.CONTACT, clientIds: [validClientId] };
+            const createDto: CreateUserDto = { firstName: 'Valid', lastName: 'Contact', userType: UserType.CONTACT, clientIds: [validClientId] };
             return request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${adminToken}`).send(createDto).expect(201);
-        });
-
-        it('should FAIL with 409 for a duplicate recordId', async () => {
-            const createDto: CreateUserDto = { recordId: 'U_DUPE', firstName: 'Dupe', lastName: 'User', userType: UserType.EMPLOYEE };
-            await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${adminToken}`).send(createDto).expect(201);
-            return request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${adminToken}`).send(createDto).expect(409);
         });
 
         it('should FAIL with 400 for missing required fields', () => {
@@ -105,7 +102,7 @@ describe('Users CRUD (e2e)', () => {
         });
 
         it('should SUCCEED when creating an EMPLOYEE user with no clientIds', () => {
-            const dto = { recordId: 'U_EMP_NO_CLIENTS', firstName: 'Emp', lastName: 'NoClients', userType: UserType.EMPLOYEE, roleId: validRoleId };
+            const dto = { firstName: 'Emp', lastName: 'NoClients', userType: UserType.EMPLOYEE, roleId: validRoleId };
             return request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${adminToken}`).send(dto).expect(201);
         });
     });

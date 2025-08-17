@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { Role, VisibilityScope } from './roles/schemas/role.schema';
 import { getModelToken } from '@nestjs/mongoose';
 import { PERMISSIONS } from './common/constants/permissions.constants';
+import { Counter } from './counters/schemas/counter.schema';
 
 /**
  * A standalone NestJS application script for seeding the database.
@@ -23,11 +24,31 @@ async function bootstrap() {
 
     // Get the Mongoose Model for the Role schema through the DI container.
     const roleModel = app.get(getModelToken(Role.name));
+    const counterModel = app.get(getModelToken(Counter.name));
+
+    // --- Define and Seed the Essential Counters ---
+    // This array defines the initial state for our recordId counters.
+    const seedCounters = [
+      { _id: 'subsidiary', prefix: 'SUB', sequence_value: 0 },
+      { _id: 'client', prefix: 'CLI', sequence_value: 0 },
+      { _id: 'user', prefix: 'USR', sequence_value: 0 },
+      { _id: 'role', prefix: 'ROL', sequence_value: 0 },
+      { _id: 'orchard', prefix: 'ORC', sequence_value: 0 },
+    ];
+
+    for (const counterData of seedCounters) {
+      await counterModel.findOneAndUpdate(
+        { _id: counterData._id },
+        { $setOnInsert: counterData },
+        { upsert: true, new: true },
+      );
+      console.log(`Successfully seeded/verified counter: ${counterData._id}`);
+    }
+
 
     // --- Define the Essential Roles ---
     // This array holds the definitions for the roles that are critical for
     // the application's initial setup.
-
     const seedRoles = [
       {
         // The highest-level administrator role. Has all permissions and can see all data.
@@ -59,9 +80,9 @@ async function bootstrap() {
         description: 'Standard client user with access to their own client data.',
         visibilityScope: VisibilityScope.CLIENT,
         permissions: [
-            PERMISSIONS.CLIENT_VIEW,
-            PERMISSIONS.USER_VIEW,
-            PERMISSIONS.ORCHARD_VIEW,
+          PERMISSIONS.CLIENT_VIEW,
+          PERMISSIONS.USER_VIEW,
+          PERMISSIONS.ORCHARD_VIEW,
         ],
         isActive: true,
       },
@@ -75,9 +96,9 @@ async function bootstrap() {
     for (const roleData of seedRoles) {
       const { recordId, permissions, ...restOfRoleData } = roleData;
       const result = await roleModel.findOneAndUpdate(
-          { recordId },
-          { ...restOfRoleData, $addToSet: { permissions: { $each: permissions } } },
-          { upsert: true, new: true }
+        { recordId },
+        { ...restOfRoleData, $addToSet: { permissions: { $each: permissions } } },
+        { upsert: true, new: true }
       );
       console.log(`Successfully seeded/updated role: ${result.name}`);
     }

@@ -5,10 +5,6 @@ import { VisibilityScope } from '../schemas/role.schema';
 export class CreateRoleDto {
   @IsString()
   @IsNotEmpty()
-  readonly recordId: string;
-
-  @IsString()
-  @IsNotEmpty()
   readonly name: string;
 
   @IsString()

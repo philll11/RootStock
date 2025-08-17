@@ -5,12 +5,14 @@ import { ClientResolverModule } from '../clients/client-resolver/client-resolver
 import { IsExistingOrchardConstraint } from './validators/is-existing-orchard.validator';
 import { ClientsModule } from '../clients/clients.module';
 import { UsersModule } from '../users/users.module';
+import { CountersModule } from '../counters/counters.module'; 
 
 @Module({
   imports: [
     ClientResolverModule,
     forwardRef(() => ClientsModule),
-    forwardRef(() => UsersModule)
+    forwardRef(() => UsersModule),
+    CountersModule
   ],
   controllers: [OrchardsController],
   providers: [

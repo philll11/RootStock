@@ -11,20 +11,30 @@ import { OrchardQueryBuilder } from './builders/orchards-query.builder';
 import { ClientResolverService } from '../clients/client-resolver/client-resolver.service';
 
 import { User } from '../users/schemas/user.schema';
+import { CountersService } from '../counters/counters.service';
 
 @Injectable()
 export class OrchardsService {
     constructor(
         @InjectModel(Orchard.name) private orchardModel: Model<OrchardDocument>,
         private readonly clientResolverService: ClientResolverService,
+        private readonly countersService: CountersService,
     ) { }
 
     async create(createOrchardDto: CreateOrchardDto): Promise<Orchard> {
-        const payload = { ...createOrchardDto };
-        if (payload.userIds) {
-            (payload as any).userIds = payload.userIds.map(id => new Types.ObjectId(id));
+        const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('orchard', 'ORC');
+        const paddedSequence = sequence_value.toString().padStart(4, '0');
+        const recordId = `${prefix}${paddedSequence}`;
+
+        const { userIds, ...restOfDto } = createOrchardDto;
+        const payload: Record<string, any> = { ...restOfDto, recordId };
+
+        if (userIds) {
+            payload.userIds = userIds.map(id => new Types.ObjectId(id));
         }
-        return this.orchardModel.create(payload);
+
+        const newOrchard = new this.orchardModel(payload);
+        return newOrchard.save();
     }
 
     async findAll(query: QueryOrchardDto, user: User): Promise<Orchard[]> {

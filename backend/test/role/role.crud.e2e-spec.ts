@@ -8,7 +8,6 @@ import { JwtService } from '@nestjs/jwt';
 import { setupTestApp, teardownTestApp } from '../test-utils';
 
 import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { CreateRoleDto } from '../../src/roles/dto/create-role.dto';
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
@@ -47,23 +46,21 @@ describe('Roles CRUD (e2e)', () => {
 
     describe('POST /roles', () => {
         it('should SUCCEED with 201 when creating a role with valid data', () => {
-            const createDto: CreateRoleDto = { recordId: 'ROLE_VALID', name: 'Valid Role', visibilityScope: VisibilityScope.CLIENT, permissions: ['Test:Perm'] };
-            return request(app.getHttpServer()).post('/roles').set('Authorization', `Bearer ${adminToken}`).send(createDto).expect(201);
-        });
-
-        it('should FAIL with 409 for a duplicate recordId', async () => {
-            await new roleModel({ recordId: 'ROLE_DUPE', name: 'Dupe Role', visibilityScope: VisibilityScope.CLIENT }).save();
-            const createDto: CreateRoleDto = { recordId: 'ROLE_DUPE', name: 'Other Dupe', visibilityScope: VisibilityScope.GLOBAL };
-            return request(app.getHttpServer()).post('/roles').set('Authorization', `Bearer ${adminToken}`).send(createDto).expect(409);
+            const createDto = { name: 'Valid Role', visibilityScope: VisibilityScope.CLIENT, permissions: ['Test:Perm'] };
+            return request(app.getHttpServer()).post('/roles').set('Authorization', `Bearer ${adminToken}`).send(createDto).expect(201)
+                .then(res => {
+                    expect(res.body.name).toEqual('Valid Role');
+                    expect(res.body.recordId).toMatch(/^ROL\d{4,}$/);
+                });
         });
 
         it('should FAIL with 400 for missing required fields', () => {
-            const incompleteDto = { recordId: 'ROLE_INCOMPLETE' };
+            const incompleteDto = { name: 'Incomplete Role' };
             return request(app.getHttpServer()).post('/roles').set('Authorization', `Bearer ${adminToken}`).send(incompleteDto).expect(400);
         });
 
         it('should FAIL with 400 for a non-whitelisted field', () => {
-            const extraFieldDto = { recordId: 'ROLE_EXTRA', name: 'Extra', visibilityScope: VisibilityScope.GLOBAL, unexpected: 'value' };
+            const extraFieldDto = { name: 'Extra', visibilityScope: VisibilityScope.GLOBAL, unexpected: 'value' };
             return request(app.getHttpServer()).post('/roles').set('Authorization', `Bearer ${adminToken}`).send(extraFieldDto).expect(400);
         });
     });

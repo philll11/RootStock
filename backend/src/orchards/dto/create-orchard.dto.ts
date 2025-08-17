@@ -28,10 +28,6 @@ class CreateAddressDto {
 export class CreateOrchardDto {
     @IsString()
     @IsNotEmpty()
-    readonly recordId: string;
-
-    @IsString()
-    @IsNotEmpty()
     readonly name: string;
 
     @IsMongoId()

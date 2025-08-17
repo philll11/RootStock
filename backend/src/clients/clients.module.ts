@@ -7,13 +7,15 @@ import { IsExistingSingleClientConstraint } from './validators/is-existing-singl
 import { ClientResolverModule } from './client-resolver/client-resolver.module';
 import { UsersModule } from '../users/users.module';
 import { OrchardsModule } from '../orchards/orchards.module';
+import { CountersModule } from '../counters/counters.module';
 
 @Module({
   imports: [
     forwardRef(() => SubsidiariesModule),
     forwardRef(() => UsersModule),
     ClientResolverModule,
-    forwardRef(() => OrchardsModule)
+    forwardRef(() => OrchardsModule),
+    CountersModule,
   ],
   controllers: [ClientsController],
   providers: [

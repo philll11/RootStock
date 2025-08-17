@@ -14,6 +14,7 @@ import { ClientResolverService } from '../clients/client-resolver/client-resolve
 
 import { User } from '../users/schemas/user.schema';
 import { PERMISSIONS } from '../common/constants/permissions.constants';
+import { CountersService } from '../counters/counters.service';
 
 @Injectable()
 export class SubsidiariesService {
@@ -23,10 +24,20 @@ export class SubsidiariesService {
     @InjectConnection() private connection: Connection,
     private readonly clientResolverService: ClientResolverService,
     private readonly clientsService: ClientsService,
+    private readonly countersService: CountersService,
   ) { }
 
   async create(createSubsidiaryDto: CreateSubsidiaryDto): Promise<Subsidiary> {
-    return this.subsidiaryModel.create(createSubsidiaryDto);
+    const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('subsidiary', 'SUB');
+    const paddedSequence = sequence_value.toString().padStart(4, '0');
+    const recordId = `${prefix}${paddedSequence}`;
+    
+    const newSubsidiary = new this.subsidiaryModel({
+      ...createSubsidiaryDto,
+      recordId,
+    });
+
+    return newSubsidiary.save();
   }
 
   async findAll(queryDto: QuerySubsidiaryDto, user: User): Promise<Subsidiary[]> {

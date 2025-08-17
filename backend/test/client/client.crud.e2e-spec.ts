@@ -76,7 +76,7 @@ describe('Clients CRUD (e2e)', () => {
 
     describe('POST /clients', () => {
         it('should SUCCEED with 201 when creating a client with valid data', () => {
-            const createClientDto: CreateClientDto = { recordId: 'CLI_VALID', name: 'Valid Client', subsidiaryId: validSubsidiaryId };
+            const createClientDto: CreateClientDto = { name: 'Valid Client', subsidiaryId: validSubsidiaryId };
             return request(app.getHttpServer())
                 .post('/clients')
                 .set('Authorization', `Bearer ${adminToken}`)
@@ -85,11 +85,12 @@ describe('Clients CRUD (e2e)', () => {
                 .then(res => {
                     expect(res.body.name).toEqual('Valid Client');
                     expect(res.body.subsidiaryId).toEqual(validSubsidiaryId);
+                    expect(res.body.recordId).toMatch(/^CLI\d{4,}$/);
                 });
         });
 
         it('should SUCCEED with 201 when creating a client with a null subsidiaryId', () => {
-            const createClientDto: CreateClientDto = { recordId: 'CLI_NO_SUB', name: 'Client Without Subsidiary', subsidiaryId: null as any};
+            const createClientDto: CreateClientDto = { name: 'Client Without Subsidiary', subsidiaryId: null as any};
             return request(app.getHttpServer())
                 .post('/clients')
                 .set('Authorization', `Bearer ${adminToken}`)
@@ -97,6 +98,7 @@ describe('Clients CRUD (e2e)', () => {
                 .expect(201)
                 .then(res => {
                     expect(res.body.subsidiaryId).toBeNull();
+                    expect(res.body.recordId).toMatch(/^CLI\d{4,}$/);
                 });
         });
 
@@ -108,27 +110,12 @@ describe('Clients CRUD (e2e)', () => {
                 .send(incompleteDto)
                 .expect(400);
         });
-
-        it('should FAIL with 409 Conflict for a duplicate recordId', async () => {
-            const createClientDto: CreateClientDto = { recordId: 'CLI_DUPLICATE', name: 'First Client', subsidiaryId: validSubsidiaryId };
-            await new clientModel(createClientDto).save();
-
-            const duplicateClientDto: CreateClientDto = { recordId: 'CLI_DUPLICATE', name: 'Second Client With Same RecordId', subsidiaryId: validSubsidiaryId };
-            return request(app.getHttpServer())
-                .post('/clients')
-                .set('Authorization', `Bearer ${adminToken}`)
-                .send(duplicateClientDto)
-                .expect(409) // Expect Conflict
-                .then(res => {
-                    expect(res.body.message).toContain(`The value 'CLI_DUPLICATE' for field 'recordId' already exists.`);
-                });
-        });
     });
 
     describe('POST /clients (Relational Validation)', () => {
         it('should FAIL with 400 if subsidiaryId does not exist', () => {
             const nonExistentMongoId = new Types.ObjectId().toHexString();
-            const createDto: CreateClientDto = { recordId: 'CLI_INVALID_SUB', name: 'Client With Invalid Sub', subsidiaryId: nonExistentMongoId };
+            const createDto: CreateClientDto = { name: 'Client With Invalid Sub', subsidiaryId: nonExistentMongoId };
 
             return request(app.getHttpServer())
                 .post('/clients')
@@ -141,7 +128,7 @@ describe('Clients CRUD (e2e)', () => {
         });
 
         it('should FAIL with 400 if subsidiaryId points to an INACTIVE subsidiary', () => {
-            const createDto: CreateClientDto = { recordId: 'CLI_INACTIVE_SUB', name: 'Client With Inactive Sub', subsidiaryId: inactiveSubsidiaryId };
+            const createDto: CreateClientDto = { name: 'Client With Inactive Sub', subsidiaryId: inactiveSubsidiaryId };
 
             return request(app.getHttpServer())
                 .post('/clients')
@@ -156,7 +143,7 @@ describe('Clients CRUD (e2e)', () => {
 
     describe('GET /clients/:clientId', () => {
         it('should SUCCEED with 200 when finding a specific client by its ID', async () => {
-            const client = await new clientModel({ recordId: 'CLI_FIND_ME', name: 'Find Me Client' }).save();
+            const client = await new clientModel({ recordId: 'CLI_FIND_ME', name: 'Find Me Client', subsidiaryId: new Types.ObjectId(validSubsidiaryId) }).save();
             return request(app.getHttpServer())
                 .get(`/clients/${client._id}`)
                 .set('Authorization', `Bearer ${adminToken}`)
@@ -178,7 +165,7 @@ describe('Clients CRUD (e2e)', () => {
     describe('PATCH /clients/:clientId', () => {
         let testClient: ClientDocument;
         beforeEach(async () => {
-            testClient = await new clientModel({ recordId: 'CLI_TO_UPDATE', name: 'Original Name' }).save();
+            testClient = await new clientModel({ recordId: 'CLI_TO_UPDATE', name: 'Original Name', subsidiaryId: new Types.ObjectId(validSubsidiaryId) }).save();
         });
 
         it('should SUCCEED with 200 when updating a client with valid data', () => {
@@ -207,7 +194,7 @@ describe('Clients CRUD (e2e)', () => {
     describe('DELETE /clients/:clientId', () => {
         let testClient: ClientDocument;
         beforeEach(async () => {
-            testClient = await new clientModel({ recordId: 'CLI_TO_DELETE', name: 'To Be Deleted' }).save();
+            testClient = await new clientModel({ recordId: 'CLI_TO_DELETE', name: 'To Be Deleted', subsidiaryId: new Types.ObjectId(validSubsidiaryId) }).save();
         });
 
         it('should SUCCEED with 200 and soft-delete the client', async () => {

@@ -8,7 +8,6 @@ import { JwtService } from '@nestjs/jwt';
 import { setupTestApp, teardownTestApp } from '../test-utils';
 
 import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { CreateSubsidiaryDto } from '../../src/subsidiaries/dto/create-subsidiary.dto';
 import { UpdateSubsidiaryDto } from '../../src/subsidiaries/dto/update-subsidiary.dto';
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
 import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
@@ -49,24 +48,24 @@ describe('Subsidiaries CRUD (e2e)', () => {
     beforeEach(async () => { await subsidiaryModel.deleteMany({}); });
 
     describe('POST /subsidiaries', () => {
-        it('should SUCCEED with 201 when creating a subsidiary with valid data', () => {
-            const createDto: CreateSubsidiaryDto = { recordId: 'SUB_VALID', name: 'Valid Subsidiary' };
-            return request(app.getHttpServer()).post('/subsidiaries').set('Authorization', `Bearer ${adminToken}`).send(createDto).expect(201);
+        
+        it('should SUCCEED with 201 and a system-generated recordId', () => {
+            const createDto = { name: 'Valid Subsidiary' };
+            
+            return request(app.getHttpServer())
+                .post('/subsidiaries')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send(createDto)
+                .expect(201)
+                .then(res => {
+                    expect(res.body).toHaveProperty('recordId');
+                    expect(res.body.recordId).toMatch(/^SUB\d{4,}$/); // Matches SUB0001, SUB9999, SUB10000 etc.
+                    expect(res.body.name).toEqual('Valid Subsidiary');
+                });
         });
-
-        it('should FAIL with 409 Conflict for a duplicate recordId', async () => {
-            await new subsidiaryModel({ recordId: 'SUB_DUPE', name: 'First Sub' }).save();
-            const duplicateDto: CreateSubsidiaryDto = { recordId: 'SUB_DUPE', name: 'Second Sub' };
-            return request(app.getHttpServer()).post('/subsidiaries').set('Authorization', `Bearer ${adminToken}`).send(duplicateDto).expect(409);
-        });
-
-        it('should FAIL with 400 for missing required fields', () => {
-            const incompleteDto = { name: 'Incomplete Sub' }; // Missing recordId
-            return request(app.getHttpServer()).post('/subsidiaries').set('Authorization', `Bearer ${adminToken}`).send(incompleteDto).expect(400);
-        });
-
+        
         it('should FAIL with 400 for a non-whitelisted field', () => {
-            const extraFieldDto = { recordId: 'SUB_EXTRA', name: 'Extra Field Sub', unexpected: 'value' };
+            const extraFieldDto = { name: 'Extra Field Sub', unexpected: 'value' };
             return request(app.getHttpServer()).post('/subsidiaries').set('Authorization', `Bearer ${adminToken}`).send(extraFieldDto).expect(400);
         });
     });

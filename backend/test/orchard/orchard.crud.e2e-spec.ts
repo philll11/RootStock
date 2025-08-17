@@ -86,8 +86,9 @@ describe('OrchardsController (e2e) - CRUD', () => {
     describe('POST /orchards', () => {
         it('should SUCCEED with 201 when creating an orchard with a valid contact user', () => {
             const createDto: CreateOrchardDto = {
-                recordId: 'ORCH_VALID_WITH_USER', name: 'Valid Orchard With User',
-                clientId: testClientId, userIds: [validContactUserId]
+                name: 'Valid Orchard With User',
+                clientId: testClientId,
+                userIds: [validContactUserId]
             };
             return request(app.getHttpServer())
                 .post('/orchards')
@@ -101,7 +102,7 @@ describe('OrchardsController (e2e) - CRUD', () => {
         });
 
         it('should SUCCEED with 201 when creating an orchard with valid data', () => {
-            const createDto: CreateOrchardDto = { recordId: 'ORCH_VALID', name: 'Valid Orchard', clientId: testClientId };
+            const createDto: CreateOrchardDto = { name: 'Valid Orchard', clientId: testClientId };
             return request(app.getHttpServer())
                 .post('/orchards')
                 .set('Authorization', `Bearer ${adminToken}`)
@@ -121,24 +122,12 @@ describe('OrchardsController (e2e) - CRUD', () => {
                 .send(incompleteDto)
                 .expect(400);
         });
-
-        it('should FAIL with 409 Conflict for a duplicate recordId', async () => {
-            const createDto: CreateOrchardDto = { recordId: 'ORCH_DUPE', name: 'First Orchard', clientId: testClientId };
-            await new orchardModel(createDto).save();
-
-            const duplicateDto: CreateOrchardDto = { recordId: 'ORCH_DUPE', name: 'Second With Same ID', clientId: testClientId };
-            return request(app.getHttpServer())
-                .post('/orchards')
-                .set('Authorization', `Bearer ${adminToken}`)
-                .send(duplicateDto)
-                .expect(409);
-        });
     });
 
     describe('POST /orchards (Relational Validation)', () => {
         it('should FAIL with 400 if clientId does not exist', () => {
             const nonExistentMongoId = new Types.ObjectId().toHexString();
-            const createDto: CreateOrchardDto = { recordId: 'ORCH_BAD_CLIENT', name: 'Orchard With Invalid Client', clientId: nonExistentMongoId };
+            const createDto: CreateOrchardDto = { name: 'Orchard With Invalid Client', clientId: nonExistentMongoId };
 
             return request(app.getHttpServer())
                 .post('/orchards')
@@ -148,7 +137,7 @@ describe('OrchardsController (e2e) - CRUD', () => {
         });
 
         it('should FAIL with 400 if clientId points to an INACTIVE client', () => {
-            const createDto: CreateOrchardDto = { recordId: 'ORCH_INACTIVE_CLIENT', name: 'Orchard With Inactive Client', clientId: inactiveClientId };
+            const createDto: CreateOrchardDto = { name: 'Orchard With Inactive Client', clientId: inactiveClientId };
 
             return request(app.getHttpServer())
                 .post('/orchards')
@@ -159,7 +148,7 @@ describe('OrchardsController (e2e) - CRUD', () => {
 
         it('should FAIL with 400 if userIds contains a non-existent user', () => {
             const nonExistentUserId = new Types.ObjectId().toHexString();
-            const createDto: CreateOrchardDto = { recordId: 'ORCH_BAD_USER', name: 'Orchard With Bad User', clientId: testClientId, userIds: [nonExistentUserId] };
+            const createDto: CreateOrchardDto = { name: 'Orchard With Bad User', clientId: testClientId, userIds: [nonExistentUserId] };
 
             return request(app.getHttpServer())
                 .post('/orchards')
@@ -172,7 +161,7 @@ describe('OrchardsController (e2e) - CRUD', () => {
         });
 
         it('should FAIL with 400 if userIds contains a user who is not a CONTACT', () => {
-            const createDto: CreateOrchardDto = { recordId: 'ORCH_EMPLOYEE_USER', name: 'Orchard With Employee User', clientId: testClientId, userIds: [employeeUserId] };
+            const createDto: CreateOrchardDto = { name: 'Orchard With Employee User', clientId: testClientId, userIds: [employeeUserId] };
 
             return request(app.getHttpServer())
                 .post('/orchards')
