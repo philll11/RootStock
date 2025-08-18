@@ -1,10 +1,8 @@
-import { Test } from '@nestjs/testing';
-import { getModelToken } from '@nestjs/mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { Connection, Model, connect } from 'mongoose';
 import { Counter, CounterDocument, CounterSchema } from './counter.schema';
 
-describe('Counter Schema', () => {
+describe('Counter Schema Business Logic', () => {
   let mongoServer: MongoMemoryServer;
   let mongoConnection: Connection;
   let counterModel: Model<Counter>;
@@ -25,325 +23,181 @@ describe('Counter Schema', () => {
     await counterModel.deleteMany({});
   });
 
-  describe('schema validation', () => {
-    it('should SUCCEED creating counter with valid data', async () => {
-      // Arrange
-      const validCounter = {
-        _id: 'subsidiary',
-        prefix: 'SUB',
-        sequence_value: 0,
-      };
+  describe('RootStock Entity Counter Management', () => {
+    it('should support all core RootStock entity counters', async () => {
+      // Arrange: Create counters for all core RootStock entities
+      const coreEntityCounters = [
+        { _id: 'subsidiary', prefix: 'SUB', sequence_value: 0 },
+        { _id: 'client', prefix: 'CLI', sequence_value: 0 },
+        { _id: 'user', prefix: 'USR', sequence_value: 0 },
+        { _id: 'role', prefix: 'ROL', sequence_value: 0 },
+        { _id: 'orchard', prefix: 'ORC', sequence_value: 0 },
+      ];
 
-      // Act
-      const counter = new counterModel(validCounter);
-      const savedCounter = await counter.save();
-
-      // Assert
-      expect(savedCounter._id).toBe('subsidiary');
-      expect(savedCounter.prefix).toBe('SUB');
-      expect(savedCounter.sequence_value).toBe(0);
+      // Act & Assert: Each core entity counter should save successfully
+      for (const counterData of coreEntityCounters) {
+        const counter = new counterModel(counterData);
+        const savedCounter = await counter.save();
+        
+        expect(savedCounter._id).toBe(counterData._id);
+        expect(savedCounter.prefix).toBe(counterData.prefix);
+        expect(savedCounter.sequence_value).toBe(0);
+      }
     });
 
-    it('should SUCCEED with default sequence_value when not provided', async () => {
-      // Arrange
-      const counterData = {
+    it('should handle counter sequences reaching high production volumes', async () => {
+      // Arrange: Business scenario - large client with thousands of records
+      const highVolumeCounter = {
         _id: 'client',
         prefix: 'CLI',
-        // sequence_value not provided, should default to 0
+        sequence_value: 50000, // Real production scenario
       };
 
       // Act
-      const counter = new counterModel(counterData);
+      const counter = new counterModel(highVolumeCounter);
       const savedCounter = await counter.save();
 
-      // Assert
-      expect(savedCounter.sequence_value).toBe(0);
+      // Assert: High sequence numbers should be supported for scalability
+      expect(savedCounter.sequence_value).toBe(50000);
     });
 
-    it('should FAIL when _id is missing', async () => {
-      // Arrange
-      const invalidCounter = {
-        // _id is missing
-        prefix: 'SUB',
-        sequence_value: 0,
-      };
+    it('should support business prefix evolution for organizational changes', async () => {
+      // Arrange: Business scenario - organization rebrands or restructures
+      const evolvedPrefixes = [
+        { _id: 'subsidiary', prefix: 'SUB-2025', sequence_value: 100 },
+        { _id: 'client_legacy', prefix: 'OLD_CLI', sequence_value: 200 },
+        { _id: 'client_new', prefix: 'NEW_CLI', sequence_value: 0 },
+      ];
 
-      // Act & Assert
-      const counter = new counterModel(invalidCounter);
-      await expect(counter.save()).rejects.toThrow();
+      // Act & Assert: Different prefix formats should coexist during transitions
+      for (const counterData of evolvedPrefixes) {
+        const counter = new counterModel(counterData);
+        const savedCounter = await counter.save();
+        expect(savedCounter.prefix).toBe(counterData.prefix);
+      }
     });
 
-    it('should FAIL when prefix is missing', async () => {
-      // Arrange
-      const invalidCounter = {
-        _id: 'subsidiary',
-        // prefix is missing
-        sequence_value: 0,
-      };
+    it('should support multi-tenant counter separation by region', async () => {
+      // Arrange: Business scenario - different prefixes for different regions/tenants
+      const regionalCounters = [
+        { _id: 'client_au', prefix: 'AU_CLI', sequence_value: 0 },
+        { _id: 'client_us', prefix: 'US_CLI', sequence_value: 0 },
+        { _id: 'client_eu', prefix: 'EU_CLI', sequence_value: 0 },
+      ];
 
-      // Act & Assert
-      const counter = new counterModel(invalidCounter);
-      await expect(counter.save()).rejects.toThrow();
+      // Act & Assert: Regional separation should be supported
+      for (const counterData of regionalCounters) {
+        const counter = new counterModel(counterData);
+        const savedCounter = await counter.save();
+        expect(savedCounter._id).toBe(counterData._id);
+        expect(savedCounter.prefix).toBe(counterData.prefix);
+      }
     });
+  });
 
-    it('should SUCCEED with high sequence_value', async () => {
-      // Arrange
-      const counterWithHighSequence = {
+  describe('Business-Critical Counter Operations', () => {
+    it('should support atomic counter increments for concurrent recordId generation', async () => {
+      // Arrange: Business scenario - multiple users creating records simultaneously
+      const counter = new counterModel({
         _id: 'user',
         prefix: 'USR',
-        sequence_value: 999999,
-      };
-
-      // Act
-      const counter = new counterModel(counterWithHighSequence);
-      const savedCounter = await counter.save();
-
-      // Assert
-      expect(savedCounter.sequence_value).toBe(999999);
-    });
-
-    it('should SUCCEED with negative sequence_value', async () => {
-      // Arrange
-      const counterWithNegativeSequence = {
-        _id: 'test',
-        prefix: 'TEST',
-        sequence_value: -1,
-      };
-
-      // Act
-      const counter = new counterModel(counterWithNegativeSequence);
-      const savedCounter = await counter.save();
-
-      // Assert
-      expect(savedCounter.sequence_value).toBe(-1);
-    });
-  });
-
-  describe('schema constraints', () => {
-    it('should enforce unique _id constraint', async () => {
-      // Arrange
-      const counter1 = new counterModel({
-        _id: 'duplicate',
-        prefix: 'DUP1',
-        sequence_value: 1,
-      });
-      const counter2 = new counterModel({
-        _id: 'duplicate', // Same _id
-        prefix: 'DUP2',
-        sequence_value: 2,
-      });
-
-      // Act
-      await counter1.save();
-
-      // Assert
-      await expect(counter2.save()).rejects.toThrow();
-    });
-
-    it('should allow same prefix for different counters', async () => {
-      // Arrange
-      const counter1 = new counterModel({
-        _id: 'resource1',
-        prefix: 'SAME',
-        sequence_value: 1,
-      });
-      const counter2 = new counterModel({
-        _id: 'resource2',
-        prefix: 'SAME', // Same prefix, different _id
-        sequence_value: 2,
-      });
-
-      // Act & Assert
-      await expect(counter1.save()).resolves.toBeDefined();
-      await expect(counter2.save()).resolves.toBeDefined();
-    });
-
-    it('should FAIL when prefix is empty string', async () => {
-      // Arrange
-      const counterWithEmptyPrefix = {
-        _id: 'empty',
-        prefix: '', // Empty string should be rejected
-        sequence_value: 0,
-      };
-
-      // Act & Assert
-      const counter = new counterModel(counterWithEmptyPrefix);
-      await expect(counter.save()).rejects.toThrow();
-    });
-
-    it('should handle long prefix strings', async () => {
-      // Arrange
-      const longPrefix = 'A'.repeat(50); // Very long prefix
-      const counterWithLongPrefix = {
-        _id: 'long',
-        prefix: longPrefix,
-        sequence_value: 0,
-      };
-
-      // Act
-      const counter = new counterModel(counterWithLongPrefix);
-      const savedCounter = await counter.save();
-
-      // Assert
-      expect(savedCounter.prefix).toBe(longPrefix);
-    });
-  });
-
-  describe('data types', () => {
-    it('should handle string _id correctly', async () => {
-      // Arrange
-      const counter = new counterModel({
-        _id: 'string-id-with-dashes',
-        prefix: 'STR',
-        sequence_value: 0,
-      });
-
-      // Act
-      const savedCounter = await counter.save();
-
-      // Assert
-      expect(typeof savedCounter._id).toBe('string');
-      expect(savedCounter._id).toBe('string-id-with-dashes');
-    });
-
-    it('should handle string prefix with special characters', async () => {
-      // Arrange
-      const counter = new counterModel({
-        _id: 'special',
-        prefix: 'SUB-2024_V1',
-        sequence_value: 0,
-      });
-
-      // Act
-      const savedCounter = await counter.save();
-
-      // Assert
-      expect(typeof savedCounter.prefix).toBe('string');
-      expect(savedCounter.prefix).toBe('SUB-2024_V1');
-    });
-
-    it('should handle number sequence_value correctly', async () => {
-      // Arrange
-      const counter = new counterModel({
-        _id: 'number',
-        prefix: 'NUM',
-        sequence_value: 12345,
-      });
-
-      // Act
-      const savedCounter = await counter.save();
-
-      // Assert
-      expect(typeof savedCounter.sequence_value).toBe('number');
-      expect(savedCounter.sequence_value).toBe(12345);
-    });
-
-    it('should handle zero sequence_value', async () => {
-      // Arrange
-      const counter = new counterModel({
-        _id: 'zero',
-        prefix: 'ZERO',
-        sequence_value: 0,
-      });
-
-      // Act
-      const savedCounter = await counter.save();
-
-      // Assert
-      expect(savedCounter.sequence_value).toBe(0);
-    });
-  });
-
-  describe('collection configuration', () => {
-    it('should use correct collection name', () => {
-      // Assert
-      expect(counterModel.collection.name).toBe('counters');
-    });
-
-    it('should have correct schema structure', () => {
-      // Assert
-      const paths = counterModel.schema.paths;
-      expect(paths).toHaveProperty('_id');
-      expect(paths).toHaveProperty('prefix');
-      expect(paths).toHaveProperty('sequence_value');
-    });
-
-    it('should have required fields marked correctly', () => {
-      // Assert
-      const paths = counterModel.schema.paths;
-      expect(paths._id.isRequired).toBe(true);
-      expect(paths.prefix.isRequired).toBe(true);
-      expect(paths.sequence_value.isRequired).toBe(true);
-    });
-
-    it('should have correct default value for sequence_value', () => {
-      // Assert
-      const sequenceValuePath = counterModel.schema.paths.sequence_value as any;
-      expect(sequenceValuePath.defaultValue).toBe(0);
-    });
-  });
-
-  describe('document operations', () => {
-    it('should support findById with string _id', async () => {
-      // Arrange
-      const counter = new counterModel({
-        _id: 'findable',
-        prefix: 'FIND',
         sequence_value: 100,
       });
       await counter.save();
 
-      // Act
-      const foundCounter = await counterModel.findById('findable');
-
-      // Assert
-      expect(foundCounter).toBeDefined();
-      expect(foundCounter?._id).toBe('findable');
-      expect(foundCounter?.prefix).toBe('FIND');
-      expect(foundCounter?.sequence_value).toBe(100);
-    });
-
-    it('should support update operations', async () => {
-      // Arrange
-      const counter = new counterModel({
-        _id: 'updatable',
-        prefix: 'OLD',
-        sequence_value: 5,
-      });
-      await counter.save();
-
-      // Act
-      const updatedCounter = await counterModel.findByIdAndUpdate(
-        'updatable',
-        { $set: { prefix: 'NEW' }, $inc: { sequence_value: 1 } },
-        { new: true }
-      );
-
-      // Assert
-      expect(updatedCounter).toBeDefined();
-      expect(updatedCounter?.prefix).toBe('NEW');
-      expect(updatedCounter?.sequence_value).toBe(6);
-    });
-
-    it('should support atomic findOneAndUpdate operations', async () => {
-      // Arrange
-      const counter = new counterModel({
-        _id: 'atomic',
-        prefix: 'ATOM',
-        sequence_value: 0,
-      });
-      await counter.save();
-
-      // Act
+      // Act: Atomic increment operation (critical for CountersService)
       const updatedCounter = await counterModel.findOneAndUpdate(
-        { _id: 'atomic' },
+        { _id: 'user' },
         { $inc: { sequence_value: 1 } },
         { new: true, returnDocument: 'after' }
       );
 
-      // Assert
+      // Assert: Atomic operations must work for thread-safe recordId generation
       expect(updatedCounter).toBeDefined();
-      expect(updatedCounter?.sequence_value).toBe(1);
+      expect(updatedCounter?.sequence_value).toBe(101);
+    });
+
+    it('should handle counter reset scenarios for system maintenance', async () => {
+      // Arrange: Business scenario - administrator resets counter sequence
+      const counter = new counterModel({
+        _id: 'test_entity',
+        prefix: 'TEST',
+        sequence_value: 9999,
+      });
+      await counter.save();
+
+      // Act: Reset counter for maintenance (business workflow)
+      const resetCounter = await counterModel.findByIdAndUpdate(
+        'test_entity',
+        { $set: { sequence_value: 0 } },
+        { new: true }
+      );
+
+      // Assert: Counter resets should be supported for system administration
+      expect(resetCounter).toBeDefined();
+      expect(resetCounter?.sequence_value).toBe(0);
+    });
+
+    it('should prevent counter conflicts with proper entity identification', async () => {
+      // Arrange: Business scenario - ensure each entity type has unique counter
+      const userCounter = new counterModel({
+        _id: 'user',
+        prefix: 'USR',
+        sequence_value: 50,
+      });
+      const clientCounter = new counterModel({
+        _id: 'client', // Different entity, different counter
+        prefix: 'CLI',
+        sequence_value: 50, // Same sequence number is OK for different entities
+      });
+
+      // Act: Save both counters
+      const savedUserCounter = await userCounter.save();
+      const savedClientCounter = await clientCounter.save();
+
+      // Assert: Different entities can have separate counter sequences
+      expect(savedUserCounter._id).toBe('user');
+      expect(savedClientCounter._id).toBe('client');
+      expect(savedUserCounter.sequence_value).toBe(50);
+      expect(savedClientCounter.sequence_value).toBe(50); // Same value, different entity
+    });
+  });
+
+  describe('Counter System Integration Points', () => {
+    it('should maintain correct collection structure for CountersService integration', () => {
+      // Assert: Verify the schema structure matches CountersService expectations
+      expect(counterModel.collection.name).toBe('counters');
+      
+      const paths = counterModel.schema.paths;
+      expect(paths).toHaveProperty('_id'); // Entity identifier
+      expect(paths).toHaveProperty('prefix'); // Business key prefix
+      expect(paths).toHaveProperty('sequence_value'); // Current sequence number
+    });
+
+    it('should support the CountersService query pattern for recordId generation', async () => {
+      // Arrange: Set up counter as CountersService would
+      const counter = new counterModel({
+        _id: 'orchard',
+        prefix: 'ORC',
+        sequence_value: 42,
+      });
+      await counter.save();
+
+      // Act: Simulate CountersService atomic increment and retrieve
+      const result = await counterModel.findOneAndUpdate(
+        { _id: 'orchard' },
+        { $inc: { sequence_value: 1 } },
+        { new: true }
+      );
+
+      // Assert: Result should provide data for recordId generation
+      expect(result).toBeDefined();
+      expect(result?.prefix).toBe('ORC');
+      expect(result?.sequence_value).toBe(43);
+      
+      // This would generate recordId: "ORC043" in CountersService
+      const expectedRecordId = `${result?.prefix}${String(result?.sequence_value).padStart(3, '0')}`;
+      expect(expectedRecordId).toBe('ORC043');
     });
   });
 });

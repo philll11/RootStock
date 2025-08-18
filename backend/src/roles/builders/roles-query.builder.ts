@@ -4,10 +4,11 @@ import { BaseQueryBuilder } from '../../common/builders/base-query.builder';
 import { QueryRoleDto } from '../dto/query-role.dto';
 import { User } from '../../users/schemas/user.schema';
 import { VisibilityScope } from '../schemas/role.schema';
+import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
 
 export class RoleQueryBuilder extends BaseQueryBuilder {
-  constructor(queryDto: QueryRoleDto, user: User) {
-    super(queryDto, user);
+  constructor(queryDto: QueryRoleDto, user: User, clientResolver: ClientResolverService) {
+    super(queryDto, user, clientResolver);
   }
 
   /**

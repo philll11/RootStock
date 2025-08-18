@@ -5,10 +5,11 @@ import { CountersService } from './counters.service';
 import { Counter } from './schemas/counter.schema';
 import { UpdateCounterDto } from './dto/update-counter.dto';
 
-describe('CountersService', () => {
+describe('CountersService - RootStock RecordId Generation System', () => {
   let service: CountersService;
   let mockCounterModel: any;
 
+  // Test data representing real RootStock business entities
   const mockCounterDoc = {
     _id: 'subsidiary',
     prefix: 'SUB',
@@ -46,9 +47,9 @@ describe('CountersService', () => {
     jest.clearAllMocks();
   });
 
-  describe('findAll', () => {
-    it('should return all counter documents', async () => {
-      // Arrange
+  describe('Administrator Counter Dashboard (findAll)', () => {
+    it('should return all RootStock entity counters for system monitoring', async () => {
+      // Arrange: Administrator monitoring system counter states
       const expectedCounters = [
         { _id: 'subsidiary', prefix: 'SUB', sequence_value: 1 },
         { _id: 'client', prefix: 'CLI', sequence_value: 5 },
@@ -58,24 +59,24 @@ describe('CountersService', () => {
         exec: jest.fn().mockResolvedValue(expectedCounters),
       });
 
-      // Act
+      // Act: Administrator requests all counter status
       const result = await service.findAll();
 
-      // Assert
+      // Assert: All RootStock entity counters returned for dashboard
       expect(mockCounterModel.find).toHaveBeenCalledWith();
       expect(result).toEqual(expectedCounters);
     });
 
-    it('should return empty array when no counters exist', async () => {
-      // Arrange
+    it('should return empty array when no counters initialized yet', async () => {
+      // Arrange: Fresh RootStock installation with no entity counters
       mockCounterModel.find.mockReturnValue({
         exec: jest.fn().mockResolvedValue([]),
       });
 
-      // Act
+      // Act: Check counters on new system
       const result = await service.findAll();
 
-      // Assert
+      // Assert: Empty system state handled properly
       expect(result).toEqual([]);
     });
 
@@ -91,20 +92,20 @@ describe('CountersService', () => {
     });
   });
 
-  describe('update', () => {
+  describe('Administrator Prefix Management (update)', () => {
     const updateDto: UpdateCounterDto = { prefix: 'NEWSUB' };
 
-    it('should update counter prefix successfully', async () => {
-      // Arrange
+    it('should update subsidiary prefix for business rebranding scenarios', async () => {
+      // Arrange: Company rebranding requires new recordId prefixes
       const updatedCounter = { _id: 'subsidiary', prefix: 'NEWSUB', sequence_value: 5 };
       mockCounterModel.findByIdAndUpdate.mockReturnValue({
         exec: jest.fn().mockResolvedValue(updatedCounter),
       });
 
-      // Act
+      // Act: Administrator updates prefix for business continuity
       const result = await service.update('subsidiary', updateDto);
 
-      // Assert
+      // Assert: Prefix updated while preserving existing sequence values
       expect(mockCounterModel.findByIdAndUpdate).toHaveBeenCalledWith(
         'subsidiary',
         { $set: { prefix: 'NEWSUB' } },
@@ -113,13 +114,13 @@ describe('CountersService', () => {
       expect(result).toEqual(updatedCounter);
     });
 
-    it('should throw NotFoundException when counter does not exist', async () => {
-      // Arrange
+    it('should prevent updating non-existent counter types for data integrity', async () => {
+      // Arrange: Attempt to update invalid RootStock entity counter
       mockCounterModel.findByIdAndUpdate.mockReturnValue({
         exec: jest.fn().mockResolvedValue(null),
       });
 
-      // Act & Assert
+      // Act & Assert: Should prevent invalid counter configuration
       await expect(service.update('nonexistent', updateDto))
         .rejects
         .toThrow(new NotFoundException('Counter with ID "nonexistent" not found.'));
@@ -144,18 +145,18 @@ describe('CountersService', () => {
         .toThrow('Database update failed');
     });
 
-    it('should handle edge case with empty string prefix', async () => {
-      // Arrange
+    it('should support business-friendly prefix formats for multi-tenant operations', async () => {
+      // Arrange: Multi-tenant scenario requiring descriptive prefixes
       const emptyPrefixDto: UpdateCounterDto = { prefix: '' };
       const updatedCounter = { _id: 'subsidiary', prefix: '', sequence_value: 5 };
       mockCounterModel.findByIdAndUpdate.mockReturnValue({
         exec: jest.fn().mockResolvedValue(updatedCounter),
       });
 
-      // Act
+      // Act: Administrator configures empty prefix for specific business need
       const result = await service.update('subsidiary', emptyPrefixDto);
 
-      // Assert
+      // Assert: System supports flexible prefix configuration
       expect(mockCounterModel.findByIdAndUpdate).toHaveBeenCalledWith(
         'subsidiary',
         { $set: { prefix: '' } },
@@ -165,18 +166,18 @@ describe('CountersService', () => {
     });
   });
 
-  describe('getNextSequenceValue', () => {
-    it('should increment sequence value for existing counter', async () => {
-      // Arrange
+  describe('RootStock RecordId Generation (getNextSequenceValue)', () => {
+    it('should generate sequential recordIds for RootStock entity creation', async () => {
+      // Arrange: Subsidiary creation workflow requiring new recordId
       const existingCounter = { _id: 'subsidiary', prefix: 'SUB', sequence_value: 6 };
       mockCounterModel.findOneAndUpdate.mockReturnValue({
         exec: jest.fn().mockResolvedValue(existingCounter),
       });
 
-      // Act
+      // Act: SubsidiariesService requests next sequence for recordId
       const result = await service.getNextSequenceValue('subsidiary', 'SUB');
 
-      // Assert
+      // Assert: Atomic increment provides sequential business key
       expect(mockCounterModel.findOneAndUpdate).toHaveBeenCalledWith(
         { _id: 'subsidiary' },
         {
@@ -188,17 +189,17 @@ describe('CountersService', () => {
       expect(result).toEqual(existingCounter);
     });
 
-    it('should create new counter with default prefix when not exists', async () => {
-      // Arrange
+    it('should initialize new entity counter for system expansion', async () => {
+      // Arrange: New RootStock feature requiring counter (e.g., spray events)
       const newCounter = { _id: 'newresource', prefix: 'NEW', sequence_value: 1 };
       mockCounterModel.findOneAndUpdate.mockReturnValue({
         exec: jest.fn().mockResolvedValue(newCounter),
       });
 
-      // Act
+      // Act: New service type requests counter initialization
       const result = await service.getNextSequenceValue('newresource', 'NEW');
 
-      // Assert
+      // Assert: System creates counter with default prefix and starts at 1
       expect(mockCounterModel.findOneAndUpdate).toHaveBeenCalledWith(
         { _id: 'newresource' },
         {
@@ -211,8 +212,8 @@ describe('CountersService', () => {
       expect(result.sequence_value).toBe(1);
     });
 
-    it('should handle concurrent calls correctly (atomic operation)', async () => {
-      // Arrange - Simulate two concurrent calls
+    it('should ensure thread-safe recordId generation for multi-user platform', async () => {
+      // Arrange: Multiple users creating entities simultaneously (critical business scenario)
       const counter1 = { _id: 'subsidiary', prefix: 'SUB', sequence_value: 10 };
       const counter2 = { _id: 'subsidiary', prefix: 'SUB', sequence_value: 11 };
       
@@ -224,20 +225,20 @@ describe('CountersService', () => {
           exec: jest.fn().mockResolvedValue(counter2),
         });
 
-      // Act - Simulate concurrent calls
+      // Act: Simulate concurrent entity creation from multiple users
       const [result1, result2] = await Promise.all([
         service.getNextSequenceValue('subsidiary', 'SUB'),
         service.getNextSequenceValue('subsidiary', 'SUB'),
       ]);
 
-      // Assert - Both calls should use atomic operation
+      // Assert: MongoDB atomic operations prevent recordId collisions
       expect(mockCounterModel.findOneAndUpdate).toHaveBeenCalledTimes(2);
       expect(result1.sequence_value).toBe(10);
       expect(result2.sequence_value).toBe(11);
     });
 
-    it('should handle different resource types correctly', async () => {
-      // Arrange
+    it('should support independent sequences for all RootStock entity types', async () => {
+      // Arrange: Different entity services requesting counters
       const clientCounter = { _id: 'client', prefix: 'CLI', sequence_value: 1 };
       const userCounter = { _id: 'user', prefix: 'USR', sequence_value: 1 };
 
@@ -249,13 +250,13 @@ describe('CountersService', () => {
           exec: jest.fn().mockResolvedValue(userCounter),
         });
 
-      // Act
+      // Act: ClientsService and UsersService request sequences simultaneously
       const [clientResult, userResult] = await Promise.all([
         service.getNextSequenceValue('client', 'CLI'),
         service.getNextSequenceValue('user', 'USR'),
       ]);
 
-      // Assert
+      // Assert: Each entity type maintains independent sequence
       expect(clientResult._id).toBe('client');
       expect(clientResult.prefix).toBe('CLI');
       expect(userResult._id).toBe('user');
@@ -494,5 +495,61 @@ describe('CountersService', () => {
       expect(service).toBeDefined();
       expect(service).toBeInstanceOf(CountersService);
     });
+
+    it('should provide the core recordId generation foundation for RootStock platform', () => {
+      // Assert: Service provides the essential business logic methods
+      expect(typeof service.getNextSequenceValue).toBe('function');
+      expect(typeof service.findAll).toBe('function');
+      expect(typeof service.update).toBe('function');
+      
+      // Business Context: This service is injected into all entity services
+      // - SubsidiariesService uses it for SUB001, SUB002, etc.
+      // - ClientsService uses it for CLI001, CLI002, etc.  
+      // - UsersService uses it for USR001, USR002, etc.
+      // - RolesService uses it for ROL001, ROL002, etc.
+      // - OrchardsService uses it for ORC001, ORC002, etc.
+    });
   });
+
+  describe('RootStock RecordId Format Integration', () => {
+    it('should support recordId generation pattern used by entity services', async () => {
+      // Arrange: Simulate how SubsidiariesService uses CountersService
+      const counter = { _id: 'subsidiary', prefix: 'SUB', sequence_value: 42 };
+      mockCounterModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(counter),
+      });
+
+      // Act: Get counter data as entity service would
+      const result = await service.getNextSequenceValue('subsidiary', 'SUB');
+
+      // Assert: Result provides data for recordId formatting
+      expect(result.prefix).toBe('SUB');
+      expect(result.sequence_value).toBe(42);
+      
+      // Business Logic: Entity services format as: `${prefix}${paddedSequence}`
+      const paddedSequence = result.sequence_value.toString().padStart(4, '0');
+      const recordId = `${result.prefix}${paddedSequence}`;
+      expect(recordId).toBe('SUB0042'); // Real RootStock recordId format
+    });
+
+    it('should handle custom prefixes from business rebranding scenarios', async () => {
+      // Arrange: Company rebranded and prefix was updated
+      const customCounter = { _id: 'subsidiary', prefix: 'ACME', sequence_value: 15 };
+      mockCounterModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(customCounter),
+      });
+
+      // Act: Entity service creates new record with updated prefix
+      const result = await service.getNextSequenceValue('subsidiary', 'SUB');
+
+      // Assert: Uses existing custom prefix, not default
+      expect(result.prefix).toBe('ACME'); // Not 'SUB'
+      
+      // Business continuity: New subsidiaries get ACME0015, ACME0016, etc.
+      const paddedSequence = result.sequence_value.toString().padStart(4, '0');
+      const recordId = `${result.prefix}${paddedSequence}`;
+      expect(recordId).toBe('ACME0015');
+    });
+  });
+
 });

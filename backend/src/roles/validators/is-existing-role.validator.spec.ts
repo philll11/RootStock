@@ -5,7 +5,7 @@ import { RolesService } from '../roles.service';
 
 // Mock the RolesService and its method
 const mockRolesService = {
-  _isRoleExistingAndActive: jest.fn(),
+  isRoleExistingAndActive: jest.fn(),
 };
 
 describe('IsExistingRoleConstraint', () => {
@@ -41,24 +41,24 @@ describe('IsExistingRoleConstraint', () => {
   describe('validate', () => {
     it('should PASS when roleId is valid and service returns true', async () => {
       const validId = '60f8f1b3b5f9f1b3b5f9f1b3';
-      mockRolesService._isRoleExistingAndActive.mockResolvedValue(true);
+      mockRolesService.isRoleExistingAndActive.mockResolvedValue(true);
       const result = await validator.validate(validId, mockArgs);
       expect(result).toBe(true);
-      expect(mockRolesService._isRoleExistingAndActive).toHaveBeenCalledWith(validId);
+      expect(mockRolesService.isRoleExistingAndActive).toHaveBeenCalledWith(validId);
     });
 
     it('should FAIL when roleId is invalid and service returns false', async () => {
       const invalidId = '000000000000000000000000';
-      mockRolesService._isRoleExistingAndActive.mockResolvedValue(false);
+      mockRolesService.isRoleExistingAndActive.mockResolvedValue(false);
       const result = await validator.validate(invalidId, mockArgs);
       expect(result).toBe(false);
-      expect(mockRolesService._isRoleExistingAndActive).toHaveBeenCalledWith(invalidId);
+      expect(mockRolesService.isRoleExistingAndActive).toHaveBeenCalledWith(invalidId);
     });
 
     it('should PASS when roleId is null', async () => {
       const result = await validator.validate(null as any, mockArgs);
       expect(result).toBe(true);
-      expect(mockRolesService._isRoleExistingAndActive).not.toHaveBeenCalled();
+      expect(mockRolesService.isRoleExistingAndActive).not.toHaveBeenCalled();
     });
   });
 

@@ -7,6 +7,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { QueryRoleDto } from './dto/query-role.dto';
 import { Role, RoleDocument } from './schemas/role.schema';
 import { RoleQueryBuilder } from './builders/roles-query.builder';
+import { ClientResolverService } from '../clients/client-resolver/client-resolver.service';
 
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
@@ -18,6 +19,7 @@ export class RolesService {
     @InjectModel(Role.name) private roleModel: Model<RoleDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectConnection() private connection: Connection,
+    private readonly clientResolverService: ClientResolverService,
     private readonly usersService: UsersService,
     private readonly countersService: CountersService,
   ) { }
@@ -36,13 +38,13 @@ export class RolesService {
   }
 
   async findAll(query: QueryRoleDto, user: User): Promise<Role[]> {
-    const queryBuilder = new RoleQueryBuilder(query, user);
+    const queryBuilder = new RoleQueryBuilder(query, user, this.clientResolverService);
     const filter = await queryBuilder.build();
     return await this.roleModel.find(filter).exec();
   }
 
   async findOne(roleId: string, user: User): Promise<Role> {
-    const queryBuilder = new RoleQueryBuilder({}, user);
+    const queryBuilder = new RoleQueryBuilder({}, user, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = {

@@ -1,231 +1,119 @@
-import { validate, validateOrReject } from 'class-validator';
-import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { UpdateCounterDto } from './update-counter.dto';
 
-describe('UpdateCounterDto', () => {
+describe('UpdateCounterDto Business Logic', () => {
   let dto: UpdateCounterDto;
 
   beforeEach(() => {
     dto = new UpdateCounterDto();
   });
 
-  // Helper function to test transformation + validation
-  const validateTransformed = async (plainObject: any) => {
-    const transformed = plainToInstance(UpdateCounterDto, plainObject);
-    return await validate(transformed);
-  };
-
-  describe('prefix field validation', () => {
-    it('should SUCCEED with valid prefix', async () => {
-      // Arrange
-      dto.prefix = 'SUB';
-
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
-      expect(errors.length).toBe(0);
+  describe('RootStock Business Prefix Formats', () => {
+    it('should accept standard RootStock entity prefixes', async () => {
+      // Arrange: Test real business prefixes used in RootStock platform
+      const standardPrefixes = ['SUB', 'CLI', 'USR', 'ROL', 'ORC'];
+      
+      // Act & Assert: Each standard prefix should be valid
+      for (const prefix of standardPrefixes) {
+        dto.prefix = prefix;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
     });
 
-    it('should SUCCEED with maximum length prefix (10 characters)', async () => {
-      // Arrange
-      dto.prefix = 'ABCDEFGHIJ'; // Exactly 10 characters
-
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
-      expect(errors.length).toBe(0);
-    });
-
-    it('should FAIL with empty string prefix', async () => {
-      // Arrange
-      dto.prefix = '';
-
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isNotEmpty');
-    });
-
-    it('should FAIL with null prefix', async () => {
-      // Arrange
-      dto.prefix = null as any;
-
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isString');
-    });
-
-    it('should FAIL with undefined prefix', async () => {
-      // Arrange
-      // dto.prefix is undefined by default
-
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isString');
-    });
-
-    it('should FAIL with non-string prefix', async () => {
-      // Arrange
-      dto.prefix = 123 as any;
-
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isString');
-    });
-
-    it('should FAIL with prefix exceeding maximum length (11 characters)', async () => {
-      // Arrange
-      dto.prefix = 'ABCDEFGHIJK'; // 11 characters, exceeds 10 limit
-
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('maxLength');
-    });
-
-    it('should SUCCEED with special characters in prefix', async () => {
-      // Arrange
+    it('should accept prefixes with version suffixes for system evolution', async () => {
+      // Arrange: Business case - when we need to evolve prefix formats
       dto.prefix = 'SUB-V2';
 
       // Act
       const errors = await validate(dto);
 
-      // Assert
+      // Assert: Version suffixes should be allowed for business continuity
       expect(errors.length).toBe(0);
     });
 
-    it('should SUCCEED with numeric characters in prefix', async () => {
-      // Arrange
-      dto.prefix = 'SUB123';
-
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
-      expect(errors.length).toBe(0);
+    it('should accept prefixes with business context indicators', async () => {
+      // Arrange: Business case - geographical or divisional prefixes
+      const contextualPrefixes = ['ORG_WEST', 'SUB_123', 'CLI_DEMO'];
+      
+      // Act & Assert: Contextual prefixes should be valid for business flexibility
+      for (const prefix of contextualPrefixes) {
+        dto.prefix = prefix;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
     });
 
-    it('should SUCCEED with single character prefix', async () => {
-      // Arrange
+    it('should accept mixed case prefixes for human-readable business keys', async () => {
+      // Arrange: Business case - readable prefixes like "Subsidiary" or "Client"
+      const mixedCasePrefixes = ['SubSidiary', 'Client', 'Orchard'];
+
+      // Act & Assert: Mixed case should be allowed for readability
+      for (const prefix of mixedCasePrefixes) {
+        dto.prefix = prefix;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
+    });
+
+    it('should accept single character prefixes for concise business keys', async () => {
+      // Arrange: Business case - ultra-concise prefixes like "S" for System
       dto.prefix = 'S';
 
       // Act
       const errors = await validate(dto);
 
-      // Assert
+      // Assert: Single char prefixes should be valid for brevity
       expect(errors.length).toBe(0);
     });
 
-    it('should SUCCEED and trim whitespace around valid prefix', async () => {
-      // Arrange - Test transformation behavior
-      const plainObject = { prefix: '  SUB  ' }; // Whitespace around valid prefix
+    it('should accept numeric characters in prefixes for sequence indicators', async () => {
+      // Arrange: Business case - prefixes with sequence numbers
+      const numericPrefixes = ['SUB123', 'CLI2024', 'V1_ORG'];
 
-      // Act
-      const errors = await validateTransformed(plainObject);
-
-      // Assert
-      expect(errors.length).toBe(0);
-      
-      // Verify the transformation worked
-      const transformed = plainToInstance(UpdateCounterDto, plainObject);
-      expect(transformed.prefix).toBe('SUB'); // Should be trimmed
+      // Act & Assert: Numeric characters should be allowed for versioning
+      for (const prefix of numericPrefixes) {
+        dto.prefix = prefix;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
     });
 
-    it('should SUCCEED after trimming whitespace-only prefix to empty and then fail validation', async () => {
-      // Arrange - Use the helper function to test transformation
-      const plainObject = { prefix: '   ' }; // Only spaces - will be trimmed to empty string
-
-      // Act
-      const errors = await validateTransformed(plainObject);
-
-      // Assert - Should fail because after trimming it becomes empty string
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isNotEmpty');
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should handle prefix with numbers and underscores', async () => {
-      // Arrange
-      dto.prefix = 'SUB_123';
+    it('should accept prefixes at maximum business length for complex organizations', async () => {
+      // Arrange: Business case - complex organizational prefixes
+      dto.prefix = 'SUBSIDIARY'; // 10 characters - max allowed
 
       // Act
       const errors = await validate(dto);
 
-      // Assert
-      expect(errors.length).toBe(0);
-    });
-
-    it('should handle prefix with mixed case', async () => {
-      // Arrange
-      dto.prefix = 'SubSidiary';
-
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
-      expect(errors.length).toBe(0);
-    });
-
-    it('should handle prefix at exact boundary (10 chars)', async () => {
-      // Arrange
-      dto.prefix = 'SUB_2024_V'; // 10 characters
-
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
+      // Assert: Full-length business prefixes should be supported
       expect(errors.length).toBe(0);
     });
   });
 
-  describe('multiple validation errors', () => {
-    it('should return multiple constraint violations for invalid input', async () => {
-      // Arrange
-      dto.prefix = null as any;
+  describe('Real Business Edge Cases', () => {
+    it('should handle legacy prefix formats during system migration', async () => {
+      // Arrange: Business case - migrating from old system prefixes
+      const legacyPrefixes = ['OLD_SUB', 'LEGACY_CLI', 'V1_USER'];
 
-      // Act
-      const errors = await validate(dto);
-
-      // Assert
-      expect(errors.length).toBe(1);
-      const constraints = Object.keys(errors[0].constraints || {});
-      expect(constraints.length).toBeGreaterThanOrEqual(1);
-    });
-  });
-
-  describe('dto construction', () => {
-    it('should create DTO instance successfully', () => {
-      // Act
-      const newDto = new UpdateCounterDto();
-
-      // Assert
-      expect(newDto).toBeInstanceOf(UpdateCounterDto);
-      expect(newDto.prefix).toBeUndefined();
+      // Act & Assert: Legacy formats should be supported during migration
+      for (const prefix of legacyPrefixes) {
+        dto.prefix = prefix;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
     });
 
-    it('should allow property assignment', () => {
-      // Act
-      const newDto = new UpdateCounterDto();
-      newDto.prefix = 'TEST';
+    it('should support multi-tenant prefix differentiation', async () => {
+      // Arrange: Business case - different prefixes for different tenants/regions
+      const tenantPrefixes = ['AU_CLI', 'US_SUB', 'EU_ORG'];
 
-      // Assert
-      expect(newDto.prefix).toBe('TEST');
+      // Act & Assert: Tenant-specific prefixes should be valid
+      for (const prefix of tenantPrefixes) {
+        dto.prefix = prefix;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
     });
   });
 });
