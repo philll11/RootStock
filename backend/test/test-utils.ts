@@ -24,16 +24,17 @@ export const setupTestApp = async (): Promise<{
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [
-      ConfigModule.forRoot({ isGlobal: true, envFilePath: './test/.env.test' }),
-      MongooseModule.forRoot(uri),
+      ConfigModule.forRoot({ 
+        isGlobal: true,
+        load: [() => ({
+          DATABASE_URL: uri,
+          COGNITO_CLIENT_SECRET: 'test-secret-key-for-jwt-signing'
+        })]
+      }),
       AppModule,
-      JwtModule.registerAsync({
-        imports: [ConfigModule],
-        useFactory: async (configService: ConfigService) => ({
-          secret: configService.get<string>('COGNITO_CLIENT_SECRET'),
-          signOptions: { expiresIn: '1h' },
-        }),
-        inject: [ConfigService],
+      JwtModule.register({
+        secret: 'test-secret-key-for-jwt-signing',
+        signOptions: { expiresIn: '1h' },
       }),
     ],
   }).compile();
@@ -41,7 +42,16 @@ export const setupTestApp = async (): Promise<{
   const app = moduleFixture.createNestApplication();
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
   await app.init();
   const jwtService = moduleFixture.get<JwtService>(JwtService);
   return { app, mongod, jwtService };

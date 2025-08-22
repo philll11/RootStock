@@ -8,7 +8,6 @@ import { JwtService } from '@nestjs/jwt';
 import { setupTestApp, teardownTestApp } from '../test-utils';
 
 import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { CreateRoleDto } from '../../src/roles/dto/create-role.dto';
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 

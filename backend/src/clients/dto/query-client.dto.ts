@@ -13,7 +13,6 @@ export class QueryClientDto {
 
     @IsMongoId()
     @IsOptional()
-    @Type(() => Boolean)
     readonly subsidiaryId?: string;
 
     @IsBoolean()

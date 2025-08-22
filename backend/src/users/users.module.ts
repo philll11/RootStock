@@ -12,12 +12,15 @@ import { IsExistingUserConstraint } from './validators/is-existing-user.validato
 import { IsExistingContactUsersConstraint } from './validators/is-existing-contact-users.validator';
 import { CountersModule } from '../counters/counters.module';
 
+import { VisibilityModule } from '../common/visibility/visibility.module';
+
 @Module({
   imports: [
     forwardRef(() => RolesModule),
     forwardRef(() => ClientsModule),
     ClientResolverModule,
-    CountersModule
+    CountersModule,
+    VisibilityModule
   ],
   controllers: [UsersController],
   providers: [

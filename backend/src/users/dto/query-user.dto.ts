@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, IsEmail } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UserType } from '../schemas/user.schema';
 
@@ -11,6 +11,10 @@ export class QueryUserDto {
     @IsString()
     @IsOptional()
     readonly name?: string;
+
+    @IsEmail()
+    @IsOptional()
+    readonly email?: string;
 
     @IsEnum(UserType)
     @IsOptional()

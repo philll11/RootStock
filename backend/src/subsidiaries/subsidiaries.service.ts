@@ -15,6 +15,7 @@ import { ClientResolverService } from '../clients/client-resolver/client-resolve
 import { User } from '../users/schemas/user.schema';
 import { PERMISSIONS } from '../common/constants/permissions.constants';
 import { CountersService } from '../counters/counters.service';
+import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
 
 @Injectable()
 export class SubsidiariesService {
@@ -31,7 +32,7 @@ export class SubsidiariesService {
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('subsidiary', 'SUB');
     const paddedSequence = sequence_value.toString().padStart(4, '0');
     const recordId = `${prefix}${paddedSequence}`;
-    
+
     const newSubsidiary = new this.subsidiaryModel({
       ...createSubsidiaryDto,
       recordId,
@@ -93,17 +94,18 @@ export class SubsidiariesService {
 
     const session = await this.connection.startSession();
     session.startTransaction();
-    try {
-      await this.clientModel.updateMany({ subsidiaryId: subsidiaryId }, { $set: { subsidiaryId: null } }, { session }).exec();
-      const deletedSubsidiary = await this.subsidiaryModel.findByIdAndUpdate(
-        subsidiaryId,
-        { isDeleted: true, isActive: false },
-        { session, new: true },
-      ).exec();
 
-      if (!deletedSubsidiary) {
-        throw new NotFoundException(`Subsidiary with ID "${subsidiaryId}" not found`);
-      }
+    try {
+      // Handle concurrent soft deletion with transaction safety
+      const deletedSubsidiary = await handleConcurrentSoftDelete<SubsidiaryDocument>(
+        this.subsidiaryModel,
+        subsidiaryId,
+        session,
+        'Subsidiary'
+      );
+
+      // Remove subsidiary reference from clients
+      await this.clientModel.updateMany({ subsidiaryId: subsidiaryId }, { $set: { subsidiaryId: null } }, { session }).exec();
 
       await session.commitTransaction();
       return deletedSubsidiary;

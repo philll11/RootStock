@@ -15,6 +15,7 @@ import { Orchard, OrchardDocument } from '../orchards/schemas/orchard.schema';
 
 import { PERMISSIONS } from '../common/constants/permissions.constants';
 import { CountersService } from '../counters/counters.service';
+import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
 
 @Injectable()
 export class ClientsService {
@@ -129,23 +130,19 @@ export class ClientsService {
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
+      // Handle concurrent soft deletion with transaction safety
+      const deletedClient = await handleConcurrentSoftDelete<ClientDocument>(
+        this.clientModel,
+        clientId,
+        session,
+        'Client'
+      );
 
       // Disassociate users from this client
       await this.userModel.updateMany({ clientIds: clientId }, { $pull: { clientIds: clientId } }, { session }).exec();
 
       // Soft-delete associated orchards
       await this.orchardModel.updateMany({ clientId: new Types.ObjectId(clientId) }, { isDeleted: true, isActive: false }, { session }).exec();
-
-      // Soft-delete the client itself
-      const deletedClient = await this.clientModel.findByIdAndUpdate(
-        clientId,
-        { isDeleted: true, isActive: false },
-        { session, new: true }
-      ).exec();
-
-      if (!deletedClient) {
-        throw new NotFoundException(`Client with ID "${clientId}" not found`);
-      }
 
       await session.commitTransaction();
       return deletedClient;
@@ -181,15 +178,18 @@ export class ClientsService {
  * @returns `true` if the ID is valid, `false` otherwise.
  */
   async validateSingleClientId(clientId: string): Promise<boolean> {
-    if (!clientId) {
+    if (!clientId) return false;
+    try {
+      const client = await this.clientModel.findOne({
+        _id: new Types.ObjectId(clientId),
+        isActive: true,
+        isDeleted: false,
+      });
+      return !!client; // Returns true if client is found, false otherwise
+    } catch (error) {
+      // Handle malformed ObjectId gracefully
       return false;
     }
-    const client = await this.clientModel.findOne({
-      _id: new Types.ObjectId(clientId),
-      isActive: true,
-      isDeleted: false,
-    });
-    return !!client; // Returns true if client is found, false otherwise
   }
 
   /**

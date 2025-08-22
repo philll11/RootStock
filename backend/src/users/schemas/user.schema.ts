@@ -23,6 +23,9 @@ export class User {
   @Prop({ required: true })
   lastName: string;
 
+  @Prop({ required: true, unique: true, lowercase: true, index: true })
+  email: string;
+
   @Prop({ required: true, enum: UserType })
   userType: UserType;
 

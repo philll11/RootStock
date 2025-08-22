@@ -5,7 +5,7 @@ import { UsersService } from '../users.service';
 
 // Mock the UsersService to isolate the validator's logic
 const mockUsersService = {
-  isUserExistingAndActive: jest.fn(),
+  validateUserId: jest.fn(),
 };
 
 describe('IsExistingUserConstraint', () => {
@@ -41,30 +41,30 @@ describe('IsExistingUserConstraint', () => {
   describe('validate', () => {
     it('should PASS when userId is valid and service returns true', async () => {
       const validId = '60f8f1b3b5f9f1b3b5f9f1b3';
-      mockUsersService.isUserExistingAndActive.mockResolvedValue(true);
+      mockUsersService.validateUserId.mockResolvedValue(true);
       const result = await validator.validate(validId, mockArgs);
       expect(result).toBe(true);
-      expect(mockUsersService.isUserExistingAndActive).toHaveBeenCalledWith(validId);
+      expect(mockUsersService.validateUserId).toHaveBeenCalledWith(validId);
     });
 
     it('should FAIL when userId is invalid and service returns false', async () => {
       const invalidId = '000000000000000000000000';
-      mockUsersService.isUserExistingAndActive.mockResolvedValue(false);
+      mockUsersService.validateUserId.mockResolvedValue(false);
       const result = await validator.validate(invalidId, mockArgs);
       expect(result).toBe(false);
-      expect(mockUsersService.isUserExistingAndActive).toHaveBeenCalledWith(invalidId);
+      expect(mockUsersService.validateUserId).toHaveBeenCalledWith(invalidId);
     });
 
     it('should PASS for a null value without calling the service', async () => {
       const result = await validator.validate(null as any, mockArgs);
       expect(result).toBe(true);
-      expect(mockUsersService.isUserExistingAndActive).not.toHaveBeenCalled();
+      expect(mockUsersService.validateUserId).not.toHaveBeenCalled();
     });
 
     it('should PASS for an undefined value without calling the service', async () => {
       const result = await validator.validate(undefined as any, mockArgs);
       expect(result).toBe(true);
-      expect(mockUsersService.isUserExistingAndActive).not.toHaveBeenCalled();
+      expect(mockUsersService.validateUserId).not.toHaveBeenCalled();
     });
   });
 

@@ -5,7 +5,6 @@ import { Types } from 'mongoose';
 export class ParseMongoIdPipe implements PipeTransform {
     transform(id: any, metadata: ArgumentMetadata) {
         if (!Types.ObjectId.isValid(id)) {
-            console.info(`Invalid MongoDB ObjectId | Param: ${metadata.data}, value: '${id}'`);
             throw new BadRequestException(`${id} is not a valid MongoDB ObjectId`);
         }
         return id;

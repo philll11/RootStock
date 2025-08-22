@@ -11,7 +11,8 @@ import { ClientResolverService } from '../clients/client-resolver/client-resolve
 
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
-import { CountersService } from '../counters/counters.service'; 
+import { CountersService } from '../counters/counters.service';
+import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
 
 @Injectable()
 export class RolesService {
@@ -91,16 +92,16 @@ export class RolesService {
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
-      await this.userModel.updateMany({ roleId: new Types.ObjectId(roleId) }, { $set: { roleId: null } }, { session }).exec();
-      const deletedRole = await this.roleModel.findByIdAndUpdate(
+      // Handle concurrent soft deletion with transaction safety
+      const deletedRole = await handleConcurrentSoftDelete<RoleDocument>(
+        this.roleModel,
         roleId,
-        { isDeleted: true, isActive: false },
-        { session, new: true },
-      ).exec();
-
-      if (!deletedRole) {
-        throw new NotFoundException(`Role with ID "${roleId}" not found`);
-      }
+        session,
+        'Role'
+      );
+      
+      // Remove role reference from users
+      await this.userModel.updateMany({ roleId: new Types.ObjectId(roleId) }, { $set: { roleId: null } }, { session }).exec();
 
       await session.commitTransaction();
       return deletedRole;

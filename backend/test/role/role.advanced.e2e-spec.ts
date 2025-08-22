@@ -1,17 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import { MongooseModule } from '@nestjs/mongoose';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { useContainer } from 'class-validator';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 
-import { AppModule } from '../../src/app.module';
 import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
@@ -349,6 +344,47 @@ describe('Roles Advanced Business Logic (e2e)', () => {
             const finalRole = await roleModel.findById(concurrentRole._id);
             expect(finalRole).not.toBeNull();
             expect(['Updated Name 1', 'Updated Name 2']).toContain(finalRole?.name);
+        });
+
+        it('should handle concurrent role deletions without write conflicts', async () => {
+            // Create multiple roles for concurrent deletion testing
+            const rolePromises = Array.from({ length: 3 }, (_, i) => 
+                new roleModel({
+                    recordId: `CONCURRENT_DELETE_${i + 1}`,
+                    name: `Concurrent Delete Role ${i + 1}`,
+                    visibilityScope: VisibilityScope.CLIENT,
+                    permissions: ['Test:Permission']
+                }).save()
+            );
+            const testRoles = await Promise.all(rolePromises);
+
+            // Simulate concurrent deletions (in real scenario these would be from different users/sessions)
+            const deletePromises = testRoles.map(role =>
+                request(app.getHttpServer())
+                    .delete(`/roles/${role._id}`)
+                    .set('Authorization', `Bearer ${globalAdminToken}`)
+            );
+
+            // Execute all deletions concurrently
+            const results = await Promise.allSettled(deletePromises);
+
+            // All deletions should succeed (idempotent behavior)
+            results.forEach((result, index) => {
+                expect(result.status).toBe('fulfilled');
+                if (result.status === 'fulfilled') {
+                    expect(result.value.status).toBe(200);
+                }
+            });
+
+            // Verify all roles are properly soft deleted
+            const deletedRoles = await roleModel.find({ 
+                _id: { $in: testRoles.map(r => r._id) }
+            });
+
+            deletedRoles.forEach(role => {
+                expect(role.isDeleted).toBe(true);
+                expect(role.isActive).toBe(false);
+            });
         });
     });
 

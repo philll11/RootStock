@@ -16,7 +16,6 @@ describe('IsClientIdsValidForUserTypeConstraint', () => {
 
     // A base DTO with all required properties to satisfy the type.
     const baseDto: CreateUserDto = {
-        recordId: 'UNIT-TEST-01',
         firstName: 'Test',
         lastName: 'User',
         userType: UserType.EMPLOYEE,
