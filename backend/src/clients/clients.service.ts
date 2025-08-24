@@ -16,6 +16,7 @@ import { Orchard, OrchardDocument } from '../orchards/schemas/orchard.schema';
 import { PERMISSIONS } from '../common/constants/permissions.constants';
 import { CountersService } from '../counters/counters.service';
 import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
+import { VisibilityScope } from '../roles/schemas/role.schema';
 
 @Injectable()
 export class ClientsService {
@@ -29,16 +30,38 @@ export class ClientsService {
     private readonly countersService: CountersService,
   ) { }
 
+  async create(createClientDto: CreateClientDto, user: User): Promise<Client> {
 
-  async create(createClientDto: CreateClientDto): Promise<Client> {
+    const userRole = user.roleId as any;
+
+    // A Global user can create a client anywhere. No further checks needed.
+    if (userRole.visibilityScope !== VisibilityScope.GLOBAL) {
+      if (!createClientDto.subsidiaryId) {
+        throw new ForbiddenException('You must provide a subsidiary ID when creating a client.');
+      }
+      // For non-global users, we must verify they have access to the target subsidiary.
+      const accessibleSubsidiaryIds = await this.clientResolverService.getAccessibleSubsidiaryIdsForUser(user);
+      const accessibleSubsidiaryIdStrings = accessibleSubsidiaryIds.map(id => id.toString());
+
+      if (createClientDto.subsidiaryId && !accessibleSubsidiaryIdStrings.includes(createClientDto.subsidiaryId)) {
+        throw new ForbiddenException(
+          `You do not have permission to create a client under subsidiary ID "${createClientDto.subsidiaryId}".`,
+        );
+      }
+    }
+    
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('client', 'CLI');
     const paddedSequence = sequence_value.toString().padStart(4, '0');
     const recordId = `${prefix}${paddedSequence}`;
 
-    const newClient = new this.clientModel({
-      ...createClientDto,
-      recordId,
-    });
+    const { subsidiaryId, ...restOfDto } = createClientDto;
+    const payload: Partial<Client> = { ...restOfDto, recordId };
+
+    if (subsidiaryId) {
+      payload.subsidiaryId = new Types.ObjectId(subsidiaryId);
+    }
+
+    const newClient = new this.clientModel(payload);
 
     return newClient.save();
   }
@@ -61,8 +84,9 @@ export class ClientsService {
    * @param user - The authenticated user making the request.
    * @returns The found client document.
    */
-  async findOne(clientId: string, user: User): Promise<Client> {
-    const queryBuilder = new ClientQueryBuilder({}, user, this.clientResolverService);
+  async findOne(clientId: string, user: User, options: { includeInactive?: boolean } = {}): Promise<Client> {
+    const queryDto = options.includeInactive ? { includeInactives: true } : {};
+    const queryBuilder = new ClientQueryBuilder(queryDto, user, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = {
@@ -87,7 +111,7 @@ export class ClientsService {
    * @returns The updated client document.
    */
   async update(clientId: string, updateClientDto: UpdateClientDto, user: User): Promise<Client> {
-    await this.findOne(clientId, user); // Will raise error if user does not have permission to view record
+    await this.findOne(clientId, user, { includeInactive: true }); // Will raise error if user does not have permission to view record
 
     if (updateClientDto.isActive === false) {
 
@@ -104,12 +128,26 @@ export class ClientsService {
       }
     }
 
-    const updatePayload = this._prepareUpdatePayload(updateClientDto, user);
+    const { subsidiaryId, isActive, ...restOfDto } = updateClientDto;
+    const updatePayload: Partial<Client> = { ...restOfDto };
+
+    const userPermissions = (user.roleId as any)?.permissions || [];
+
+    if (isActive !== undefined) {
+      if (!userPermissions.includes(PERMISSIONS.CLIENT_MANAGE_INACTIVE)) {
+        throw new ForbiddenException('You do not have permission to change the isActive status.');
+      }
+      updatePayload.isActive = isActive;
+    }
+
+    if (subsidiaryId) {
+      updatePayload.subsidiaryId = new Types.ObjectId(subsidiaryId);
+    }
 
     const updatedClient = await this.clientModel.findByIdAndUpdate(
       clientId,
       { $set: updatePayload },
-      { new: true }
+      { new: true, runValidators: true },
     ).exec();
 
     if (!updatedClient) {
@@ -206,29 +244,5 @@ export class ClientsService {
     }).exec();
   }
 
-  /**
-   * Prepares the final, type-safe payload for a client update operation.
-   * Handles permission-based field-level security.
-   * @private
-   */
-  private _prepareUpdatePayload(updateClientDto: UpdateClientDto, user: User): Partial<Client> {
-    const { subsidiaryId, isActive, ...restOfDto } = updateClientDto;
-    const updatePayload: Partial<Client> = { ...restOfDto };
 
-    const userPermissions = (user.roleId as any)?.permissions || [];
-
-    // System Constraint: Only roles with CLIENT_EDIT_STATUS permissions can change Client status.
-    // This prevents non-admin users from turning off key master data records
-    if (updateClientDto.isActive !== undefined) {
-      if (!userPermissions.includes(PERMISSIONS.CLIENT_EDIT_STATUS)) {
-        throw new ForbiddenException('You do not have permission to change the isActive status.');
-      }
-      updatePayload.isActive = isActive;
-    }
-
-    if (subsidiaryId) {
-      updatePayload.subsidiaryId = new Types.ObjectId(subsidiaryId);
-    }
-    return updatePayload;
-  }
 }

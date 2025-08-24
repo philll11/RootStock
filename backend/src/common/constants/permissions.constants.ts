@@ -15,10 +15,11 @@ export const PERMISSIONS = {
   USER_EDIT: 'User:Edit',
   USER_DELETE: 'User:Delete',
   /**
-   * Grants the ability to change a user's `isActive` status. This is considered
-   * a sensitive operation separate from a standard edit.
+   * Grants the ability to change a user's `isActive` status and to include
+   * inactive user records in query results. This is a sensitive operation
+   * separate from a standard edit.
    */
-  USER_EDIT_STATUS: 'User:EditStatus',
+  USER_MANAGE_INACTIVE: 'User:ManageInactive',
 
   // --- Client Management ---
   // Permissions for managing direct customer entities (Clients).
@@ -27,9 +28,10 @@ export const PERMISSIONS = {
   CLIENT_EDIT: 'Client:Edit',
   CLIENT_DELETE: 'Client:Delete',
   /**
-   * Grants the ability to change a client's `isActive` status.
+   * Grants the ability to change a client's `isActive` status and to
+   * include inactive client records in query results.
    */
-  CLIENT_EDIT_STATUS: 'Client:EditStatus',
+  CLIENT_MANAGE_INACTIVE: 'Client:ManageInactive',
 
   // --- Orchard Management ---
   // Permissions for managing orchard entities.
@@ -38,9 +40,10 @@ export const PERMISSIONS = {
   ORCHARD_EDIT: 'Orchard:Edit',
   ORCHARD_DELETE: 'Orchard:Delete',
   /**
-   * Grants the ability to change a client's `isActive` status.
+   * Grants the ability to change an orchard's `isActive` status and to
+   * include inactive orchard records in query results.
    */
-  ORCHARD_EDIT_STATUS: 'Orchard:EditStatus',
+  ORCHARD_MANAGE_INACTIVE: 'Orchard:ManageInactive',
 
   // --- Role Management ---
   // Permissions for managing user roles and their associated permissions.
@@ -49,6 +52,11 @@ export const PERMISSIONS = {
   ROLE_VIEW: 'Role:View',
   ROLE_EDIT: 'Role:Edit',
   ROLE_DELETE: 'Role:Delete',
+  /**
+   * Grants the ability to change a role's `isActive` status and to
+   * include inactive role records in query results.
+   */
+  ROLE_MANAGE_INACTIVE: 'Role:ManageInactive',
 
   // --- Subsidiary Management ---
   // Permissions for managing the highest-level business entities (Subsidiaries).
@@ -57,9 +65,10 @@ export const PERMISSIONS = {
   SUBSIDIARY_EDIT: 'Subsidiary:Edit',
   SUBSIDIARY_DELETE: 'Subsidiary:Delete',
   /**
-   * Grants the ability to change a subsidiary's `isActive` status.
+   * Grants the ability to change a subsidiary's `isActive` status and to
+   * include inactive subsidiary records in query results.
    */
-  SUBSIDIARY_EDIT_STATUS: 'Subsidiary:EditStatus',
+  SUBSIDIARY_MANAGE_INACTIVE: 'Subsidiary:ManageInactive',
 
   // --- System Configuration ---
   // Permissions for managing system-level configurations, like recordId counters.
@@ -75,3 +84,17 @@ export const PERMISSIONS = {
    */
   VIEW_DELETED: 'Global:ViewDeleted',
 };
+
+/**
+ * An enum that defines the standardized resource names used in permission strings.
+ * This provides a single, type-safe source of truth for resource identifiers,
+ * preventing the use of brittle, hardcoded strings throughout the application.
+ */
+export enum Resource {
+  USER = 'User',
+  CLIENT = 'Client',
+  ORCHARD = 'Orchard',
+  ROLE = 'Role',
+  SUBSIDIARY = 'Subsidiary',
+  COUNTERS = 'Counters',
+}

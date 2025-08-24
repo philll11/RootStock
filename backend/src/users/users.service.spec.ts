@@ -389,7 +389,7 @@ describe('UsersService', () => {
         const result = await service.update(mockUserId, updateDto, userWithPermissions);
 
         // Assert
-        expect(service.findOne).toHaveBeenCalledWith(mockUserId, userWithPermissions);
+        expect(service.findOne).toHaveBeenCalledWith(mockUserId, userWithPermissions, { includeInactive: true });
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
           mockUserId,
           { $set: { firstName: 'Updated Name', name: 'Updated Name User' } },
@@ -516,7 +516,7 @@ describe('UsersService', () => {
         const result = await service.update(mockUserId, updateDto, contactUser);
 
         // Assert
-        expect(service.findOne).toHaveBeenCalledWith(mockUserId, contactUser);
+        expect(service.findOne).toHaveBeenCalledWith(mockUserId, contactUser, { includeInactive: true });
         expect(visibilityService.validateClientAccess).not.toHaveBeenCalled(); // Contact users skip this validation
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
           mockUserId,
@@ -652,7 +652,7 @@ describe('UsersService', () => {
         const result = await service.update(mockUserId, updateDto, contactUser);
 
         // Assert - Should succeed with email-only update
-        expect(service.findOne).toHaveBeenCalledWith(mockUserId, contactUser);
+        expect(service.findOne).toHaveBeenCalledWith(mockUserId, contactUser, { includeInactive: true });
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
           mockUserId,
           { $set: { email: 'newemail@test.com' } },
@@ -683,7 +683,7 @@ describe('UsersService', () => {
         const result = await service.update(mockUserId, updateDto, contactUser);
 
         // Assert - Should succeed and update computed name field
-        expect(service.findOne).toHaveBeenCalledWith(mockUserId, contactUser);
+        expect(service.findOne).toHaveBeenCalledWith(mockUserId, contactUser, { includeInactive: true });
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
           mockUserId,
           { 
@@ -702,7 +702,7 @@ describe('UsersService', () => {
       it('should throw ForbiddenException when user lacks permission for status change', async () => {
         // Arrange - Status change without permission
         const updateDto = { isActive: false };
-        const userWithoutPermission = mockUser([PERMISSIONS.USER_EDIT], VisibilityScope.CLIENT); // Missing USER_EDIT_STATUS
+        const userWithoutPermission = mockUser([PERMISSIONS.USER_EDIT], VisibilityScope.CLIENT); // Missing USER_MANAGE_INACTIVE
 
         jest.spyOn(service, 'findOne').mockResolvedValue(mockUserDoc as any);
 
@@ -716,7 +716,7 @@ describe('UsersService', () => {
       it('should allow status update when user has proper permissions', async () => {
         // Arrange - Valid status change
         const updateDto = { isActive: false };
-        const userWithPermissions = mockUser([PERMISSIONS.USER_EDIT, PERMISSIONS.USER_EDIT_STATUS], VisibilityScope.CLIENT);
+        const userWithPermissions = mockUser([PERMISSIONS.USER_EDIT, PERMISSIONS.USER_MANAGE_INACTIVE], VisibilityScope.CLIENT);
         const deactivatedUser = { ...mockUserDoc, isActive: false };
 
         jest.spyOn(service, 'findOne').mockResolvedValue(mockUserDoc as any);
@@ -787,7 +787,7 @@ describe('UsersService', () => {
           isActive: false,
           roleId: new Types.ObjectId().toHexString(),
         };
-        const userWithPermissions = mockUser([PERMISSIONS.USER_EDIT, PERMISSIONS.USER_EDIT_STATUS], VisibilityScope.GLOBAL);
+        const userWithPermissions = mockUser([PERMISSIONS.USER_EDIT, PERMISSIONS.USER_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
         const updatedUser = { ...mockUserDoc, ...updateDto };
 
         jest.spyOn(service, 'findOne').mockResolvedValue(mockUserDoc as any);
@@ -1518,6 +1518,158 @@ describe('UsersService', () => {
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBe(0);
       });
+    });
+  });
+
+  describe('Inactive User Access Control', () => {
+    it('should include inactive users when user has USER_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User with manage inactive permission
+      const userWithPermission = mockUser([PERMISSIONS.USER_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
+      const activeUser = { name: 'Active User', isActive: true };
+      const inactiveUser = { name: 'Inactive User', isActive: false };
+
+      // Mock the client resolver service
+      (mockClientResolverService.resolveClientsForUser as jest.Mock).mockResolvedValue([new Types.ObjectId()]);
+
+      // Mock the model's find method directly
+      const mockExec = jest.fn().mockResolvedValue([activeUser, inactiveUser]);
+      (userModel.find as jest.Mock).mockReturnValue({ exec: mockExec });
+
+      // Act: Find all users with includeInactive option
+      const result = await service.findAll({ includeInactives: true }, userWithPermission);
+
+      // Assert: Both active and inactive users returned
+      expect(result).toHaveLength(2);
+      expect(result).toContain(activeUser);
+      expect(result).toContain(inactiveUser);
+    });
+
+    it('should exclude inactive users when user lacks USER_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User without manage inactive permission
+      const userWithoutPermission = mockUser([PERMISSIONS.USER_VIEW], VisibilityScope.GLOBAL);
+      const activeUser = { name: 'Active User', isActive: true };
+
+      // Mock the client resolver service
+      (mockClientResolverService.resolveClientsForUser as jest.Mock).mockResolvedValue([new Types.ObjectId()]);
+
+      // Mock the model's find method directly
+      const mockExec = jest.fn().mockResolvedValue([activeUser]);
+      (userModel.find as jest.Mock).mockReturnValue({ exec: mockExec });
+
+      // Act: Find all users with includeInactive option
+      const result = await service.findAll({ includeInactives: true }, userWithoutPermission);
+
+      // Assert: Only active users returned despite includeInactive flag
+      expect(result).toHaveLength(1);
+      expect(result).toContain(activeUser);
+    });
+
+    it('should find inactive user by ID when user has USER_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User with manage inactive permission
+      const userWithPermission = mockUser([PERMISSIONS.USER_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
+      const userId = new Types.ObjectId().toHexString();
+      const inactiveUser = { _id: userId, name: 'Inactive User', isActive: false };
+
+      // Mock the query builder to allow inactive access
+      const mockQueryBuilder = {
+        build: jest.fn().mockResolvedValue({
+          isDeleted: false,
+          // No isActive filter when includeInactive is true
+        }),
+      };
+
+      jest.doMock('./builders/user-query.builder', () => {
+        return {
+          UserQueryBuilder: jest.fn().mockImplementation(() => mockQueryBuilder)
+        };
+      });
+
+      // Mock the model's findOne method
+      const mockExec = jest.fn().mockResolvedValue(inactiveUser);
+      (userModel.findOne as jest.Mock).mockReturnValue({ exec: mockExec });
+
+      // Act: Find inactive user by ID
+      const result = await service.findOne(userId, userWithPermission, { includeInactive: true });
+
+      // Assert: Inactive user found
+      expect(result).toBe(inactiveUser);
+    });
+
+    it('should not find inactive user by ID when user lacks USER_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User without manage inactive permission
+      const userWithoutPermission = mockUser([PERMISSIONS.USER_VIEW], VisibilityScope.GLOBAL);
+      const userId = new Types.ObjectId().toHexString();
+
+      // Mock the query builder to filter out inactive users
+      const mockQueryBuilder = {
+        build: jest.fn().mockResolvedValue({
+          isActive: true,
+          isDeleted: false,
+        }),
+      };
+
+      jest.doMock('./builders/user-query.builder', () => {
+        return {
+          UserQueryBuilder: jest.fn().mockImplementation(() => mockQueryBuilder)
+        };
+      });
+
+      // Mock the model's findOne method to return null (filtered out)
+      const mockExec = jest.fn().mockResolvedValue(null);
+      (userModel.findOne as jest.Mock).mockReturnValue({ exec: mockExec });
+
+      // Act & Assert: Expect NotFoundException to be thrown
+      await expect(service.findOne(userId, userWithoutPermission, { includeInactive: true }))
+        .rejects.toThrow(NotFoundException);
+    });
+
+    it('should enforce permission boundaries when updating inactive user status', async () => {
+      // Arrange: Users with different permissions
+      const userWithPermission = mockUser([PERMISSIONS.USER_EDIT, PERMISSIONS.USER_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
+      const userWithoutPermission = mockUser([PERMISSIONS.USER_EDIT], VisibilityScope.GLOBAL);
+      const userId = new Types.ObjectId().toHexString();
+      const targetUser = { _id: userId, name: 'Target User', isActive: true };
+      
+      jest.spyOn(service, 'findOne').mockResolvedValue(targetUser as any);
+
+      // Act & Assert: User with permission can update status
+      const deactivatedUser = { ...targetUser, isActive: false };
+      (userModel.findByIdAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(deactivatedUser),
+      });
+
+      const resultWithPermission = await service.update(userId, { isActive: false }, userWithPermission);
+      expect(resultWithPermission.isActive).toBe(false);
+
+      // Act & Assert: User without permission cannot update status
+      await expect(service.update(userId, { isActive: false }, userWithoutPermission))
+        .rejects.toThrow(ForbiddenException);
+      await expect(service.update(userId, { isActive: false }, userWithoutPermission))
+        .rejects.toThrow('You do not have permission to change the isActive status');
+    });
+
+    it('should allow users with USER_MANAGE_INACTIVE to reactivate inactive users', async () => {
+      // Arrange: User with permission to manage inactive users
+      const userWithPermission = mockUser([PERMISSIONS.USER_EDIT, PERMISSIONS.USER_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
+      const userId = new Types.ObjectId().toHexString();
+      const inactiveUser = { _id: userId, name: 'Inactive User', isActive: false };
+      const reactivatedUser = { ...inactiveUser, isActive: true };
+      
+      jest.spyOn(service, 'findOne').mockResolvedValue(inactiveUser as any);
+      (userModel.findByIdAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(reactivatedUser),
+      });
+
+      // Act: Reactivate inactive user
+      const result = await service.update(userId, { isActive: true }, userWithPermission);
+
+      // Assert: User successfully reactivated
+      expect(result.isActive).toBe(true);
+      expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        userId,
+        { $set: { isActive: true } },
+        { new: true }
+      );
     });
   });
 });

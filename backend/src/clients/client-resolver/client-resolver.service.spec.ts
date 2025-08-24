@@ -74,8 +74,16 @@ describe('ClientResolverService', () => {
 
       const result = await service.getAccessibleClientIdsForSubsidiaryScope(mockUser as User);
 
-      expect(clientModel.find).toHaveBeenCalledWith({ _id: { $in: mockUser.clientIds } });
-      expect(clientModel.find).toHaveBeenCalledWith({ subsidiaryId: { $in: [toObjectId('65a9a1a7b8e5c6e2f1f4a4a1'), toObjectId('65a9a1a7b8e5c6e2f1f4a4a2')] } });
+      expect(clientModel.find).toHaveBeenCalledWith({ 
+        _id: { $in: mockUser.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
+      expect(clientModel.find).toHaveBeenCalledWith({ 
+        subsidiaryId: { $in: [toObjectId('65a9a1a7b8e5c6e2f1f4a4a1'), toObjectId('65a9a1a7b8e5c6e2f1f4a4a2')] },
+        isActive: true,
+        isDeleted: false,
+      });
       expect(result).toEqual(mockAccessibleClients.map(c => c._id));
       expect(result.length).toBe(3);
     });
@@ -107,7 +115,11 @@ describe('ClientResolverService', () => {
       expect(result).toEqual([]);
       // Crucially, it should only call `find` once and then stop.
       expect(clientModel.find).toHaveBeenCalledTimes(1);
-      expect(clientModel.find).toHaveBeenCalledWith({ _id: { $in: mockUser.clientIds } });
+      expect(clientModel.find).toHaveBeenCalledWith({ 
+        _id: { $in: mockUser.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
     });
 
     it('should propagate errors from the database', async () => {
@@ -120,6 +132,327 @@ describe('ClientResolverService', () => {
 
       // We expect our service call to be rejected with the same error
       await expect(service.getAccessibleClientIdsForSubsidiaryScope(mockUser as User)).rejects.toThrow('Database connection failed');
+    });
+
+    // --- isActive and isDeleted Filtering Tests ---
+    it('should exclude inactive clients from subsidiary scope resolution', async () => {
+      const mixedStatusClients = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1'), isActive: true, isDeleted: false },
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c2'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1'), isActive: false, isDeleted: false }, // INACTIVE - should be filtered out
+      ];
+
+      const activeAccessibleClients = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1') }, // Only active client returned
+      ];
+
+      (clientModel.find as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValueOnce([mixedStatusClients[0]]), // Only active client returned from first query
+        })
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValueOnce(activeAccessibleClients),
+        });
+
+      const result = await service.getAccessibleClientIdsForSubsidiaryScope(mockUser as User);
+
+      // Verify that the query includes isActive: true filter
+      expect(clientModel.find).toHaveBeenCalledWith({
+        _id: { $in: mockUser.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
+
+      expect(result).toEqual([toObjectId('65a9a1a7b8e5c6e2f1f4a4c1')]);
+      expect(result.length).toBe(1); // Only the active client
+    });
+
+    it('should exclude deleted clients from subsidiary scope resolution', async () => {
+      const mixedStatusClients = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1'), isActive: true, isDeleted: false },
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c2'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1'), isActive: true, isDeleted: true }, // DELETED - should be filtered out
+      ];
+
+      const activeAccessibleClients = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1') }, // Only non-deleted client returned
+      ];
+
+      (clientModel.find as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValueOnce([mixedStatusClients[0]]), // Only non-deleted client returned from first query
+        })
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValueOnce(activeAccessibleClients),
+        });
+
+      const result = await service.getAccessibleClientIdsForSubsidiaryScope(mockUser as User);
+
+      // Verify that the query includes isDeleted: false filter
+      expect(clientModel.find).toHaveBeenCalledWith({
+        _id: { $in: mockUser.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
+
+      expect(result).toEqual([toObjectId('65a9a1a7b8e5c6e2f1f4a4c1')]);
+      expect(result.length).toBe(1); // Only the non-deleted client
+    });
+
+    it('should exclude both inactive and deleted clients from subsidiary scope resolution', async () => {
+      const userWithMixedClients: Partial<User> = {
+        clientIds: [
+          toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), // Active, non-deleted
+          toObjectId('65a9a1a7b8e5c6e2f1f4a4c2'), // Inactive
+          toObjectId('65a9a1a7b8e5c6e2f1f4a4c3'), // Deleted
+        ]
+      };
+
+      const onlyActiveClients = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1') },
+        // Only the active, non-deleted client is returned
+      ];
+
+      const accessibleClients = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1') },
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c4') }, // Other active clients in same subsidiary
+      ];
+
+      (clientModel.find as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValueOnce(onlyActiveClients),
+        })
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValueOnce(accessibleClients),
+        });
+
+      const result = await service.getAccessibleClientIdsForSubsidiaryScope(userWithMixedClients as User);
+
+      // Verify the filtering query includes both conditions
+      expect(clientModel.find).toHaveBeenCalledWith({
+        _id: { $in: userWithMixedClients.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
+
+      expect(clientModel.find).toHaveBeenCalledWith({
+        subsidiaryId: { $in: [toObjectId('65a9a1a7b8e5c6e2f1f4a4a1')] },
+        isActive: true,
+        isDeleted: false,
+      });
+
+      expect(result).toEqual([toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), toObjectId('65a9a1a7b8e5c6e2f1f4a4c4')]);
+    });
+
+    it('should return empty array if all assigned clients are inactive or deleted', async () => {
+      // User is assigned to clients that are all inactive or deleted
+      const userWithInactiveClients: Partial<User> = {
+        clientIds: [toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), toObjectId('65a9a1a7b8e5c6e2f1f4a4c2')]
+      };
+
+      // First query returns empty because all clients are filtered out
+      (clientModel.find as jest.Mock).mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValueOnce([]), // No active, non-deleted clients found
+      });
+
+      const result = await service.getAccessibleClientIdsForSubsidiaryScope(userWithInactiveClients as User);
+
+      expect(clientModel.find).toHaveBeenCalledWith({
+        _id: { $in: userWithInactiveClients.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
+
+      // Should only call find once since first query returns empty
+      expect(clientModel.find).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getAccessibleSubsidiaryIdsForUser', () => {
+    
+    // --- Happy Path Tests ---
+    it('should correctly resolve subsidiary IDs from user\'s active, non-deleted clients', async () => {
+      const mockClientsWithSubsidiaries = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1') },
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c2'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a2') },
+      ];
+
+      (clientModel.find as jest.Mock).mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValueOnce(mockClientsWithSubsidiaries),
+      });
+
+      const result = await service.getAccessibleSubsidiaryIdsForUser(mockUser as User);
+
+      expect(clientModel.find).toHaveBeenCalledWith({
+        _id: { $in: mockUser.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
+
+      expect(result).toEqual([
+        toObjectId('65a9a1a7b8e5c6e2f1f4a4a1'),
+        toObjectId('65a9a1a7b8e5c6e2f1f4a4a2'),
+      ]);
+    });
+
+    // --- Edge Cases ---
+    it('should return empty array if user has no clientIds', async () => {
+      const userWithoutClients: Partial<User> = { clientIds: [] };
+      const result = await service.getAccessibleSubsidiaryIdsForUser(userWithoutClients as User);
+      
+      expect(result).toEqual([]);
+      expect(clientModel.find).not.toHaveBeenCalled();
+    });
+
+    it('should return empty array if user.clientIds is null or undefined', async () => {
+      const userWithNullClients: Partial<User> = { clientIds: null as any };
+      const result = await service.getAccessibleSubsidiaryIdsForUser(userWithNullClients as User);
+      
+      expect(result).toEqual([]);
+      expect(clientModel.find).not.toHaveBeenCalled();
+    });
+
+    it('should handle clients without subsidiaryId gracefully', async () => {
+      const mockClientsWithMixedSubsidiaries = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1') },
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c2'), subsidiaryId: null }, // Independent client
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c3'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a2') },
+      ];
+
+      (clientModel.find as jest.Mock).mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValueOnce(mockClientsWithMixedSubsidiaries),
+      });
+
+      const result = await service.getAccessibleSubsidiaryIdsForUser(mockUser as User);
+
+      // Should only return subsidiaries for clients that have them
+      expect(result).toEqual([
+        toObjectId('65a9a1a7b8e5c6e2f1f4a4a1'),
+        toObjectId('65a9a1a7b8e5c6e2f1f4a4a2'),
+      ]);
+    });
+
+    it('should deduplicate subsidiary IDs if user has multiple clients in same subsidiary', async () => {
+      const mockClientsWithDuplicateSubsidiaries = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1') },
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c2'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1') }, // Same subsidiary
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c3'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a2') },
+      ];
+
+      (clientModel.find as jest.Mock).mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValueOnce(mockClientsWithDuplicateSubsidiaries),
+      });
+
+      const result = await service.getAccessibleSubsidiaryIdsForUser(mockUser as User);
+
+      // Should return unique subsidiary IDs only
+      expect(result).toHaveLength(2);
+      expect(result).toEqual([
+        toObjectId('65a9a1a7b8e5c6e2f1f4a4a1'),
+        toObjectId('65a9a1a7b8e5c6e2f1f4a4a2'),
+      ]);
+    });
+
+    // --- isActive and isDeleted Filtering Tests ---
+    it('should exclude inactive clients when resolving subsidiary IDs', async () => {
+      const userWithMixedStatusClients: Partial<User> = {
+        clientIds: [
+          toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), // Active client
+          toObjectId('65a9a1a7b8e5c6e2f1f4a4c2'), // Inactive client - should be filtered out
+        ]
+      };
+
+      const onlyActiveClients = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1') },
+        // Inactive client is filtered out by the query
+      ];
+
+      (clientModel.find as jest.Mock).mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValueOnce(onlyActiveClients),
+      });
+
+      const result = await service.getAccessibleSubsidiaryIdsForUser(userWithMixedStatusClients as User);
+
+      expect(clientModel.find).toHaveBeenCalledWith({
+        _id: { $in: userWithMixedStatusClients.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
+
+      expect(result).toEqual([toObjectId('65a9a1a7b8e5c6e2f1f4a4a1')]);
+      expect(result.length).toBe(1); // Only subsidiary from active client
+    });
+
+    it('should exclude deleted clients when resolving subsidiary IDs', async () => {
+      const userWithMixedStatusClients: Partial<User> = {
+        clientIds: [
+          toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), // Non-deleted client
+          toObjectId('65a9a1a7b8e5c6e2f1f4a4c2'), // Deleted client - should be filtered out
+        ]
+      };
+
+      const onlyNonDeletedClients = [
+        { _id: toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), subsidiaryId: toObjectId('65a9a1a7b8e5c6e2f1f4a4a1') },
+        // Deleted client is filtered out by the query
+      ];
+
+      (clientModel.find as jest.Mock).mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValueOnce(onlyNonDeletedClients),
+      });
+
+      const result = await service.getAccessibleSubsidiaryIdsForUser(userWithMixedStatusClients as User);
+
+      expect(clientModel.find).toHaveBeenCalledWith({
+        _id: { $in: userWithMixedStatusClients.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
+
+      expect(result).toEqual([toObjectId('65a9a1a7b8e5c6e2f1f4a4a1')]);
+      expect(result.length).toBe(1); // Only subsidiary from non-deleted client
+    });
+
+    it('should return empty array if all user clients are inactive or deleted', async () => {
+      const userWithInactiveClients: Partial<User> = {
+        clientIds: [toObjectId('65a9a1a7b8e5c6e2f1f4a4c1'), toObjectId('65a9a1a7b8e5c6e2f1f4a4c2')]
+      };
+
+      // All clients are filtered out due to being inactive or deleted
+      (clientModel.find as jest.Mock).mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValueOnce([]), // No active, non-deleted clients found
+      });
+
+      const result = await service.getAccessibleSubsidiaryIdsForUser(userWithInactiveClients as User);
+
+      expect(clientModel.find).toHaveBeenCalledWith({
+        _id: { $in: userWithInactiveClients.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('should propagate database errors', async () => {
+      const dbError = new Error('Database connection failed');
+      (clientModel.find as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockRejectedValue(dbError),
+      });
+
+      await expect(service.getAccessibleSubsidiaryIdsForUser(mockUser as User)).rejects.toThrow('Database connection failed');
     });
   });
 });

@@ -18,8 +18,8 @@ import { ClientsService } from '../clients/clients.service';
 import { CountersService } from '../counters/counters.service';
 import { PERMISSIONS } from '../common/constants/permissions.constants';
 
-// Test helper to create mock user with specific role
-const createMockUser = (visibilityScope: VisibilityScope = VisibilityScope.GLOBAL): User => ({
+// Test helper to create mock user with specific role and permissions
+const createMockUser = (permissions: string[] = [], visibilityScope: VisibilityScope = VisibilityScope.GLOBAL): User => ({
   _id: new Types.ObjectId(),
   recordId: 'USR001',
   firstName: 'Test',
@@ -35,7 +35,7 @@ const createMockUser = (visibilityScope: VisibilityScope = VisibilityScope.GLOBA
     recordId: 'ROL001',
     name: 'Test Role',
     visibilityScope,
-    permissions: [PERMISSIONS.SUBSIDIARY_VIEW, PERMISSIONS.SUBSIDIARY_EDIT, PERMISSIONS.SUBSIDIARY_EDIT_STATUS],
+    permissions,
     isActive: true,
     isDeleted: false,
   }
@@ -87,6 +87,7 @@ describe('SubsidiariesService', () => {
     const mockClientResolverService = {
       getAccessibleSubsidiaryIdsForUser: jest.fn(),
       getAccessibleClientIdsForSubsidiaryScope: jest.fn(),
+      resolveClientsForUser: jest.fn(),
     } as any;
     
     const mockClientsService = {
@@ -123,6 +124,173 @@ describe('SubsidiariesService', () => {
     mockSession.commitTransaction.mockClear();
     mockSession.abortTransaction.mockClear();
     mockSession.endSession.mockClear();
+  });
+
+  describe('Inactive Subsidiary Access Control - Business Logic', () => {
+    it('should allow subsidiary administrators with Subsidiary:ManageInactive permission to see inactive subsidiaries', async () => {
+      // Arrange: Subsidiary administrator requesting inactive subsidiary data for business review
+      const subsidiaryAdministratorUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW, PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE]);
+      const queryDto: QuerySubsidiaryDto = {
+        includeInactives: true,
+      };
+
+      const inactiveSubsidiaries = [
+        { _id: new Types.ObjectId(), isActive: false, name: 'Dormant Agricultural Division - Seasonal Operations', recordId: 'SUB001' },
+        { _id: new Types.ObjectId(), isActive: true, name: 'Active AgriTech Solutions Ltd', recordId: 'SUB002' }
+      ];
+
+      subsidiaryModel.find = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(inactiveSubsidiaries)
+      });
+
+      // Act: Query including inactive subsidiaries with proper permission
+      const result = await service.findAll(queryDto, subsidiaryAdministratorUser);
+
+      // Assert: Administrator can access both active and inactive subsidiaries for business management
+      expect(result).toEqual(inactiveSubsidiaries);
+      expect(result.length).toBe(2);
+      expect(result.some(subsidiary => !subsidiary.isActive)).toBe(true);
+    });
+
+    it('should prevent standard users from accessing inactive subsidiaries even when requested', async () => {
+      // Arrange: Standard user attempting to access inactive subsidiary data
+      const standardBusinessUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW]);
+      const queryDto: QuerySubsidiaryDto = {
+        includeInactives: true,
+      };
+
+      const activeSubsidiariesOnly = [
+        { _id: new Types.ObjectId(), isActive: true, name: 'Active Agricultural Corporation', recordId: 'SUB001' }
+      ];
+
+      subsidiaryModel.find = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(activeSubsidiariesOnly)
+      });
+
+      // Act: Query attempting to include inactive subsidiaries without permission
+      const result = await service.findAll(queryDto, standardBusinessUser);
+
+      // Assert: Security boundary enforced - only active subsidiaries returned
+      expect(result).toEqual(activeSubsidiariesOnly);
+      expect(result.every(subsidiary => subsidiary.isActive)).toBe(true);
+    });
+
+    it('should maintain default active-only behavior for standard subsidiary queries', async () => {
+      // Arrange: Standard subsidiary query without explicit inactive request
+      const anyUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW]);
+      const queryDto: QuerySubsidiaryDto = {
+        name: 'agri',
+      };
+
+      const activeSubsidiaries = [
+        { _id: new Types.ObjectId(), isActive: true, name: 'Active Agri Business Solutions', recordId: 'SUB001' }
+      ];
+
+      subsidiaryModel.find = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(activeSubsidiaries)
+      });
+
+      // Act: Standard query without inactive flag
+      const result = await service.findAll(queryDto, anyUser);
+
+      // Assert: Default behavior shows only active subsidiaries for operational use
+      expect(result).toEqual(activeSubsidiaries);
+      expect(result.every(subsidiary => subsidiary.isActive)).toBe(true);
+    });
+
+    it('should deny inactive subsidiary access when user has other permissions but lacks ManageInactive', async () => {
+      // Arrange: User with administrative permissions but no Subsidiary:ManageInactive
+      const partialAdminUser = createMockUser([
+        PERMISSIONS.SUBSIDIARY_VIEW, 
+        PERMISSIONS.SUBSIDIARY_EDIT, 
+        PERMISSIONS.CLIENT_VIEW,
+        PERMISSIONS.CLIENT_MANAGE_INACTIVE  // Has Client inactive permission but not Subsidiary
+      ]);
+      
+      const queryDto: QuerySubsidiaryDto = {
+        includeInactives: true,
+      };
+
+      const activeSubsidiariesOnly = [
+        { _id: new Types.ObjectId(), isActive: true, name: 'Active Business Operations', recordId: 'SUB001' }
+      ];
+
+      subsidiaryModel.find = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(activeSubsidiariesOnly)
+      });
+
+      // Act: Query for inactive subsidiaries without specific permission
+      const result = await service.findAll(queryDto, partialAdminUser);
+
+      // Assert: Resource-specific permissions enforced - no cross-resource privilege escalation
+      expect(result).toEqual(activeSubsidiariesOnly);
+      expect(result.every(subsidiary => subsidiary.isActive)).toBe(true);
+    });
+
+    it('should enforce resource-specific permission boundaries for inactive access', async () => {
+      // Arrange: User with User:ManageInactive but not Subsidiary:ManageInactive
+      const userManagerRole = createMockUser([
+        PERMISSIONS.SUBSIDIARY_VIEW,
+        PERMISSIONS.USER_MANAGE_INACTIVE,  // Wrong resource permission
+        PERMISSIONS.CLIENT_VIEW
+      ]);
+      
+      const queryDto: QuerySubsidiaryDto = {
+        includeInactives: true,
+      };
+
+      const activeSubsidiariesOnly = [
+        { _id: new Types.ObjectId(), isActive: true, name: 'Secure Active Subsidiary', recordId: 'SUB001' }
+      ];
+
+      subsidiaryModel.find = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(activeSubsidiariesOnly)
+      });
+
+      // Act: Attempt to access inactive subsidiaries with wrong resource permission
+      const result = await service.findAll(queryDto, userManagerRole);
+
+      // Assert: Business rule - User management permissions do not grant subsidiary management permissions
+      expect(result).toEqual(activeSubsidiariesOnly);
+      expect(result.every(subsidiary => subsidiary.isActive)).toBe(true);
+    });
+
+    it('should allow finding inactive subsidiary when user has Subsidiary:ManageInactive permission and includeInactive option is used', async () => {
+      // Arrange: Finding a specific inactive subsidiary for administrative review
+      const subsidiaryAdminUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW, PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE]);
+      const subsidiaryId = new Types.ObjectId().toHexString();
+      const inactiveSubsidiaryDoc = { 
+        _id: subsidiaryId, 
+        isActive: false, 
+        name: 'Dormant Seasonal Business Division', 
+        recordId: 'SUB001' 
+      };
+
+      subsidiaryModel.findOne = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(inactiveSubsidiaryDoc)
+      });
+
+      // Act: Find inactive subsidiary with includeInactive option
+      const result = await service.findOne(subsidiaryId, subsidiaryAdminUser, { includeInactive: true });
+
+      // Assert: Admin can access inactive subsidiary for business management
+      expect(result).toEqual(inactiveSubsidiaryDoc);
+      expect(result.isActive).toBe(false);
+    });
+
+    it('should prevent access to inactive subsidiary when user lacks ManageInactive permission', async () => {
+      // Arrange: Standard user attempting to access inactive subsidiary
+      const standardUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW]);
+      const subsidiaryId = new Types.ObjectId().toHexString();
+
+      subsidiaryModel.findOne = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null) // Query would filter out inactive subsidiary
+      });
+
+      // Act & Assert: Standard user cannot access inactive subsidiary even with includeInactive option
+      await expect(service.findOne(subsidiaryId, standardUser, { includeInactive: true }))
+        .rejects.toThrow(NotFoundException);
+    });
   });
 
   it('should be defined', () => {
@@ -165,7 +333,7 @@ describe('SubsidiariesService', () => {
   describe('Subsidiary Query Business Logic', () => {
     it('should build proper query filter with SubsidiaryQueryBuilder', async () => {
       // Arrange: Query with user context
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW], VisibilityScope.GLOBAL);
       const queryDto: QuerySubsidiaryDto = {};
       const mockSubsidiaries = [
         { _id: new Types.ObjectId(), name: 'Global Subsidiary', recordId: 'SUB001' },
@@ -186,7 +354,7 @@ describe('SubsidiariesService', () => {
 
     it('should apply visibility scope restrictions in query', async () => {
       // Arrange: Subsidiary-scoped user with limited access
-      const subsidiaryUser = createMockUser(VisibilityScope.SUBSIDIARY);
+      const subsidiaryUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW], VisibilityScope.SUBSIDIARY);
       const queryDto: QuerySubsidiaryDto = {};
       const accessibleSubsidiaryIds = [new Types.ObjectId(), new Types.ObjectId()];
       
@@ -208,7 +376,7 @@ describe('SubsidiariesService', () => {
   describe('Individual Subsidiary Access Business Logic', () => {
     it('should find subsidiary by ID with security check', async () => {
       // Arrange: Valid subsidiary lookup
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW], VisibilityScope.GLOBAL);
       const subsidiaryId = new Types.ObjectId().toHexString();
       const mockSubsidiary = {
         _id: subsidiaryId,
@@ -237,7 +405,7 @@ describe('SubsidiariesService', () => {
 
     it('should throw NotFoundException when subsidiary not found or unauthorized', async () => {
       // Arrange: Subsidiary not found or user lacks access
-      const clientUser = createMockUser(VisibilityScope.CLIENT);
+      const clientUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW], VisibilityScope.CLIENT);
       const subsidiaryId = new Types.ObjectId().toHexString();
 
       subsidiaryModel.findOne = jest.fn().mockReturnValue({
@@ -254,7 +422,7 @@ describe('SubsidiariesService', () => {
   describe('Subsidiary Update Business Rules', () => {
     it('should prevent subsidiary deactivation when active clients exist', async () => {
       // Arrange: Subsidiary with active clients cannot be deactivated
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW, PERMISSIONS.SUBSIDIARY_EDIT, PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
       const subsidiaryId = new Types.ObjectId().toHexString();
       const updateDto: UpdateSubsidiaryDto = { isActive: false };
 
@@ -282,7 +450,7 @@ describe('SubsidiariesService', () => {
 
     it('should allow subsidiary deactivation when no active clients exist', async () => {
       // Arrange: Subsidiary with no active clients can be deactivated
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW, PERMISSIONS.SUBSIDIARY_EDIT, PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
       const subsidiaryId = new Types.ObjectId().toHexString();
       const updateDto: UpdateSubsidiaryDto = { isActive: false };
 
@@ -316,7 +484,7 @@ describe('SubsidiariesService', () => {
 
     it('should update basic subsidiary fields without affecting status', async () => {
       // Arrange: Update subsidiary name only
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW, PERMISSIONS.SUBSIDIARY_EDIT], VisibilityScope.GLOBAL);
       const subsidiaryId = new Types.ObjectId().toHexString();
       const updateDto: UpdateSubsidiaryDto = { name: 'Updated Subsidiary Name' };
 
@@ -350,7 +518,7 @@ describe('SubsidiariesService', () => {
   describe('Subsidiary Soft Delete Business Logic', () => {
     it('should perform soft delete with client reassignment in transaction', async () => {
       // Arrange: Subsidiary removal with client updates
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.SUBSIDIARY_DELETE], VisibilityScope.GLOBAL);
       const subsidiaryId = new Types.ObjectId().toHexString();
 
       const existingSubsidiary = {
@@ -365,6 +533,11 @@ describe('SubsidiariesService', () => {
 
       subsidiaryModel.findOne = jest.fn().mockReturnValue({
         exec: jest.fn().mockResolvedValue(existingSubsidiary)
+      });
+
+      // Mock findOneAndUpdate for the concurrent deletion utility
+      subsidiaryModel.findOneAndUpdate = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(deletedSubsidiary)
       });
 
       clientModel.updateMany = jest.fn().mockReturnValue({
@@ -426,6 +599,81 @@ describe('SubsidiariesService', () => {
 
       // Assert: Subsidiary validation fails
       expect(result).toBe(false);
+    });
+  });
+
+  describe('Inactive Subsidiary Access Control', () => {
+    it('should include inactive subsidiaries when user has SUBSIDIARY_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User with manage inactive permission
+      const userWithPermission = createMockUser([PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
+      const activeSubsidiary = { name: 'Active Subsidiary', isActive: true };
+      const inactiveSubsidiary = { name: 'Inactive Subsidiary', isActive: false };
+
+      // Mock the client resolver service
+      clientResolverService.resolveClientsForUser.mockResolvedValue([new Types.ObjectId()]);
+
+      // Mock the model's find method directly (no sort chain)
+      const mockExec = jest.fn().mockResolvedValue([activeSubsidiary, inactiveSubsidiary]);
+      subsidiaryModel.find = jest.fn().mockReturnValue({ exec: mockExec });
+
+      // Act: Find all subsidiaries with includeInactive option
+      const result = await service.findAll({ includeInactives: true }, userWithPermission);
+
+      // Assert: Both active and inactive subsidiaries returned
+      expect(result).toHaveLength(2);
+      expect(result).toContain(activeSubsidiary);
+      expect(result).toContain(inactiveSubsidiary);
+    });
+
+    it('should exclude inactive subsidiaries when user lacks SUBSIDIARY_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User without manage inactive permission
+      const userWithoutPermission = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW], VisibilityScope.GLOBAL);
+      const activeSubsidiary = { name: 'Active Subsidiary', isActive: true };
+
+      // Mock the client resolver service
+      clientResolverService.resolveClientsForUser.mockResolvedValue([new Types.ObjectId()]);
+
+      // Mock the model's find method directly (no sort chain)
+      const mockExec = jest.fn().mockResolvedValue([activeSubsidiary]);
+      subsidiaryModel.find = jest.fn().mockReturnValue({ exec: mockExec });
+
+      // Act: Find all subsidiaries with includeInactive option
+      const result = await service.findAll({ includeInactives: true }, userWithoutPermission);
+
+      // Assert: Only active subsidiaries returned despite includeInactive flag
+      expect(result).toHaveLength(1);
+      expect(result).toContain(activeSubsidiary);
+    });
+
+    it('should find inactive subsidiary by ID when user has SUBSIDIARY_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User with manage inactive permission
+      const userWithPermission = createMockUser([PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
+      const subsidiaryId = new Types.ObjectId().toHexString();
+      const inactiveSubsidiary = { _id: subsidiaryId, name: 'Inactive Subsidiary', isActive: false };
+
+      // Mock the query builder chain
+      const mockExec = jest.fn().mockResolvedValue(inactiveSubsidiary);
+      subsidiaryModel.findOne = jest.fn().mockReturnValue({ exec: mockExec });
+
+      // Act: Find inactive subsidiary by ID
+      const result = await service.findOne(subsidiaryId, userWithPermission, { includeInactive: true });
+
+      // Assert: Inactive subsidiary found
+      expect(result).toBe(inactiveSubsidiary);
+    });
+
+    it('should not find inactive subsidiary by ID when user lacks SUBSIDIARY_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User without manage inactive permission
+      const userWithoutPermission = createMockUser([PERMISSIONS.SUBSIDIARY_VIEW], VisibilityScope.GLOBAL);
+      const subsidiaryId = new Types.ObjectId().toHexString();
+
+      // Mock the query builder chain to return null (filtered out)
+      const mockExec = jest.fn().mockResolvedValue(null);
+      subsidiaryModel.findOne = jest.fn().mockReturnValue({ exec: mockExec });
+
+      // Act & Assert: Expect NotFoundException to be thrown
+      await expect(service.findOne(subsidiaryId, userWithoutPermission, { includeInactive: true }))
+        .rejects.toThrow(NotFoundException);
     });
   });
 });

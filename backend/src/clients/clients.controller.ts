@@ -29,8 +29,8 @@ export class ClientsController {
 
   @Post()
   @RequirePermission(PERMISSIONS.CLIENT_CREATE)
-  create(@Body() createClientDto: CreateClientDto) {
-    return this.clientsService.create(createClientDto);
+  create(@Body() createClientDto: CreateClientDto, @Req() req) {
+    return this.clientsService.create(createClientDto, req.user);
   }
 
   @Get()
@@ -41,8 +41,12 @@ export class ClientsController {
 
   @Get(':clientId')
   @RequirePermission(PERMISSIONS.CLIENT_VIEW)
-  findOne(@Param('clientId', ParseMongoIdPipe) clientId: string, @Req() req) {
-    return this.clientsService.findOne(clientId, req.user);
+  findOne(
+    @Param('clientId', ParseMongoIdPipe) clientId: string,
+    @Query() query: QueryClientDto,
+    @Req() req
+  ) {
+    return this.clientsService.findOne(clientId, req.user, { includeInactive: query.includeInactives });
   }
 
   @Get(':clientId/users')

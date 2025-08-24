@@ -151,6 +151,7 @@ describe('Clients Authorization - Real Multi-Tenant Security Model (e2e)', () =>
             name: 'Platform Administrator',
             firstName: 'Platform',
             lastName: 'Admin',
+            email: 'platform.admin@example.com',
             userType: UserType.EMPLOYEE,
             roleId: platformAdminRole._id,
             clientIds: [] // Global access
@@ -162,6 +163,7 @@ describe('Clients Authorization - Real Multi-Tenant Security Model (e2e)', () =>
             name: 'Agricultural Consultant',
             firstName: 'Jane',
             lastName: 'Consultant',
+            email: 'jane.consultant@example.com',
             userType: UserType.EMPLOYEE,
             roleId: subsidiaryConsultantRole._id,
             clientIds: [clientAinSubA._id, clientBinSubA._id] // Works with clients in Subsidiary A only
@@ -173,6 +175,7 @@ describe('Clients Authorization - Real Multi-Tenant Security Model (e2e)', () =>
             name: 'Orchard Grower',
             firstName: 'John',
             lastName: 'Appleton',
+            email: 'john.appleton@example.com',
             userType: UserType.CONTACT,
             roleId: clientGrowerRole._id,
             clientIds: [clientAinSubA._id] // Only their specific client
@@ -184,6 +187,7 @@ describe('Clients Authorization - Real Multi-Tenant Security Model (e2e)', () =>
             name: 'Field Worker',
             firstName: 'Mike',
             lastName: 'Worker',
+            email: 'mike.worker@example.com',
             userType: UserType.CONTACT,
             roleId: fieldWorkerRole._id,
             clientIds: [clientAinSubA._id] // Assigned to client but no CLIENT_VIEW permission
@@ -195,6 +199,7 @@ describe('Clients Authorization - Real Multi-Tenant Security Model (e2e)', () =>
             name: 'Unauthorized User',
             firstName: 'No',
             lastName: 'Access',
+            email: 'unauthorized.user@example.com',
             userType: UserType.CONTACT,
             roleId: unauthorizedRole._id,
             clientIds: [clientAinSubA._id] // Assigned but no permissions

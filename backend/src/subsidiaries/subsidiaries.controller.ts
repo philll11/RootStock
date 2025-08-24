@@ -36,8 +36,12 @@ export class SubsidiariesController {
 
   @Get(':subsidiaryId')
   @RequirePermission(PERMISSIONS.SUBSIDIARY_VIEW)
-  findOne(@Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string, @Req() req) {
-    return this.subsidiariesService.findOne(subsidiaryId, req.user);
+  findOne(
+    @Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string,
+    @Query() query: QuerySubsidiaryDto,
+    @Req() req
+  ) {
+    return this.subsidiariesService.findOne(subsidiaryId, req.user, { includeInactive: query.includeInactives });
   }
 
   @Get(':subsidiaryId/clients')

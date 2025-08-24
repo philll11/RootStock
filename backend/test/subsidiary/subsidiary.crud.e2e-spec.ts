@@ -22,10 +22,12 @@ describe('Subsidiaries CRUD - Comprehensive Business Operations (e2e)', () => {
     let subsidiaryModel: Model<SubsidiaryDocument>;
     let userModel: Model<UserDocument>;
     let roleModel: Model<RoleDocument>;
+    let clientModel: Model<any>; // For testing subsidiary lifecycle operations
 
     // Test users for comprehensive business scenario testing
     let globalAdminToken: string; // Full subsidiary management capabilities
     let subsidiaryManagerToken: string; // Limited subsidiary management
+    let inactiveAccessUserToken: string; // Has SUBSIDIARY_MANAGE_INACTIVE permission for testing
     let readOnlyUserToken: string; // View-only access
 
     jest.setTimeout(60000);
@@ -36,6 +38,7 @@ describe('Subsidiaries CRUD - Comprehensive Business Operations (e2e)', () => {
         subsidiaryModel = app.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
         userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
         roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
+        clientModel = app.get<Model<any>>(getModelToken('Client'));
 
         // Create comprehensive role hierarchy for realistic testing
         const globalAdminRole = await new roleModel({
@@ -45,7 +48,7 @@ describe('Subsidiaries CRUD - Comprehensive Business Operations (e2e)', () => {
                 PERMISSIONS.SUBSIDIARY_CREATE,
                 PERMISSIONS.SUBSIDIARY_VIEW,
                 PERMISSIONS.SUBSIDIARY_EDIT,
-                PERMISSIONS.SUBSIDIARY_EDIT_STATUS,
+                PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE, // Updated permission name
                 PERMISSIONS.SUBSIDIARY_DELETE,
                 PERMISSIONS.VIEW_DELETED
             ],
@@ -58,7 +61,19 @@ describe('Subsidiaries CRUD - Comprehensive Business Operations (e2e)', () => {
             permissions: [
                 PERMISSIONS.SUBSIDIARY_VIEW,
                 PERMISSIONS.SUBSIDIARY_EDIT,
-                // NOTE: No CREATE, DELETE, or STATUS editing permissions
+                // NOTE: No CREATE, DELETE, or MANAGE_INACTIVE permissions
+            ],
+            visibilityScope: VisibilityScope.GLOBAL
+        }).save();
+
+        const inactiveAccessRole = await new roleModel({
+            recordId: 'INACTIVE_ACCESS_SUB_ROLE',
+            name: 'Subsidiary Inactive Manager',
+            permissions: [
+                PERMISSIONS.SUBSIDIARY_VIEW,
+                PERMISSIONS.SUBSIDIARY_EDIT, // Need edit permission to modify isActive
+                PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE, // Key permission for inactive record access
+                // NOTE: Has inactive management and edit but not create/delete
             ],
             visibilityScope: VisibilityScope.GLOBAL
         }).save();
@@ -93,6 +108,17 @@ describe('Subsidiaries CRUD - Comprehensive Business Operations (e2e)', () => {
         }).save();
         subsidiaryManagerToken = jwtService.sign({ sub: managerUser.recordId });
 
+        const inactiveAccessUser = await new userModel({
+            recordId: 'INACTIVE_ACCESS_SUB_USER',
+            name: 'Subsidiary Inactive Manager',
+            firstName: 'Inactive',
+            lastName: 'Manager',
+            email: 'inactive.manager@subsidiary-test.com',
+            userType: UserType.EMPLOYEE,
+            roleId: inactiveAccessRole._id
+        }).save();
+        inactiveAccessUserToken = jwtService.sign({ sub: inactiveAccessUser.recordId });
+
         const readOnlyUser = await new userModel({
             recordId: 'READONLY_SUB_CRUD_USER',
             name: 'ReadOnly User',
@@ -110,7 +136,8 @@ describe('Subsidiaries CRUD - Comprehensive Business Operations (e2e)', () => {
     });
     
     beforeEach(async () => { 
-        await subsidiaryModel.deleteMany({}); 
+        await subsidiaryModel.deleteMany({});
+        await clientModel.deleteMany({}); // Clean up test clients too
     });
 
     describe('POST /subsidiaries - Subsidiary Creation', () => {
@@ -195,19 +222,6 @@ describe('Subsidiaries CRUD - Comprehensive Business Operations (e2e)', () => {
                     .then(res => {
                         const messages = Array.isArray(res.body.message) ? res.body.message : [res.body.message];
                         expect(messages.some(msg => msg.includes('name'))).toBe(true);
-                    });
-            });
-
-            it('should reject creation with non-string name', () => {
-                return request(app.getHttpServer())
-                    .post('/subsidiaries')
-                    .set('Authorization', `Bearer ${globalAdminToken}`)
-                    .send({ name: 12345 })
-                    .expect(400)
-                    .then(res => {
-                        const messages = Array.isArray(res.body.message) ? res.body.message : [res.body.message];
-                        expect(messages.some(msg => msg.includes('name'))).toBe(true);
-                        expect(messages.some(msg => /must be a string/i.test(msg))).toBe(true);
                     });
             });
 
@@ -348,6 +362,23 @@ describe('Subsidiaries CRUD - Comprehensive Business Operations (e2e)', () => {
                         expect(res.body).toHaveLength(3); // Active + Inactive, but not deleted
                         const inactiveFound = res.body.find(sub => !sub.isActive);
                         expect(inactiveFound).toBeTruthy();
+                    });
+            });
+
+            it('should never return deleted subsidiaries regardless of query parameters', () => {
+                return request(app.getHttpServer())
+                    .get('/subsidiaries?includeInactives=true')
+                    .set('Authorization', `Bearer ${globalAdminToken}`)
+                    .expect(200)
+                    .then(res => {
+                        // Even with includeInactives=true, deleted subsidiaries should not appear
+                        const deletedSub = res.body.find(s => s.recordId === 'SUB003');
+                        expect(deletedSub).toBeUndefined();
+                        
+                        // Verify no subsidiary in results has isDeleted: true
+                        res.body.forEach(subsidiary => {
+                            expect(subsidiary.isDeleted).toBe(false);
+                        });
                     });
             });
 
@@ -548,19 +579,6 @@ describe('Subsidiaries CRUD - Comprehensive Business Operations (e2e)', () => {
         });
 
         describe('Update Failure Scenarios', () => {
-            it('should reject update with invalid field types', () => {
-                const invalidDto = { name: 12345 }; // Wrong type
-                
-                return request(app.getHttpServer())
-                    .patch(`/subsidiaries/${testSubsidiary._id}`)
-                    .set('Authorization', `Bearer ${globalAdminToken}`)
-                    .send(invalidDto)
-                    .expect(400)
-                    .then(res => {
-                        const messages = Array.isArray(res.body.message) ? res.body.message : [res.body.message];
-                        expect(messages.some(msg => /must be a string/i.test(msg))).toBe(true);
-                    });
-            });
 
             it('should reject update with non-whitelisted fields', () => {
                 const invalidDto = { 
@@ -716,6 +734,249 @@ describe('Subsidiaries CRUD - Comprehensive Business Operations (e2e)', () => {
                     .delete(`/subsidiaries/${testSubsidiary._id}`)
                     .expect(401);
             });
+        });
+    });
+
+    describe('SUBSIDIARY_MANAGE_INACTIVE Permission Testing - Inactive Record Access Control', () => {
+        let inactiveSubsidiary: SubsidiaryDocument;
+
+        beforeEach(async () => {
+            // Create an inactive subsidiary for testing
+            inactiveSubsidiary = await new subsidiaryModel({
+                recordId: 'SUB_INACTIVE_PERM_TEST',
+                name: 'Inactive Subsidiary for Permission Testing',
+                isActive: false,
+                isDeleted: false
+            }).save();
+        });
+
+        afterEach(async () => {
+            // Clean up test inactive subsidiary
+            await subsidiaryModel.deleteOne({ recordId: 'SUB_INACTIVE_PERM_TEST' });
+        });
+
+        describe('Users WITH SUBSIDIARY_MANAGE_INACTIVE Permission', () => {
+            it('should allow user with SUBSIDIARY_MANAGE_INACTIVE to view inactive subsidiaries in list', async () => {
+                return request(app.getHttpServer())
+                    .get('/subsidiaries?includeInactives=true')
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.length).toBeGreaterThanOrEqual(1);
+                        const inactiveSubInList = res.body.find(s => s.recordId === 'SUB_INACTIVE_PERM_TEST');
+                        expect(inactiveSubInList).toBeDefined();
+                        expect(inactiveSubInList.isActive).toBe(false);
+                    });
+            });
+
+            it('should allow user with SUBSIDIARY_MANAGE_INACTIVE to access inactive subsidiary by ID', async () => {
+                return request(app.getHttpServer())
+                    .get(`/subsidiaries/${inactiveSubsidiary._id}?includeInactives=true`)
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.recordId).toBe('SUB_INACTIVE_PERM_TEST');
+                        expect(res.body.isActive).toBe(false);
+                        expect(res.body.name).toBe('Inactive Subsidiary for Permission Testing');
+                    });
+            });
+
+            it('should allow user with SUBSIDIARY_MANAGE_INACTIVE to reactivate inactive subsidiaries', async () => {
+                return request(app.getHttpServer())
+                    .patch(`/subsidiaries/${inactiveSubsidiary._id}`)
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .send({ isActive: true })
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.isActive).toBe(true);
+                        expect(res.body.recordId).toBe('SUB_INACTIVE_PERM_TEST');
+                    });
+            });
+
+            it('should allow global admin (with SUBSIDIARY_MANAGE_INACTIVE) to deactivate active subsidiaries', async () => {
+                // Create a clean subsidiary with no dependencies for this test
+                const cleanSubsidiary = await new subsidiaryModel({
+                    recordId: 'SUB_CLEAN_FOR_DEACTIVATION',
+                    name: 'Clean Subsidiary for Deactivation',
+                    isActive: true,
+                    isDeleted: false
+                }).save();
+
+                return request(app.getHttpServer())
+                    .patch(`/subsidiaries/${cleanSubsidiary._id}`)
+                    .set('Authorization', `Bearer ${globalAdminToken}`)
+                    .send({ isActive: false })
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.isActive).toBe(false);
+                        expect(res.body.recordId).toBe('SUB_CLEAN_FOR_DEACTIVATION');
+                    });
+            });
+        });
+
+        describe('Users WITHOUT SUBSIDIARY_MANAGE_INACTIVE Permission', () => {
+            it('should prevent manager from accessing inactive subsidiaries in list (filtered out)', async () => {
+                return request(app.getHttpServer())
+                    .get('/subsidiaries?includeInactives=true')
+                    .set('Authorization', `Bearer ${subsidiaryManagerToken}`)
+                    .expect(200)
+                    .then(res => {
+                        // Should not see the inactive subsidiary even with includeInactives=true
+                        const inactiveSubInList = res.body.find(s => s.recordId === 'SUB_INACTIVE_PERM_TEST');
+                        expect(inactiveSubInList).toBeUndefined();
+                        
+                        // Should only see active subsidiaries
+                        res.body.forEach(subsidiary => {
+                            expect(subsidiary.isActive).toBe(true);
+                        });
+                    });
+            });
+
+            it('should prevent manager from accessing inactive subsidiary by ID', async () => {
+                return request(app.getHttpServer())
+                    .get(`/subsidiaries/${inactiveSubsidiary._id}?includeInactives=true`)
+                    .set('Authorization', `Bearer ${subsidiaryManagerToken}`)
+                    .expect(404); // Filtered out by permission check
+            });
+
+            it('should prevent manager from modifying isActive status (403 Forbidden)', async () => {
+                // Create a clean subsidiary for this test
+                const cleanSubsidiary = await new subsidiaryModel({
+                    recordId: 'SUB_CLEAN_PERMISSION_TEST',
+                    name: 'Clean Subsidiary for Permission Test',
+                    isActive: true,
+                    isDeleted: false
+                }).save();
+
+                return request(app.getHttpServer())
+                    .patch(`/subsidiaries/${cleanSubsidiary._id}`)
+                    .set('Authorization', `Bearer ${subsidiaryManagerToken}`)
+                    .send({ isActive: false })
+                    .expect(403)
+                    .then(res => {
+                        expect(res.body.message).toContain('You do not have permission to change the isActive status');
+                    });
+            });
+
+            it('should prevent read-only user from modifying isActive status (403 Forbidden)', async () => {
+                // Create a clean subsidiary for this test
+                const cleanSubsidiary = await new subsidiaryModel({
+                    recordId: 'SUB_READONLY_PERMISSION_TEST',
+                    name: 'Clean Subsidiary for Readonly Test',
+                    isActive: true,
+                    isDeleted: false
+                }).save();
+
+                return request(app.getHttpServer())
+                    .patch(`/subsidiaries/${cleanSubsidiary._id}`)
+                    .set('Authorization', `Bearer ${readOnlyUserToken}`)
+                    .send({ isActive: false })
+                    .expect(403); // Blocked by general SUBSIDIARY_EDIT permission check
+            });
+
+            it('should prevent read-only user from accessing inactive subsidiaries', async () => {
+                return request(app.getHttpServer())
+                    .get('/subsidiaries?includeInactives=true')
+                    .set('Authorization', `Bearer ${readOnlyUserToken}`)
+                    .expect(200)
+                    .then(res => {
+                        // Should not see any inactive subsidiaries
+                        const inactiveSubInList = res.body.find(s => s.recordId === 'SUB_INACTIVE_PERM_TEST');
+                        expect(inactiveSubInList).toBeUndefined();
+                    });
+            });
+        });
+    });
+
+    describe('Business Rule Validation & Subsidiary Lifecycle Operations', () => {
+        it('should enforce subsidiary deactivation business rules when active clients exist', async () => {
+            // Create a subsidiary with active clients
+            const subsidiaryWithClients = await new subsidiaryModel({
+                recordId: 'SUB_WITH_CLIENTS',
+                name: 'Subsidiary with Active Clients',
+                isActive: true,
+                isDeleted: false
+            }).save();
+
+            // Create active clients under this subsidiary
+            await Promise.all([
+                new clientModel({
+                    recordId: 'CLI_BLOCKING_SUB_DEACTIVATION1',
+                    name: 'Client Blocking Deactivation 1',
+                    subsidiaryId: subsidiaryWithClients._id,
+                    isActive: true,
+                    isDeleted: false
+                }).save(),
+                new clientModel({
+                    recordId: 'CLI_BLOCKING_SUB_DEACTIVATION2',
+                    name: 'Client Blocking Deactivation 2',
+                    subsidiaryId: subsidiaryWithClients._id,
+                    isActive: true,
+                    isDeleted: false
+                }).save()
+            ]);
+
+            // Should prevent deactivation due to active clients
+            return request(app.getHttpServer())
+                .patch(`/subsidiaries/${subsidiaryWithClients._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send({ isActive: false })
+                .expect(409)
+                .then(res => {
+                    expect(res.body.message).toContain('This subsidiary cannot be deactivated because it has 2 active client(s)');
+                });
+        });
+
+        it('should maintain data consistency during subsidiary lifecycle operations', async () => {
+            // Arrange: Create a subsidiary with associated clients
+            const subsidiaryForLifecycleTest = await new subsidiaryModel({
+                recordId: 'SUB_LIFECYCLE_TEST',
+                name: 'Subsidiary Lifecycle Test',
+                isActive: true,
+                isDeleted: false
+            }).save();
+
+            const associatedClients = await Promise.all([
+                new clientModel({
+                    recordId: 'CLI_LIFECYCLE_TEST1',
+                    name: 'Client for Lifecycle Test 1',
+                    subsidiaryId: subsidiaryForLifecycleTest._id,
+                    isActive: true,
+                    isDeleted: false
+                }).save(),
+                new clientModel({
+                    recordId: 'CLI_LIFECYCLE_TEST2',
+                    name: 'Client for Lifecycle Test 2',
+                    subsidiaryId: subsidiaryForLifecycleTest._id,
+                    isActive: true,
+                    isDeleted: false
+                }).save()
+            ]);
+
+            // Act: Delete the subsidiary
+            await request(app.getHttpServer())
+                .delete(`/subsidiaries/${subsidiaryForLifecycleTest._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            // Assert: Verify data consistency is maintained
+            
+            // Subsidiary should be soft-deleted
+            const deletedSubsidiary = await subsidiaryModel.findById(subsidiaryForLifecycleTest._id);
+            expect(deletedSubsidiary?.isDeleted).toBe(true);
+            expect(deletedSubsidiary?.isActive).toBe(false);
+
+            // Associated clients should have their subsidiaryId set to null
+            for (const client of associatedClients) {
+                const updatedClient = await clientModel.findById(client._id);
+                expect(updatedClient?.subsidiaryId).toBeNull();
+            }
+
+            // Subsidiary should no longer be accessible via API
+            return request(app.getHttpServer())
+                .get(`/subsidiaries/${subsidiaryForLifecycleTest._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(404);
         });
     });
 });

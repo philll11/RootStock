@@ -3,10 +3,11 @@ import { Model } from 'mongoose';
 import { User } from '../schemas/user.schema';
 import { QueryUserDto } from '../dto/query-user.dto';
 import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
+import { Resource } from '../../common/constants/permissions.constants';
 
 export class UserQueryBuilder extends BaseQueryBuilder {
   constructor(queryDto: QueryUserDto, user: User, clientResolverService: ClientResolverService) {
-    super(queryDto, user, clientResolverService);
+    super(queryDto, user, clientResolverService, Resource.USER);
   }
 
   // OVERRIDE: When querying for Users, the visibility scope filter

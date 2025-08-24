@@ -5,10 +5,11 @@ import { QueryRoleDto } from '../dto/query-role.dto';
 import { User } from '../../users/schemas/user.schema';
 import { VisibilityScope } from '../schemas/role.schema';
 import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
+import { Resource } from '../../common/constants/permissions.constants';
 
 export class RoleQueryBuilder extends BaseQueryBuilder {
   constructor(queryDto: QueryRoleDto, user: User, clientResolver: ClientResolverService) {
-    super(queryDto, user, clientResolver);
+    super(queryDto, user, clientResolver, Resource.ROLE);
   }
 
   /**

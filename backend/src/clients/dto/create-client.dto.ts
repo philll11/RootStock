@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsMongoId, ValidateIf } from 'class-validator';
+import { IsString, IsNotEmpty, IsMongoId, IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { IsExistingSubsidiary } from '../../subsidiaries/decorators/is-existing-subsidiary.decorator';
 
@@ -9,9 +9,8 @@ export class CreateClientDto {
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   readonly name: string;
 
+  @IsOptional()
   @IsMongoId()
   @IsExistingSubsidiary()
-  @IsNotEmpty()
-  @ValidateIf((o) => o.subsidiaryId !== null)
-  readonly subsidiaryId: string;
+  readonly subsidiaryId?: string;
 }

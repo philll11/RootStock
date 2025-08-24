@@ -6,13 +6,15 @@ import { IsExistingOrchardConstraint } from './validators/is-existing-orchard.va
 import { ClientsModule } from '../clients/clients.module';
 import { UsersModule } from '../users/users.module';
 import { CountersModule } from '../counters/counters.module'; 
+import { VisibilityModule } from '../common/visibility/visibility.module';
 
 @Module({
   imports: [
     ClientResolverModule,
     forwardRef(() => ClientsModule),
     forwardRef(() => UsersModule),
-    CountersModule
+    CountersModule,
+    VisibilityModule
   ],
   controllers: [OrchardsController],
   providers: [

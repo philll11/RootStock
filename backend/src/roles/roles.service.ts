@@ -44,8 +44,9 @@ export class RolesService {
     return await this.roleModel.find(filter).exec();
   }
 
-  async findOne(roleId: string, user: User): Promise<Role> {
-    const queryBuilder = new RoleQueryBuilder({}, user, this.clientResolverService);
+  async findOne(roleId: string, user: User, options: { includeInactive?: boolean } = {}): Promise<Role> {
+    const queryDto = options.includeInactive ? { includeInactives: true } : {};
+    const queryBuilder = new RoleQueryBuilder(queryDto, user, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = {
@@ -65,7 +66,7 @@ export class RolesService {
   }
 
   async update(roleId: string, updateRoleDto: UpdateRoleDto, user: User): Promise<Role> {
-    await this.findOne(roleId, user); // Secure authorization check
+    await this.findOne(roleId, user, { includeInactive: true }); // Secure authorization check
 
     if (updateRoleDto.isActive === false) {
       const activeUserCount = await this.usersService.countActiveByRoleId(roleId);

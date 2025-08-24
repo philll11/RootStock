@@ -3,21 +3,21 @@ import { User } from '../../users/schemas/user.schema';
 import { VisibilityScope } from '../../roles/schemas/role.schema';
 import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
 
-import { PERMISSIONS } from '../constants/permissions.constants'
+import { PERMISSIONS, Resource } from '../constants/permissions.constants'
 
 export class BaseQueryBuilder {
   protected filter: any = {};
   protected queryDto: any;
   protected user: User;
+  protected resourceName: Resource;
 
   protected readonly clientResolverService: ClientResolverService;
 
-  constructor(queryDto: any, user: User, clientResolverService: ClientResolverService) {
+  constructor(queryDto: any, user: User, clientResolverService: ClientResolverService, resourceName: Resource) {
     this.queryDto = queryDto;
     this.user = user;
-    if (clientResolverService) {
-      this.clientResolverService = clientResolverService;
-    }
+    this.clientResolverService = clientResolverService;
+    this.resourceName = resourceName;
   }
 
   public async build(): Promise<any> {
@@ -63,14 +63,16 @@ export class BaseQueryBuilder {
     // Default behavior: filter out deleted records.
     this.filter.isDeleted = false;
 
-    // Default behavior: only include active records.
-    this.filter.isActive = true;
+    // Default behavior: only include active records unless user has specific permission.
+    const canManageInactive = userPermissions.includes(`${this.resourceName}:ManageInactive`);
 
-    // Allow overriding the isActive filter if the DTO specifies it.
-    if (this.queryDto.includeInactives) {
-      this.filter.isActive = { $in: [true, false] };
-    } else if (this.queryDto.isActive !== undefined) {
-      this.filter.isActive = this.queryDto.isActive;
+    if (this.queryDto.includeInactives === true && canManageInactive) {
+      // If the user requests inactive records and has permission, remove the isActive filter.
+      // This will return both active and inactive records.
+      delete this.filter.isActive;
+    } else {
+      // Otherwise, default to only showing active records.
+      this.filter.isActive = true;
     }
   }
 

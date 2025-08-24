@@ -40,10 +40,9 @@ export class CreateOrchardDto {
     @Type(() => CreateAddressDto)
     readonly address?: CreateAddressDto;
 
-    
     @IsArray()
     @IsMongoId({ each: true })
-    @IsExistingContactUsers()
+    @IsExistingContactUsers() // Ensures all users exist and are active
     @IsOptional()
     readonly userIds?: string[];
 }

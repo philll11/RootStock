@@ -3,11 +3,12 @@ import { Types } from 'mongoose';
 import { User } from '../../users/schemas/user.schema';
 import { QueryClientDto } from '../dto/query-client.dto';
 import { ClientResolverService } from '../client-resolver/client-resolver.service';
+import { Resource } from '../../common/constants/permissions.constants';
 
 
 export class ClientQueryBuilder extends BaseQueryBuilder {
   constructor(queryDto: QueryClientDto, user: User, clientResolverService: ClientResolverService) {
-    super(queryDto, user, clientResolverService);
+    super(queryDto, user, clientResolverService, Resource.CLIENT);
   }
 
   protected buildSearchFilters() {

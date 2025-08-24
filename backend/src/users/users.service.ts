@@ -89,8 +89,9 @@ export class UsersService {
    * @param user - The authenticated user making the request.
    * @returns The found user document.
    */
-  async findOne(userId: string, user: User): Promise<User> {
-    const queryBuilder = new UserQueryBuilder({}, user, this.clientResolverService);
+  async findOne(userId: string, user: User, options: { includeInactive?: boolean } = {}): Promise<User> {
+    const queryDto = options.includeInactive ? { includeInactives: true } : {};
+    const queryBuilder = new UserQueryBuilder(queryDto, user, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = {
@@ -116,7 +117,7 @@ export class UsersService {
    * @returns The updated user document.
    */
   async update(userId: string, updateUserDto: UpdateUserDto, user: User): Promise<User> {
-    const existingUser = await this.findOne(userId, user); // Secure findOne doubles as authorization check
+    const existingUser = await this.findOne(userId, user, { includeInactive: true }); // Secure findOne doubles as authorization check
 
     // Business Rule: Contact users can only update their own information
     if (user.userType === UserType.CONTACT) {
@@ -288,8 +289,11 @@ export class UsersService {
     if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
     if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
 
+    
+    // System Constraint: Only roles with CLIENT_MANAGE_INACTIVE permissions can change Client status.
+    // This prevents non-admin users from turning off key master data records
     if (dto.isActive !== undefined) {
-      if (!loggedInUserPermissions.includes(PERMISSIONS.USER_EDIT_STATUS)) {
+      if (!loggedInUserPermissions.includes(PERMISSIONS.USER_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
       payload.isActive = isActive;

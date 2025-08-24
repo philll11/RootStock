@@ -36,8 +36,12 @@ export class RolesController {
 
   @Get(':roleId')
   @RequirePermission(PERMISSIONS.ROLE_VIEW)
-  findOne(@Param('roleId', ParseMongoIdPipe) roleId: string, @Req() req) {
-    return this.rolesService.findOne(roleId, req.user);
+  findOne(
+    @Param('roleId', ParseMongoIdPipe) roleId: string,
+    @Query() query: QueryRoleDto,
+    @Req() req
+  ) {
+    return this.rolesService.findOne(roleId, req.user, { includeInactive: query.includeInactives });
   }
 
   @Get(':roleId/users')

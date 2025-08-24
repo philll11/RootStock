@@ -29,8 +29,12 @@ export class UsersController {
 
   @Get(':userId')
   @RequirePermission(PERMISSIONS.USER_VIEW)
-  findOne(@Param('userId', ParseMongoIdPipe) userId: string, @Req() req) {
-    return this.usersService.findOne(userId, req.user);
+  findOne(
+    @Param('userId', ParseMongoIdPipe) userId: string,
+    @Query() query: QueryUserDto,
+    @Req() req
+  ) {
+    return this.usersService.findOne(userId, req.user, { includeInactive: query.includeInactives });
   }
 
   @Patch(':userId')

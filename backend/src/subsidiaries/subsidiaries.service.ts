@@ -47,8 +47,9 @@ export class SubsidiariesService {
     return this.subsidiaryModel.find(filter).exec();
   }
 
-  async findOne(subsidiaryId: string, user: User): Promise<Subsidiary> {
-    const queryBuilder = new SubsidiaryQueryBuilder({}, user, this.clientResolverService);
+  async findOne(subsidiaryId: string, user: User, options: { includeInactive?: boolean } = {}): Promise<Subsidiary> {
+    const queryDto = options.includeInactive ? { includeInactives: true } : {};
+    const queryBuilder = new SubsidiaryQueryBuilder(queryDto, user, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = {
@@ -67,7 +68,7 @@ export class SubsidiariesService {
   }
 
   async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, user: User): Promise<Subsidiary> {
-    await this.findOne(subsidiaryId, user);
+    await this.findOne(subsidiaryId, user, { includeInactive: true });
 
     if (updateSubsidiaryDto.isActive === false) {
       const activeClientCount = await this.clientsService.countActiveBySubsidiaryId(subsidiaryId);
@@ -127,8 +128,10 @@ export class SubsidiariesService {
     const updatePayload: Partial<Subsidiary> = { ...restOfDto };
     const userPermissions = (user.roleId as any)?.permissions || [];
 
+    // System Constraint: Only roles with SUBSIDIARY_MANAGE_INACTIVE permissions can change Subsidiary status.
+    // This prevents non-admin users from turning off key master data records
     if (updateSubsidiaryDto.isActive !== undefined) {
-      if (!userPermissions.includes(PERMISSIONS.SUBSIDIARY_EDIT_STATUS)) {
+      if (!userPermissions.includes(PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
       updatePayload.isActive = isActive;

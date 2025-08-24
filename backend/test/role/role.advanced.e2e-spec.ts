@@ -123,6 +123,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
             name: 'Global Admin',
             firstName: 'Super',
             lastName: 'Admin',
+            email: 'super.admin@roles-test.com',
             userType: UserType.EMPLOYEE,
             roleId: globalAdminRole._id,
             clientIds: []
@@ -134,6 +135,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
             name: 'Operations Manager',
             firstName: 'Operations',
             lastName: 'Manager',
+            email: 'operations.manager@roles-test.com',
             userType: UserType.EMPLOYEE,
             roleId: subsidiaryManagerRole._id,
             clientIds: [clientA._id, clientB._id]
@@ -145,6 +147,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
             name: 'Premium Orchard Owner',
             firstName: 'Premium',
             lastName: 'Owner',
+            email: 'premium.owner@roles-test.com',
             userType: UserType.CONTACT,
             roleId: clientOwnerRole._id,
             clientIds: [clientA._id]
@@ -156,6 +159,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
             name: 'Family Farm Owner',
             firstName: 'Family',
             lastName: 'Owner',
+            email: 'family.owner@roles-test.com',
             userType: UserType.CONTACT,
             roleId: clientOwnerRole._id,
             clientIds: [clientB._id]
@@ -167,6 +171,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
             name: 'Multi-Client Consultant',
             firstName: 'Expert',
             lastName: 'Consultant',
+            email: 'multi.consultant@roles-test.com',
             userType: UserType.EMPLOYEE,
             roleId: multiClientConsultantRole._id,
             clientIds: [clientA._id, clientB._id] // Works with both clients
@@ -205,6 +210,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
                 name: 'Active Supervisor',
                 firstName: 'Active',
                 lastName: 'Supervisor',
+                email: 'active.supervisor@roles-test.com',
                 userType: UserType.CONTACT,
                 roleId: supervisorRole._id,
                 clientIds: [clientA._id],
@@ -243,6 +249,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
                 name: 'Migrating User',
                 firstName: 'Migrating',
                 lastName: 'User',
+                email: 'migrating.user@roles-test.com',
                 userType: UserType.CONTACT,
                 roleId: oldRole._id,
                 clientIds: [clientA._id]
@@ -278,6 +285,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
                 name: 'User 1',
                 firstName: 'User',
                 lastName: '1',
+                email: 'user1.lifecycle@roles-test.com',
                 userType: UserType.CONTACT,
                 roleId: roleToDelete._id,
                 clientIds: [clientA._id]
@@ -288,6 +296,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
                 name: 'User 2',
                 firstName: 'User',
                 lastName: '2',
+                email: 'user2.lifecycle@roles-test.com',
                 userType: UserType.CONTACT,
                 roleId: roleToDelete._id,
                 clientIds: [clientB._id]
@@ -494,6 +503,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
                 name: 'Staff Member 1',
                 firstName: 'Staff',
                 lastName: '1',
+                email: 'staff1@roles-test.com',
                 userType: UserType.CONTACT,
                 roleId: managerRole._id,
                 clientIds: [clientA._id]
@@ -504,6 +514,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
                 name: 'Staff Member 2',
                 firstName: 'Staff',
                 lastName: '2',
+                email: 'staff2@roles-test.com',
                 userType: UserType.CONTACT,
                 roleId: managerRole._id,
                 clientIds: [clientA._id]
@@ -537,6 +548,7 @@ describe('Roles Advanced Business Logic (e2e)', () => {
                 name: 'Critical Operator',
                 firstName: 'Critical',
                 lastName: 'Operator',
+                email: 'critical.operator@roles-test.com',
                 userType: UserType.CONTACT,
                 roleId: criticalRole._id,
                 clientIds: [clientA._id],

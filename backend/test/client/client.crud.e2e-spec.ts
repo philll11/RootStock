@@ -31,6 +31,7 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
     let globalAdminToken: string; // Full client management permissions
     let subsidiaryConsultantToken: string; // Can view/edit clients in their subsidiaries
     let clientGrowerToken: string; // Can view clients they're assigned to
+    let inactiveAccessUserToken: string; // Has CLIENT_MANAGE_INACTIVE permission for testing
     let noPermissionUserToken: string; // Has no client permissions
     
     // Test entities for real business scenarios
@@ -107,6 +108,20 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
             visibilityScope: VisibilityScope.CLIENT
         }).save();
 
+        const inactiveAccessRole = await new roleModel({
+            recordId: 'INACTIVE_ACCESS_ROLE',
+            name: 'Client Inactive Manager',
+            permissions: [
+                PERMISSIONS.CLIENT_VIEW,
+                PERMISSIONS.CLIENT_EDIT, // Need edit permission to modify isActive
+                PERMISSIONS.CLIENT_MANAGE_INACTIVE, // Key permission for inactive record access
+                PERMISSIONS.USER_VIEW,
+                PERMISSIONS.ORCHARD_VIEW,
+                // NOTE: Has inactive management and edit but not create/delete
+            ],
+            visibilityScope: VisibilityScope.CLIENT
+        }).save();
+
         // Create test clients for visibility scope testing
         testClientA = await new clientModel({
             recordId: 'CLI001',
@@ -128,6 +143,7 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
             name: 'Platform Administrator',
             firstName: 'Platform',
             lastName: 'Admin',
+            email: 'platform.admin@example.com',
             userType: UserType.EMPLOYEE,
             roleId: globalAdminRole._id,
             clientIds: [] // Global access
@@ -139,6 +155,7 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
             name: 'Agricultural Consultant',
             firstName: 'Jane',
             lastName: 'Consultant',
+            email: 'jane.consultant@example.com',
             userType: UserType.EMPLOYEE,
             roleId: subsidiaryConsultantRole._id,
             clientIds: [testClientA._id, testClientB._id] // Works with multiple clients
@@ -149,7 +166,8 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
             recordId: 'CLIENT_GROWER_USER',
             name: 'Orchard Grower',
             firstName: 'John',
-            lastName: 'Appleton', 
+            lastName: 'Appleton',
+            email: 'john.appleton@example.com',
             userType: UserType.CONTACT,
             roleId: clientGrowerRole._id,
             clientIds: [testClientA._id] // Only their own orchard
@@ -161,11 +179,24 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
             name: 'Limited User',
             firstName: 'Limited',
             lastName: 'User',
+            email: 'limited.user@example.com',
             userType: UserType.CONTACT,
             roleId: noPermissionRole._id,
             clientIds: [testClientA._id] // Assigned but no permissions
         }).save();
         noPermissionUserToken = jwtService.sign({ sub: noPermissionUser.recordId });
+
+        const inactiveAccessUser = await new userModel({
+            recordId: 'INACTIVE_ACCESS_USER',
+            name: 'Client Inactive Manager',
+            firstName: 'Inactive',
+            lastName: 'Manager',
+            email: 'inactive.manager@example.com',
+            userType: UserType.EMPLOYEE,
+            roleId: inactiveAccessRole._id,
+            clientIds: [testClientA._id, testClientB._id] // Access to test clients
+        }).save();
+        inactiveAccessUserToken = jwtService.sign({ sub: inactiveAccessUser.recordId });
     });
 
     afterAll(async () => {
@@ -182,6 +213,7 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
                 'GLOBAL_ADMIN_USER', 
                 'SUBSIDIARY_CONSULTANT_USER',
                 'CLIENT_GROWER_USER',
+                'INACTIVE_ACCESS_USER',
                 'NO_PERMISSION_USER'
             ] } 
         });
@@ -191,6 +223,24 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
         await clientModel.updateMany(
             { recordId: { $in: ['CLI001', 'CLI002'] } },
             { $set: { isActive: true, isDeleted: false } }
+        );
+
+        // Ensure users maintain their original client assignments
+        await userModel.updateOne(
+            { recordId: 'SUBSIDIARY_CONSULTANT_USER' },
+            { $set: { clientIds: [testClientA._id, testClientB._id] } }
+        );
+        await userModel.updateOne(
+            { recordId: 'CLIENT_GROWER_USER' },
+            { $set: { clientIds: [testClientA._id] } }
+        );
+        await userModel.updateOne(
+            { recordId: 'INACTIVE_ACCESS_USER' },
+            { $set: { clientIds: [testClientA._id, testClientB._id] } }
+        );
+        await userModel.updateOne(
+            { recordId: 'NO_PERMISSION_USER' },
+            { $set: { clientIds: [testClientA._id] } }
         );
     });
 
@@ -218,8 +268,7 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
 
         it('should allow global administrator to create independent client (no subsidiary)', async () => {
             const independentClientData: CreateClientDto = {
-                name: 'Independent Family Farm',
-                subsidiaryId: null as any
+                name: 'Independent Family Farm'
             };
 
             return request(app.getHttpServer())
@@ -229,7 +278,7 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
                 .expect(201)
                 .then(res => {
                     expect(res.body.name).toBe('Independent Family Farm');
-                    expect(res.body.subsidiaryId).toBeNull();
+                    expect(res.body.subsidiaryId).toBeUndefined(); // Should be undefined, not null
                     expect(res.body.recordId).toMatch(/^CLI\d+$/);
                 });
         });
@@ -464,6 +513,150 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
         });
     });
 
+    describe('CLIENT_MANAGE_INACTIVE Permission Testing - Inactive Record Access Control', () => {
+        let inactiveClient: ClientDocument;
+
+        beforeEach(async () => {
+            // Create an inactive client for testing
+            inactiveClient = await new clientModel({
+                recordId: 'CLI_INACTIVE_PERM_TEST',
+                name: 'Inactive Client for Permission Testing',
+                subsidiaryId: testSubsidiary._id,
+                isActive: false,
+                isDeleted: false
+            }).save();
+
+            // Add the inactive client to inactiveAccessUser's scope
+            await userModel.updateOne(
+                { recordId: 'INACTIVE_ACCESS_USER' },
+                { $push: { clientIds: inactiveClient._id } }
+            );
+        });
+
+        afterEach(async () => {
+            // Clean up test inactive client and remove from user scope
+            await userModel.updateOne(
+                { recordId: 'INACTIVE_ACCESS_USER' },
+                { $pull: { clientIds: inactiveClient._id } }
+            );
+            await clientModel.deleteOne({ recordId: 'CLI_INACTIVE_PERM_TEST' });
+        });
+
+        describe('Users WITH CLIENT_MANAGE_INACTIVE Permission', () => {
+            it('should allow user with CLIENT_MANAGE_INACTIVE to view inactive clients in list', async () => {
+                return request(app.getHttpServer())
+                    .get('/clients?includeInactives=true')
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.length).toBeGreaterThanOrEqual(1);
+                        const inactiveClientInList = res.body.find(c => c.recordId === 'CLI_INACTIVE_PERM_TEST');
+                        expect(inactiveClientInList).toBeDefined();
+                        expect(inactiveClientInList.isActive).toBe(false);
+                    });
+            });
+
+            it('should allow user with CLIENT_MANAGE_INACTIVE to access inactive client by ID', async () => {
+                return request(app.getHttpServer())
+                    .get(`/clients/${inactiveClient._id}?includeInactives=true`)
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.recordId).toBe('CLI_INACTIVE_PERM_TEST');
+                        expect(res.body.isActive).toBe(false);
+                        expect(res.body.name).toBe('Inactive Client for Permission Testing');
+                    });
+            });
+
+            it('should allow user with CLIENT_MANAGE_INACTIVE to reactivate inactive clients', async () => {
+                return request(app.getHttpServer())
+                    .patch(`/clients/${inactiveClient._id}`)
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .send({ isActive: true })
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.isActive).toBe(true);
+                        expect(res.body.recordId).toBe('CLI_INACTIVE_PERM_TEST');
+                    });
+            });
+
+            it('should allow global admin (with CLIENT_MANAGE_INACTIVE) to deactivate clean clients', async () => {
+                // Create a clean client with no dependencies for this test
+                const cleanClient = await new clientModel({
+                    recordId: 'CLI_CLEAN_FOR_DEACTIVATION',
+                    name: 'Clean Client for Deactivation',
+                    subsidiaryId: testSubsidiary._id,
+                    isActive: true,
+                    isDeleted: false
+                }).save();
+
+                return request(app.getHttpServer())
+                    .patch(`/clients/${cleanClient._id}`)
+                    .set('Authorization', `Bearer ${globalAdminToken}`)
+                    .send({ isActive: false })
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.isActive).toBe(false);
+                        expect(res.body.recordId).toBe('CLI_CLEAN_FOR_DEACTIVATION');
+                    });
+            });
+        });
+
+        describe('Users WITHOUT CLIENT_MANAGE_INACTIVE Permission', () => {
+            it('should prevent consultant from accessing inactive clients in list (filtered out)', async () => {
+                return request(app.getHttpServer())
+                    .get('/clients?includeInactives=true')
+                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
+                    .expect(200)
+                    .then(res => {
+                        // Should not see the inactive client even with includeInactives=true
+                        const inactiveClientInList = res.body.find(c => c.recordId === 'CLI_INACTIVE_PERM_TEST');
+                        expect(inactiveClientInList).toBeUndefined();
+                        
+                        // Should only see active clients
+                        res.body.forEach(client => {
+                            expect(client.isActive).toBe(true);
+                        });
+                    });
+            });
+
+            it('should prevent consultant from accessing inactive client by ID', async () => {
+                return request(app.getHttpServer())
+                    .get(`/clients/${inactiveClient._id}?includeInactives=true`)
+                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
+                    .expect(404); // Filtered out by permission check
+            });
+
+            it('should prevent consultant from modifying isActive status (403 Forbidden)', async () => {
+                // Use testClientB which should be clean (no users assigned in beforeEach)
+                // Test setting to true first to avoid any business rule conflicts
+                return request(app.getHttpServer())
+                    .patch(`/clients/${testClientB._id}`)
+                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
+                    .send({ isActive: true, name: 'Test Update' }) // Include isActive change
+                    .expect(403)
+                    .then(res => {
+                        expect(res.body.message).toContain('You do not have permission to change the isActive status');
+                    });
+            });
+
+            it('should prevent grower from modifying isActive status (403 Forbidden)', async () => {
+                return request(app.getHttpServer())
+                    .patch(`/clients/${testClientA._id}`)
+                    .set('Authorization', `Bearer ${clientGrowerToken}`)
+                    .send({ isActive: false })
+                    .expect(403); // Blocked by general CLIENT_EDIT permission check
+            });
+
+            it('should prevent user with no permissions from accessing inactive clients', async () => {
+                return request(app.getHttpServer())
+                    .get('/clients?includeInactives=true')
+                    .set('Authorization', `Bearer ${noPermissionUserToken}`)
+                    .expect(403); // Blocked by @RequirePermission('Client:View') guard
+            });
+        });
+    });
+
     describe('Business Rule Validation - Real Client Management Scenarios', () => {
         it('should reject client creation with non-existent subsidiaryId', async () => {
             const fakeSubsidiaryId = new Types.ObjectId().toHexString();
@@ -506,6 +699,7 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
                 name: 'User Assigned to Client',
                 firstName: 'Assigned',
                 lastName: 'User',
+                email: 'assigned.user@example.com',
                 userType: UserType.CONTACT,
                 roleId: (await roleModel.findOne({ recordId: 'CLIENT_GROWER_ROLE' }))!._id,
                 clientIds: [testClientA._id],
@@ -525,18 +719,27 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
         });
 
         it('should enforce client deactivation business rules when active orchards exist', async () => {
-            // Create an active orchard assigned to testClientB
+            // Create a clean client with no users but with an active orchard
+            const clientWithOrchard = await new clientModel({
+                recordId: 'CLI_WITH_ORCHARD_ONLY',
+                name: 'Client with Orchard Only',
+                subsidiaryId: testSubsidiary._id,
+                isActive: true,
+                isDeleted: false
+            }).save();
+
+            // Create an active orchard assigned to this client
             await new orchardModel({
-                recordId: 'ORC001',
-                name: 'Active Test Orchard',
-                clientId: testClientB._id,
+                recordId: 'ORC_BLOCKING_DEACTIVATION',
+                name: 'Orchard Blocking Deactivation',
+                clientId: clientWithOrchard._id,
                 isActive: true,
                 isDeleted: false
             }).save();
 
             // Should prevent deactivation due to active orchard
             return request(app.getHttpServer())
-                .patch(`/clients/${testClientB._id}`)
+                .patch(`/clients/${clientWithOrchard._id}`)
                 .set('Authorization', `Bearer ${globalAdminToken}`)
                 .send({ isActive: false })
                 .expect(409)
@@ -552,6 +755,7 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
                 name: 'User for Deletion Test',
                 firstName: 'Test',
                 lastName: 'User',
+                email: 'test.user@example.com',
                 userType: UserType.CONTACT,
                 roleId: (await roleModel.findOne({ recordId: 'CLIENT_GROWER_ROLE' }))!._id,
                 clientIds: [testClientA._id]
@@ -629,6 +833,65 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
                 .expect(404);
         });
 
+        it('should maintain data consistency during client lifecycle operations', async () => {
+            // Arrange: Create a client with associated users and orchards
+            const clientForLifecycleTest = await new clientModel({
+                recordId: 'CLI_LIFECYCLE_TEST',
+                name: 'Client Lifecycle Test',
+                subsidiaryId: testSubsidiary._id,
+                isActive: true,
+                isDeleted: false
+            }).save();
+
+            const associatedUser = await new userModel({
+                recordId: 'USER_LIFECYCLE_TEST',
+                name: 'User for Lifecycle Test',
+                firstName: 'Lifecycle',
+                lastName: 'User',
+                email: 'lifecycle.user@example.com',
+                userType: UserType.CONTACT,
+                roleId: (await roleModel.findOne({ recordId: 'CLIENT_GROWER_ROLE' }))!._id,
+                clientIds: [clientForLifecycleTest._id],
+                isActive: true
+            }).save();
+
+            const associatedOrchard = await new orchardModel({
+                recordId: 'ORC_LIFECYCLE_TEST',
+                name: 'Orchard for Lifecycle Test',
+                clientId: clientForLifecycleTest._id,
+                isActive: true,
+                isDeleted: false
+            }).save();
+
+            // Act: Delete the client
+            await request(app.getHttpServer())
+                .delete(`/clients/${clientForLifecycleTest._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            // Assert: Verify data consistency is maintained
+            
+            // Client should be soft-deleted
+            const deletedClient = await clientModel.findById(clientForLifecycleTest._id);
+            expect(deletedClient?.isDeleted).toBe(true);
+            expect(deletedClient?.isActive).toBe(false);
+
+            // User's clientIds should be updated (client removed from array)
+            const updatedUser = await userModel.findById(associatedUser._id);
+            expect(updatedUser?.clientIds.map(id => id.toString())).not.toContain(clientForLifecycleTest._id.toString());
+
+            // Associated orchard should be soft-deleted
+            const updatedOrchard = await orchardModel.findById(associatedOrchard._id);
+            expect(updatedOrchard?.isDeleted).toBe(true);
+            expect(updatedOrchard?.isActive).toBe(false);
+
+            // Client should no longer be accessible via API
+            return request(app.getHttpServer())
+                .get(`/clients/${clientForLifecycleTest._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(404);
+        });
+
         it('should reject client update with missing required fields', async () => {
             const invalidUpdateData = { name: '' }; // Empty name
 
@@ -668,20 +931,13 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
 
     describe('Query Filtering & Data Visibility Testing', () => {
         beforeEach(async () => {
-            // Create additional test clients with different states
+            // Create additional test clients with different states for comprehensive testing
             await Promise.all([
                 new clientModel({
                     recordId: 'CLI_ACTIVE_EXTRA',
                     name: 'Additional Active Client',
                     subsidiaryId: testSubsidiary._id,
                     isActive: true,
-                    isDeleted: false
-                }).save(),
-                new clientModel({
-                    recordId: 'CLI_INACTIVE_TEST',
-                    name: 'Inactive Test Client',
-                    subsidiaryId: testSubsidiary._id,
-                    isActive: false,
                     isDeleted: false
                 }).save(),
                 new clientModel({
@@ -713,20 +969,6 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
                         expect(client.isActive).toBe(true);
                         expect(client.isDeleted).toBe(false);
                     });
-                });
-        });
-
-        it('should include inactive clients when includeInactives=true', async () => {
-            return request(app.getHttpServer())
-                .get('/clients?includeInactives=true')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200)
-                .then(res => {
-                    // Should see 5 clients: 4 active + 1 inactive (but not deleted)
-                    expect(res.body.length).toBe(5);
-                    const recordIds = res.body.map(c => c.recordId);
-                    expect(recordIds).toContain('CLI_INACTIVE_TEST');
-                    expect(recordIds).not.toContain('CLI_DELETED_TEST');
                 });
         });
 
@@ -769,6 +1011,56 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
                     const foundClient = res.body.find(client => client.recordId === 'CLI_ACTIVE_EXTRA');
                     expect(foundClient).toBeDefined();
                     expect(foundClient.name.toLowerCase()).toContain('additional');
+                });
+        });
+
+        it('should never return deleted clients regardless of query parameters', async () => {
+            // Even with includeInactives=true, deleted clients should not appear
+            return request(app.getHttpServer())
+                .get('/clients?includeInactives=true')
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200)
+                .then(res => {
+                    const deletedClient = res.body.find(c => c.recordId === 'CLI_DELETED_TEST');
+                    expect(deletedClient).toBeUndefined();
+                    
+                    // Verify no client in results has isDeleted: true
+                    res.body.forEach(client => {
+                        expect(client.isDeleted).toBe(false);
+                    });
+                });
+        });
+
+        it('should apply visibility scope filtering correctly for subsidiary consultant', async () => {
+            return request(app.getHttpServer())
+                .get('/clients')
+                .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
+                .expect(200)
+                .then(res => {
+                    // Consultant with SUBSIDIARY scope can see ALL clients in subsidiaries where they have assigned clients
+                    // They have clients in testSubsidiary, so they can see all clients in testSubsidiary
+                    const clientRecordIds = res.body.map(client => client.recordId);
+                    expect(clientRecordIds).toContain('CLI001'); // In testSubsidiary
+                    expect(clientRecordIds).toContain('CLI002'); // In testSubsidiary
+                    expect(clientRecordIds).toContain('CLI_ACTIVE_EXTRA'); // Also in testSubsidiary
+                    expect(clientRecordIds).not.toContain('CLI_INDEPENDENT'); // Not in testSubsidiary (no subsidiary)
+                    
+                    // Should see 3 clients in the testSubsidiary
+                    const subsidiaryClients = res.body.filter(client => client.subsidiaryId === testSubsidiary._id.toString());
+                    expect(subsidiaryClients).toHaveLength(3);
+                });
+        });
+
+        it('should apply visibility scope filtering correctly for client grower', async () => {
+            return request(app.getHttpServer())
+                .get('/clients')
+                .set('Authorization', `Bearer ${clientGrowerToken}`)
+                .expect(200)
+                .then(res => {
+                    // Grower should only see their assigned client
+                    expect(res.body).toHaveLength(1);
+                    expect(res.body[0].recordId).toBe('CLI001');
+                    expect(res.body[0]._id).toBe(testClientA._id.toString());
                 });
         });
     });

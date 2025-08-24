@@ -27,6 +27,7 @@ describe('Users CRUD - Business Logic & Multi-Tenant Security Testing (e2e)', ()
     // Test users representing REAL business stakeholders
     let globalAdminToken: string; // Full user management permissions
     let subsidiaryManagerToken: string; // Can manage users in their subsidiaries
+    let inactiveAccessUserToken: string; // Has USER_MANAGE_INACTIVE permission for testing
     let clientOwnerToken: string; // Can view/manage users in their client
     let basicUserToken: string; // Limited permissions - can only view self
     let noPermissionUserToken: string; // Has no user permissions
@@ -126,6 +127,19 @@ describe('Users CRUD - Business Logic & Multi-Tenant Security Testing (e2e)', ()
             name: 'Restricted Access',
             permissions: [], // No permissions
             visibilityScope: VisibilityScope.CLIENT
+        }).save();
+
+        const inactiveAccessRole = await new roleModel({
+            recordId: 'INACTIVE_ACCESS_USER_ROLE',
+            name: 'User Inactive Manager',
+            permissions: [
+                PERMISSIONS.USER_VIEW,
+                PERMISSIONS.USER_EDIT, // Need edit permission to modify isActive
+                PERMISSIONS.USER_MANAGE_INACTIVE, // Key permission for inactive record access
+                PERMISSIONS.CLIENT_VIEW,
+                // NOTE: Has inactive management and edit but not create/delete
+            ],
+            visibilityScope: VisibilityScope.GLOBAL
         }).save();
         // Create additional business roles for comprehensive testing
         consultantRole = await new roleModel({
@@ -227,6 +241,18 @@ describe('Users CRUD - Business Logic & Multi-Tenant Security Testing (e2e)', ()
             isActive: true
         }).save();
         noPermissionUserToken = jwtService.sign({ sub: noPermissionUser.recordId });
+
+        const inactiveAccessUser = await new userModel({
+            recordId: 'INACTIVE_ACCESS_USER',
+            name: 'User Inactive Manager',
+            firstName: 'Inactive',
+            lastName: 'Manager',
+            email: 'inactive.manager@users-test.com',
+            userType: UserType.EMPLOYEE,
+            roleId: inactiveAccessRole._id,
+            isActive: true
+        }).save();
+        inactiveAccessUserToken = jwtService.sign({ sub: inactiveAccessUser.recordId });
     });
     afterAll(async () => {
         await teardownTestApp({ app, mongod });
@@ -239,7 +265,8 @@ describe('Users CRUD - Business Logic & Multi-Tenant Security Testing (e2e)', ()
                 'SUBSIDIARY_MANAGER_USER',
                 'CLIENT_OWNER_USER',
                 'BASIC_USER',
-                'NO_PERMISSION_USER'
+                'NO_PERMISSION_USER',
+                'INACTIVE_ACCESS_USER'
             ] } 
         });
         // Clean up test-created roles, preserve setup roles
@@ -250,6 +277,7 @@ describe('Users CRUD - Business Logic & Multi-Tenant Security Testing (e2e)', ()
                 'CLIENT_OWNER_ROLE',
                 'BASIC_USER_ROLE',
                 'NO_PERMISSION_ROLE',
+                'INACTIVE_ACCESS_USER_ROLE',
                 'CONSULTANT_ROLE',
                 'GROWER_ROLE',
                 'MANAGER_ROLE',
@@ -265,7 +293,8 @@ describe('Users CRUD - Business Logic & Multi-Tenant Security Testing (e2e)', ()
                 'SUBSIDIARY_MANAGER_USER',
                 'CLIENT_OWNER_USER',
                 'BASIC_USER',
-                'NO_PERMISSION_USER'
+                'NO_PERMISSION_USER',
+                'INACTIVE_ACCESS_USER'
             ] } },
             { $set: { isActive: true, isDeleted: false } }
         );
@@ -1582,56 +1611,6 @@ describe('Users CRUD - Business Logic & Multi-Tenant Security Testing (e2e)', ()
                     expect(res.body.clientIds).not.toContain(testClientA._id.toString());
                 });
         });
-        it('should handle user deactivation and reactivation workflow', async () => {
-            // Create user
-            const userData: CreateUserDto = {
-                firstName: 'Deactivation',
-                lastName: 'Test',
-                email: 'deactivation.test@workflow.com',
-                userType: UserType.CONTACT,
-                roleId: growerRole._id.toString(),
-                clientIds: [testClientA._id.toString()]
-            };
-            const createResponse = await request(app.getHttpServer())
-                .post('/users')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send(userData)
-                .expect(201);
-            const userId = createResponse.body._id;
-            // Deactivate user
-            await request(app.getHttpServer())
-                .patch(`/users/${userId}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send({ isActive: false })
-                .expect(200)
-                .then(res => {
-                    expect(res.body.isActive).toBe(false);
-                });
-            
-            // For reactivation, we need to use direct database access since inactive users are filtered out
-            // This simulates an admin accessing the user through a different interface
-            const userToReactivate = await userModel.findById(userId).exec();
-            expect(userToReactivate).not.toBeNull();
-            expect(userToReactivate!.isActive).toBe(false);
-            
-            // Reactivate via direct database update (simulating admin tool)
-            await userModel.findByIdAndUpdate(userId, { isActive: true }).exec();
-            
-            // Verify reactivation worked
-            const reactivatedUser = await userModel.findById(userId).exec();
-            expect(reactivatedUser).not.toBeNull();
-            expect(reactivatedUser!.isActive).toBe(true);
-            
-            // Now the user should be queryable again
-            return request(app.getHttpServer())
-                .get(`/users/${userId}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200)
-                .then(res => {
-                    expect(res.body.isActive).toBe(true);
-                    expect(res.body.name).toBe('Deactivation Test');
-                });
-        });
     });
 
     describe('Advanced Query Operations & Filtering', () => {
@@ -1885,6 +1864,325 @@ describe('Users CRUD - Business Logic & Multi-Tenant Security Testing (e2e)', ()
                     ])
                 );
             });
+        });
+    });
+
+    describe('USER_MANAGE_INACTIVE Permission Testing - Inactive Record Access Control', () => {
+        let inactiveUser: UserDocument;
+
+        beforeEach(async () => {
+            // Create an inactive user for testing
+            inactiveUser = await new userModel({
+                recordId: 'USER_INACTIVE_PERM_TEST',
+                name: 'Inactive User for Permission Testing',
+                firstName: 'Inactive',
+                lastName: 'User',
+                email: 'inactive.user@permission-test.com',
+                userType: UserType.CONTACT,
+                roleId: growerRole._id,
+                clientIds: [testClientA._id],
+                isActive: false,
+                isDeleted: false
+            }).save();
+        });
+
+        afterEach(async () => {
+            // Clean up test inactive user
+            await userModel.deleteOne({ recordId: 'USER_INACTIVE_PERM_TEST' });
+        });
+
+        describe('Users WITH USER_MANAGE_INACTIVE Permission', () => {
+            it('should allow user with USER_MANAGE_INACTIVE to view inactive users in list', async () => {
+                return request(app.getHttpServer())
+                    .get('/users?includeInactives=true')
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.length).toBeGreaterThanOrEqual(1);
+                        const inactiveUserInList = res.body.find(u => u.recordId === 'USER_INACTIVE_PERM_TEST');
+                        expect(inactiveUserInList).toBeDefined();
+                        expect(inactiveUserInList.isActive).toBe(false);
+                    });
+            });
+
+            it('should allow user with USER_MANAGE_INACTIVE to access inactive user by ID', async () => {
+                return request(app.getHttpServer())
+                    .get(`/users/${inactiveUser._id}?includeInactives=true`)
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.recordId).toBe('USER_INACTIVE_PERM_TEST');
+                        expect(res.body.isActive).toBe(false);
+                        expect(res.body.name).toBe('Inactive User for Permission Testing');
+                    });
+            });
+
+            it('should allow user with USER_MANAGE_INACTIVE to reactivate inactive users', async () => {
+                return request(app.getHttpServer())
+                    .patch(`/users/${inactiveUser._id}`)
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .send({ isActive: true })
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.isActive).toBe(true);
+                        expect(res.body.recordId).toBe('USER_INACTIVE_PERM_TEST');
+                    });
+            });
+
+            it('should allow global admin (with USER_MANAGE_INACTIVE) to deactivate active users', async () => {
+                // Create a clean user with no dependencies for this test
+                const cleanUser = await new userModel({
+                    recordId: 'USER_CLEAN_FOR_DEACTIVATION',
+                    name: 'Clean User for Deactivation',
+                    firstName: 'Clean',
+                    lastName: 'User',
+                    email: 'clean.user@deactivation-test.com',
+                    userType: UserType.CONTACT,
+                    roleId: growerRole._id,
+                    clientIds: [testClientA._id],
+                    isActive: true,
+                    isDeleted: false
+                }).save();
+
+                return request(app.getHttpServer())
+                    .patch(`/users/${cleanUser._id}`)
+                    .set('Authorization', `Bearer ${globalAdminToken}`)
+                    .send({ isActive: false })
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.isActive).toBe(false);
+                        expect(res.body.recordId).toBe('USER_CLEAN_FOR_DEACTIVATION');
+                    });
+            });
+        });
+
+        describe('Users WITHOUT USER_MANAGE_INACTIVE Permission', () => {
+            it('should prevent subsidiary manager from accessing inactive users in list (filtered out)', async () => {
+                return request(app.getHttpServer())
+                    .get('/users?includeInactives=true')
+                    .set('Authorization', `Bearer ${subsidiaryManagerToken}`)
+                    .expect(200)
+                    .then(res => {
+                        // Should not see the inactive user even with includeInactives=true
+                        const inactiveUserInList = res.body.find(u => u.recordId === 'USER_INACTIVE_PERM_TEST');
+                        expect(inactiveUserInList).toBeUndefined();
+                        
+                        // Should only see active users
+                        res.body.forEach(user => {
+                            expect(user.isActive).toBe(true);
+                        });
+                    });
+            });
+
+            it('should prevent subsidiary manager from accessing inactive user by ID', async () => {
+                return request(app.getHttpServer())
+                    .get(`/users/${inactiveUser._id}?includeInactives=true`)
+                    .set('Authorization', `Bearer ${subsidiaryManagerToken}`)
+                    .expect(404); // Filtered out by permission check
+            });
+
+            it('should prevent subsidiary manager from modifying isActive status (403 Forbidden)', async () => {
+                // Create a clean user for this test
+                const cleanUser = await new userModel({
+                    recordId: 'USER_CLEAN_PERMISSION_TEST',
+                    name: 'Clean User for Permission Test',
+                    firstName: 'Clean',
+                    lastName: 'User',
+                    email: 'clean.user@permission-test.com',
+                    userType: UserType.CONTACT,
+                    roleId: growerRole._id,
+                    clientIds: [testClientA._id],
+                    isActive: true,
+                    isDeleted: false
+                }).save();
+
+                return request(app.getHttpServer())
+                    .patch(`/users/${cleanUser._id}`)
+                    .set('Authorization', `Bearer ${subsidiaryManagerToken}`)
+                    .send({ isActive: false })
+                    .expect(403)
+                    .then(res => {
+                        expect(res.body.message).toContain('You do not have permission to change the isActive status');
+                    });
+            });
+
+            it('should prevent client owner from modifying isActive status (403 Forbidden)', async () => {
+                // Create a clean user for this test
+                const cleanUser = await new userModel({
+                    recordId: 'USER_CLIENT_PERMISSION_TEST',
+                    name: 'Clean User for Client Test',
+                    firstName: 'Clean',
+                    lastName: 'User',
+                    email: 'clean.user@client-test.com',
+                    userType: UserType.CONTACT,
+                    roleId: growerRole._id,
+                    clientIds: [testClientA._id],
+                    isActive: true,
+                    isDeleted: false
+                }).save();
+
+                return request(app.getHttpServer())
+                    .patch(`/users/${cleanUser._id}`)
+                    .set('Authorization', `Bearer ${clientOwnerToken}`)
+                    .send({ isActive: false })
+                    .expect(403); // Blocked by general USER_EDIT permission check or isActive permission
+            });
+
+            it('should prevent basic user from accessing inactive users', async () => {
+                return request(app.getHttpServer())
+                    .get('/users?includeInactives=true')
+                    .set('Authorization', `Bearer ${basicUserToken}`)
+                    .expect(200)
+                    .then(res => {
+                        // Should not see any inactive users
+                        const inactiveUserInList = res.body.find(u => u.recordId === 'USER_INACTIVE_PERM_TEST');
+                        expect(inactiveUserInList).toBeUndefined();
+                    });
+            });
+        });
+    });
+
+    describe('User Lifecycle Operations & Data Consistency Validation', () => {
+        it('should maintain data consistency during user lifecycle operations', async () => {
+            // Arrange: Create a user with associated orchards for lifecycle testing
+            const userForLifecycleTest = await new userModel({
+                recordId: 'USER_LIFECYCLE_TEST',
+                name: 'User Lifecycle Test',
+                firstName: 'User',
+                lastName: 'Lifecycle',
+                email: 'user.lifecycle@test.com',
+                userType: UserType.CONTACT,
+                roleId: growerRole._id,
+                clientIds: [testClientA._id],
+                isActive: true,
+                isDeleted: false
+            }).save();
+
+            // Create associated orchards
+            const associatedOrchards = await Promise.all([
+                new orchardModel({
+                    recordId: 'ORC_LIFECYCLE_TEST1',
+                    name: 'Orchard for Lifecycle Test 1',
+                    clientId: testClientA._id,
+                    userIds: [userForLifecycleTest._id],
+                    isActive: true,
+                    isDeleted: false
+                }).save(),
+                new orchardModel({
+                    recordId: 'ORC_LIFECYCLE_TEST2',
+                    name: 'Orchard for Lifecycle Test 2',
+                    clientId: testClientA._id,
+                    userIds: [userForLifecycleTest._id],
+                    isActive: true,
+                    isDeleted: false
+                }).save()
+            ]);
+
+            // Act: Delete the user
+            await request(app.getHttpServer())
+                .delete(`/users/${userForLifecycleTest._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            // Assert: Verify data consistency is maintained
+            
+            // User should be soft-deleted
+            const deletedUser = await userModel.findById(userForLifecycleTest._id);
+            expect(deletedUser?.isDeleted).toBe(true);
+            expect(deletedUser?.isActive).toBe(false);
+
+            // Associated orchards should have the user removed from userIds
+            for (const orchard of associatedOrchards) {
+                const updatedOrchard = await orchardModel.findById(orchard._id);
+                expect(updatedOrchard?.userIds).not.toContain(userForLifecycleTest._id);
+            }
+
+            // User should no longer be accessible via API
+            return request(app.getHttpServer())
+                .get(`/users/${userForLifecycleTest._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(404);
+        });
+
+        it('should handle user deactivation business logic properly', async () => {
+            // Arrange: Create user with active associations
+            const userForDeactivation = await new userModel({
+                recordId: 'USER_DEACTIVATION_TEST',
+                name: 'User Deactivation Test',
+                firstName: 'User',
+                lastName: 'Deactivation',
+                email: 'user.deactivation@test.com',
+                userType: UserType.CONTACT,
+                roleId: growerRole._id,
+                clientIds: [testClientA._id],
+                isActive: true,
+                isDeleted: false
+            }).save();
+
+            // Act: Deactivate the user
+            await request(app.getHttpServer())
+                .patch(`/users/${userForDeactivation._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send({ isActive: false })
+                .expect(200);
+
+            // Assert: Verify user is properly deactivated
+            const deactivatedUser = await userModel.findById(userForDeactivation._id);
+            expect(deactivatedUser?.isActive).toBe(false);
+            expect(deactivatedUser?.isDeleted).toBe(false); // Should not be deleted, just deactivated
+
+            // User should not appear in normal queries
+            const usersResponse = await request(app.getHttpServer())
+                .get('/users')
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            const foundUser = usersResponse.body.find(u => u.recordId === 'USER_DEACTIVATION_TEST');
+            expect(foundUser).toBeUndefined(); // Should be filtered out of normal queries
+        });
+
+        it('should validate business rules during user creation with lifecycle dependencies', async () => {
+            // Test that users cannot be created with invalid references
+            
+            // Test 1: Invalid client assignment
+            const invalidClientData: CreateUserDto = {
+                firstName: 'Invalid',
+                lastName: 'Client',
+                email: 'invalid.client@lifecycle.com',
+                userType: UserType.CONTACT,
+                roleId: growerRole._id.toString(),
+                clientIds: [new Types.ObjectId().toString()] // Non-existent client
+            };
+
+            await request(app.getHttpServer())
+                .post('/users')
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send(invalidClientData)
+                .expect(400)
+                .then(res => {
+                    const messages = Array.isArray(res.body.message) ? res.body.message : [res.body.message];
+                    expect(messages.some(msg => msg.includes('client IDs') && msg.includes('do not exist'))).toBe(true);
+                });
+
+            // Test 2: Invalid role assignment
+            const invalidRoleData: CreateUserDto = {
+                firstName: 'Invalid',
+                lastName: 'Role',
+                email: 'invalid.role@lifecycle.com',
+                userType: UserType.CONTACT,
+                roleId: new Types.ObjectId().toString(), // Non-existent role
+                clientIds: [testClientA._id.toString()]
+            };
+
+            return request(app.getHttpServer())
+                .post('/users')
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send(invalidRoleData)
+                .expect(400)
+                .then(res => {
+                    const messages = Array.isArray(res.body.message) ? res.body.message : [res.body.message];
+                    expect(messages.some(msg => msg.includes('roleId') || msg.includes('role') || msg.includes('does not exist'))).toBe(true);
+                });
         });
     });
 });

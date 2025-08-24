@@ -160,6 +160,7 @@ describe('Clients Advanced Business Logic - Complex Multi-Tenant Scenarios (e2e)
             name: 'Platform Administrator',
             firstName: 'System',
             lastName: 'Admin',
+            email: 'platform.admin@example.com',
             userType: UserType.EMPLOYEE,
             roleId: globalAdminRole._id,
             clientIds: []
@@ -171,6 +172,7 @@ describe('Clients Advanced Business Logic - Complex Multi-Tenant Scenarios (e2e)
             name: 'Regional Operations Manager',
             firstName: 'Regional',
             lastName: 'Manager',
+            email: 'regional.manager@example.com',
             userType: UserType.EMPLOYEE,
             roleId: subsidiaryManagerRole._id,
             clientIds: [premiumClient._id, familyFarmClient._id]
@@ -182,6 +184,7 @@ describe('Clients Advanced Business Logic - Complex Multi-Tenant Scenarios (e2e)
             name: 'Senior Agricultural Consultant',
             firstName: 'Expert',
             lastName: 'Consultant',
+            email: 'expert.consultant@example.com',
             userType: UserType.EMPLOYEE,
             roleId: multiClientConsultantRole._id,
             clientIds: [premiumClient._id, familyFarmClient._id]
@@ -193,6 +196,7 @@ describe('Clients Advanced Business Logic - Complex Multi-Tenant Scenarios (e2e)
             name: 'Premium Orchards CEO',
             firstName: 'Business',
             lastName: 'Owner',
+            email: 'business.owner@example.com',
             userType: UserType.CONTACT,
             roleId: clientOwnerRole._id,
             clientIds: [premiumClient._id]
@@ -204,6 +208,7 @@ describe('Clients Advanced Business Logic - Complex Multi-Tenant Scenarios (e2e)
             name: 'Field Operations Lead',
             firstName: 'Field',
             lastName: 'Supervisor',
+            email: 'field.supervisor@example.com',
             userType: UserType.CONTACT,
             roleId: fieldSupervisorRole._id,
             clientIds: [premiumClient._id]
@@ -255,6 +260,7 @@ describe('Clients Advanced Business Logic - Complex Multi-Tenant Scenarios (e2e)
                     name: 'Premium Operations Manager',
                     firstName: 'Operations',
                     lastName: 'Manager',
+                    email: 'operations.manager@example.com',
                     userType: UserType.CONTACT,
                     roleId: (await roleModel.findOne({ recordId: 'CLIENT_OWNER_ADV' }))!._id,
                     clientIds: [testClient._id],
@@ -264,7 +270,8 @@ describe('Clients Advanced Business Logic - Complex Multi-Tenant Scenarios (e2e)
                     recordId: 'PREMIUM_SUPERVISOR',
                     name: 'Premium Field Supervisor',
                     firstName: 'Field',
-                    lastName: 'Supervisor',
+                    lastName: 'Supervisor2',
+                    email: 'field.supervisor2@example.com',
                     userType: UserType.CONTACT,
                     roleId: (await roleModel.findOne({ recordId: 'FIELD_SUPERVISOR_ADV' }))!._id,
                     clientIds: [testClient._id],
@@ -330,6 +337,7 @@ describe('Clients Advanced Business Logic - Complex Multi-Tenant Scenarios (e2e)
                 name: 'Test User for Deactivation',
                 firstName: 'Test',
                 lastName: 'User',
+                email: 'test.user@example.com',
                 userType: UserType.CONTACT,
                 roleId: (await roleModel.findOne({ recordId: 'CLIENT_OWNER_ADV' }))!._id,
                 clientIds: [independentClient._id],
@@ -385,6 +393,7 @@ describe('Clients Advanced Business Logic - Complex Multi-Tenant Scenarios (e2e)
                     name: 'First User for Deletion',
                     firstName: 'First',
                     lastName: 'User',
+                    email: 'first.user@example.com',
                     userType: UserType.CONTACT,
                     roleId: (await roleModel.findOne({ recordId: 'CLIENT_OWNER_ADV' }))!._id,
                     clientIds: [deletionTestClient._id, familyFarmClient._id] // Assigned to multiple clients
@@ -394,6 +403,7 @@ describe('Clients Advanced Business Logic - Complex Multi-Tenant Scenarios (e2e)
                     name: 'Second User for Deletion',
                     firstName: 'Second',
                     lastName: 'User',
+                    email: 'second.user@example.com',
                     userType: UserType.EMPLOYEE,
                     roleId: (await roleModel.findOne({ recordId: 'MULTI_CLIENT_CONSULTANT_ADV' }))!._id,
                     clientIds: [deletionTestClient._id] // Only assigned to deletion test client

@@ -15,8 +15,8 @@ export class OrchardsController {
 
   @Post()
   @RequirePermission(PERMISSIONS.ORCHARD_CREATE)
-  create(@Body() createOrchardDto: CreateOrchardDto) {
-    return this.orchardsService.create(createOrchardDto);
+  create(@Body() createOrchardDto: CreateOrchardDto, @Req() req) {
+    return this.orchardsService.create(createOrchardDto, req.user);
   }
 
   @Get()
@@ -25,21 +25,25 @@ export class OrchardsController {
     return this.orchardsService.findAll(query, req.user);
   }
 
-  @Get(':id')
+  @Get(':orchardId')
   @RequirePermission(PERMISSIONS.ORCHARD_VIEW)
-  findOne(@Param('id', ParseMongoIdPipe) id: string, @Req() req) {
-    return this.orchardsService.findOne(id, req.user);
+  findOne(
+    @Param('orchardId', ParseMongoIdPipe) orchardId: string,
+    @Query() query: QueryOrchardDto,
+    @Req() req
+  ) {
+    return this.orchardsService.findOne(orchardId, req.user, { includeInactive: query.includeInactives });
   }
 
-  @Patch(':id')
+  @Patch(':orchardId')
   @RequirePermission(PERMISSIONS.ORCHARD_EDIT)
-  update(@Param('id', ParseMongoIdPipe) id: string, @Body() updateOrchardDto: UpdateOrchardDto, @Req() req) {
-    return this.orchardsService.update(id, updateOrchardDto, req.user);
+  update(@Param('orchardId', ParseMongoIdPipe) orchardId: string, @Body() updateOrchardDto: UpdateOrchardDto, @Req() req) {
+    return this.orchardsService.update(orchardId, updateOrchardDto, req.user);
   }
 
-  @Delete(':id')
+  @Delete(':orchardId')
   @RequirePermission(PERMISSIONS.ORCHARD_DELETE)
-  remove(@Param('id', ParseMongoIdPipe) id: string, @Req() req) {
-    return this.orchardsService.remove(id, req.user);
+  remove(@Param('orchardId', ParseMongoIdPipe) orchardId: string, @Req() req) {
+    return this.orchardsService.remove(orchardId, req.user);
   }
 }

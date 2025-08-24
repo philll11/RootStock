@@ -1,8 +1,8 @@
-import { ForbiddenException } from '@nestjs/common';
 import { BaseQueryBuilder } from './base-query.builder';
 import { VisibilityScope } from '../../roles/schemas/role.schema';
 import { Types } from 'mongoose';
 import { User } from '../../users/schemas/user.schema';
+import { PERMISSIONS, Resource } from '../constants/permissions.constants';
 
 const createMockUser = (roleName: string, scope: VisibilityScope, clientIds: string[] = []): User => ({
   _id: new Types.ObjectId(),
@@ -25,20 +25,82 @@ const createMockUser = (roleName: string, scope: VisibilityScope, clientIds: str
 } as any);
 
 describe('BaseQueryBuilder', () => {
-  // MODIFIED: A more sophisticated mock that simulates Mongoose's chainable methods
-  const mockClientModel = {
-    find: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    exec: jest.fn(),
-  };
+  const mockClientResolverService = {
+    getAccessibleClientIdsForSubsidiaryScope: jest.fn(),
+    getAccessibleSubsidiaryIdsForUser: jest.fn(),
+  } as any;
 
   // Reset mocks before each test to ensure isolation
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
+  describe('Inactive Record Access Control - Business Logic', () => {
+    it('should allow managers with Client:ManageInactive permission to see all client records including inactive ones', async () => {
+      const query = { includeInactives: true };
+      const clientManagerUser = createMockUser('ClientManager', VisibilityScope.GLOBAL);
+      // Grant the specific Client:ManageInactive permission
+      (clientManagerUser.roleId as any).permissions = ['Client:ManageInactive'];
+      
+      const builder = new BaseQueryBuilder(query, clientManagerUser, mockClientResolverService, Resource.CLIENT);
+      const filter = await builder.build();
+      
+      // Manager can access inactive client records for business operations
+      expect(filter).toEqual({ isDeleted: false });
+    });
+
+    it('should prevent standard users from accessing inactive client records even when requested', async () => {
+      const query = { includeInactives: true };
+      const standardOperatorUser = createMockUser('StandardUser', VisibilityScope.GLOBAL);
+      // Ensure user does NOT have the Client:ManageInactive permission
+      (standardOperatorUser.roleId as any).permissions = [];
+      
+      const builder = new BaseQueryBuilder(query, standardOperatorUser, mockClientResolverService, Resource.CLIENT);
+      const filter = await builder.build();
+      
+      // Security boundary: standard users cannot bypass active-only filtering
+      expect(filter).toEqual({ isDeleted: false, isActive: true });
+    });
+
+    it('should maintain default active-only behavior when inactive records are not explicitly requested', async () => {
+      const query = {};
+      const anyUser = createMockUser('AnyUser', VisibilityScope.GLOBAL);
+      
+      const builder = new BaseQueryBuilder(query, anyUser, mockClientResolverService, Resource.CLIENT);
+      const filter = await builder.build();
+      
+      // Default business behavior: only show active, operational records
+      expect(filter).toEqual({ isDeleted: false, isActive: true });
+    });
+
+    it('should deny access to inactive records even when user has other administrative permissions', async () => {
+      const query = { includeInactives: true };
+      const partialAdminUser = createMockUser('PartialAdmin', VisibilityScope.GLOBAL);
+      // User has other administrative permissions but NOT Client:ManageInactive
+      (partialAdminUser.roleId as any).permissions = ['Client:View', 'Client:Edit', 'User:View'];
+      
+      const builder = new BaseQueryBuilder(query, partialAdminUser, mockClientResolverService, Resource.CLIENT);
+      const filter = await builder.build();
+      
+      // Security principle: permissions are specific and non-transferable
+      expect(filter).toEqual({ isDeleted: false, isActive: true });
+    });
+
+    it('should enforce resource-specific permission boundaries between different entity types', async () => {
+      const query = { includeInactives: true };
+      const userManagerRole = createMockUser('UserManager', VisibilityScope.GLOBAL);
+      // User has ManageInactive permission for Users but not for Clients
+      (userManagerRole.roleId as any).permissions = ['User:ManageInactive', 'Client:View'];
+      
+      const builder = new BaseQueryBuilder(query, userManagerRole, mockClientResolverService, Resource.CLIENT);
+      const filter = await builder.build();
+      
+      // Business rule: User management permissions do not grant client management permissions
+      expect(filter).toEqual({ isDeleted: false, isActive: true });
+    });
+  });
+
   describe('Status and Search Filters', () => {
-    const adminUser = createMockUser('Administrator', VisibilityScope.GLOBAL);
     const growerUser = createMockUser('Grower', VisibilityScope.CLIENT, []); // User with Client scope but no assigned clients
 
     // MODIFIED: Updated the test to reflect the new default behavior
@@ -51,7 +113,7 @@ describe('BaseQueryBuilder', () => {
           await super.applyVisibilityScope('clientId');
         }
       }
-      const builder = new TestBuilder(query, growerUser, mockClientModel as any);
+      const builder = new TestBuilder(query, growerUser, mockClientResolverService, Resource.CLIENT);
       const filter = await builder.build();
 
       expect(filter).toEqual({
@@ -59,14 +121,6 @@ describe('BaseQueryBuilder', () => {
         isDeleted: false,
         isActive: true,
       });
-    });
-
-    it('should return non-deleted records, both active and inactive, when includeInactives is true', async () => {
-      const query = { includeInactives: true };
-      const builder = new BaseQueryBuilder(query, adminUser, mockClientModel as any);
-      const filter = await builder.build();
-      // Global user has no extra filters
-      expect(filter).toEqual({ isDeleted: false, isActive: { $in: [true, false] } });
     });
   });
 
@@ -77,7 +131,7 @@ describe('BaseQueryBuilder', () => {
 
     it('should apply NO visibility filter for a user with Global scope', async () => {
       const globalUser = createMockUser('Administrator', VisibilityScope.GLOBAL);
-      const builder = new BaseQueryBuilder({}, globalUser, mockClientModel as any);
+      const builder = new BaseQueryBuilder({}, globalUser, mockClientResolverService, Resource.CLIENT);
       const filter = await builder.build();
       expect(filter.clientId).toBeUndefined();
       expect(filter).toEqual({ isDeleted: false, isActive: true });
@@ -90,7 +144,7 @@ describe('BaseQueryBuilder', () => {
           await super.applyVisibilityScope('clientId');
         }
       }
-      const builder = new TestBuilder({}, clientUser, mockClientModel as any);
+      const builder = new TestBuilder({}, clientUser, mockClientResolverService, Resource.CLIENT);
       const filter = await builder.build();
 
       expect(filter.clientId).toBeDefined();
@@ -100,30 +154,23 @@ describe('BaseQueryBuilder', () => {
     // MODIFIED: This test now uses the chainable mock
     it('should apply a filter for accessible subsidiary clients for a user with Subsidiary scope', async () => {
       const consultantUser = createMockUser('Consultant', VisibilityScope.SUBSIDIARY, [clientId1]);
-      const mockAssignedClients = [{ _id: new Types.ObjectId(clientId1), subsidiaryId: new Types.ObjectId(subId1) }];
-      const mockAccessibleClients = [{ _id: new Types.ObjectId(clientId1) }, { _id: new Types.ObjectId(clientId2) }];
-      
-      // Configure the mock's chained behavior
-      mockClientModel.find.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        exec: jest.fn()
-          .mockResolvedValueOnce(mockAssignedClients)
-          .mockResolvedValueOnce(mockAccessibleClients),
-      });
+      mockClientResolverService.getAccessibleClientIdsForSubsidiaryScope.mockResolvedValueOnce([
+        new Types.ObjectId(clientId1),
+        new Types.ObjectId(clientId2)
+      ]);
 
       class TestBuilder extends BaseQueryBuilder {
         protected async applyVisibilityScope() {
           await super.applyVisibilityScope('clientId');
         }
       }
-      const builder = new TestBuilder({}, consultantUser, mockClientModel as any);
+      const builder = new TestBuilder({}, consultantUser, mockClientResolverService, Resource.CLIENT);
       const filter = await builder.build();
       
       expect(filter.clientId).toBeDefined();
       expect(filter.clientId.$in.map(String)).toEqual([clientId1, clientId2]);
       
-      expect(mockClientModel.find).toHaveBeenCalledWith({ _id: { $in: [new Types.ObjectId(clientId1)] } });
-      expect(mockClientModel.find).toHaveBeenCalledWith({ subsidiaryId: { $in: [new Types.ObjectId(subId1)] } });
+      expect(mockClientResolverService.getAccessibleClientIdsForSubsidiaryScope).toHaveBeenCalledWith(consultantUser);
     });
   });
 });

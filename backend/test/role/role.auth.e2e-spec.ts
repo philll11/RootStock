@@ -113,6 +113,7 @@ describe('Roles Authorization - Real Security Model (e2e)', () => {
             name: 'Platform Administrator',
             firstName: 'Platform',
             lastName: 'Admin',
+            email: 'platform.admin@roles-test.com',
             userType: UserType.EMPLOYEE,
             roleId: platformAdminRole._id,
             clientIds: [] // Global access
@@ -124,6 +125,7 @@ describe('Roles Authorization - Real Security Model (e2e)', () => {
             name: 'Agricultural Consultant',
             firstName: 'Expert',
             lastName: 'Consultant',
+            email: 'subsidiary.consultant@roles-test.com',
             userType: UserType.EMPLOYEE,
             roleId: subsidiaryConsultantRole._id,
             clientIds: [clientA._id, clientB._id] // Works with multiple clients
@@ -135,6 +137,7 @@ describe('Roles Authorization - Real Security Model (e2e)', () => {
             name: 'Orchard Grower',
             firstName: 'John',
             lastName: 'Appleton',
+            email: 'john.appleton@roles-test.com',
             userType: UserType.CONTACT,
             roleId: clientGrowerRole._id,
             clientIds: [clientA._id] // Only their own orchard
@@ -146,6 +149,7 @@ describe('Roles Authorization - Real Security Model (e2e)', () => {
             name: 'Field Worker',
             firstName: 'Tom',
             lastName: 'Picker',
+            email: 'tom.picker@roles-test.com',
             userType: UserType.CONTACT,
             roleId: fieldWorkerRole._id,
             clientIds: [clientA._id] // Works for specific client

@@ -24,6 +24,7 @@ describe('Roles CRUD - Administrator-Only Functionality (e2e)', () => {
 
     // Test users representing the REAL business model
     let globalAdminToken: string; // ONLY user who can manage roles
+    let inactiveAccessUserToken: string; // Has ROLE_MANAGE_INACTIVE permission for testing
     let subsidiaryConsultantToken: string; // Should be blocked from role operations
     let clientGrowerToken: string; // Should be blocked from role operations
     let fieldWorkerToken: string; // Should be blocked from role operations
@@ -69,6 +70,20 @@ describe('Roles CRUD - Administrator-Only Functionality (e2e)', () => {
             visibilityScope: VisibilityScope.GLOBAL
         }).save();
 
+        const inactiveAccessRole = await new roleModel({
+            recordId: 'INACTIVE_ACCESS_ROLE',
+            name: 'Role Inactive Manager',
+            permissions: [
+                PERMISSIONS.ROLE_VIEW,
+                PERMISSIONS.ROLE_EDIT, // Need edit permission to modify isActive
+                PERMISSIONS.ROLE_MANAGE_INACTIVE, // Key permission for inactive record access
+                PERMISSIONS.CLIENT_VIEW,
+                PERMISSIONS.USER_VIEW,
+                // NOTE: Has inactive management and edit but not create/delete
+            ],
+            visibilityScope: VisibilityScope.GLOBAL
+        }).save();
+
         const consultantRole = await new roleModel({
             recordId: 'CONSULTANT_ROLE',
             name: 'Agricultural Consultant',
@@ -109,17 +124,31 @@ describe('Roles CRUD - Administrator-Only Functionality (e2e)', () => {
             name: 'Platform Administrator',
             firstName: 'Platform',
             lastName: 'Admin',
+            email: 'platform.admin@roles-test.com',
             userType: UserType.EMPLOYEE,
             roleId: globalAdminRole._id,
             clientIds: [] // Global access
         }).save();
         globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId });
 
+        const inactiveAccessUser = await new userModel({
+            recordId: 'INACTIVE_ACCESS_USER',
+            name: 'Role Inactive Manager',
+            firstName: 'Inactive',
+            lastName: 'Manager',
+            email: 'inactive.manager@roles-test.com',
+            userType: UserType.EMPLOYEE,
+            roleId: inactiveAccessRole._id,
+            isActive: true
+        }).save();
+        inactiveAccessUserToken = jwtService.sign({ sub: inactiveAccessUser.recordId });
+
         const subsidiaryConsultant = await new userModel({
             recordId: 'SUB_CONSULTANT',
             name: 'Subsidiary Consultant',
             firstName: 'Agricultural',
             lastName: 'Consultant',
+            email: 'subsidiary.consultant@roles-test.com',
             userType: UserType.EMPLOYEE,
             roleId: consultantRole._id,
             clientIds: [clientA._id, clientB._id] // Works with multiple clients
@@ -131,6 +160,7 @@ describe('Roles CRUD - Administrator-Only Functionality (e2e)', () => {
             name: 'Orchard Grower',
             firstName: 'John',
             lastName: 'Appleton',
+            email: 'john.appleton@roles-test.com',
             userType: UserType.CONTACT,
             roleId: growerRole._id,
             clientIds: [clientA._id] // Only their own orchard
@@ -142,6 +172,7 @@ describe('Roles CRUD - Administrator-Only Functionality (e2e)', () => {
             name: 'Field Worker',
             firstName: 'Tom',
             lastName: 'Picker',
+            email: 'tom.picker@roles-test.com',
             userType: UserType.CONTACT,
             roleId: fieldWorkerRole._id,
             clientIds: [clientA._id] // Works for specific client
@@ -152,15 +183,11 @@ describe('Roles CRUD - Administrator-Only Functionality (e2e)', () => {
     afterAll(async () => {
         await teardownTestApp({ app, mongod });
     });
-    
-    afterAll(async () => {
-        await teardownTestApp({ app, mongod });
-    });
 
     beforeEach(async () => {
         // Clean up test-created roles, preserve setup roles
         await roleModel.deleteMany({ 
-            recordId: { $nin: ['ADMIN_ROLE', 'CONSULTANT_ROLE', 'GROWER_ROLE', 'WORKER_ROLE'] } 
+            recordId: { $nin: ['ADMIN_ROLE', 'INACTIVE_ACCESS_ROLE', 'CONSULTANT_ROLE', 'GROWER_ROLE', 'WORKER_ROLE'] } 
         });
     });
 
@@ -388,6 +415,7 @@ describe('Roles CRUD - Administrator-Only Functionality (e2e)', () => {
                 name: 'Active User',
                 firstName: 'Active',
                 lastName: 'User',
+                email: 'active.user@roles-test.com',
                 userType: UserType.CONTACT,
                 roleId: roleWithUsers._id,
                 clientIds: [clientA._id],
@@ -419,6 +447,7 @@ describe('Roles CRUD - Administrator-Only Functionality (e2e)', () => {
                 name: 'User to be Cleaned',
                 firstName: 'Test',
                 lastName: 'User',
+                email: 'test.user@roles-test.com',
                 userType: UserType.CONTACT,
                 roleId: roleToDelete._id,
                 clientIds: [clientA._id]
@@ -460,6 +489,320 @@ describe('Roles CRUD - Administrator-Only Functionality (e2e)', () => {
                     expect(res.body.permissions).toEqual(completeRole.permissions);
                     expect(res.body.isActive).toBe(true);
                     expect(res.body.isDeleted).toBe(false);
+                });
+        });
+    });
+
+    describe('ROLE_MANAGE_INACTIVE Permission Testing - Inactive Record Access Control', () => {
+        let inactiveRole: RoleDocument;
+
+        beforeEach(async () => {
+            // Create an inactive role for testing
+            inactiveRole = await new roleModel({
+                recordId: 'ROLE_INACTIVE_PERM_TEST',
+                name: 'Inactive Role for Permission Testing',
+                description: 'Role for testing inactive permissions',
+                visibilityScope: VisibilityScope.CLIENT,
+                permissions: ['Test:Permission'],
+                isActive: false,
+                isDeleted: false
+            }).save();
+        });
+
+        afterEach(async () => {
+            // Clean up test inactive role
+            await roleModel.deleteOne({ recordId: 'ROLE_INACTIVE_PERM_TEST' });
+        });
+
+        describe('Users WITH ROLE_MANAGE_INACTIVE Permission', () => {
+            it('should allow user with ROLE_MANAGE_INACTIVE to view inactive roles in list', async () => {
+                return request(app.getHttpServer())
+                    .get('/roles?includeInactives=true')
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.length).toBeGreaterThanOrEqual(1);
+                        const inactiveRoleInList = res.body.find(r => r.recordId === 'ROLE_INACTIVE_PERM_TEST');
+                        expect(inactiveRoleInList).toBeDefined();
+                        expect(inactiveRoleInList.isActive).toBe(false);
+                    });
+            });
+
+            it('should allow user with ROLE_MANAGE_INACTIVE to access inactive role by ID', async () => {
+                return request(app.getHttpServer())
+                    .get(`/roles/${inactiveRole._id}?includeInactives=true`)
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.recordId).toBe('ROLE_INACTIVE_PERM_TEST');
+                        expect(res.body.isActive).toBe(false);
+                        expect(res.body.name).toBe('Inactive Role for Permission Testing');
+                    });
+            });
+
+            it('should allow user with ROLE_MANAGE_INACTIVE to reactivate inactive roles', async () => {
+                return request(app.getHttpServer())
+                    .patch(`/roles/${inactiveRole._id}`)
+                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
+                    .send({ isActive: true })
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.isActive).toBe(true);
+                        expect(res.body.recordId).toBe('ROLE_INACTIVE_PERM_TEST');
+                    });
+            });
+
+            it('should allow global admin (with ROLE_MANAGE_INACTIVE) to deactivate active roles', async () => {
+                // Create a clean role with no dependencies for this test
+                const cleanRole = await new roleModel({
+                    recordId: 'ROLE_CLEAN_FOR_DEACTIVATION',
+                    name: 'Clean Role for Deactivation',
+                    description: 'Role that can be safely deactivated',
+                    visibilityScope: VisibilityScope.CLIENT,
+                    permissions: ['Test:Permission'],
+                    isActive: true,
+                    isDeleted: false
+                }).save();
+
+                return request(app.getHttpServer())
+                    .patch(`/roles/${cleanRole._id}`)
+                    .set('Authorization', `Bearer ${globalAdminToken}`)
+                    .send({ isActive: false })
+                    .expect(200)
+                    .then(res => {
+                        expect(res.body.isActive).toBe(false);
+                        expect(res.body.recordId).toBe('ROLE_CLEAN_FOR_DEACTIVATION');
+                    });
+            });
+        });
+
+        describe('Users WITHOUT ROLE_MANAGE_INACTIVE Permission', () => {
+            it('should prevent consultant from accessing inactive roles (403 Forbidden - lacks ROLE_VIEW)', async () => {
+                return request(app.getHttpServer())
+                    .get('/roles?includeInactives=true')
+                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
+                    .expect(403); // Blocked by @RequirePermission('Role:View') guard
+            });
+
+            it('should prevent consultant from accessing inactive role by ID (403 Forbidden)', async () => {
+                return request(app.getHttpServer())
+                    .get(`/roles/${inactiveRole._id}?includeInactives=true`)
+                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
+                    .expect(403); // Blocked by @RequirePermission('Role:View') guard
+            });
+
+            it('should prevent grower from accessing inactive roles (403 Forbidden)', async () => {
+                return request(app.getHttpServer())
+                    .get('/roles?includeInactives=true')
+                    .set('Authorization', `Bearer ${clientGrowerToken}`)
+                    .expect(403); // Blocked by @RequirePermission('Role:View') guard
+            });
+
+            it('should prevent field worker from accessing inactive roles (403 Forbidden)', async () => {
+                return request(app.getHttpServer())
+                    .get('/roles?includeInactives=true')
+                    .set('Authorization', `Bearer ${fieldWorkerToken}`)
+                    .expect(403); // Blocked by @RequirePermission('Role:View') guard
+            });
+
+            // Note: Since non-admin users don't have ROLE_VIEW permission at all,
+            // they can't even attempt to modify isActive status. The permission check
+            // for ROLE_VIEW happens before any ROLE_MANAGE_INACTIVE checks.
+        });
+    });
+
+    describe('Role Lifecycle Operations & Data Consistency Validation', () => {
+        it('should enforce role deactivation business rules when active users exist', async () => {
+            // Create a role with active users
+            const roleWithActiveUsers = await new roleModel({
+                recordId: 'ROLE_WITH_ACTIVE_USERS_LIFECYCLE',
+                name: 'Role with Active Users for Lifecycle',
+                visibilityScope: VisibilityScope.CLIENT,
+                permissions: ['Test:Permission'],
+                isActive: true,
+                isDeleted: false
+            }).save();
+
+            // Create active users assigned to this role
+            await Promise.all([
+                new userModel({
+                    recordId: 'USER_BLOCKING_ROLE_DEACTIVATION1',
+                    name: 'User Blocking Deactivation 1',
+                    firstName: 'Blocking1',
+                    lastName: 'User',
+                    email: 'blocking1.user@roles-test.com',
+                    userType: UserType.CONTACT,
+                    roleId: roleWithActiveUsers._id,
+                    clientIds: [clientA._id],
+                    isActive: true,
+                    isDeleted: false
+                }).save(),
+                new userModel({
+                    recordId: 'USER_BLOCKING_ROLE_DEACTIVATION2',
+                    name: 'User Blocking Deactivation 2',
+                    firstName: 'Blocking2',
+                    lastName: 'User',
+                    email: 'blocking2.user@roles-test.com',
+                    userType: UserType.CONTACT,
+                    roleId: roleWithActiveUsers._id,
+                    clientIds: [clientA._id],
+                    isActive: true,
+                    isDeleted: false
+                }).save()
+            ]);
+
+            // Should prevent deactivation due to active users
+            return request(app.getHttpServer())
+                .patch(`/roles/${roleWithActiveUsers._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send({ isActive: false })
+                .expect(409)
+                .then(res => {
+                    expect(res.body.message).toContain('This role cannot be deactivated because it has 2 active user(s) assigned to it');
+                });
+        });
+
+        it('should maintain data consistency during role lifecycle operations', async () => {
+            // Arrange: Create a role with associated users for lifecycle testing
+            const roleForLifecycleTest = await new roleModel({
+                recordId: 'ROLE_LIFECYCLE_TEST',
+                name: 'Role Lifecycle Test',
+                description: 'Role for testing lifecycle operations',
+                visibilityScope: VisibilityScope.CLIENT,
+                permissions: ['Test:Permission'],
+                isActive: true,
+                isDeleted: false
+            }).save();
+
+            // Create associated users
+            const associatedUsers = await Promise.all([
+                new userModel({
+                    recordId: 'USER_LIFECYCLE_TEST1',
+                    name: 'User for Lifecycle Test 1',
+                    firstName: 'User1',
+                    lastName: 'Lifecycle',
+                    userType: UserType.CONTACT,
+                    email: 'user1.lifecycle@roles-test.com',
+                    roleId: roleForLifecycleTest._id,
+                    clientIds: [clientA._id],
+                    isActive: true,
+                    isDeleted: false
+                }).save(),
+                new userModel({
+                    recordId: 'USER_LIFECYCLE_TEST2',
+                    name: 'User for Lifecycle Test 2',
+                    firstName: 'User2',
+                    lastName: 'Lifecycle',
+                    userType: UserType.CONTACT,
+                    email: 'user2.lifecycle@roles-test.com',
+                    roleId: roleForLifecycleTest._id,
+                    clientIds: [clientA._id],
+                    isActive: true,
+                    isDeleted: false
+                }).save()
+            ]);
+
+            // Act: Delete the role
+            await request(app.getHttpServer())
+                .delete(`/roles/${roleForLifecycleTest._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            // Assert: Verify data consistency is maintained
+            
+            // Role should be soft-deleted
+            const deletedRole = await roleModel.findById(roleForLifecycleTest._id);
+            expect(deletedRole?.isDeleted).toBe(true);
+            expect(deletedRole?.isActive).toBe(false);
+
+            // Associated users should have their roleId set to null
+            for (const user of associatedUsers) {
+                const updatedUser = await userModel.findById(user._id);
+                expect(updatedUser?.roleId).toBeNull();
+            }
+
+            // Role should no longer be accessible via API
+            return request(app.getHttpServer())
+                .get(`/roles/${roleForLifecycleTest._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(404);
+        });
+
+        it('should handle role deactivation business logic properly', async () => {
+            // Arrange: Create role with no active users (safe to deactivate)
+            const roleForDeactivation = await new roleModel({
+                recordId: 'ROLE_DEACTIVATION_TEST',
+                name: 'Role Deactivation Test',
+                description: 'Role that can be safely deactivated',
+                visibilityScope: VisibilityScope.CLIENT,
+                permissions: ['Test:Permission'],
+                isActive: true,
+                isDeleted: false
+            }).save();
+
+            // Act: Deactivate the role
+            await request(app.getHttpServer())
+                .patch(`/roles/${roleForDeactivation._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send({ isActive: false })
+                .expect(200);
+
+            // Assert: Verify role is properly deactivated
+            const deactivatedRole = await roleModel.findById(roleForDeactivation._id);
+            expect(deactivatedRole?.isActive).toBe(false);
+            expect(deactivatedRole?.isDeleted).toBe(false); // Should not be deleted, just deactivated
+
+            // Role should not appear in normal queries
+            const rolesResponse = await request(app.getHttpServer())
+                .get('/roles')
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            const foundRole = rolesResponse.body.find(r => r.recordId === 'ROLE_DEACTIVATION_TEST');
+            expect(foundRole).toBeUndefined(); // Should be filtered out of normal queries
+        });
+
+        it('should validate business rules during role creation with proper permission validation', async () => {
+            // Test that roles are created with valid permission sets
+            
+            // Test 1: Role with valid permissions
+            const validRoleData = {
+                name: 'Valid Role Test',
+                description: 'Role with valid permissions',
+                visibilityScope: VisibilityScope.CLIENT,
+                permissions: [
+                    PERMISSIONS.CLIENT_VIEW,
+                    PERMISSIONS.ORCHARD_VIEW,
+                    PERMISSIONS.USER_VIEW
+                ]
+            };
+
+            await request(app.getHttpServer())
+                .post('/roles')
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send(validRoleData)
+                .expect(201)
+                .then(res => {
+                    expect(res.body.permissions).toEqual(validRoleData.permissions);
+                    expect(res.body.name).toBe('Valid Role Test');
+                });
+
+            // Test 2: Role with empty name (should fail validation)
+            const invalidRoleData = {
+                name: '', // Invalid empty name
+                description: 'Role with invalid name',
+                visibilityScope: VisibilityScope.CLIENT,
+                permissions: [PERMISSIONS.CLIENT_VIEW]
+            };
+
+            return request(app.getHttpServer())
+                .post('/roles')
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send(invalidRoleData)
+                .expect(400)
+                .then(res => {
+                    const messages = Array.isArray(res.body.message) ? res.body.message : [res.body.message];
+                    expect(messages.some(msg => msg.includes('name') && (msg.includes('should not be empty') || msg.includes('is required')))).toBe(true);
                 });
         });
     });

@@ -16,8 +16,8 @@ import { UsersService } from '../users/users.service';
 import { CountersService } from '../counters/counters.service';
 import { PERMISSIONS } from '../common/constants/permissions.constants';
 
-// Test helper to create mock user with specific role
-const createMockUser = (visibilityScope: VisibilityScope = VisibilityScope.GLOBAL): User => ({
+// Test helper to create mock user with specific role and permissions
+const createMockUser = (permissions: string[] = [], visibilityScope: VisibilityScope = VisibilityScope.GLOBAL): User => ({
   _id: new Types.ObjectId(),
   recordId: 'USR001',
   firstName: 'Test',
@@ -33,7 +33,7 @@ const createMockUser = (visibilityScope: VisibilityScope = VisibilityScope.GLOBA
     recordId: 'ROL001',
     name: 'Test Role',
     visibilityScope,
-    permissions: [PERMISSIONS.ROLE_VIEW, PERMISSIONS.ROLE_EDIT],
+    permissions,
     isActive: true,
     isDeleted: false,
   }
@@ -61,7 +61,9 @@ describe('RolesService', () => {
     const mockRoleModel = {
       find: jest.fn(),
       findOne: jest.fn(),
+      findById: jest.fn(),
       findByIdAndUpdate: jest.fn(),
+      findOneAndUpdate: jest.fn(),
       countDocuments: jest.fn(),
       // Constructor function for new documents
     } as any;
@@ -194,7 +196,7 @@ describe('RolesService', () => {
   describe('Role Query Business Logic', () => {
     it('should apply security filter for role queries', async () => {
       // Arrange: Query with user context
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.ROLE_VIEW], VisibilityScope.GLOBAL);
       const queryDto: QueryRoleDto = {};
       const mockRoles = [
         { _id: new Types.ObjectId(), name: 'Admin Role', visibilityScope: VisibilityScope.GLOBAL },
@@ -215,7 +217,7 @@ describe('RolesService', () => {
 
     it('should prevent non-global users from seeing roles', async () => {
       // Arrange: Non-global user querying roles
-      const clientUser = createMockUser(VisibilityScope.CLIENT);
+      const clientUser = createMockUser([PERMISSIONS.ROLE_VIEW], VisibilityScope.CLIENT);
       const queryDto: QueryRoleDto = {};
 
       roleModel.find = jest.fn().mockReturnValue({
@@ -234,7 +236,7 @@ describe('RolesService', () => {
   describe('Individual Role Access Business Logic', () => {
     it('should find role by ID with security check', async () => {
       // Arrange: Valid role lookup
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.ROLE_VIEW], VisibilityScope.GLOBAL);
       const roleId = new Types.ObjectId().toHexString();
       const mockRole = {
         _id: roleId,
@@ -263,7 +265,7 @@ describe('RolesService', () => {
 
     it('should throw NotFoundException when role not found or unauthorized', async () => {
       // Arrange: Role not found or user lacks access
-      const clientUser = createMockUser(VisibilityScope.CLIENT);
+      const clientUser = createMockUser([PERMISSIONS.ROLE_VIEW], VisibilityScope.CLIENT);
       const roleId = new Types.ObjectId().toHexString();
 
       roleModel.findOne = jest.fn().mockReturnValue({
@@ -280,7 +282,7 @@ describe('RolesService', () => {
   describe('Role Update Business Rules', () => {
     it('should successfully update role information', async () => {
       // Arrange: Standard role update
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.ROLE_EDIT], VisibilityScope.GLOBAL);
       const roleId = new Types.ObjectId().toHexString();
       const updateDto: UpdateRoleDto = {
         name: 'Updated Role Name',
@@ -321,7 +323,7 @@ describe('RolesService', () => {
 
     it('should prevent role deactivation when active users exist', async () => {
       // Arrange: Role with active users cannot be deactivated
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.ROLE_EDIT], VisibilityScope.GLOBAL);
       const roleId = new Types.ObjectId().toHexString();
       const updateDto: UpdateRoleDto = { isActive: false };
 
@@ -347,7 +349,7 @@ describe('RolesService', () => {
 
     it('should allow role deactivation when no active users exist', async () => {
       // Arrange: Role with no active users can be deactivated
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.ROLE_EDIT], VisibilityScope.GLOBAL);
       const roleId = new Types.ObjectId().toHexString();
       const updateDto: UpdateRoleDto = { isActive: false };
 
@@ -379,7 +381,7 @@ describe('RolesService', () => {
 
     it('should throw NotFoundException when updating non-existent role', async () => {
       // Arrange: Update attempt on non-existent role
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.ROLE_EDIT], VisibilityScope.GLOBAL);
       const roleId = new Types.ObjectId().toHexString();
       const updateDto: UpdateRoleDto = { name: 'Updated Name' };
 
@@ -402,7 +404,7 @@ describe('RolesService', () => {
   describe('Role Deletion and Transaction Management', () => {
     it('should successfully delete role and update users in transaction', async () => {
       // Arrange: Role deletion with user cleanup
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.ROLE_DELETE], VisibilityScope.GLOBAL);
       const roleId = new Types.ObjectId().toHexString();
       const roleObjectId = new Types.ObjectId(roleId);
 
@@ -429,8 +431,8 @@ describe('RolesService', () => {
         exec: jest.fn().mockResolvedValue({ modifiedCount: 2 })
       });
 
-      // Mock role soft delete
-      roleModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+      // Mock role soft delete via handleConcurrentSoftDelete utility
+      roleModel.findOneAndUpdate = jest.fn().mockReturnValue({
         exec: jest.fn().mockResolvedValue(deletedRole)
       });
 
@@ -450,9 +452,9 @@ describe('RolesService', () => {
         { session: mockSession }
       );
 
-      // Verify role soft deletion
-      expect(roleModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        roleId,
+      // Verify role soft deletion via handleConcurrentSoftDelete utility
+      expect(roleModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: roleId, isDeleted: false },
         { isDeleted: true, isActive: false },
         { session: mockSession, new: true }
       );
@@ -463,7 +465,7 @@ describe('RolesService', () => {
 
     it('should rollback transaction on deletion failure', async () => {
       // Arrange: Role deletion failure scenario
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.ROLE_DELETE], VisibilityScope.GLOBAL);
       const roleId = new Types.ObjectId().toHexString();
 
       const existingRole = {
@@ -480,7 +482,7 @@ describe('RolesService', () => {
       });
 
       const deletionError = new Error('Database deletion failed');
-      roleModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+      roleModel.findOneAndUpdate = jest.fn().mockReturnValue({
         exec: jest.fn().mockRejectedValue(deletionError)
       });
 
@@ -497,7 +499,7 @@ describe('RolesService', () => {
 
     it('should throw NotFoundException when deleting non-existent role', async () => {
       // Arrange: Delete non-existent role
-      const globalUser = createMockUser(VisibilityScope.GLOBAL);
+      const globalUser = createMockUser([PERMISSIONS.ROLE_DELETE], VisibilityScope.GLOBAL);
       const roleId = new Types.ObjectId().toHexString();
 
       const existingRole = { _id: roleId, name: 'Existing Role' };
@@ -510,7 +512,12 @@ describe('RolesService', () => {
         exec: jest.fn().mockResolvedValue({ modifiedCount: 0 })
       });
 
-      roleModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+      roleModel.findOneAndUpdate = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null) // Role not found
+      });
+
+      // Mock findById for the concurrent deletion utility fallback check
+      roleModel.findById = jest.fn().mockReturnValue({
         exec: jest.fn().mockResolvedValue(null) // Role not found
       });
 
@@ -592,6 +599,129 @@ describe('RolesService', () => {
 
       // Assert: Non-existent role rejected
       expect(result).toBe(false);
+    });
+  });
+
+  describe('Inactive Role Access Control', () => {
+    it('should include inactive roles when user has ROLE_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User with manage inactive permission
+      const userWithPermission = createMockUser([PERMISSIONS.ROLE_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
+      const activeRole = { name: 'Active Role', isActive: true };
+      const inactiveRole = { name: 'Inactive Role', isActive: false };
+
+      // Mock the model's find method directly
+      const mockExec = jest.fn().mockResolvedValue([activeRole, inactiveRole]);
+      roleModel.find = jest.fn().mockReturnValue({ exec: mockExec });
+
+      // Act: Find all roles with includeInactive option
+      const result = await service.findAll({ includeInactives: true }, userWithPermission);
+
+      // Assert: Both active and inactive roles returned
+      expect(result).toHaveLength(2);
+      expect(result).toContain(activeRole);
+      expect(result).toContain(inactiveRole);
+    });
+
+    it('should exclude inactive roles when user lacks ROLE_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User without manage inactive permission
+      const userWithoutPermission = createMockUser([PERMISSIONS.ROLE_VIEW], VisibilityScope.GLOBAL);
+      const activeRole = { name: 'Active Role', isActive: true };
+
+      // Mock the model's find method directly
+      const mockExec = jest.fn().mockResolvedValue([activeRole]);
+      roleModel.find = jest.fn().mockReturnValue({ exec: mockExec });
+
+      // Act: Find all roles with includeInactive option
+      const result = await service.findAll({ includeInactives: true }, userWithoutPermission);
+
+      // Assert: Only active roles returned despite includeInactive flag
+      expect(result).toHaveLength(1);
+      expect(result).toContain(activeRole);
+    });
+
+    it('should find inactive role by ID when user has ROLE_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User with manage inactive permission
+      const userWithPermission = createMockUser([PERMISSIONS.ROLE_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
+      const roleId = new Types.ObjectId().toHexString();
+      const inactiveRole = { _id: roleId, name: 'Inactive Role', isActive: false };
+
+      // Mock the model's findOne method
+      const mockExec = jest.fn().mockResolvedValue(inactiveRole);
+      roleModel.findOne = jest.fn().mockReturnValue({ exec: mockExec });
+
+      // Act: Find inactive role by ID
+      const result = await service.findOne(roleId, userWithPermission, { includeInactive: true });
+
+      // Assert: Inactive role found
+      expect(result).toBe(inactiveRole);
+    });
+
+    it('should not find inactive role by ID when user lacks ROLE_MANAGE_INACTIVE permission', async () => {
+      // Arrange: User without manage inactive permission
+      const userWithoutPermission = createMockUser([PERMISSIONS.ROLE_VIEW], VisibilityScope.GLOBAL);
+      const roleId = new Types.ObjectId().toHexString();
+
+      // Mock the model's findOne method to return null (filtered out)
+      const mockExec = jest.fn().mockResolvedValue(null);
+      roleModel.findOne = jest.fn().mockReturnValue({ exec: mockExec });
+
+      // Act & Assert: Expect NotFoundException to be thrown
+      await expect(service.findOne(roleId, userWithoutPermission, { includeInactive: true }))
+        .rejects.toThrow(NotFoundException);
+    });
+
+    it('should enforce permission boundaries when accessing inactive roles', async () => {
+      // Arrange: Users with different permissions
+      const userWithPermission = createMockUser([PERMISSIONS.ROLE_MANAGE_INACTIVE, PERMISSIONS.ROLE_VIEW], VisibilityScope.GLOBAL);
+      const userWithoutPermission = createMockUser([PERMISSIONS.ROLE_VIEW], VisibilityScope.GLOBAL);
+      const roleId = new Types.ObjectId().toHexString();
+      const inactiveRole = { _id: roleId, name: 'Inactive Role', isActive: false };
+
+      // Act & Assert: User with permission can find inactive role
+      roleModel.findOne = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(inactiveRole)
+      });
+
+      const resultWithPermission = await service.findOne(roleId, userWithPermission, { includeInactive: true });
+      expect(resultWithPermission).toBe(inactiveRole);
+
+      // Reset mock for second call
+      roleModel.findOne = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null)
+      });
+
+      // Act & Assert: User without permission cannot find inactive role
+      await expect(service.findOne(roleId, userWithoutPermission, { includeInactive: true }))
+        .rejects.toThrow(NotFoundException);
+    });
+
+    it('should allow users with ROLE_MANAGE_INACTIVE to update inactive roles', async () => {
+      // Arrange: User with permission to manage inactive roles
+      const userWithPermission = createMockUser([PERMISSIONS.ROLE_EDIT, PERMISSIONS.ROLE_MANAGE_INACTIVE], VisibilityScope.GLOBAL);
+      const roleId = new Types.ObjectId().toHexString();
+      const inactiveRole = { _id: roleId, name: 'Inactive Role', isActive: false };
+      const updatedRole = { ...inactiveRole, name: 'Updated Inactive Role' };
+      
+      // Mock findOne for security check (with includeInactive: true)
+      roleModel.findOne = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(inactiveRole)
+      });
+
+      // Mock update operation
+      roleModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(updatedRole)
+      });
+
+      // Act: Update inactive role
+      const result = await service.update(roleId, { name: 'Updated Inactive Role' }, userWithPermission);
+
+      // Assert: Role successfully updated
+      expect(result.name).toBe('Updated Inactive Role');
+      expect(roleModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        roleId,
+        { $set: { name: 'Updated Inactive Role' } },
+        { new: true }
+      );
     });
   });
 });

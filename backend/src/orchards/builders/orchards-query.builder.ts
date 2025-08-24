@@ -3,10 +3,11 @@ import { Types } from 'mongoose';
 import { User } from '../../users/schemas/user.schema';
 import { QueryOrchardDto } from '../dto/query-orchard.dto';
 import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
+import { Resource } from '../../common/constants/permissions.constants';
 
 export class OrchardQueryBuilder extends BaseQueryBuilder {
   constructor( queryDto: QueryOrchardDto, user: User, clientResolverService: ClientResolverService ) {
-    super(queryDto, user, clientResolverService);
+    super(queryDto, user, clientResolverService, Resource.ORCHARD);
   }
 
   protected buildSearchFilters() {

@@ -4,10 +4,11 @@ import { QuerySubsidiaryDto } from '../dto/query-subsidiary.dto';
 import { User } from '../../users/schemas/user.schema';
 import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
 import { VisibilityScope } from '../../roles/schemas/role.schema';
+import { Resource } from '../../common/constants/permissions.constants';
 
 export class SubsidiaryQueryBuilder extends BaseQueryBuilder {
   constructor(queryDto: QuerySubsidiaryDto, user: User, clientResolverService: ClientResolverService) {
-    super(queryDto, user, clientResolverService);
+    super(queryDto, user, clientResolverService, Resource.SUBSIDIARY);
   }
 
   /**
