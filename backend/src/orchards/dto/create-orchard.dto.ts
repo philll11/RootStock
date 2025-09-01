@@ -1,7 +1,7 @@
 import { IsString, IsNotEmpty, IsMongoId, ValidateNested, IsOptional, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
 import { IsExistingSingleClient } from '../../clients/decorators/is-existing-single-client.decorator';
-import { IsExistingContactUsers } from '../../users/decorators/is-existing-contact-users.decorator';
+import { IsExistingUsers } from '../../users/decorators/is-existing-contact-users.decorator';
 
 class CreateAddressDto {
     @IsString()
@@ -42,7 +42,7 @@ export class CreateOrchardDto {
 
     @IsArray()
     @IsMongoId({ each: true })
-    @IsExistingContactUsers() // Ensures all users exist and are active
+    @IsExistingUsers() // Ensures all users exist and are active
     @IsOptional()
     readonly userIds?: string[];
 }

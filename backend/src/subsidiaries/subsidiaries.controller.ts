@@ -9,10 +9,13 @@ import { ClientsService } from '../clients/clients.service';
 import { QueryClientDto } from '../clients/dto/query-client.dto';
 
 import { RequirePermission } from '../common/decorators/permissions.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PERMISSIONS } from '../common/constants/permissions.constants';
 
 import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
 import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
+
+import type { UserDocument } from '../users/schemas/user.schema';
 
 @Controller('subsidiaries')
 @UseFilters(MongoExceptionFilter)
@@ -30,8 +33,8 @@ export class SubsidiariesController {
 
   @Get()
   @RequirePermission(PERMISSIONS.SUBSIDIARY_VIEW)
-  findAll(@Query() query: QuerySubsidiaryDto, @Req() req) {
-    return this.subsidiariesService.findAll(query, req.user);
+  findAll(@Query() query: QuerySubsidiaryDto, @CurrentUser() user: UserDocument) {
+    return this.subsidiariesService.findAll(query, user);
   }
 
   @Get(':subsidiaryId')
@@ -39,9 +42,9 @@ export class SubsidiariesController {
   findOne(
     @Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string,
     @Query() query: QuerySubsidiaryDto,
-    @Req() req
+    @CurrentUser() user: UserDocument
   ) {
-    return this.subsidiariesService.findOne(subsidiaryId, req.user, { includeInactive: query.includeInactives });
+    return this.subsidiariesService.findOne(subsidiaryId, user, { includeInactive: query.includeInactives });
   }
 
   @Get(':subsidiaryId/clients')
@@ -49,10 +52,10 @@ export class SubsidiariesController {
   async findAllClientsForSubsidiary(
     @Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string,
     @Query() query: QueryClientDto,
-    @Req() req,
+    @CurrentUser() user: UserDocument,
   ) {
-    await this.subsidiariesService.findOne(subsidiaryId, req.user); 
-    return this.clientsService.findAllBySubsidiaryId(subsidiaryId, query, req.user);
+    await this.subsidiariesService.findOne(subsidiaryId, user); 
+    return this.clientsService.findAllBySubsidiaryId(subsidiaryId, query, user);
   }
 
   @Patch(':subsidiaryId')
@@ -60,14 +63,14 @@ export class SubsidiariesController {
   update(
     @Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string,
     @Body() updateSubsidiaryDto: UpdateSubsidiaryDto,
-    @Req() req,
+    @CurrentUser() user: UserDocument,
   ) {
-    return this.subsidiariesService.update(subsidiaryId, updateSubsidiaryDto, req.user);
+    return this.subsidiariesService.update(subsidiaryId, updateSubsidiaryDto, user);
   }
 
   @Delete(':subsidiaryId')
   @RequirePermission(PERMISSIONS.SUBSIDIARY_DELETE)
-  remove(@Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string, @Req() req) {
-    return this.subsidiariesService.remove(subsidiaryId, req.user);
+  remove(@Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string, @CurrentUser() user: UserDocument) {
+    return this.subsidiariesService.remove(subsidiaryId, user);
   }
 }

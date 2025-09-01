@@ -1,13 +1,13 @@
 import { registerDecorator, ValidationOptions } from 'class-validator';
-import { IsExistingContactUsersConstraint } from '../validators/is-existing-contact-users.validator';
+import { IsExistingUsersConstraint } from '../validators/is-existing-contact-users.validator';
 
-export function IsExistingContactUsers(validationOptions?: ValidationOptions) {
+export function IsExistingUsers(validationOptions?: ValidationOptions) {
     return function (object: Object, propertyName: string) {
         registerDecorator({
             target: object.constructor,
             propertyName: propertyName,
             options: validationOptions,
-            validator: IsExistingContactUsersConstraint,
+            validator: IsExistingUsersConstraint,
         });
     };
 }

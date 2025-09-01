@@ -17,37 +17,30 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-
     "test:e2e:subsidiary:all": "jest --config ./test/jest-e2e.json --testPathPatterns=test/subsidiary --verbose",
     "test:e2e:subsidiary:crud": "jest --config ./test/jest-e2e.json --testPathPatterns=test/subsidiary/subsidiary.crud.e2e-spec.ts --verbose",
     "test:e2e:subsidiary:auth": "jest --config ./test/jest-e2e.json --testPathPatterns=test/subsidiary/subsidiary.auth.e2e-spec.ts --verbose",
     "test:e2e:subsidiary:advanced": "jest --config ./test/jest-e2e.json --testPathPatterns=test/subsidiary/subsidiary.advanced.e2e-spec.ts --verbose",
-
     "test:e2e:role:all": "jest --config ./test/jest-e2e.json --testPathPatterns=test/role --verbose",
     "test:e2e:role:crud": "jest --config ./test/jest-e2e.json --testPathPatterns=test/role/role.crud.e2e-spec.ts --verbose",
     "test:e2e:role:auth": "jest --config ./test/jest-e2e.json --testPathPatterns=test/role/role.auth.e2e-spec.ts --verbose",
     "test:e2e:role:advanced": "jest --config ./test/jest-e2e.json --testPathPatterns=test/role/role.advanced.e2e-spec.ts --verbose",
-
     "test:e2e:client:all": "jest --config ./test/jest-e2e.json --testPathPatterns=test/client --verbose",
     "test:e2e:client:crud": "jest --config ./test/jest-e2e.json --testPathPatterns=test/client/client.crud.e2e-spec.ts --verbose",
     "test:e2e:client:auth": "jest --config ./test/jest-e2e.json --testPathPatterns=test/client/client.auth.e2e-spec.ts --verbose",
     "test:e2e:client:advanced": "jest --config ./test/jest-e2e.json --testPathPatterns=test/client/client.advanced.e2e-spec.ts --verbose",
-
     "test:e2e:user:all": "jest --config ./test/jest-e2e.json --testPathPatterns=test/user --verbose",
     "test:e2e:user:crud": "jest --config ./test/jest-e2e.json --testPathPatterns=test/user/user.crud.e2e-spec.ts --verbose",
     "test:e2e:user:auth": "jest --config ./test/jest-e2e.json --testPathPatterns=test/user/user.auth.e2e-spec.ts --verbose",
     "test:e2e:user:advanced": "jest --config ./test/jest-e2e.json --testPathPatterns=test/user/user.advanced.e2e-spec.ts --verbose",
-
     "test:e2e:orchard:all": "jest --config ./test/jest-e2e.json --testPathPatterns=test/orchard --verbose",
     "test:e2e:orchard:crud": "jest --config ./test/jest-e2e.json --testPathPatterns=test/orchard/orchard.crud.e2e-spec.ts --verbose",
     "test:e2e:orchard:auth": "jest --config ./test/jest-e2e.json --testPathPatterns=test/orchard/orchard.auth.e2e-spec.ts --verbose",
     "test:e2e:orchard:advanced": "jest --config ./test/jest-e2e.json --testPathPatterns=test/orchard/orchard.advanced.e2e-spec.ts --verbose",
-
     "test:e2e:counter:all": "jest --config ./test/jest-e2e.json --testPathPatterns=test/counter --verbose",
     "test:e2e:counter:crud": "jest --config ./test/jest-e2e.json --testPathPatterns=test/counter/counter.crud.e2e-spec.ts --verbose",
     "test:e2e:counter:auth": "jest --config ./test/jest-e2e.json --testPathPatterns=test/counter/counter.auth.e2e-spec.ts --verbose",
     "test:e2e:counter:advanced": "jest --config ./test/jest-e2e.json --testPathPatterns=test/counter/counter.advanced.e2e-spec.ts --verbose",
-
     "test:e2e": "npm run test:e2e:subsidiary:all && npm run test:e2e:role:all && npm run test:e2e:client:all && npm run test:e2e:user:all && npm run test:e2e:orchard:all && npm run test:e2e:counter:all",
     "seed": "ts-node src/seed.ts"
   },
@@ -60,6 +53,7 @@
     "@nestjs/mongoose": "^11.0.3",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.2.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "jsonwebtoken": "^9.0.2",

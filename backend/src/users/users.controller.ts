@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Post, Body, Patch, Param, Delete, UseFilters, Req } from '@nestjs/common';
+import { Controller, Get, Query, Post, Body, Patch, Param, Delete, UseFilters } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { QueryUserDto } from './dto/query-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -7,7 +7,10 @@ import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
 import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
 
 import { RequirePermission } from '../common/decorators/permissions.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PERMISSIONS } from '../common/constants/permissions.constants';
+
+import type { UserDocument } from '../users/schemas/user.schema';
 
 
 @Controller('users')
@@ -17,14 +20,14 @@ export class UsersController {
 
   @Post()
   @RequirePermission(PERMISSIONS.USER_CREATE)
-  create(@Body() createUserDto: CreateUserDto, @Req() req) {
-    return this.usersService.create(createUserDto, req.user);
+  create(@Body() createUserDto: CreateUserDto, @CurrentUser() user: UserDocument) {
+    return this.usersService.create(createUserDto, user);
   }
 
   @Get()
   @RequirePermission(PERMISSIONS.USER_VIEW)
-  findAll(@Query() query: QueryUserDto, @Req() req) {
-    return this.usersService.findAll(query, req.user);
+  findAll(@Query() query: QueryUserDto, @CurrentUser() user: UserDocument) {
+    return this.usersService.findAll(query, user);
   }
 
   @Get(':userId')
@@ -32,24 +35,23 @@ export class UsersController {
   findOne(
     @Param('userId', ParseMongoIdPipe) userId: string,
     @Query() query: QueryUserDto,
-    @Req() req
+    @CurrentUser() user: UserDocument
   ) {
-    return this.usersService.findOne(userId, req.user, { includeInactive: query.includeInactives });
+    return this.usersService.findOne(userId, user, { includeInactive: query.includeInactives });
   }
 
   @Patch(':userId')
-  @RequirePermission(PERMISSIONS.USER_EDIT)
   update(
     @Param('userId', ParseMongoIdPipe) userId: string,
     @Body() updateUserDto: UpdateUserDto,
-    @Req() req,
+    @CurrentUser() user: UserDocument,
   ) {
-    return this.usersService.update(userId, updateUserDto, req.user);
+    return this.usersService.update(userId, updateUserDto, user);
   }
 
   @Delete(':userId')
   @RequirePermission(PERMISSIONS.USER_DELETE)
-  remove(@Param('userId', ParseMongoIdPipe) userId: string, @Req() req) {
-    return this.usersService.remove(userId, req.user);
+  remove(@Param('userId', ParseMongoIdPipe) userId: string, @CurrentUser() user: UserDocument) {
+    return this.usersService.remove(userId, user);
   }
 }

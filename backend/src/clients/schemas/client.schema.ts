@@ -12,7 +12,7 @@ export class Client {
   @Prop({ required: true })
   name: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Subsidiary', required: false })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Subsidiary', required: false, immutable: true })
   subsidiaryId?: Types.ObjectId;
 
   @Prop({ required: true, default: true })

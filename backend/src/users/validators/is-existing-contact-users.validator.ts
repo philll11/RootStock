@@ -2,17 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
 import { UsersService } from '../users.service';
 
-@ValidatorConstraint({ name: 'isExistingContactUsers', async: true })
+@ValidatorConstraint({ name: 'isExistingUsers', async: true })
 @Injectable()
-export class IsExistingContactUsersConstraint implements ValidatorConstraintInterface {
+export class IsExistingUsersConstraint implements ValidatorConstraintInterface {
     constructor(private readonly usersService: UsersService) { }
 
     async validate(userIds: string[], args: ValidationArguments): Promise<boolean> {
         if (!userIds || userIds.length === 0) return true;
-        return this.usersService.validateContactUserIds(userIds);
+        return this.usersService.validateUserIds(userIds);
     }
 
     defaultMessage(args: ValidationArguments) {
-        return `One or more user IDs in [${args.value}] do not exist, are inactive, or are not 'contact' type users.`;
+        return `One or more user IDs in [${args.value}] do not exist, are inactive, or are not valid users.`;
     }
 }

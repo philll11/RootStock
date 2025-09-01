@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { getModelToken } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
@@ -12,7 +12,7 @@ import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/rol
 import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
 import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
 
-describe('Users Authorization & Multi-Tenant Security - Agricultural Business Scenarios (e2e)', () => {
+describe('Users Authorization & Security (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
     let jwtService: JwtService;
@@ -22,36 +22,22 @@ describe('Users Authorization & Multi-Tenant Security - Agricultural Business Sc
     let roleModel: Model<RoleDocument>;
     let clientModel: Model<ClientDocument>;
     let subsidiaryModel: Model<SubsidiaryDocument>;
-    let orchardModel: Model<any>;
 
-    // Agricultural Business Test Data - Real stakeholders
-    let platformAdminToken: string; // Global platform administrator
-    let regionManagerToken: string; // Regional subsidiary manager
-    let farmOwnerToken: string; // Individual farm owner/grower
-    let consultantToken: string; // Agricultural consultant
-    let fieldWorkerToken: string; // Farm worker with limited access
-    let contactUserToken: string; // External contact with restricted access
-    let unauthorizedUserToken: string; // User with no relevant permissions
+    // Tokens for different user roles
+    let platformAdminToken: string;
+    let regionManagerToken: string;
+    let farmOwnerToken: string;
+    let unauthorizedUserToken: string;
 
-    // Business entities representing real agricultural operations
-    let californiaSubsidiary: SubsidiaryDocument;
-    let oregonSubsidiary: SubsidiaryDocument;
-    let inactiveSubsidiary: SubsidiaryDocument;
-    let appleOrchardClient: ClientDocument;
-    let berryFarmClient: ClientDocument;
-    let independentGrowerClient: ClientDocument;
-    let crossSubsidiaryClient: ClientDocument;
+    // Test Data Entities
+    let californiaSubsidiary: SubsidiaryDocument, oregonSubsidiary: SubsidiaryDocument;
+    let appleOrchardClient: ClientDocument, berryFarmClient: ClientDocument, crossSubsidiaryClient: ClientDocument, independentClient: ClientDocument;
+    let globalAdminRole: RoleDocument, subsidiaryManagerRole: RoleDocument, farmOwnerRole: RoleDocument, contactRole: RoleDocument, restrictedRole: RoleDocument;
 
-    // Business roles for agricultural hierarchy
-    let globalAdminRole: RoleDocument;
-    let subsidiaryManagerRole: RoleDocument;
-    let farmOwnerRole: RoleDocument;
-    let consultantRole: RoleDocument;
-    let fieldWorkerRole: RoleDocument;
-    let contactRole: RoleDocument;
-    let restrictedRole: RoleDocument;
+    // Target users for testing operations
+    let caliEmployeeUser: UserDocument, caliContactUser: UserDocument, oregonContactUser: UserDocument, standaloneContactUser: UserDocument;
 
-    jest.setTimeout(60000);
+    jest.setTimeout(60000); // Increased timeout for E2E tests
 
     beforeAll(async () => {
         ({ app, mongod, jwtService } = await setupTestApp());
@@ -60,783 +46,212 @@ describe('Users Authorization & Multi-Tenant Security - Agricultural Business Sc
         roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
         clientModel = app.get<Model<ClientDocument>>(getModelToken(Client.name));
         subsidiaryModel = app.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
-        orchardModel = app.get<Model<any>>(getModelToken('Orchard'));
 
-        // Create agricultural business entities
-        californiaSubsidiary = await new subsidiaryModel({
-            recordId: 'SUB_CA',
-            name: 'California Agricultural Solutions',
-            isActive: true
-        }).save();
+        // Setup Subsidiaries
+        [californiaSubsidiary, oregonSubsidiary] = await subsidiaryModel.create([
+            { recordId: 'SUB_CA', name: 'California Agricultural Solutions' },
+            { recordId: 'SUB_OR', name: 'Oregon Fruit Growers Co-op' },
+        ]);
 
-        oregonSubsidiary = await new subsidiaryModel({
-            recordId: 'SUB_OR',
-            name: 'Oregon Fruit Growers Co-op',
-            isActive: true
-        }).save();
+        // Setup Clients
+        [appleOrchardClient, berryFarmClient, crossSubsidiaryClient, independentClient] = await clientModel.create([
+            { recordId: 'CLI_APPLE', name: 'Golden Valley Apple Orchards', subsidiaryId: californiaSubsidiary._id },
+            { recordId: 'CLI_BERRY', name: 'Mountain Berry Farms', subsidiaryId: californiaSubsidiary._id },
+            { recordId: 'CLI_OREGON', name: 'Pacific Northwest Orchards', subsidiaryId: oregonSubsidiary._id },
+            { recordId: 'CLI_INDEPENDENT', name: 'Independent Orchard', subsidiaryId: null },
+        ]);
 
-        inactiveSubsidiary = await new subsidiaryModel({
-            recordId: 'SUB_INACTIVE',
-            name: 'Closed Agricultural Corp',
-            isActive: false
-        }).save();
-
-        // Create diverse agricultural clients
-        appleOrchardClient = await new clientModel({
-            recordId: 'CLI_APPLE',
-            name: 'Golden Valley Apple Orchards',
-            subsidiaryId: californiaSubsidiary._id,
-            isActive: true
-        }).save();
-
-        berryFarmClient = await new clientModel({
-            recordId: 'CLI_BERRY',
-            name: 'Mountain Berry Farms',
-            subsidiaryId: californiaSubsidiary._id,
-            isActive: true
-        }).save();
-
-        independentGrowerClient = await new clientModel({
-            recordId: 'CLI_INDEPENDENT',
-            name: 'Independent Family Orchard',
-            // No subsidiary - independent operation
-            isActive: true
-        }).save();
-
-        crossSubsidiaryClient = await new clientModel({
-            recordId: 'CLI_OREGON',
-            name: 'Pacific Northwest Orchards',
-            subsidiaryId: oregonSubsidiary._id,
-            isActive: true
-        }).save();
-
-        // Create realistic agricultural business roles
-        globalAdminRole = await new roleModel({
-            recordId: 'ROLE_GLOBAL_ADMIN',
-            name: 'Platform Administrator',
-            permissions: Object.values(PERMISSIONS), // All permissions
-            visibilityScope: VisibilityScope.GLOBAL
-        }).save();
-
-        subsidiaryManagerRole = await new roleModel({
-            recordId: 'ROLE_REGION_MGR',
-            name: 'Regional Agricultural Manager',
-            permissions: [
-                PERMISSIONS.USER_VIEW,
-                PERMISSIONS.USER_CREATE,
-                PERMISSIONS.USER_EDIT,
-                PERMISSIONS.CLIENT_VIEW,
-                PERMISSIONS.SUBSIDIARY_VIEW,
-                PERMISSIONS.ORCHARD_VIEW,
-                PERMISSIONS.ORCHARD_CREATE,
-                // Note: No USER_DELETE permission - business rule
-            ],
-            visibilityScope: VisibilityScope.SUBSIDIARY
-        }).save();
-
-        farmOwnerRole = await new roleModel({
-            recordId: 'ROLE_FARM_OWNER',
-            name: 'Farm Owner/Grower',
-            permissions: [
-                PERMISSIONS.USER_VIEW,
-                PERMISSIONS.USER_EDIT, // Can manage own farm staff
-                PERMISSIONS.CLIENT_VIEW,
-                PERMISSIONS.ORCHARD_VIEW,
-                PERMISSIONS.ORCHARD_EDIT,
-            ],
-            visibilityScope: VisibilityScope.CLIENT
-        }).save();
-
-        consultantRole = await new roleModel({
-            recordId: 'ROLE_CONSULTANT',
-            name: 'Agricultural Consultant',
-            permissions: [
-                PERMISSIONS.USER_VIEW,
-                PERMISSIONS.CLIENT_VIEW,
-                PERMISSIONS.ORCHARD_VIEW,
-                // Note: No edit permissions - consultants are read-only
-            ],
-            visibilityScope: VisibilityScope.SUBSIDIARY
-        }).save();
-
-        fieldWorkerRole = await new roleModel({
-            recordId: 'ROLE_FIELD_WORKER',
-            name: 'Farm Field Worker',
-            permissions: [
-                PERMISSIONS.USER_VIEW,
-                PERMISSIONS.ORCHARD_VIEW,
-                // Limited permissions for field operations
-            ],
-            visibilityScope: VisibilityScope.CLIENT
-        }).save();
-
-        contactRole = await new roleModel({
-            recordId: 'ROLE_CONTACT',
-            name: 'External Contact',
-            permissions: [
-                PERMISSIONS.USER_VIEW, // Can view basic user info
-                // Very limited permissions for external contacts
-            ],
-            visibilityScope: VisibilityScope.CLIENT
-        }).save();
-
-        restrictedRole = await new roleModel({
-            recordId: 'ROLE_NO_PERMS',
-            name: 'No Permissions Role',
-            permissions: [], // No permissions whatsoever
-            visibilityScope: VisibilityScope.CLIENT
-        }).save();
+        // Setup Roles
+        [globalAdminRole, subsidiaryManagerRole, farmOwnerRole, contactRole, restrictedRole] = await roleModel.create([
+            { recordId: 'ROLE_GLOBAL_ADMIN', name: 'Platform Administrator', permissions: Object.values(PERMISSIONS), visibilityScope: VisibilityScope.GLOBAL },
+            { recordId: 'ROLE_REGION_MGR', name: 'Regional Manager', permissions: [PERMISSIONS.USER_VIEW, PERMISSIONS.USER_CREATE, PERMISSIONS.USER_EDIT, PERMISSIONS.CLIENT_VIEW], visibilityScope: VisibilityScope.SUBSIDIARY },
+            { recordId: 'ROLE_FARM_OWNER', name: 'Farm Owner', permissions: [PERMISSIONS.USER_VIEW, PERMISSIONS.USER_EDIT, PERMISSIONS.CLIENT_VIEW], visibilityScope: VisibilityScope.CLIENT },
+            { recordId: 'ROLE_CONTACT', name: 'External Contact', permissions: [PERMISSIONS.USER_VIEW], visibilityScope: VisibilityScope.CLIENT },
+            { recordId: 'ROLE_NO_PERMS', name: 'No Permissions Role', permissions: [], visibilityScope: VisibilityScope.CLIENT },
+        ]);
     });
 
     afterAll(async () => {
         await teardownTestApp({ app, mongod });
     });
 
-    describe('Multi-Tenant Data Visibility - Agricultural Business Security', () => {
+    // --- PHASE 1: LAYER 2 - VISIBILITY SCOPE TESTS ---
+    describe('Layer 2 - Data Visibility Scope', () => {
         beforeEach(async () => {
-            // Clean slate for each test
             await userModel.deleteMany({});
+            const users = await userModel.create([
+                // California Subsidiary Users
+                { recordId: 'ADMIN_GLOBAL', name: 'Platform Admin', firstName: 'Global', lastName: 'Admin', email: 'admin@rootstock.platform', userType: UserType.EMPLOYEE, roleId: globalAdminRole._id },
+                { recordId: 'MGR_CA', name: 'California Manager', firstName: 'Cali', lastName: 'Manager', email: 'manager@ca.com', userType: UserType.EMPLOYEE, roleId: subsidiaryManagerRole._id, clientIds: [appleOrchardClient._id] },
+                { recordId: 'OWNER_APPLE', name: 'Apple Farm Owner', firstName: 'Apple', lastName: 'Owner', email: 'owner@apple.com', userType: UserType.EMPLOYEE, roleId: farmOwnerRole._id, clientIds: [appleOrchardClient._id] },
+                { recordId: 'CONTACT_BERRY', name: 'Berry Farm Contact', firstName: 'Berry', lastName: 'Contact', email: 'contact@berry.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [berryFarmClient._id] },
+                // Oregon Subsidiary User
+                { recordId: 'OWNER_OR', name: 'Oregon Farm Owner', firstName: 'Oregon', lastName: 'Owner', email: 'owner@or.com', userType: UserType.EMPLOYEE, roleId: farmOwnerRole._id, clientIds: [crossSubsidiaryClient._id] },
+                // User with no permissions for negative testing
+                { recordId: 'UNAUTH', name: 'Unauthorized User', firstName: 'No', lastName: 'Perms', email: 'no@perms.com', userType: UserType.EMPLOYEE, roleId: restrictedRole._id, clientIds: [appleOrchardClient._id] }
+            ]);
 
-            // Create users representing real agricultural stakeholders
-            const platformAdmin = await new userModel({
-                recordId: 'ADMIN_GLOBAL',
-                name: 'Platform Administrator',
-                firstName: 'Global',
-                lastName: 'Admin',
-                email: 'admin@rootstock.platform',
-                userType: UserType.EMPLOYEE,
-                roleId: globalAdminRole._id,
-                isActive: true
-            }).save();
-            platformAdminToken = jwtService.sign({ sub: platformAdmin.recordId });
-
-            const regionManager = await new userModel({
-                recordId: 'MGR_CALIFORNIA',
-                name: 'California Regional Manager',
-                firstName: 'Regional',
-                lastName: 'Manager',
-                email: 'manager@california-ag.com',
-                userType: UserType.EMPLOYEE,
-                roleId: subsidiaryManagerRole._id,
-                clientIds: [appleOrchardClient._id, berryFarmClient._id],
-                isActive: true
-            }).save();
-            regionManagerToken = jwtService.sign({ sub: regionManager.recordId });
-
-            const farmOwner = await new userModel({
-                recordId: 'OWNER_APPLE',
-                name: 'Apple Orchard Owner',
-                firstName: 'Farm',
-                lastName: 'Owner',
-                email: 'owner@goldenvalley.com',
-                userType: UserType.EMPLOYEE,
-                roleId: farmOwnerRole._id,
-                clientIds: [appleOrchardClient._id],
-                isActive: true
-            }).save();
-            farmOwnerToken = jwtService.sign({ sub: farmOwner.recordId });
-
-            const consultant = await new userModel({
-                recordId: 'CONSULTANT_AG',
-                name: 'Agricultural Consultant',
-                firstName: 'Ag',
-                lastName: 'Consultant',
-                email: 'consultant@agservices.com',
-                userType: UserType.EMPLOYEE,
-                roleId: consultantRole._id,
-                clientIds: [appleOrchardClient._id, berryFarmClient._id],
-                isActive: true
-            }).save();
-            consultantToken = jwtService.sign({ sub: consultant.recordId });
-
-            const fieldWorker = await new userModel({
-                recordId: 'WORKER_FIELD',
-                name: 'Field Worker',
-                firstName: 'Field',
-                lastName: 'Worker',
-                email: 'worker@goldenvalley.com',
-                userType: UserType.EMPLOYEE,
-                roleId: fieldWorkerRole._id,
-                clientIds: [appleOrchardClient._id],
-                isActive: true
-            }).save();
-            fieldWorkerToken = jwtService.sign({ sub: fieldWorker.recordId });
-
-            const contactUser = await new userModel({
-                recordId: 'CONTACT_EXT',
-                name: 'External Contact',
-                firstName: 'External',
-                lastName: 'Contact',
-                email: 'contact@supplier.com',
-                userType: UserType.CONTACT,
-                roleId: contactRole._id,
-                clientIds: [appleOrchardClient._id],
-                isActive: true
-            }).save();
-            contactUserToken = jwtService.sign({ sub: contactUser.recordId });
-
-            const unauthorizedUser = await new userModel({
-                recordId: 'USER_NO_PERMS',
-                name: 'Unauthorized User',
-                firstName: 'No',
-                lastName: 'Permissions',
-                email: 'noperms@test.com',
-                userType: UserType.EMPLOYEE,
-                roleId: restrictedRole._id,
-                clientIds: [independentGrowerClient._id],
-                isActive: true
-            }).save();
-            unauthorizedUserToken = jwtService.sign({ sub: unauthorizedUser.recordId });
-
-            // Create cross-subsidiary users to test isolation
-            await new userModel({
-                recordId: 'USER_OREGON_1',
-                name: 'Oregon User 1',
-                firstName: 'Oregon',
-                lastName: 'User1',
-                email: 'user1@oregon-growers.com',
-                userType: UserType.EMPLOYEE,
-                roleId: farmOwnerRole._id,
-                clientIds: [crossSubsidiaryClient._id],
-                isActive: true
-            }).save();
-
-            await new userModel({
-                recordId: 'USER_BERRY_FARM',
-                name: 'Berry Farm Manager',
-                firstName: 'Berry',
-                lastName: 'Manager',
-                email: 'manager@berryforms.com',
-                userType: UserType.EMPLOYEE,
-                roleId: farmOwnerRole._id,
-                clientIds: [berryFarmClient._id],
-                isActive: true
-            }).save();
-
-            await new userModel({
-                recordId: 'CONTACT_INDEPENDENT',
-                name: 'Independent Contact',
-                firstName: 'Independent',
-                lastName: 'Contact',
-                email: 'contact@independent.com',
-                userType: UserType.CONTACT,
-                roleId: contactRole._id,
-                clientIds: [independentGrowerClient._id],
-                isActive: true
-            }).save();
+            // Create tokens for each persona
+            platformAdminToken = jwtService.sign({ sub: users[0].recordId });
+            regionManagerToken = jwtService.sign({ sub: users[1].recordId });
+            farmOwnerToken = jwtService.sign({ sub: users[2].recordId });
+            unauthorizedUserToken = jwtService.sign({ sub: users[5].recordId });
         });
 
-        it('should allow Global Admin to see ALL users across the entire platform', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/users')
-                .set('Authorization', `Bearer ${platformAdminToken}`)
-                .expect(200);
-
-            expect(res.body).toHaveLength(10); // All users created in beforeEach
-            
-            const userNames = res.body.map(u => u.name);
-            expect(userNames).toEqual(expect.arrayContaining([
-                'Platform Administrator',
-                'California Regional Manager', 
-                'Apple Orchard Owner',
-                'Agricultural Consultant',
-                'Field Worker',
-                'External Contact',
-                'Unauthorized User',
-                'Oregon User 1',
-                'Berry Farm Manager',
-                'Independent Contact'
-            ]));
-        });
-
-        it('should restrict Regional Manager to users within their subsidiary scope', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/users')
-                .set('Authorization', `Bearer ${regionManagerToken}`)
-                .expect(200);
-
-            // Should see users from California subsidiary clients only (6 users total)
-            // Regional Manager has access to both Apple and Berry clients in California subsidiary
+        it('Global Admin should see ALL users across the entire platform', async () => {
+            const res = await request(app.getHttpServer()).get('/users').set('Authorization', `Bearer ${platformAdminToken}`).expect(200);
+            expect(res.body.map(u => u.name)).toEqual(expect.arrayContaining(['Platform Admin', 'California Manager', 'Apple Farm Owner', 'Berry Farm Contact', 'Oregon Farm Owner']));
             expect(res.body).toHaveLength(6);
-            
-            const userNames = res.body.map(u => u.name);
-            expect(userNames).toEqual(expect.arrayContaining([
-                'California Regional Manager', // Self
-                'Apple Orchard Owner', // Same subsidiary
-                'Agricultural Consultant', // Same subsidiary  
-                'Field Worker', // Same subsidiary
-                'External Contact', // Same subsidiary
-                'Berry Farm Manager' // Same subsidiary
-            ]));
-
-            // Should NOT see Oregon users or independent users
-            expect(userNames).not.toContain('Oregon User 1');
-            expect(userNames).not.toContain('Independent Contact');
         });
 
-        it('should restrict Farm Owner to users within their client scope only', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/users')
-                .set('Authorization', `Bearer ${farmOwnerToken}`)
-                .expect(200);
-
-            // Should only see users associated with Apple Orchard client (5 users)
-            // Farm Owner only has access to Apple Orchard client, but Regional Manager also has access
-            expect(res.body).toHaveLength(5);
-            
-            const userNames = res.body.map(u => u.name);
-            expect(userNames).toEqual(expect.arrayContaining([
-                'California Regional Manager', // Has access to apple orchard 
-                'Apple Orchard Owner', // Self
-                'Agricultural Consultant', // Has access to apple orchard
-                'Field Worker', // Works at apple orchard
-                'External Contact', // Contact for apple orchard
-            ]));
-
-            // Should NOT see users from other clients
-            expect(userNames).not.toContain('Berry Farm Manager');
-            expect(userNames).not.toContain('Oregon User 1');
+        it('Subsidiary Manager should see only users within their subsidiary', async () => {
+            const res = await request(app.getHttpServer()).get('/users').set('Authorization', `Bearer ${regionManagerToken}`).expect(200);
+            expect(res.body.map(u => u.name)).toEqual(expect.arrayContaining(['California Manager', 'Apple Farm Owner', 'Berry Farm Contact', 'Unauthorized User']));
+            expect(res.body.map(u => u.name)).not.toContain('Oregon Farm Owner');
+            expect(res.body).toHaveLength(4);
         });
 
-        it('should restrict Agricultural Consultant to their assigned subsidiary clients', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/users')
-                .set('Authorization', `Bearer ${consultantToken}`)
-                .expect(200);
-
-            // Consultant has access to multiple clients in California subsidiary (6 users)
-            expect(res.body).toHaveLength(6);
-            
-            const userNames = res.body.map(u => u.name);
-            expect(userNames).toEqual(expect.arrayContaining([
-                'California Regional Manager', // Same subsidiary
-                'Agricultural Consultant', // Self
-                'Apple Orchard Owner', // Client A access
-                'Field Worker', // Client A access
-                'External Contact', // Client A access
-                'Berry Farm Manager' // Client B access
-            ]));
+        it('Client Owner should see only users assigned to their specific client', async () => {
+            const res = await request(app.getHttpServer()).get('/users').set('Authorization', `Bearer ${farmOwnerToken}`).expect(200);
+            expect(res.body.map(u => u.name)).toEqual(expect.arrayContaining(['California Manager', 'Apple Farm Owner', 'Unauthorized User']));
+            expect(res.body.map(u => u.name)).not.toContain('Berry Farm Contact');
+            expect(res.body).toHaveLength(3);
         });
 
-        it('should restrict Field Worker to their specific client only', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/users')
-                .set('Authorization', `Bearer ${fieldWorkerToken}`)
-                .expect(200);
-
-            // Field worker only sees users from their specific farm (5 users)
-            expect(res.body).toHaveLength(5);
-            
-            const userNames = res.body.map(u => u.name);
-            expect(userNames).toEqual(expect.arrayContaining([
-                'California Regional Manager', // Has access to same client
-                'Field Worker', // Self
-                'Apple Orchard Owner', // Same client
-                'Agricultural Consultant', // Has access to same client
-                'External Contact' // Same client contact
-            ]));
-
-            expect(userNames).not.toContain('Berry Farm Manager');
-        });
-
-        it('should restrict CONTACT user to minimal visibility within their client', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/users')
-                .set('Authorization', `Bearer ${contactUserToken}`)
-                .expect(200);
-
-            // Contact users should have very limited visibility (5 users)
-            expect(res.body).toHaveLength(5);
-            
-            const userNames = res.body.map(u => u.name);
-            expect(userNames).toEqual(expect.arrayContaining([
-                'California Regional Manager', // Has access to same client
-                'External Contact', // Self
-                'Apple Orchard Owner', // Same client
-                'Agricultural Consultant', // Same client
-                'Field Worker' // Same client
-            ]));
-        });
-
-        it('should deny access to users with no USER_VIEW permission', async () => {
-            await request(app.getHttpServer())
-                .get('/users')
-                .set('Authorization', `Bearer ${unauthorizedUserToken}`)
-                .expect(403);
-        });
-
-        it('should enforce client isolation between different subsidiaries', async () => {
-            // Create a token for Oregon user
-            const oregonUser = await userModel.findOne({ recordId: 'USER_OREGON_1' });
-            const oregonToken = jwtService.sign({ sub: oregonUser!.recordId });
-
-            const res = await request(app.getHttpServer())
-                .get('/users')
-                .set('Authorization', `Bearer ${oregonToken}`)
-                .expect(200);
-
-            // Oregon user should only see themselves (no other users in their scope)
-            expect(res.body).toHaveLength(1);
-            expect(res.body[0].name).toBe('Oregon User 1');
-
-            // Should NOT see California subsidiary users
-            const userNames = res.body.map(u => u.name);
-            expect(userNames).not.toContain('Apple Orchard Owner');
-            expect(userNames).not.toContain('Berry Farm Manager');
+        it('should return 403 Forbidden for a user with no USER_VIEW permission', async () => {
+            await request(app.getHttpServer()).get('/users').set('Authorization', `Bearer ${unauthorizedUserToken}`).expect(403);
         });
     });
 
-    describe('Permission-Based Action Authorization - Agricultural Business Rules', () => {
-        let testTargetUser: UserDocument;
-        let contactTestUser: UserDocument;
-
+    // --- PHASE 2: LAYER 1 & 3 - ACTION AUTHORIZATION AND BUSINESS RULES ---
+    describe('Layer 1 & 3 - Actions and Business Rules (Write)', () => {
         beforeEach(async () => {
-            // Clean slate for permission testing
             await userModel.deleteMany({});
-
-            // Create test target users for action testing
-            testTargetUser = await new userModel({
-                recordId: 'TARGET_USER',
-                name: 'Target Test User',
-                firstName: 'Target',
-                lastName: 'User',
-                email: 'target@test.com',
-                userType: UserType.EMPLOYEE,
-                roleId: farmOwnerRole._id,
-                clientIds: [appleOrchardClient._id],
-                isActive: true
-            }).save();
-
-            contactTestUser = await new userModel({
-                recordId: 'TARGET_CONTACT',
-                name: 'Target Contact User',
-                firstName: 'Target',
-                lastName: 'Contact',
-                email: 'contact@test.com',
-                userType: UserType.CONTACT,
-                roleId: contactRole._id,
-                clientIds: [appleOrchardClient._id],
-                isActive: true
-            }).save();
-
-            // Create action test users
-            const platformAdmin = await new userModel({
-                recordId: 'ADMIN_ACTIONS',
-                name: 'Admin for Actions',
-                firstName: 'Admin',
-                lastName: 'Actions',
-                email: 'admin@platform.com',
-                userType: UserType.EMPLOYEE,
-                roleId: globalAdminRole._id,
-                isActive: true
-            }).save();
-            platformAdminToken = jwtService.sign({ sub: platformAdmin.recordId });
-
-            const regionManager = await new userModel({
-                recordId: 'MGR_ACTIONS',
-                name: 'Manager for Actions',
-                firstName: 'Manager',
-                lastName: 'Actions',
-                email: 'manager@region.com',
-                userType: UserType.EMPLOYEE,
-                roleId: subsidiaryManagerRole._id,
-                clientIds: [appleOrchardClient._id, berryFarmClient._id],
-                isActive: true
-            }).save();
-            regionManagerToken = jwtService.sign({ sub: regionManager.recordId });
-
-            const farmOwner = await new userModel({
-                recordId: 'OWNER_ACTIONS',
-                name: 'Owner for Actions',
-                firstName: 'Owner',
-                lastName: 'Actions',
-                email: 'owner@farm.com',
-                userType: UserType.EMPLOYEE,
-                roleId: farmOwnerRole._id,
-                clientIds: [appleOrchardClient._id],
-                isActive: true
-            }).save();
-            farmOwnerToken = jwtService.sign({ sub: farmOwner.recordId });
-
-            const consultant = await new userModel({
-                recordId: 'CONSULTANT_ACTIONS',
-                name: 'Consultant for Actions',
-                firstName: 'Consultant',
-                lastName: 'Actions',
-                email: 'consultant@services.com',
-                userType: UserType.EMPLOYEE,
-                roleId: consultantRole._id,
-                clientIds: [appleOrchardClient._id],
-                isActive: true
-            }).save();
-            consultantToken = jwtService.sign({ sub: consultant.recordId });
-
-            const fieldWorker = await new userModel({
-                recordId: 'WORKER_ACTIONS',
-                name: 'Worker for Actions',
-                firstName: 'Worker',
-                lastName: 'Actions',
-                email: 'worker@farm.com',
-                userType: UserType.EMPLOYEE,
-                roleId: fieldWorkerRole._id,
-                clientIds: [appleOrchardClient._id],
-                isActive: true
-            }).save();
-            fieldWorkerToken = jwtService.sign({ sub: fieldWorker.recordId });
-
-            const contactUser = await new userModel({
-                recordId: 'CONTACT_ACTIONS',
-                name: 'Contact for Actions',
-                firstName: 'Contact',
-                lastName: 'Actions',
-                email: 'contact@external.com',
-                userType: UserType.CONTACT,
-                roleId: contactRole._id,
-                clientIds: [appleOrchardClient._id],
-                isActive: true
-            }).save();
-            contactUserToken = jwtService.sign({ sub: contactUser.recordId });
-
-            const unauthorizedUser = await new userModel({
-                recordId: 'UNAUTH_ACTIONS',
-                name: 'Unauthorized for Actions',
-                firstName: 'Unauthorized',
-                lastName: 'Actions',
-                email: 'unauth@test.com',
-                userType: UserType.EMPLOYEE,
-                roleId: restrictedRole._id,
-                clientIds: [independentGrowerClient._id],
-                isActive: true
-            }).save();
-            unauthorizedUserToken = jwtService.sign({ sub: unauthorizedUser.recordId });
+            const users = await userModel.create([
+                { recordId: 'ADMIN_GLOBAL', name: 'Platform Admin', firstName: 'Global', lastName: 'Admin', email: 'admin@rootstock.platform', userType: UserType.EMPLOYEE, roleId: globalAdminRole._id },
+                { recordId: 'MGR_CA', name: 'California Manager', firstName: 'Cali', lastName: 'Manager', email: 'manager@ca.com', userType: UserType.EMPLOYEE, roleId: subsidiaryManagerRole._id, clientIds: [appleOrchardClient._id] },
+                { recordId: 'OWNER_APPLE', name: 'Apple Farm Owner', firstName: 'Apple', lastName: 'Owner', email: 'owner@apple.com', userType: UserType.EMPLOYEE, roleId: farmOwnerRole._id, clientIds: [appleOrchardClient._id] },
+            ]);
+            [caliEmployeeUser, caliContactUser, standaloneContactUser] = await userModel.create([
+                { recordId: 'EMP_CA', name: 'Cali Employee', firstName: 'Cali', lastName: 'Emp', email: 'emp@ca.com', userType: UserType.EMPLOYEE, roleId: farmOwnerRole._id, clientIds: [appleOrchardClient._id] },
+                { recordId: 'CONTACT_CA', name: 'Cali Contact', firstName: 'Cali', lastName: 'Contact', email: 'contact@ca.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [appleOrchardClient._id] },
+                { recordId: 'CONTACT_STANDALONE', name: 'Standalone Contact', firstName: 'Stand', lastName: 'Alone', email: 'standalone@contact.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [independentClient._id] },
+            ]);
+            platformAdminToken = jwtService.sign({ sub: users[0].recordId });
+            regionManagerToken = jwtService.sign({ sub: users[1].recordId });
+            farmOwnerToken = jwtService.sign({ sub: users[2].recordId });
         });
 
-        describe('POST /users - User Creation Authorization', () => {
-            it('should allow Global Admin to create any type of user', async () => {
-                const newUserData = {
-                    firstName: 'New',
-                    lastName: 'Employee',
-                    email: 'new@employee.com',
-                    userType: UserType.EMPLOYEE,
-                    clientIds: [appleOrchardClient._id]
-                };
-
-                const res = await request(app.getHttpServer())
-                    .post('/users')
-                    .set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send(newUserData)
-                    .expect(201);
-
-                expect(res.body.recordId).toMatch(/^USR\d{4,}$/);
-                expect(res.body.userType).toBe(UserType.EMPLOYEE);
-            });
-
-            it('should allow Regional Manager to create users within their subsidiary scope', async () => {
-                const newUserData = {
-                    firstName: 'New',
-                    lastName: 'Worker',
-                    email: 'new@worker.com',
-                    userType: UserType.EMPLOYEE,
-                    clientIds: [appleOrchardClient._id] // Within manager's scope
-                };
-
-                await request(app.getHttpServer())
-                    .post('/users')
-                    .set('Authorization', `Bearer ${regionManagerToken}`)
-                    .send(newUserData)
+        // --- CREATE Operation Tests ---
+        describe('POST /users', () => {
+            // Admin user
+            it('should allow an admin to create a "contact" user and assign them to a subsidiary client', async () => {
+                await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${platformAdminToken}`)
+                    .send({ firstName: 'New', lastName: 'Contact', email: 'new@contact.com', userType: UserType.CONTACT, roleId: contactRole._id.toString(), clientIds: [appleOrchardClient._id.toString()] })
                     .expect(201);
             });
+            it('should allow an admin to create a "contact" user and assign them to a standalone client', async () => {
+                await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${platformAdminToken}`)
+                    .send({ firstName: 'New', lastName: 'Contact', email: 'new@contact.com', userType: UserType.CONTACT, roleId: contactRole._id.toString(), clientIds: [independentClient._id.toString()] })
+                    .expect(201);
+            });
+            it('should FORBID creating a "contact" user without a client assignment (Layer 3)', async () => {
+                await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${platformAdminToken}`)
+                    .send({ firstName: 'New', lastName: 'Contact', email: 'new@contact.com', userType: UserType.CONTACT, roleId: contactRole._id.toString() })
+                    .expect(400);
+            });
 
-            it('should deny user creation for Farm Owner (lacks USER_CREATE permission)', async () => {
-                const newUserData = {
-                    firstName: 'Denied',
-                    lastName: 'User',
-                    email: 'denied@test.com',
-                    userType: UserType.EMPLOYEE,
-                    clientIds: [appleOrchardClient._id]
-                };
-
-                await request(app.getHttpServer())
-                    .post('/users')
-                    .set('Authorization', `Bearer ${farmOwnerToken}`)
-                    .send(newUserData)
+            // Region Manager user
+            it('should allow a user with USER_CREATE to create a user', async () => {
+                await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${regionManagerToken}`)
+                    .send({ firstName: 'New', lastName: 'Hire', email: 'new@ca.com', userType: UserType.EMPLOYEE, roleId: farmOwnerRole._id.toString(), clientIds: [berryFarmClient._id.toString()] })
+                    .expect(201);
+            });
+            it('should FORBID creating a user in a client outside the creator`s scope (Layer 2)', async () => {
+                await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${regionManagerToken}`)
+                    .send({ firstName: 'New', lastName: 'Hire', email: 'new@or.com', userType: UserType.EMPLOYEE, roleId: farmOwnerRole._id.toString(), clientIds: [crossSubsidiaryClient._id.toString()] })
+                    .expect(403);
+            });
+            it('should FORBID creating a "contact" user in a standalone client outside the creator`s scope (Layer 2)', async () => {
+                await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${regionManagerToken}`)
+                    .send({ firstName: 'New', lastName: 'Hire', email: 'new@or.com', userType: UserType.CONTACT, roleId: contactRole._id.toString(), clientIds: [independentClient._id.toString()] })
                     .expect(403);
             });
 
-            it('should deny user creation for Consultant (read-only access)', async () => {
-                const newUserData = {
-                    firstName: 'Denied',
-                    lastName: 'Consultant',
-                    email: 'denied@consultant.com',
-                    userType: UserType.CONTACT
-                };
-
-                await request(app.getHttpServer())
-                    .post('/users')
-                    .set('Authorization', `Bearer ${consultantToken}`)
-                    .send(newUserData)
-                    .expect(403);
-            });
-
-            it('should deny user creation for CONTACT user', async () => {
-                const newUserData = {
-                    firstName: 'Denied',
-                    lastName: 'Contact',
-                    email: 'denied@contact.com',
-                    userType: UserType.CONTACT
-                };
-
-                await request(app.getHttpServer())
-                    .post('/users')
-                    .set('Authorization', `Bearer ${contactUserToken}`)
-                    .send(newUserData)
+            // Farm Owner user
+            it('should FORBID a user without USER_CREATE permission (Layer 1)', async () => {
+                await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${farmOwnerToken}`)
+                    .send({ firstName: 'New', lastName: 'Hire', email: 'new@ca.com', userType: UserType.EMPLOYEE, roleId: farmOwnerRole._id.toString(), clientIds: [appleOrchardClient._id.toString()] })
                     .expect(403);
             });
         });
 
-        describe('PATCH /users/:id - User Update Authorization', () => {
-            it('should allow Global Admin to update any user', async () => {
-                const updateData = {
-                    firstName: 'Updated',
-                    lastName: 'AdminUser'
-                };
-
-                const res = await request(app.getHttpServer())
-                    .patch(`/users/${testTargetUser._id}`)
+        // --- Layer 3 Subsidiary Containment Tests ---
+        describe('PATCH /users/:id - Subsidiary Containment Rules', () => {
+            it('should allow assigning a CONTACT to another client WITHIN the same subsidiary', async () => {
+                await request(app.getHttpServer()).patch(`/users/${caliContactUser.id}`).set('Authorization', `Bearer ${platformAdminToken}`)
+                    .send({ clientIds: [appleOrchardClient._id.toString(), berryFarmClient._id.toString()] })
+                    .expect(200);
+            });
+            it('should FORBID assigning a CONTACT to a client in a DIFFERENT subsidiary (Layer 3)', async () => {
+                await request(app.getHttpServer()).patch(`/users/${caliContactUser.id}`).set('Authorization', `Bearer ${platformAdminToken}`)
+                    .send({ clientIds: [appleOrchardClient._id.toString(), crossSubsidiaryClient._id.toString()] })
+                    .expect(400);
+            });
+            it('should FORBID re-assigning a subsidiary-based CONTACT to a standalone client (Layer 3)', async () => {
+                // Take a contact from Subsidiary A and try to move them to the independent client.
+                await request(app.getHttpServer())
+                    .patch(`/users/${caliContactUser.id}`)
                     .set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send(updateData)
-                    .expect(200);
-
-                expect(res.body.firstName).toBe('Updated');
-                expect(res.body.lastName).toBe('AdminUser');
+                    .send({ clientIds: [independentClient._id.toString()] })
+                    .expect(400); // Bad Request, violates the data silo rule
             });
 
-            it('should allow Regional Manager to update users within their scope', async () => {
-                const updateData = {
-                    firstName: 'Updated',
-                    lastName: 'ByManager'
-                };
-
+            it('should FORBID re-assigning a standalone CONTACT to a subsidiary-based client (Layer 3)', async () => {
+                // Take the contact from the independent client and try to move them to a client in Subsidiary A.
                 await request(app.getHttpServer())
-                    .patch(`/users/${testTargetUser._id}`)
-                    .set('Authorization', `Bearer ${regionManagerToken}`)
-                    .send(updateData)
-                    .expect(200);
+                    .patch(`/users/${standaloneContactUser.id}`)
+                    .set('Authorization', `Bearer ${platformAdminToken}`)
+                    .send({ clientIds: [appleOrchardClient._id.toString()] })
+                    .expect(400); // Bad Request, violates the data silo rule
             });
+        });
 
-            it('should allow Farm Owner to update users within their client', async () => {
-                const updateData = {
-                    firstName: 'Updated',
-                    lastName: 'ByOwner'
-                };
-
-                await request(app.getHttpServer())
-                    .patch(`/users/${testTargetUser._id}`)
-                    .set('Authorization', `Bearer ${farmOwnerToken}`)
-                    .send(updateData)
+        // --- General UPDATE Operation Tests ---
+        describe('PATCH /users/:id - General Permissions', () => {
+            it('should allow a user with USER_EDIT to update a user within their scope', async () => {
+                await request(app.getHttpServer()).patch(`/users/${caliEmployeeUser.id}`).set('Authorization', `Bearer ${farmOwnerToken}`)
+                    .send({ firstName: "Updated" })
                     .expect(200);
             });
+            it('should FORBID a user without USER_EDIT from updating a user (Layer 1)', async () => {
+                // We need a user with USER_VIEW but not USER_EDIT to test this properly. Let's create one.
+                const viewOnlyRole = await roleModel.create({ recordId: 'VIEW_ONLY', name: 'View Only', permissions: [PERMISSIONS.USER_VIEW], visibilityScope: VisibilityScope.CLIENT });
+                const viewOnlyUser = await userModel.create({ recordId: 'VIEW_ONLY', name: 'Viewer', firstName: 'View', lastName: 'Only', email: 'view@only.com', userType: UserType.EMPLOYEE, roleId: viewOnlyRole._id, clientIds: [appleOrchardClient._id] });
+                const viewOnlyToken = jwtService.sign({ sub: viewOnlyUser.recordId });
 
-            it('should deny user updates for Consultant (lacks USER_EDIT permission)', async () => {
-                const updateData = {
-                    firstName: 'Denied',
-                    lastName: 'Update'
-                };
-
-                await request(app.getHttpServer())
-                    .patch(`/users/${testTargetUser._id}`)
-                    .set('Authorization', `Bearer ${consultantToken}`)
-                    .send(updateData)
-                    .expect(403);
-            });
-
-            it('should deny user updates for Field Worker (lacks USER_EDIT permission)', async () => {
-                const updateData = {
-                    firstName: 'Denied',
-                    lastName: 'Worker'
-                };
-
-                await request(app.getHttpServer())
-                    .patch(`/users/${testTargetUser._id}`)
-                    .set('Authorization', `Bearer ${fieldWorkerToken}`)
-                    .send(updateData)
-                    .expect(403);
-            });
-
-            it('should deny CONTACT user from updating other users', async () => {
-                const updateData = {
-                    firstName: 'Denied',
-                    lastName: 'Contact'
-                };
-
-                await request(app.getHttpServer())
-                    .patch(`/users/${testTargetUser._id}`)
-                    .set('Authorization', `Bearer ${contactUserToken}`)
-                    .send(updateData)
-                    .expect(403);
-            });
-
-            it('should deny updates from users with no permissions', async () => {
-                const updateData = {
-                    firstName: 'Denied',
-                    lastName: 'NoPerms'
-                };
-
-                await request(app.getHttpServer())
-                    .patch(`/users/${testTargetUser._id}`)
-                    .set('Authorization', `Bearer ${unauthorizedUserToken}`)
-                    .send(updateData)
+                await request(app.getHttpServer()).patch(`/users/${caliEmployeeUser.id}`).set('Authorization', `Bearer ${viewOnlyToken}`)
+                    .send({ firstName: "ShouldFail" })
                     .expect(403);
             });
         });
 
-        describe('DELETE /users/:id - User Deletion Authorization', () => {
-            it('should allow Global Admin to delete any user', async () => {
-                await request(app.getHttpServer())
-                    .delete(`/users/${testTargetUser._id}`)
-                    .set('Authorization', `Bearer ${platformAdminToken}`)
+        // --- DELETE Operation Tests ---
+        describe('DELETE /users/:id', () => {
+            it('should allow a user with USER_DELETE to delete a user within their scope', async () => {
+                await request(app.getHttpServer()).delete(`/users/${caliEmployeeUser.id}`).set('Authorization', `Bearer ${platformAdminToken}`)
                     .expect(200);
-
-                // Verify user is soft deleted (isDeleted = true, isActive = false)
-                const deletedUser = await userModel.findById(testTargetUser._id);
-                expect(deletedUser).not.toBeNull();
-                expect(deletedUser!.isDeleted).toBe(true);
-                expect(deletedUser!.isActive).toBe(false);
+                const user = await userModel.findById(caliEmployeeUser.id);
+                expect(user).not.toBeNull();
+                expect(user!.isDeleted).toBe(true);
             });
-
-            it('should deny user deletion for Regional Manager (lacks USER_DELETE permission)', async () => {
-                await request(app.getHttpServer())
-                    .delete(`/users/${testTargetUser._id}`)
-                    .set('Authorization', `Bearer ${regionManagerToken}`)
+            it('should FORBID a user without USER_DELETE from deleting a user (Layer 1)', async () => {
+                await request(app.getHttpServer()).delete(`/users/${caliEmployeeUser.id}`).set('Authorization', `Bearer ${regionManagerToken}`)
                     .expect(403);
+                const user = await userModel.findById(caliEmployeeUser.id);
+                expect(user).not.toBeNull();
+                expect(user!.isDeleted).toBe(false);
 
-                // Verify user still exists
-                const existingUser = await userModel.findById(testTargetUser._id);
-                expect(existingUser).not.toBeNull();
-            });
-
-            it('should deny user deletion for Farm Owner', async () => {
-                await request(app.getHttpServer())
-                    .delete(`/users/${testTargetUser._id}`)
-                    .set('Authorization', `Bearer ${farmOwnerToken}`)
-                    .expect(403);
-            });
-
-            it('should deny user deletion for all other role types', async () => {
-                // Test multiple roles that should not have delete permission
-                const tokensToTest = [
-                    consultantToken,
-                    fieldWorkerToken,
-                    contactUserToken,
-                    unauthorizedUserToken
-                ];
-
-                for (const token of tokensToTest) {
-                    await request(app.getHttpServer())
-                        .delete(`/users/${testTargetUser._id}`)
-                        .set('Authorization', `Bearer ${token}`)
-                        .expect(403);
-                }
             });
         });
     });

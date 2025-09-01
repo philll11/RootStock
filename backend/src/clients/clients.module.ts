@@ -1,10 +1,12 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import { ClientsController } from './clients.controller';
-import { SubsidiariesModule } from '../subsidiaries/subsidiaries.module';
+import { ClientResolverService } from './client-resolver/client-resolver.service';
+
 import { IsExistingClientConstraint } from "./validators/is-existing-client.validator";
 import { IsExistingSingleClientConstraint } from './validators/is-existing-single-client.validator';
-import { ClientResolverModule } from './client-resolver/client-resolver.module';
+
+import { SubsidiariesModule } from '../subsidiaries/subsidiaries.module';
 import { UsersModule } from '../users/users.module';
 import { OrchardsModule } from '../orchards/orchards.module';
 import { CountersModule } from '../counters/counters.module';
@@ -13,16 +15,16 @@ import { CountersModule } from '../counters/counters.module';
   imports: [
     forwardRef(() => SubsidiariesModule),
     forwardRef(() => UsersModule),
-    ClientResolverModule,
     forwardRef(() => OrchardsModule),
     CountersModule,
   ],
   controllers: [ClientsController],
   providers: [
-    ClientsService, 
+    ClientsService,
+    ClientResolverService,
     IsExistingClientConstraint,
     IsExistingSingleClientConstraint
   ],
-  exports: [ClientsService],
+  exports: [ClientsService, ClientResolverService],
 })
 export class ClientsModule {}

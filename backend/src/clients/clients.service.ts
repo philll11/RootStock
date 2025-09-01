@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 
@@ -10,68 +10,54 @@ import { ClientQueryBuilder } from './builders/clients-query.builder';
 import { ClientResolverService } from './client-resolver/client-resolver.service';
 
 import { UsersService } from '../users/users.service';
-import { User, UserDocument } from '../users/schemas/user.schema';
-import { Orchard, OrchardDocument } from '../orchards/schemas/orchard.schema';
+import { User, UserDocument, UserType } from '../users/schemas/user.schema';
+import { OrchardsService } from '../orchards/orchards.service';
 
 import { PERMISSIONS } from '../common/constants/permissions.constants';
 import { CountersService } from '../counters/counters.service';
 import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
 import { VisibilityScope } from '../roles/schemas/role.schema';
 
+
 @Injectable()
 export class ClientsService {
   constructor(
     @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(Orchard.name) private orchardModel: Model<OrchardDocument>,
     @InjectConnection() private connection: Connection,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => OrchardsService))
+    private readonly orchardsService: OrchardsService,
     private readonly clientResolverService: ClientResolverService,
     private readonly countersService: CountersService,
   ) { }
 
-  async create(createClientDto: CreateClientDto, user: User): Promise<Client> {
-
-    const userRole = user.roleId as any;
-
-    // A Global user can create a client anywhere. No further checks needed.
-    if (userRole.visibilityScope !== VisibilityScope.GLOBAL) {
-      if (!createClientDto.subsidiaryId) {
-        throw new ForbiddenException('You must provide a subsidiary ID when creating a client.');
-      }
-      // For non-global users, we must verify they have access to the target subsidiary.
-      const accessibleSubsidiaryIds = await this.clientResolverService.getAccessibleSubsidiaryIdsForUser(user);
-      const accessibleSubsidiaryIdStrings = accessibleSubsidiaryIds.map(id => id.toString());
-
-      if (createClientDto.subsidiaryId && !accessibleSubsidiaryIdStrings.includes(createClientDto.subsidiaryId)) {
-        throw new ForbiddenException(
-          `You do not have permission to create a client under subsidiary ID "${createClientDto.subsidiaryId}".`,
-        );
+  async create(createClientDto: CreateClientDto, requestingUser: UserDocument): Promise<ClientDocument> {
+    // === LAYER 2 VALIDATION: A user can only create a client within a subsidiary they have access to ===
+    if (createClientDto.subsidiaryId) {
+      const accessibleSubs = await this.clientResolverService.getAccessibleSubsidiaryIdsForUser(requestingUser);
+      const isAllowed = accessibleSubs.some(id => id.toString() === createClientDto.subsidiaryId);
+      // Global users don't get a list of subs, so we must check their scope directly.
+      const userRole = requestingUser.roleId as any;
+      if (!isAllowed && userRole.visibilityScope !== VisibilityScope.GLOBAL) {
+        throw new ForbiddenException(`You do not have permission to create a client under subsidiary ID "${createClientDto.subsidiaryId}".`);
       }
     }
-    
+
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('client', 'CLI');
-    const paddedSequence = sequence_value.toString().padStart(4, '0');
-    const recordId = `${prefix}${paddedSequence}`;
+    const recordId = `${prefix}${sequence_value.toString().padStart(4, '0')}`;
 
-    const { subsidiaryId, ...restOfDto } = createClientDto;
-    const payload: Partial<Client> = { ...restOfDto, recordId };
-
-    if (subsidiaryId) {
-      payload.subsidiaryId = new Types.ObjectId(subsidiaryId);
-    }
-
-    const newClient = new this.clientModel(payload);
-
+    const newClient = new this.clientModel({ ...createClientDto, recordId });
     return newClient.save();
   }
-  async findAll(query: QueryClientDto, user: User): Promise<Client[]> {
+
+  async findAll(query: QueryClientDto, user: UserDocument): Promise<ClientDocument[]> {
     const queryBuilder = new ClientQueryBuilder(query, user, this.clientResolverService);
     const filter = await queryBuilder.build();
     return this.clientModel.find(filter).exec();
   }
 
-  async findAllBySubsidiaryId(subsidiaryId: string, queryDto: QueryClientDto, user: User): Promise<Client[]> {
+  async findAllBySubsidiaryId(subsidiaryId: string, queryDto: QueryClientDto, user: UserDocument): Promise<ClientDocument[]> {
     const queryBuilder = new ClientQueryBuilder(queryDto, user, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.subsidiaryId = new Types.ObjectId(subsidiaryId);
@@ -84,17 +70,12 @@ export class ClientsService {
    * @param user - The authenticated user making the request.
    * @returns The found client document.
    */
-  async findOne(clientId: string, user: User, options: { includeInactive?: boolean } = {}): Promise<Client> {
+  async findOne(clientId: string, user: UserDocument, options: { includeInactive?: boolean } = {}): Promise<ClientDocument> {
     const queryDto = options.includeInactive ? { includeInactives: true } : {};
     const queryBuilder = new ClientQueryBuilder(queryDto, user, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
-    const finalFilter = {
-      $and: [
-        securityFilter,
-        { _id: new Types.ObjectId(clientId) }
-      ]
-    };
+    const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(clientId) }] };
 
     const client = await this.clientModel.findOne(finalFilter).exec();
     if (!client) {
@@ -110,50 +91,79 @@ export class ClientsService {
    * @param user - The authenticated user making the request.
    * @returns The updated client document.
    */
-  async update(clientId: string, updateClientDto: UpdateClientDto, user: User): Promise<Client> {
-    await this.findOne(clientId, user, { includeInactive: true }); // Will raise error if user does not have permission to view record
+  async update(clientId: string, updateClientDto: UpdateClientDto, user: UserDocument): Promise<ClientDocument> {
+    // The DTO and schema now prevent subsidiaryId from being changed. This check simplifies significantly.
+    const clientToUpdate = await this.findOne(clientId, user, { includeInactive: true });
 
     if (updateClientDto.isActive === false) {
-
-      // Check for child User records
       const activeUserCount = await this.usersService.countActiveByClientId(clientId);
       if (activeUserCount > 0) {
-        throw new ConflictException(`This client cannot be deactivated because it has ${activeUserCount} active user(s) assigned to it. Please reassign or deactivate the users first.`);
+        throw new ConflictException(`This client cannot be deactivated because it has ${activeUserCount} active user(s) assigned to it.`);
       }
-
-      // Check for child Orchard records
-      const activeOrchardCount = await this.orchardModel.countDocuments({ clientId: new Types.ObjectId(clientId), isActive: true, isDeleted: false });
+      const activeOrchardCount = await this.orchardsService.countActiveByClientId(clientId);
       if (activeOrchardCount > 0) {
-        throw new ConflictException(`This client cannot be deactivated because it has ${activeOrchardCount} active orchard(s). Please deactivate the orchards first.`);
+        throw new ConflictException(`This client cannot be deactivated because it has ${activeOrchardCount} active orchard(s).`);
       }
     }
 
-    const { subsidiaryId, isActive, ...restOfDto } = updateClientDto;
+    const { isActive, ...restOfDto } = updateClientDto;
     const updatePayload: Partial<Client> = { ...restOfDto };
 
-    const userPermissions = (user.roleId as any)?.permissions || [];
-
     if (isActive !== undefined) {
+      const userPermissions = (user.roleId as any)?.permissions || [];
       if (!userPermissions.includes(PERMISSIONS.CLIENT_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
       updatePayload.isActive = isActive;
     }
 
-    if (subsidiaryId) {
-      updatePayload.subsidiaryId = new Types.ObjectId(subsidiaryId);
-    }
-
-    const updatedClient = await this.clientModel.findByIdAndUpdate(
-      clientId,
-      { $set: updatePayload },
-      { new: true, runValidators: true },
-    ).exec();
-
+    const updatedClient = await this.clientModel.findByIdAndUpdate(clientId, { $set: updatePayload }, { new: true }).exec();
     if (!updatedClient) {
       throw new NotFoundException(`Client with ID "${clientId}" could not be updated.`);
     }
     return updatedClient;
+  }
+
+  /**
+* Handles assigning users to this client, enforcing all security layers.
+* Corresponds to the `PUT /clients/:id/users` endpoint.
+*/
+  async assignUsers(clientId: string, userIdsToAssign: string[], requestingUser: UserDocument): Promise<void> {
+    const client = await this.findOne(clientId, requestingUser); // Layer 2 check
+
+    if (userIdsToAssign.length === 0) {
+      // If clearing users, just remove this client from everyone.
+      await this.userModel.updateMany({ clientIds: clientId }, { $pull: { clientIds: clientId } }).exec();
+      return;
+    }
+
+    const usersToAssign = await this.userModel.find({ _id: { $in: userIdsToAssign } }).select('userType clientIds recordId').exec();
+    if (usersToAssign.length !== userIdsToAssign.length) {
+      throw new BadRequestException('One or more user IDs provided are invalid.');
+    }
+
+    // LAYER 3 VALIDATION: Enforce Subsidiary Containment for 'contact' users.
+    for (const user of usersToAssign) {
+        if (user.userType === UserType.CONTACT) {
+            await this._validateContactAssignmentRule(client, user);
+        }
+    }
+
+    const session = await this.connection.startSession();
+    session.startTransaction();
+    try {
+      // Remove the client from users who are no longer in the list.
+      await this.userModel.updateMany({ clientIds: clientId, _id: { $nin: userIdsToAssign } }, { $pull: { clientIds: clientId } }, { session });
+      // Add the client to all users in the new list.
+      await this.userModel.updateMany({ _id: { $in: userIdsToAssign } }, { $addToSet: { clientIds: clientId } }, { session });
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 
   /**
@@ -162,25 +172,17 @@ export class ClientsService {
    * @param user - The authenticated user making the request.
    * @returns The soft-deleted client document.
    */
-  async remove(clientId: string, user: User): Promise<Client> {
-    await this.findOne(clientId, user); // Will raise error if user does not have permission to view record
+  async remove(clientId: string, user: UserDocument): Promise<ClientDocument> {
+    await this.findOne(clientId, user); // Layer 2 Client Check
 
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
-      // Handle concurrent soft deletion with transaction safety
-      const deletedClient = await handleConcurrentSoftDelete<ClientDocument>(
-        this.clientModel,
-        clientId,
-        session,
-        'Client'
-      );
-
-      // Disassociate users from this client
+      const deletedClient = await handleConcurrentSoftDelete<ClientDocument>(this.clientModel, clientId, session, 'Client');
       await this.userModel.updateMany({ clientIds: clientId }, { $pull: { clientIds: clientId } }, { session }).exec();
 
-      // Soft-delete associated orchards
-      await this.orchardModel.updateMany({ clientId: new Types.ObjectId(clientId) }, { isDeleted: true, isActive: false }, { session }).exec();
+      // TODO: Evaluate whether we should soft-delete orchards as well or simply throw a 409 Conflict
+      await this.orchardsService.softDeleteByClientId(clientId, session);
 
       await session.commitTransaction();
       return deletedClient;
@@ -190,8 +192,40 @@ export class ClientsService {
     } finally {
       session.endSession();
     }
+
   }
 
+
+  /**
+   * LAYER 3 VALIDATION HELPER
+   * Enforces the Strict Data Silo rule for contact user assignments.
+   * - If target is in a sub, contact must also be from that sub.
+   * - If target is standalone, contact cannot be from any sub.
+   * @private
+   */
+  private async _validateContactAssignmentRule(targetClient: ClientDocument, contactUser: UserDocument): Promise<void> {
+    // Find all clients the contact is currently assigned to.
+    const contactCurrentClients = await this.clientModel.find({ _id: { $in: contactUser.clientIds } }).select('subsidiaryId').exec();
+
+    if (contactCurrentClients.length === 0) return; // No existing clients means no conflict.
+
+    if (targetClient.subsidiaryId) {
+      // CASE 1: The target client is IN a subsidiary.
+      // The contact must already belong to at least one client in that SAME subsidiary.
+      const targetSubId = targetClient.subsidiaryId.toString();
+      const contactBelongsToTargetSub = contactCurrentClients.some(c => c.subsidiaryId?.toString() === targetSubId);
+      if (!contactBelongsToTargetSub) {
+        throw new BadRequestException(`Contact user ${contactUser.recordId} belongs to a different subsidiary and cannot be assigned to this client.`);
+      }
+    } else {
+      // CASE 2: The target client is STANDALONE.
+      // The contact must NOT belong to any client that is part of a subsidiary.
+      const contactBelongsToAnySub = contactCurrentClients.some(c => !!c.subsidiaryId);
+      if (contactBelongsToAnySub) {
+        throw new BadRequestException(`Contact user ${contactUser.recordId} belongs to a subsidiary and cannot be assigned to a standalone client.`);
+      }
+    }
+  }
 
   /**
  * Validates that all client IDs in an array exist, are active, and not deleted.
@@ -199,9 +233,7 @@ export class ClientsService {
  * @returns `true` if all IDs are valid, `false` otherwise.
  */
   async validateClientIds(clientIds: string[]): Promise<boolean> {
-    if (!clientIds || clientIds.length === 0) {
-      return true;
-    }
+    if (!clientIds || clientIds.length === 0) return true;
     const activeClientsCount = await this.clientModel.countDocuments({
       _id: { $in: clientIds },
       isActive: true,

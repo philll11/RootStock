@@ -32,7 +32,7 @@ export class Orchard {
     @Prop({ type: String, required: true, trim: true })
     name: string;
 
-    @Prop({ type: Types.ObjectId, ref: 'Client', required: true, index: true })
+    @Prop({ type: Types.ObjectId, ref: 'Client', required: true, index: true, immutable: true })
     clientId: Types.ObjectId;
 
     @Prop({ type: AddressSchema, default: {} })

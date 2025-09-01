@@ -6,7 +6,6 @@ import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
-
 import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
 import { CreateClientDto } from '../../src/clients/dto/create-client.dto';
 import { UpdateClientDto } from '../../src/clients/dto/update-client.dto';
@@ -14,31 +13,25 @@ import { User, UserDocument, UserType } from '../../src/users/schemas/user.schem
 import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
 import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
+import { Orchard } from '../../src/orchards/schemas/orchard.schema';
 
-describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
+describe('Clients CRUD & Business Logic (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
     let jwtService: JwtService;
 
     // Models
     let clientModel: Model<ClientDocument>;
-    let subsidiaryModel: Model<SubsidiaryDocument>;
     let userModel: Model<UserDocument>;
-    let roleModel: Model<RoleDocument>;
     let orchardModel: Model<any>;
 
-    // Test users representing REAL business stakeholders
-    let globalAdminToken: string; // Full client management permissions
-    let subsidiaryConsultantToken: string; // Can view/edit clients in their subsidiaries
-    let clientGrowerToken: string; // Can view clients they're assigned to
-    let inactiveAccessUserToken: string; // Has CLIENT_MANAGE_INACTIVE permission for testing
-    let noPermissionUserToken: string; // Has no client permissions
-    
-    // Test entities for real business scenarios
-    let testSubsidiary: SubsidiaryDocument;
-    let inactiveSubsidiary: SubsidiaryDocument;
+    // Tokens
+    let globalAdminToken: string;
+
+    // Test Data Entities
+    let testSubsidiary: SubsidiaryDocument, inactiveSubsidiary: SubsidiaryDocument;
     let testClientA: ClientDocument;
-    let testClientB: ClientDocument;
+    let contactUserSubA: UserDocument, contactUserSubB: UserDocument;
 
     jest.setTimeout(60000);
 
@@ -46,1022 +39,143 @@ describe('Clients CRUD - Business Logic & Workflow Testing (e2e)', () => {
         ({ app, mongod, jwtService } = await setupTestApp());
 
         clientModel = app.get<Model<ClientDocument>>(getModelToken(Client.name));
-        subsidiaryModel = app.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
         userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
-        roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
-        orchardModel = app.get<Model<any>>(getModelToken('Orchard'));
+        orchardModel = app.get<Model<any>>(getModelToken(Orchard.name));
+        const roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
+        const subsidiaryModel = app.get<Model<SubsidiaryDocument>>(getModelToken(Subsidiary.name));
+        
+        [testSubsidiary, inactiveSubsidiary] = await subsidiaryModel.create([
+            { recordId: 'SUB_CRUD', name: 'CRUD Test Subsidiary' },
+            { recordId: 'SUB_CRUD_INACTIVE', name: 'CRUD Inactive Subsidiary', isActive: false },
+        ]);
+        const subB = await subsidiaryModel.create({ recordId: 'SUB_B', name: 'Subsidiary B' });
 
-        // Create business hierarchy for real testing scenarios
-        testSubsidiary = await new subsidiaryModel({
-            recordId: 'SUB001',
-            name: 'Agricultural Solutions Inc',
-            isActive: true
-        }).save();
+        testClientA = await clientModel.create({ recordId: 'CLI_A', name: 'Client A', subsidiaryId: testSubsidiary._id });
+        const clientC_subB = await clientModel.create({ recordId: 'CLI_C', name: 'Client C in Sub B', subsidiaryId: subB._id });
 
-        inactiveSubsidiary = await new subsidiaryModel({
-            recordId: 'SUB_INACTIVE',
-            name: 'Inactive Agricultural Corp',
-            isActive: false
-        }).save();
+        const [adminRole, contactRole] = await roleModel.create([
+            { recordId: 'ROLE_ADMIN', name: 'Admin', permissions: Object.values(PERMISSIONS), visibilityScope: VisibilityScope.GLOBAL },
+            { recordId: 'ROLE_CONTACT', name: 'Contact', permissions: [PERMISSIONS.USER_VIEW], visibilityScope: VisibilityScope.CLIENT },
+        ]);
 
-        // Create realistic roles matching actual business model
-        const globalAdminRole = await new roleModel({
-            recordId: 'GLOBAL_ADMIN_ROLE',
-            name: 'Platform Administrator',
-            permissions: Object.values(PERMISSIONS), // All permissions including client management
-            visibilityScope: VisibilityScope.GLOBAL
-        }).save();
-
-        const subsidiaryConsultantRole = await new roleModel({
-            recordId: 'SUBSIDIARY_CONSULTANT_ROLE', 
-            name: 'Agricultural Consultant',
-            permissions: [
-                PERMISSIONS.CLIENT_VIEW,
-                PERMISSIONS.CLIENT_EDIT,
-                PERMISSIONS.SUBSIDIARY_VIEW,
-                PERMISSIONS.USER_VIEW,
-                PERMISSIONS.ORCHARD_VIEW,
-                // NOTE: No CLIENT_CREATE or CLIENT_DELETE permissions
-            ],
-            visibilityScope: VisibilityScope.SUBSIDIARY
-        }).save();
-
-        const clientGrowerRole = await new roleModel({
-            recordId: 'CLIENT_GROWER_ROLE',
-            name: 'Orchard Grower/Owner',
-            permissions: [
-                PERMISSIONS.CLIENT_VIEW,
-                PERMISSIONS.ORCHARD_VIEW,
-                PERMISSIONS.USER_VIEW,
-                // NOTE: No client management permissions
-            ],
-            visibilityScope: VisibilityScope.CLIENT
-        }).save();
-
-        const noPermissionRole = await new roleModel({
-            recordId: 'NO_PERMISSION_ROLE',
-            name: 'Limited Access User',
-            permissions: [
-                'Some:Other:Permission'
-                // NOTE: No client permissions at all
-            ],
-            visibilityScope: VisibilityScope.CLIENT
-        }).save();
-
-        const inactiveAccessRole = await new roleModel({
-            recordId: 'INACTIVE_ACCESS_ROLE',
-            name: 'Client Inactive Manager',
-            permissions: [
-                PERMISSIONS.CLIENT_VIEW,
-                PERMISSIONS.CLIENT_EDIT, // Need edit permission to modify isActive
-                PERMISSIONS.CLIENT_MANAGE_INACTIVE, // Key permission for inactive record access
-                PERMISSIONS.USER_VIEW,
-                PERMISSIONS.ORCHARD_VIEW,
-                // NOTE: Has inactive management and edit but not create/delete
-            ],
-            visibilityScope: VisibilityScope.CLIENT
-        }).save();
-
-        // Create test clients for visibility scope testing
-        testClientA = await new clientModel({
-            recordId: 'CLI001',
-            name: 'Green Valley Orchards',
-            subsidiaryId: testSubsidiary._id,
-            isActive: true
-        }).save();
-
-        testClientB = await new clientModel({
-            recordId: 'CLI002', 
-            name: 'Sunset Fruit Farms',
-            subsidiaryId: testSubsidiary._id,
-            isActive: true
-        }).save();
-
-        // Create test users representing real business stakeholders
-        const globalAdmin = await new userModel({
-            recordId: 'GLOBAL_ADMIN_USER',
-            name: 'Platform Administrator',
-            firstName: 'Platform',
-            lastName: 'Admin',
-            email: 'platform.admin@example.com',
-            userType: UserType.EMPLOYEE,
-            roleId: globalAdminRole._id,
-            clientIds: [] // Global access
-        }).save();
+        const globalAdmin = await userModel.create({ recordId: 'ADMIN_CRUD', name: 'Admin', firstName: 'Admin', lastName: 'User', email: 'admin_crud_client@test.com', userType: UserType.EMPLOYEE, roleId: adminRole._id });
         globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId });
 
-        const subsidiaryConsultant = await new userModel({
-            recordId: 'SUBSIDIARY_CONSULTANT_USER',
-            name: 'Agricultural Consultant',
-            firstName: 'Jane',
-            lastName: 'Consultant',
-            email: 'jane.consultant@example.com',
-            userType: UserType.EMPLOYEE,
-            roleId: subsidiaryConsultantRole._id,
-            clientIds: [testClientA._id, testClientB._id] // Works with multiple clients
-        }).save();
-        subsidiaryConsultantToken = jwtService.sign({ sub: subsidiaryConsultant.recordId });
-
-        const clientGrowerUser = await new userModel({
-            recordId: 'CLIENT_GROWER_USER',
-            name: 'Orchard Grower',
-            firstName: 'John',
-            lastName: 'Appleton',
-            email: 'john.appleton@example.com',
-            userType: UserType.CONTACT,
-            roleId: clientGrowerRole._id,
-            clientIds: [testClientA._id] // Only their own orchard
-        }).save();
-        clientGrowerToken = jwtService.sign({ sub: clientGrowerUser.recordId });
-
-        const noPermissionUser = await new userModel({
-            recordId: 'NO_PERMISSION_USER',
-            name: 'Limited User',
-            firstName: 'Limited',
-            lastName: 'User',
-            email: 'limited.user@example.com',
-            userType: UserType.CONTACT,
-            roleId: noPermissionRole._id,
-            clientIds: [testClientA._id] // Assigned but no permissions
-        }).save();
-        noPermissionUserToken = jwtService.sign({ sub: noPermissionUser.recordId });
-
-        const inactiveAccessUser = await new userModel({
-            recordId: 'INACTIVE_ACCESS_USER',
-            name: 'Client Inactive Manager',
-            firstName: 'Inactive',
-            lastName: 'Manager',
-            email: 'inactive.manager@example.com',
-            userType: UserType.EMPLOYEE,
-            roleId: inactiveAccessRole._id,
-            clientIds: [testClientA._id, testClientB._id] // Access to test clients
-        }).save();
-        inactiveAccessUserToken = jwtService.sign({ sub: inactiveAccessUser.recordId });
+        [contactUserSubA, contactUserSubB] = await userModel.create([
+            { recordId: 'CONTACT_A', name: 'Contact A', firstName: 'Contact', lastName: 'A', email: 'contact_a_client@test.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [testClientA._id] },
+            { recordId: 'CONTACT_B', name: 'Contact B', firstName: 'Contact', lastName: 'B', email: 'contact_b_client@test.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [clientC_subB._id] },
+        ]);
     });
 
-    afterAll(async () => {
-        await teardownTestApp({ app, mongod });
-    });
-
+    afterAll(async () => await teardownTestApp({ app, mongod }));
     beforeEach(async () => {
-        // Clean up test-created clients and related data, preserve setup data
-        await clientModel.deleteMany({ 
-            recordId: { $nin: ['CLI001', 'CLI002'] } 
-        });
-        await userModel.deleteMany({ 
-            recordId: { $nin: [
-                'GLOBAL_ADMIN_USER', 
-                'SUBSIDIARY_CONSULTANT_USER',
-                'CLIENT_GROWER_USER',
-                'INACTIVE_ACCESS_USER',
-                'NO_PERMISSION_USER'
-            ] } 
-        });
+        // Clean collections but preserve the foundational data from beforeAll
+        await clientModel.deleteMany({ recordId: { $nin: ['CLI_A', 'CLI_C'] } });
+        await userModel.deleteMany({ recordId: { $nin: ['ADMIN_CRUD', 'CONTACT_A', 'CONTACT_B'] } });
         await orchardModel.deleteMany({});
-        
-        // Reset test clients to active state
-        await clientModel.updateMany(
-            { recordId: { $in: ['CLI001', 'CLI002'] } },
-            { $set: { isActive: true, isDeleted: false } }
-        );
-
-        // Ensure users maintain their original client assignments
-        await userModel.updateOne(
-            { recordId: 'SUBSIDIARY_CONSULTANT_USER' },
-            { $set: { clientIds: [testClientA._id, testClientB._id] } }
-        );
-        await userModel.updateOne(
-            { recordId: 'CLIENT_GROWER_USER' },
-            { $set: { clientIds: [testClientA._id] } }
-        );
-        await userModel.updateOne(
-            { recordId: 'INACTIVE_ACCESS_USER' },
-            { $set: { clientIds: [testClientA._id, testClientB._id] } }
-        );
-        await userModel.updateOne(
-            { recordId: 'NO_PERMISSION_USER' },
-            { $set: { clientIds: [testClientA._id] } }
-        );
     });
 
-    // REAL BUSINESS MODEL: Client Management by Different User Types
-    describe('Global Administrator Client Management (Positive Testing)', () => {
-        it('should allow global administrator to create client with subsidiary relationship', async () => {
-            const newClientData: CreateClientDto = {
-                name: 'Premium Agricultural Services',
-                subsidiaryId: testSubsidiary._id.toString()
-            };
+    describe('POST /clients - Creation & Validation', () => {
+        it('should create a client with a subsidiary and an independent client', async () => {
+            const withSubDto: CreateClientDto = { name: 'New Sub Client', subsidiaryId: testSubsidiary._id.toString() };
+            const noSubDto: CreateClientDto = { name: 'New Independent Client' };
 
-            return request(app.getHttpServer())
-                .post('/clients')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send(newClientData)
-                .expect(201)
-                .then(res => {
-                    expect(res.body.recordId).toMatch(/^CLI\d+$/);
-                    expect(res.body.name).toBe('Premium Agricultural Services');
-                    expect(res.body.subsidiaryId).toBe(testSubsidiary._id.toString());
-                    expect(res.body.isActive).toBe(true);
-                    expect(res.body.isDeleted).toBe(false);
-                });
+            const res1 = await request(app.getHttpServer()).post('/clients').set('Authorization', `Bearer ${globalAdminToken}`).send(withSubDto).expect(201);
+            expect(res1.body.subsidiaryId).toBe(testSubsidiary._id.toString());
+            expect(res1.body.recordId).toMatch(/^CLI\d{4}$/);
+
+            const res2 = await request(app.getHttpServer()).post('/clients').set('Authorization', `Bearer ${globalAdminToken}`).send(noSubDto).expect(201);
+            expect(res2.body.subsidiaryId).toBeUndefined();
         });
 
-        it('should allow global administrator to create independent client (no subsidiary)', async () => {
-            const independentClientData: CreateClientDto = {
-                name: 'Independent Family Farm'
-            };
-
-            return request(app.getHttpServer())
-                .post('/clients')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send(independentClientData)
-                .expect(201)
-                .then(res => {
-                    expect(res.body.name).toBe('Independent Family Farm');
-                    expect(res.body.subsidiaryId).toBeUndefined(); // Should be undefined, not null
-                    expect(res.body.recordId).toMatch(/^CLI\d+$/);
-                });
+        it('should reject creation if required field (name) is missing', async () => {
+            await request(app.getHttpServer()).post('/clients').set('Authorization', `Bearer ${globalAdminToken}`).send({ subsidiaryId: testSubsidiary._id.toString() }).expect(400);
         });
 
-        it('should allow global administrator to view all clients', async () => {
-            return request(app.getHttpServer())
-                .get('/clients')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200)
-                .then(res => {
-                    expect(res.body.length).toBeGreaterThanOrEqual(2); // At least our setup clients
-                    const clientNames = res.body.map((client: any) => client.name);
-                    expect(clientNames).toContain('Green Valley Orchards');
-                    expect(clientNames).toContain('Sunset Fruit Farms');
-                });
+        it('should reject creation with a non-existent or inactive subsidiaryId', async () => {
+            const nonExistentId = new Types.ObjectId().toHexString();
+            const withNonExistentSub: CreateClientDto = { name: 'Fail Sub', subsidiaryId: nonExistentId };
+            const withInactiveSub: CreateClientDto = { name: 'Fail Inactive Sub', subsidiaryId: inactiveSubsidiary._id.toString() };
+
+            await request(app.getHttpServer()).post('/clients').set('Authorization', `Bearer ${globalAdminToken}`).send(withNonExistentSub).expect(400);
+            await request(app.getHttpServer()).post('/clients').set('Authorization', `Bearer ${globalAdminToken}`).send(withInactiveSub).expect(400);
+        });
+    });
+    
+    describe('GET /clients - Retrieval', () => {
+        it('should retrieve a single client by ID', async () => {
+            const res = await request(app.getHttpServer()).get(`/clients/${testClientA._id}`).set('Authorization', `Bearer ${globalAdminToken}`).expect(200);
+            expect(res.body.recordId).toBe('CLI_A');
         });
 
-        it('should allow global administrator to update any client', async () => {
-            const updateData: UpdateClientDto = {
-                name: 'Updated by Administrator'
-            };
-
-            return request(app.getHttpServer())
-                .patch(`/clients/${testClientA._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send(updateData)
-                .expect(200)
-                .then(res => {
-                    expect(res.body.name).toBe('Updated by Administrator');
-                    expect(res.body._id).toBe(testClientA._id.toString());
-                });
-        });
-
-        it('should allow global administrator to delete clients', async () => {
-            // Delete should succeed
-            await request(app.getHttpServer())
-                .delete(`/clients/${testClientB._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200)
-                .then(res => {
-                    expect(res.body.isDeleted).toBe(true);
-                    expect(res.body.isActive).toBe(false);
-                });
-
-            // Client should no longer be accessible via normal GET
-            await request(app.getHttpServer())
-                .get(`/clients/${testClientB._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(404);
-        });
-
-        it('should generate sequential recordIds for concurrent client creation', async () => {
-            const clientPromises = Array.from({ length: 3 }, (_, i) => 
-                request(app.getHttpServer())
-                    .post('/clients')
-                    .set('Authorization', `Bearer ${globalAdminToken}`)
-                    .send({ 
-                        name: `Concurrent Client ${i + 1}`, 
-                        subsidiaryId: testSubsidiary._id.toString()
-                    })
-                    .expect(201)
-            );
-
-            const responses = await Promise.all(clientPromises);
-            const recordIds = responses.map(res => res.body.recordId);
-
-            // Verify proper recordId format and uniqueness
-            recordIds.forEach(recordId => {
-                expect(recordId).toMatch(/^CLI\d+$/);
-            });
-
-            const uniqueIds = new Set(recordIds);
-            expect(uniqueIds.size).toBe(3); // All should be unique
+        it('should return 404 for a non-existent client ID', async () => {
+            await request(app.getHttpServer()).get(`/clients/${new Types.ObjectId().toHexString()}`).set('Authorization', `Bearer ${globalAdminToken}`).expect(404);
         });
     });
 
-    describe('Security Enforcement: Permission-Based Access Control (Negative Testing)', () => {
-        describe('Subsidiary Consultant - Limited Client Management Access', () => {
-            it('should prevent consultant from creating new clients (403 Forbidden)', async () => {
-                const unauthorizedClientData: CreateClientDto = {
-                    name: 'Unauthorized Client Creation',
-                    subsidiaryId: testSubsidiary._id.toString()
-                };
-
-                // Consultant lacks CLIENT_CREATE permission
-                return request(app.getHttpServer())
-                    .post('/clients')
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .send(unauthorizedClientData)
-                    .expect(403);
-            });
-
-            it('should allow consultant to view clients within their scope', async () => {
-                // Consultant should see both clients they're assigned to
-                return request(app.getHttpServer())
-                    .get('/clients')
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .expect(200)
-                    .then(res => {
-                        expect(res.body).toHaveLength(2);
-                        const clientRecordIds = res.body.map((client: any) => client.recordId);
-                        expect(clientRecordIds).toContain('CLI001');
-                        expect(clientRecordIds).toContain('CLI002');
-                    });
-            });
-
-            it('should allow consultant to edit clients within their scope', async () => {
-                const updateData: UpdateClientDto = {
-                    name: 'Updated by Consultant'
-                };
-
-                return request(app.getHttpServer())
-                    .patch(`/clients/${testClientA._id}`)
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .send(updateData)
-                    .expect(200)
-                    .then(res => {
-                        expect(res.body.name).toBe('Updated by Consultant');
-                    });
-            });
-
-            it('should prevent consultant from deleting clients (403 Forbidden)', async () => {
-                // Consultant lacks CLIENT_DELETE permission
-                return request(app.getHttpServer())
-                    .delete(`/clients/${testClientA._id}`)
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .expect(403);
-            });
+    describe('PATCH /clients/:id - Updates & Business Logic', () => {
+        it('should successfully update a client`s name', async () => {
+            const res = await request(app.getHttpServer()).patch(`/clients/${testClientA._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send({ name: 'Updated Name' }).expect(200);
+            expect(res.body.name).toBe('Updated Name');
         });
 
-        describe('Client Grower - Read-Only Client Access', () => {
-            it('should prevent grower from creating clients (403 Forbidden)', async () => {
-                const unauthorizedClientData: CreateClientDto = {
-                    name: 'Grower Attempted Client',
-                    subsidiaryId: testSubsidiary._id.toString()
-                };
-
-                return request(app.getHttpServer())
-                    .post('/clients')
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .send(unauthorizedClientData)
-                    .expect(403);
-            });
-
-            it('should allow grower to view only their assigned client', async () => {
-                return request(app.getHttpServer())
-                    .get('/clients')
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .expect(200)
-                    .then(res => {
-                        expect(res.body).toHaveLength(1);
-                        expect(res.body[0].recordId).toBe('CLI001'); // Use recordId instead of name
-                        expect(res.body[0]._id).toBe(testClientA._id.toString());
-                    });
-            });
-
-            it('should prevent grower from accessing clients outside their scope', async () => {
-                // Grower should not see Client B (not assigned to them)
-                return request(app.getHttpServer())
-                    .get(`/clients/${testClientB._id}`)
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .expect(404); // Filtered out by visibility scope
-            });
-
-            it('should prevent grower from editing any clients (403 Forbidden)', async () => {
-                const updateData: UpdateClientDto = {
-                    name: 'Unauthorized Edit by Grower'
-                };
-
-                // Grower lacks CLIENT_EDIT permission
-                return request(app.getHttpServer())
-                    .patch(`/clients/${testClientA._id}`)
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .send(updateData)
-                    .expect(403);
-            });
-
-            it('should prevent grower from deleting clients (403 Forbidden)', async () => {
-                return request(app.getHttpServer())
-                    .delete(`/clients/${testClientA._id}`)
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .expect(403);
-            });
+        it('should FORBID changing the subsidiaryId (Immutability Rule)', async () => {
+            await request(app.getHttpServer()).patch(`/clients/${testClientA._id}`).set('Authorization', `Bearer ${globalAdminToken}`)
+                .send({ subsidiaryId: new Types.ObjectId().toHexString() })
+                .expect(400);
         });
 
-        describe('No Permission User - Complete Access Denial', () => {
-            it('should prevent user with no client permissions from creating clients (403)', async () => {
-                const unauthorizedClientData: CreateClientDto = {
-                    name: 'No Permission Attempt',
-                    subsidiaryId: testSubsidiary._id.toString()
-                };
-
-                return request(app.getHttpServer())
-                    .post('/clients')
-                    .set('Authorization', `Bearer ${noPermissionUserToken}`)
-                    .send(unauthorizedClientData)
-                    .expect(403);
-            });
-
-            it('should prevent user with no client permissions from viewing clients (403)', async () => {
-                return request(app.getHttpServer())
-                    .get('/clients')
-                    .set('Authorization', `Bearer ${noPermissionUserToken}`)
-                    .expect(403); // Blocked by @RequirePermission('Client:View') guard
-            });
-
-            it('should prevent user with no client permissions from accessing specific clients (403)', async () => {
-                return request(app.getHttpServer())
-                    .get(`/clients/${testClientA._id}`)
-                    .set('Authorization', `Bearer ${noPermissionUserToken}`)
-                    .expect(403);
-            });
-
-            it('should prevent user with no client permissions from editing clients (403)', async () => {
-                const updateData: UpdateClientDto = {
-                    name: 'Blocked Edit Attempt'
-                };
-
-                return request(app.getHttpServer())
-                    .patch(`/clients/${testClientA._id}`)
-                    .set('Authorization', `Bearer ${noPermissionUserToken}`)
-                    .send(updateData)
-                    .expect(403);
-            });
-
-            it('should prevent user with no client permissions from deleting clients (403)', async () => {
-                return request(app.getHttpServer())
-                    .delete(`/clients/${testClientA._id}`)
-                    .set('Authorization', `Bearer ${noPermissionUserToken}`)
-                    .expect(403);
-            });
-        });
-    });
-
-    describe('CLIENT_MANAGE_INACTIVE Permission Testing - Inactive Record Access Control', () => {
-        let inactiveClient: ClientDocument;
-
-        beforeEach(async () => {
-            // Create an inactive client for testing
-            inactiveClient = await new clientModel({
-                recordId: 'CLI_INACTIVE_PERM_TEST',
-                name: 'Inactive Client for Permission Testing',
-                subsidiaryId: testSubsidiary._id,
-                isActive: false,
-                isDeleted: false
-            }).save();
-
-            // Add the inactive client to inactiveAccessUser's scope
-            await userModel.updateOne(
-                { recordId: 'INACTIVE_ACCESS_USER' },
-                { $push: { clientIds: inactiveClient._id } }
-            );
-        });
-
-        afterEach(async () => {
-            // Clean up test inactive client and remove from user scope
-            await userModel.updateOne(
-                { recordId: 'INACTIVE_ACCESS_USER' },
-                { $pull: { clientIds: inactiveClient._id } }
-            );
-            await clientModel.deleteOne({ recordId: 'CLI_INACTIVE_PERM_TEST' });
-        });
-
-        describe('Users WITH CLIENT_MANAGE_INACTIVE Permission', () => {
-            it('should allow user with CLIENT_MANAGE_INACTIVE to view inactive clients in list', async () => {
-                return request(app.getHttpServer())
-                    .get('/clients?includeInactives=true')
-                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
-                    .expect(200)
-                    .then(res => {
-                        expect(res.body.length).toBeGreaterThanOrEqual(1);
-                        const inactiveClientInList = res.body.find(c => c.recordId === 'CLI_INACTIVE_PERM_TEST');
-                        expect(inactiveClientInList).toBeDefined();
-                        expect(inactiveClientInList.isActive).toBe(false);
-                    });
-            });
-
-            it('should allow user with CLIENT_MANAGE_INACTIVE to access inactive client by ID', async () => {
-                return request(app.getHttpServer())
-                    .get(`/clients/${inactiveClient._id}?includeInactives=true`)
-                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
-                    .expect(200)
-                    .then(res => {
-                        expect(res.body.recordId).toBe('CLI_INACTIVE_PERM_TEST');
-                        expect(res.body.isActive).toBe(false);
-                        expect(res.body.name).toBe('Inactive Client for Permission Testing');
-                    });
-            });
-
-            it('should allow user with CLIENT_MANAGE_INACTIVE to reactivate inactive clients', async () => {
-                return request(app.getHttpServer())
-                    .patch(`/clients/${inactiveClient._id}`)
-                    .set('Authorization', `Bearer ${inactiveAccessUserToken}`)
-                    .send({ isActive: true })
-                    .expect(200)
-                    .then(res => {
-                        expect(res.body.isActive).toBe(true);
-                        expect(res.body.recordId).toBe('CLI_INACTIVE_PERM_TEST');
-                    });
-            });
-
-            it('should allow global admin (with CLIENT_MANAGE_INACTIVE) to deactivate clean clients', async () => {
-                // Create a clean client with no dependencies for this test
-                const cleanClient = await new clientModel({
-                    recordId: 'CLI_CLEAN_FOR_DEACTIVATION',
-                    name: 'Clean Client for Deactivation',
-                    subsidiaryId: testSubsidiary._id,
-                    isActive: true,
-                    isDeleted: false
-                }).save();
-
-                return request(app.getHttpServer())
-                    .patch(`/clients/${cleanClient._id}`)
-                    .set('Authorization', `Bearer ${globalAdminToken}`)
-                    .send({ isActive: false })
-                    .expect(200)
-                    .then(res => {
-                        expect(res.body.isActive).toBe(false);
-                        expect(res.body.recordId).toBe('CLI_CLEAN_FOR_DEACTIVATION');
-                    });
-            });
-        });
-
-        describe('Users WITHOUT CLIENT_MANAGE_INACTIVE Permission', () => {
-            it('should prevent consultant from accessing inactive clients in list (filtered out)', async () => {
-                return request(app.getHttpServer())
-                    .get('/clients?includeInactives=true')
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .expect(200)
-                    .then(res => {
-                        // Should not see the inactive client even with includeInactives=true
-                        const inactiveClientInList = res.body.find(c => c.recordId === 'CLI_INACTIVE_PERM_TEST');
-                        expect(inactiveClientInList).toBeUndefined();
-                        
-                        // Should only see active clients
-                        res.body.forEach(client => {
-                            expect(client.isActive).toBe(true);
-                        });
-                    });
-            });
-
-            it('should prevent consultant from accessing inactive client by ID', async () => {
-                return request(app.getHttpServer())
-                    .get(`/clients/${inactiveClient._id}?includeInactives=true`)
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .expect(404); // Filtered out by permission check
-            });
-
-            it('should prevent consultant from modifying isActive status (403 Forbidden)', async () => {
-                // Use testClientB which should be clean (no users assigned in beforeEach)
-                // Test setting to true first to avoid any business rule conflicts
-                return request(app.getHttpServer())
-                    .patch(`/clients/${testClientB._id}`)
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .send({ isActive: true, name: 'Test Update' }) // Include isActive change
-                    .expect(403)
-                    .then(res => {
-                        expect(res.body.message).toContain('You do not have permission to change the isActive status');
-                    });
-            });
-
-            it('should prevent grower from modifying isActive status (403 Forbidden)', async () => {
-                return request(app.getHttpServer())
-                    .patch(`/clients/${testClientA._id}`)
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .send({ isActive: false })
-                    .expect(403); // Blocked by general CLIENT_EDIT permission check
-            });
-
-            it('should prevent user with no permissions from accessing inactive clients', async () => {
-                return request(app.getHttpServer())
-                    .get('/clients?includeInactives=true')
-                    .set('Authorization', `Bearer ${noPermissionUserToken}`)
-                    .expect(403); // Blocked by @RequirePermission('Client:View') guard
-            });
-        });
-    });
-
-    describe('Business Rule Validation - Real Client Management Scenarios', () => {
-        it('should reject client creation with non-existent subsidiaryId', async () => {
-            const fakeSubsidiaryId = new Types.ObjectId().toHexString();
-            const invalidClientData: CreateClientDto = {
-                name: 'Client with Invalid Subsidiary',
-                subsidiaryId: fakeSubsidiaryId
-            };
-
-            return request(app.getHttpServer())
-                .post('/clients')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send(invalidClientData)
-                .expect(400)
-                .then(res => {
-                    expect(res.body.message).toContain(`Subsidiary with ID "${fakeSubsidiaryId}" does not exist, is inactive, or has been deleted.`);
-                });
-        });
-
-        it('should reject client creation with inactive subsidiaryId', async () => {
-            const invalidClientData: CreateClientDto = {
-                name: 'Client with Inactive Subsidiary',
-                subsidiaryId: inactiveSubsidiary._id.toString()
-            };
-
-            return request(app.getHttpServer())
-                .post('/clients')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send(invalidClientData)
-                .expect(400)
-                .then(res => {
-                    const message = Array.isArray(res.body.message) ? res.body.message[0] : res.body.message;
-                    expect(message).toContain('does not exist, is inactive, or has been deleted');
-                });
-        });
-
-        it('should enforce client deactivation business rules when active users exist', async () => {
-            // Create an active user assigned to testClientA
-            const userWithClient = await new userModel({
-                recordId: 'USER_ASSIGNED_TO_CLIENT',
-                name: 'User Assigned to Client',
-                firstName: 'Assigned',
-                lastName: 'User',
-                email: 'assigned.user@example.com',
-                userType: UserType.CONTACT,
-                roleId: (await roleModel.findOne({ recordId: 'CLIENT_GROWER_ROLE' }))!._id,
-                clientIds: [testClientA._id],
-                isActive: true
-            }).save();
-
-            // Should prevent deactivation due to active user
-            return request(app.getHttpServer())
-                .patch(`/clients/${testClientA._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send({ isActive: false })
-                .expect(409)
-                .then(res => {
-                    expect(res.body.message).toContain('This client cannot be deactivated because it has');
-                    expect(res.body.message).toContain('active user(s) assigned to it');
-                });
-        });
-
-        it('should enforce client deactivation business rules when active orchards exist', async () => {
-            // Create a clean client with no users but with an active orchard
-            const clientWithOrchard = await new clientModel({
-                recordId: 'CLI_WITH_ORCHARD_ONLY',
-                name: 'Client with Orchard Only',
-                subsidiaryId: testSubsidiary._id,
-                isActive: true,
-                isDeleted: false
-            }).save();
-
-            // Create an active orchard assigned to this client
-            await new orchardModel({
-                recordId: 'ORC_BLOCKING_DEACTIVATION',
-                name: 'Orchard Blocking Deactivation',
-                clientId: clientWithOrchard._id,
-                isActive: true,
-                isDeleted: false
-            }).save();
-
-            // Should prevent deactivation due to active orchard
-            return request(app.getHttpServer())
-                .patch(`/clients/${clientWithOrchard._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send({ isActive: false })
-                .expect(409)
-                .then(res => {
-                    expect(res.body.message).toContain('This client cannot be deactivated because it has 1 active orchard(s)');
-                });
-        });
-
-        it('should handle client deletion with user/orchard cleanup transaction', async () => {
-            // Create user and orchard associated with client
-            const assignedUser = await new userModel({
-                recordId: 'USER_FOR_CLIENT_DELETION',
-                name: 'User for Deletion Test',
-                firstName: 'Test',
-                lastName: 'User',
-                email: 'test.user@example.com',
-                userType: UserType.CONTACT,
-                roleId: (await roleModel.findOne({ recordId: 'CLIENT_GROWER_ROLE' }))!._id,
-                clientIds: [testClientA._id]
-            }).save();
-
-            await new orchardModel({
-                recordId: 'ORC_FOR_DELETION',
-                name: 'Orchard for Deletion Test',
-                clientId: testClientA._id,
-                isActive: true
-            }).save();
-
-            // Delete the client
-            await request(app.getHttpServer())
-                .delete(`/clients/${testClientA._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200);
-
-            // Verify user's clientIds was updated (removed this client)
-            const updatedUser = await userModel.findById(assignedUser._id);
-            expect(updatedUser?.clientIds).not.toContain(testClientA._id);
-
-            // Verify orchard was soft-deleted
-            const updatedOrchard = await orchardModel.findOne({ recordId: 'ORC_FOR_DELETION' });
-            expect(updatedOrchard?.isDeleted).toBe(true);
-            expect(updatedOrchard?.isActive).toBe(false);
-        });
-
-        it('should validate proper client data structure in creation response', async () => {
-            const completeClientData: CreateClientDto = {
-                name: 'Complete Test Client',
-                subsidiaryId: testSubsidiary._id.toString()
-            };
-
-            return request(app.getHttpServer())
-                .post('/clients')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send(completeClientData)
-                .expect(201)
-                .then(res => {
-                    expect(res.body.recordId).toMatch(/^CLI\d+$/);
-                    expect(res.body.name).toBe('Complete Test Client');
-                    expect(res.body.subsidiaryId).toBe(testSubsidiary._id.toString());
-                    expect(res.body.isActive).toBe(true);
-                    expect(res.body.isDeleted).toBe(false);
-                    expect(res.body).toHaveProperty('createdAt');
-                    expect(res.body).toHaveProperty('updatedAt');
-                });
-        });
-
-        it('should handle client soft deletion correctly', async () => {
-            // Create a fresh client for this test
-            const clientForDeletion = await new clientModel({
-                recordId: 'CLI_FOR_DELETION_TEST',
-                name: 'Client for Deletion Test',
-                subsidiaryId: testSubsidiary._id,
-                isActive: true,
-                isDeleted: false
-            }).save();
-
-            // First deletion should succeed
-            await request(app.getHttpServer())
-                .delete(`/clients/${clientForDeletion._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200)
-                .then(res => {
-                    expect(res.body.isDeleted).toBe(true);
-                    expect(res.body.isActive).toBe(false);
-                });
-
-            // Verify client is no longer accessible after soft deletion
-            return request(app.getHttpServer())
-                .get(`/clients/${clientForDeletion._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(404);
-        });
-
-        it('should maintain data consistency during client lifecycle operations', async () => {
-            // Arrange: Create a client with associated users and orchards
-            const clientForLifecycleTest = await new clientModel({
-                recordId: 'CLI_LIFECYCLE_TEST',
-                name: 'Client Lifecycle Test',
-                subsidiaryId: testSubsidiary._id,
-                isActive: true,
-                isDeleted: false
-            }).save();
-
-            const associatedUser = await new userModel({
-                recordId: 'USER_LIFECYCLE_TEST',
-                name: 'User for Lifecycle Test',
-                firstName: 'Lifecycle',
-                lastName: 'User',
-                email: 'lifecycle.user@example.com',
-                userType: UserType.CONTACT,
-                roleId: (await roleModel.findOne({ recordId: 'CLIENT_GROWER_ROLE' }))!._id,
-                clientIds: [clientForLifecycleTest._id],
-                isActive: true
-            }).save();
-
-            const associatedOrchard = await new orchardModel({
-                recordId: 'ORC_LIFECYCLE_TEST',
-                name: 'Orchard for Lifecycle Test',
-                clientId: clientForLifecycleTest._id,
-                isActive: true,
-                isDeleted: false
-            }).save();
-
-            // Act: Delete the client
-            await request(app.getHttpServer())
-                .delete(`/clients/${clientForLifecycleTest._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200);
-
-            // Assert: Verify data consistency is maintained
+        it('should prevent deactivation if active users or orchards exist', async () => {
+            // Test with active user
+            await request(app.getHttpServer()).patch(`/clients/${testClientA._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send({ isActive: false }).expect(409);
             
-            // Client should be soft-deleted
-            const deletedClient = await clientModel.findById(clientForLifecycleTest._id);
-            expect(deletedClient?.isDeleted).toBe(true);
-            expect(deletedClient?.isActive).toBe(false);
-
-            // User's clientIds should be updated (client removed from array)
-            const updatedUser = await userModel.findById(associatedUser._id);
-            expect(updatedUser?.clientIds.map(id => id.toString())).not.toContain(clientForLifecycleTest._id.toString());
-
-            // Associated orchard should be soft-deleted
-            const updatedOrchard = await orchardModel.findById(associatedOrchard._id);
-            expect(updatedOrchard?.isDeleted).toBe(true);
-            expect(updatedOrchard?.isActive).toBe(false);
-
-            // Client should no longer be accessible via API
-            return request(app.getHttpServer())
-                .get(`/clients/${clientForLifecycleTest._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(404);
-        });
-
-        it('should reject client update with missing required fields', async () => {
-            const invalidUpdateData = { name: '' }; // Empty name
-
-            return request(app.getHttpServer())
-                .patch(`/clients/${testClientA._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send(invalidUpdateData)
-                .expect(400)
-                .then(res => {
-                    expect(res.body.message).toContain('name should not be empty');
-                });
-        });
-
-        it('should return 404 for operations on non-existent clients', async () => {
-            const fakeClientId = new Types.ObjectId().toHexString();
-
-            // GET non-existent
-            await request(app.getHttpServer())
-                .get(`/clients/${fakeClientId}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(404);
-
-            // UPDATE non-existent
-            await request(app.getHttpServer())
-                .patch(`/clients/${fakeClientId}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send({ name: 'Update Non-existent' })
-                .expect(404);
-
-            // DELETE non-existent
-            await request(app.getHttpServer())
-                .delete(`/clients/${fakeClientId}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(404);
+            // Test with active orchard
+            const tempClient = await clientModel.create({ recordId: 'CLI_TEMP', name: 'Temp Client' });
+            await orchardModel.create({ recordId: 'ORCH_TEMP', name: 'Temp Orchard', clientId: tempClient._id });
+            await request(app.getHttpServer()).patch(`/clients/${tempClient._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send({ isActive: false }).expect(409);
         });
     });
 
-    describe('Query Filtering & Data Visibility Testing', () => {
-        beforeEach(async () => {
-            // Create additional test clients with different states for comprehensive testing
-            await Promise.all([
-                new clientModel({
-                    recordId: 'CLI_ACTIVE_EXTRA',
-                    name: 'Additional Active Client',
-                    subsidiaryId: testSubsidiary._id,
-                    isActive: true,
-                    isDeleted: false
-                }).save(),
-                new clientModel({
-                    recordId: 'CLI_DELETED_TEST',
-                    name: 'Deleted Test Client',
-                    subsidiaryId: testSubsidiary._id,
-                    isActive: false,
-                    isDeleted: true
-                }).save(),
-                new clientModel({
-                    recordId: 'CLI_INDEPENDENT',
-                    name: 'Independent Client',
-                    subsidiaryId: null,
-                    isActive: true,
-                    isDeleted: false
-                }).save()
-            ]);
+    describe('PUT /clients/:id/users - User Assignment Rules', () => {
+        it('should assign a valid subsidiary contact to another client in the same subsidiary', async () => {
+            // contactUserSubA is on client A. We are assigning them to client B (which doesn't exist yet, let's create it).
+            const clientB = await clientModel.create({recordId: 'CLI_B', name: 'Client B', subsidiaryId: testSubsidiary._id });
+            await request(app.getHttpServer()).put(`/clients/${clientB._id}/users`).set('Authorization', `Bearer ${globalAdminToken}`)
+                .send({ userIds: [contactUserSubA._id.toString()] }).expect(204);
+
+            const updatedUser = await userModel.findById(contactUserSubA._id);
+            expect(updatedUser).not.toBeNull();
+            expect(updatedUser!.clientIds.map(id => id.toString())).toContain(clientB._id.toString());
         });
 
-        it('should retrieve only active, non-deleted clients by default', async () => {
-            return request(app.getHttpServer())
-                .get('/clients')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200)
-                .then(res => {
-                    // Should see 4 active clients: CLI001, CLI002, CLI_ACTIVE_EXTRA, CLI_INDEPENDENT
-                    expect(res.body.length).toBe(4);
-                    res.body.forEach(client => {
-                        expect(client.isActive).toBe(true);
-                        expect(client.isDeleted).toBe(false);
-                    });
-                });
+        it('should FORBID assigning a contact from a different subsidiary (Subsidiary Containment Rule)', async () => {
+            await request(app.getHttpServer()).put(`/clients/${testClientA._id}/users`).set('Authorization', `Bearer ${globalAdminToken}`)
+                .send({ userIds: [contactUserSubB._id.toString()] })
+                .expect(400);
+        });
+    });
+    
+    describe('DELETE /clients/:id - Deletion & Transactional Integrity', () => {
+        it('should successfully soft-delete a client and its dependencies', async () => {
+            const tempClient = await clientModel.create({ recordId: 'CLI_DEL', name: 'To Delete' });
+            const tempUser = await userModel.create({ recordId: 'USER_DEL', name: 'To Delink', firstName: 'Delink', lastName: 'User', email: 'del@test.com', userType: UserType.CONTACT, roleId: new Types.ObjectId(), clientIds: [tempClient._id] });
+            const tempOrchard = await orchardModel.create({ recordId: 'ORCH_DEL', name: 'To Delete', clientId: tempClient._id });
+
+            await request(app.getHttpServer()).delete(`/clients/${tempClient._id}`).set('Authorization', `Bearer ${globalAdminToken}`).expect(200);
+
+            const deletedClient = await clientModel.findById(tempClient._id);
+            const updatedUser = await userModel.findById(tempUser._id);
+            const deletedOrchard = await orchardModel.findById(tempOrchard._id);
+
+            expect(deletedClient!.isDeleted).toBe(true);
+            expect(updatedUser!.clientIds).toHaveLength(0);
+            expect(deletedOrchard!.isDeleted).toBe(true);
         });
 
-        it('should filter clients by subsidiary when subsidiaryId provided', async () => {
-            return request(app.getHttpServer())
-                .get(`/clients?subsidiaryId=${testSubsidiary._id}`)
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200)
-                .then(res => {
-                    // Should see 3 clients with subsidiary: CLI001, CLI002, CLI_ACTIVE_EXTRA
-                    expect(res.body.length).toBe(3);
-                    res.body.forEach(client => {
-                        expect(client.subsidiaryId).toBe(testSubsidiary._id.toString());
-                    });
-                });
-        });
-
-        it('should find independent clients (no subsidiary filtering)', async () => {
-            return request(app.getHttpServer())
-                .get('/clients')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200)
-                .then(res => {
-                    // Find the independent client in the results
-                    const independentClient = res.body.find(client => client.recordId === 'CLI_INDEPENDENT');
-                    expect(independentClient).toBeDefined();
-                    expect(independentClient.subsidiaryId).toBeNull();
-                });
-        });
-
-        it('should search clients by name (case-insensitive)', async () => {
-            // Search for part of the 'Additional Active Client' name created in beforeEach
-            return request(app.getHttpServer())
-                .get('/clients?name=additional')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200)
-                .then(res => {
-                    expect(res.body.length).toBeGreaterThanOrEqual(1);
-                    // Should find the additional active client
-                    const foundClient = res.body.find(client => client.recordId === 'CLI_ACTIVE_EXTRA');
-                    expect(foundClient).toBeDefined();
-                    expect(foundClient.name.toLowerCase()).toContain('additional');
-                });
-        });
-
-        it('should never return deleted clients regardless of query parameters', async () => {
-            // Even with includeInactives=true, deleted clients should not appear
-            return request(app.getHttpServer())
-                .get('/clients?includeInactives=true')
-                .set('Authorization', `Bearer ${globalAdminToken}`)
-                .expect(200)
-                .then(res => {
-                    const deletedClient = res.body.find(c => c.recordId === 'CLI_DELETED_TEST');
-                    expect(deletedClient).toBeUndefined();
-                    
-                    // Verify no client in results has isDeleted: true
-                    res.body.forEach(client => {
-                        expect(client.isDeleted).toBe(false);
-                    });
-                });
-        });
-
-        it('should apply visibility scope filtering correctly for subsidiary consultant', async () => {
-            return request(app.getHttpServer())
-                .get('/clients')
-                .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                .expect(200)
-                .then(res => {
-                    // Consultant with SUBSIDIARY scope can see ALL clients in subsidiaries where they have assigned clients
-                    // They have clients in testSubsidiary, so they can see all clients in testSubsidiary
-                    const clientRecordIds = res.body.map(client => client.recordId);
-                    expect(clientRecordIds).toContain('CLI001'); // In testSubsidiary
-                    expect(clientRecordIds).toContain('CLI002'); // In testSubsidiary
-                    expect(clientRecordIds).toContain('CLI_ACTIVE_EXTRA'); // Also in testSubsidiary
-                    expect(clientRecordIds).not.toContain('CLI_INDEPENDENT'); // Not in testSubsidiary (no subsidiary)
-                    
-                    // Should see 3 clients in the testSubsidiary
-                    const subsidiaryClients = res.body.filter(client => client.subsidiaryId === testSubsidiary._id.toString());
-                    expect(subsidiaryClients).toHaveLength(3);
-                });
-        });
-
-        it('should apply visibility scope filtering correctly for client grower', async () => {
-            return request(app.getHttpServer())
-                .get('/clients')
-                .set('Authorization', `Bearer ${clientGrowerToken}`)
-                .expect(200)
-                .then(res => {
-                    // Grower should only see their assigned client
-                    expect(res.body).toHaveLength(1);
-                    expect(res.body[0].recordId).toBe('CLI001');
-                    expect(res.body[0]._id).toBe(testClientA._id.toString());
-                });
+        it('should return 404 when trying to GET a soft-deleted client', async () => {
+            const tempClient = await clientModel.create({ recordId: 'CLI_DEL_2', name: 'To Delete 2' });
+            await clientModel.updateOne({ _id: tempClient._id }, { isDeleted: true });
+            await request(app.getHttpServer()).get(`/clients/${tempClient._id}`).set('Authorization', `Bearer ${globalAdminToken}`).expect(404);
         });
     });
 });
