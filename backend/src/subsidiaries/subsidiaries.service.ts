@@ -12,7 +12,7 @@ import { ClientsService } from '../clients/clients.service';
 import { Client, ClientDocument } from '../clients/schemas/client.schema';
 import { ClientResolverService } from '../clients/client-resolver/client-resolver.service';
 
-import { User } from '../users/schemas/user.schema';
+import { UserDocument } from '../users/schemas/user.schema';
 import { PERMISSIONS } from '../common/constants/permissions.constants';
 import { CountersService } from '../counters/counters.service';
 import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
@@ -28,7 +28,7 @@ export class SubsidiariesService {
     private readonly countersService: CountersService,
   ) { }
 
-  async create(createSubsidiaryDto: CreateSubsidiaryDto): Promise<Subsidiary> {
+  async create(createSubsidiaryDto: CreateSubsidiaryDto, requestingUser: UserDocument): Promise<Subsidiary> {
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('subsidiary', 'SUB');
     const paddedSequence = sequence_value.toString().padStart(4, '0');
     const recordId = `${prefix}${paddedSequence}`;
@@ -41,15 +41,15 @@ export class SubsidiariesService {
     return newSubsidiary.save();
   }
 
-  async findAll(queryDto: QuerySubsidiaryDto, user: User): Promise<Subsidiary[]> {
-    const queryBuilder = new SubsidiaryQueryBuilder(queryDto, user, this.clientResolverService);
+  async findAll(queryDto: QuerySubsidiaryDto, requestingUser: UserDocument): Promise<Subsidiary[]> {
+    const queryBuilder = new SubsidiaryQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     return this.subsidiaryModel.find(filter).exec();
   }
 
-  async findOne(subsidiaryId: string, user: User, options: { includeInactive?: boolean } = {}): Promise<Subsidiary> {
+  async findOne(subsidiaryId: string, requestingUser: UserDocument, options: { includeInactive?: boolean } = {}): Promise<Subsidiary> {
     const queryDto = options.includeInactive ? { includeInactives: true } : {};
-    const queryBuilder = new SubsidiaryQueryBuilder(queryDto, user, this.clientResolverService);
+    const queryBuilder = new SubsidiaryQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = {
@@ -67,8 +67,8 @@ export class SubsidiariesService {
     return subsidiary;
   }
 
-  async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, user: User): Promise<Subsidiary> {
-    await this.findOne(subsidiaryId, user, { includeInactive: true });
+  async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, requestingUser: UserDocument): Promise<Subsidiary> {
+    await this.findOne(subsidiaryId, requestingUser, { includeInactive: true });
 
     if (updateSubsidiaryDto.isActive === false) {
       const activeClientCount = await this.clientsService.countActiveBySubsidiaryId(subsidiaryId);
@@ -77,7 +77,7 @@ export class SubsidiariesService {
       }
     }
 
-    const updatePayload = this._prepareUpdatePayload(updateSubsidiaryDto, user);
+    const updatePayload = this._prepareUpdatePayload(updateSubsidiaryDto, requestingUser);
 
     const updatedSubsidiary = await this.subsidiaryModel
       .findByIdAndUpdate(subsidiaryId, { $set: updatePayload }, { new: true })
@@ -90,8 +90,8 @@ export class SubsidiariesService {
   }
 
 
-  async remove(subsidiaryId: string, user: User): Promise<Subsidiary> {
-    await this.findOne(subsidiaryId, user);
+  async remove(subsidiaryId: string, requestingUser: UserDocument): Promise<Subsidiary> {
+    await this.findOne(subsidiaryId, requestingUser);
 
     const session = await this.connection.startSession();
     session.startTransaction();
@@ -105,7 +105,8 @@ export class SubsidiariesService {
         'Subsidiary'
       );
 
-      // Remove subsidiary reference from clients
+      // TODO: Evaluate whether disconnecting clients from a deleted subsidiary is necessary or whether a 409 Conflict should be returned
+      // If 409, return a list of clients that would be affected in the response.
       await this.clientModel.updateMany({ subsidiaryId: subsidiaryId }, { $set: { subsidiaryId: null } }, { session }).exec();
 
       await session.commitTransaction();
@@ -123,10 +124,10 @@ export class SubsidiariesService {
    * Handles role-based field permissions.
    * @private
    */
-  private _prepareUpdatePayload(updateSubsidiaryDto: UpdateSubsidiaryDto, user: User): Partial<Subsidiary> {
+  private _prepareUpdatePayload(updateSubsidiaryDto: UpdateSubsidiaryDto, requestingUser: UserDocument): Partial<Subsidiary> {
     const { isActive, ...restOfDto } = updateSubsidiaryDto;
     const updatePayload: Partial<Subsidiary> = { ...restOfDto };
-    const userPermissions = (user.roleId as any)?.permissions || [];
+    const userPermissions = (requestingUser.roleId as any)?.permissions || [];
 
     // System Constraint: Only roles with SUBSIDIARY_MANAGE_INACTIVE permissions can change Subsidiary status.
     // This prevents non-admin users from turning off key master data records

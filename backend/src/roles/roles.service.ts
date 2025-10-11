@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 
@@ -13,6 +13,7 @@ import { User, UserDocument } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
 import { CountersService } from '../counters/counters.service';
 import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
+import { PERMISSIONS } from '../common/constants/permissions.constants';
 
 @Injectable()
 export class RolesService {
@@ -25,28 +26,28 @@ export class RolesService {
     private readonly countersService: CountersService,
   ) { }
 
-  async create(createRoleDto: CreateRoleDto): Promise<Role> {
+  async create(createRoleDto: CreateRoleDto, requestingUser: UserDocument): Promise<Role> {
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('role', 'ROL');
     const paddedSequence = sequence_value.toString().padStart(4, '0');
     const recordId = `${prefix}${paddedSequence}`;
 
     const newRole = new this.roleModel({
       ...createRoleDto,
-      recordId,
+      recordId
     });
 
     return newRole.save();
   }
 
-  async findAll(query: QueryRoleDto, user: User): Promise<Role[]> {
-    const queryBuilder = new RoleQueryBuilder(query, user, this.clientResolverService);
+  async findAll(query: QueryRoleDto, requestingUser: User): Promise<Role[]> {
+    const queryBuilder = new RoleQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     return await this.roleModel.find(filter).exec();
   }
 
-  async findOne(roleId: string, user: User, options: { includeInactive?: boolean } = {}): Promise<Role> {
+  async findOne(roleId: string, requestingUser: User, options: { includeInactive?: boolean } = {}): Promise<Role> {
     const queryDto = options.includeInactive ? { includeInactives: true } : {};
-    const queryBuilder = new RoleQueryBuilder(queryDto, user, this.clientResolverService);
+    const queryBuilder = new RoleQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = {
@@ -65,9 +66,11 @@ export class RolesService {
     return role;
   }
 
-  async update(roleId: string, updateRoleDto: UpdateRoleDto, user: User): Promise<Role> {
-    await this.findOne(roleId, user, { includeInactive: true }); // Secure authorization check
+  async update(roleId: string, updateRoleDto: UpdateRoleDto, requestingUser: User): Promise<Role> {
+    // Layer 2 check to ensure requestingUser has permission to see the role they are trying to update.
+    await this.findOne(roleId, requestingUser, { includeInactive: true });
 
+    // Prevent deactivation of Roles that are assigned to users
     if (updateRoleDto.isActive === false) {
       const activeUserCount = await this.usersService.countActiveByRoleId(roleId);
       if (activeUserCount > 0) {
@@ -75,20 +78,36 @@ export class RolesService {
       }
     }
 
-    const updatedRole = await this.roleModel.findByIdAndUpdate(
-      roleId,
-      { $set: updateRoleDto },
-      { new: true },
+    const { __v, ...restOfDto } = updateRoleDto;
+    const updatePayload: Partial<Role> = { ...restOfDto };
+
+    // System Constraint: Only roles with ROLE_MANAGE_INACTIVE permissions can change Role status.
+    if (updateRoleDto.isActive !== undefined) {
+      const userPermissions = (requestingUser.roleId as any)?.permissions || [];
+      if (!userPermissions.includes(PERMISSIONS.ROLE_MANAGE_INACTIVE)) {
+        throw new ForbiddenException('You do not have permission to change the isActive status of a role.');
+      }
+      updatePayload.isActive = updateRoleDto.isActive;
+    }
+
+    // Atomically find the document by its ID and the version from the DTO, and update it.
+    // If the document has been updated since it was fetched, its version will have changed,
+    // and the find query will not find a match, resulting in a null return.
+    const updatedRole = await this.roleModel.findOneAndUpdate(
+      { _id: roleId, __v: updateRoleDto.__v },
+      { $set: updatePayload, $inc: { __v: 1 } },
+      { new: true }
     ).exec();
 
     if (!updatedRole) {
-      throw new NotFoundException(`Role with ID "${roleId}" not found`);
+      throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
     }
+
     return updatedRole;
   }
 
-  async remove(roleId: string, user: User): Promise<Role> {
-    await this.findOne(roleId, user); // Secure authorization check
+  async remove(roleId: string, requestingUser: User): Promise<Role> {
+    await this.findOne(roleId, requestingUser); // Secure authorization check
 
     const session = await this.connection.startSession();
     session.startTransaction();

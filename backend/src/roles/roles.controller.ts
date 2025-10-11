@@ -27,14 +27,14 @@ export class RolesController {
 
   @Post()
   @RequirePermission(PERMISSIONS.ROLE_CREATE)
-  create(@Body() createRoleDto: CreateRoleDto) {
-    return this.rolesService.create(createRoleDto);
+  create(@Body() createRoleDto: CreateRoleDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.rolesService.create(createRoleDto, requestingUser);
   }
 
   @Get()
   @RequirePermission(PERMISSIONS.ROLE_VIEW)
-  findAll(@Query() query: QueryRoleDto, @CurrentUser() user: UserDocument) {
-    return this.rolesService.findAll(query, user);
+  findAll(@Query() query: QueryRoleDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.rolesService.findAll(query, requestingUser);
   }
 
   @Get(':roleId')
@@ -42,9 +42,9 @@ export class RolesController {
   findOne(
     @Param('roleId', ParseMongoIdPipe) roleId: string,
     @Query() query: QueryRoleDto,
-    @CurrentUser() user: UserDocument
+    @CurrentUser() requestingUser: UserDocument
   ) {
-    return this.rolesService.findOne(roleId, user, { includeInactive: query.includeInactives });
+    return this.rolesService.findOne(roleId, requestingUser, { includeInactive: query.includeInactives });
   }
 
   @Get(':roleId/users')
@@ -52,21 +52,21 @@ export class RolesController {
   async findAllUsersForRole(
     @Param('roleId', ParseMongoIdPipe) roleId: string,
     @Query() query: QueryUserDto,
-    @CurrentUser() user: UserDocument,
+    @CurrentUser() requestingUser: UserDocument,
   ) {
-    await this.rolesService.findOne(roleId, user); // Secure check
-    return this.usersService.findAllByRoleId(roleId, query, user);
+    await this.rolesService.findOne(roleId, requestingUser); // Secure check
+    return this.usersService.findAllByRoleId(roleId, query, requestingUser);
   }
 
   @Patch(':roleId')
   @RequirePermission(PERMISSIONS.ROLE_EDIT)
-  update(@Param('roleId', ParseMongoIdPipe) roleId: string, @Body() updateRoleDto: UpdateRoleDto, @CurrentUser() user: UserDocument) {
-    return this.rolesService.update(roleId, updateRoleDto, user);
+  update(@Param('roleId', ParseMongoIdPipe) roleId: string, @Body() updateRoleDto: UpdateRoleDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.rolesService.update(roleId, updateRoleDto, requestingUser);
   }
 
   @Delete(':roleId')
   @RequirePermission(PERMISSIONS.ROLE_DELETE)
-  remove(@Param('roleId', ParseMongoIdPipe) roleId: string, @CurrentUser() user: UserDocument) {
-    return this.rolesService.remove(roleId, user);
+  remove(@Param('roleId', ParseMongoIdPipe) roleId: string, @CurrentUser() requestingUser: UserDocument) {
+    return this.rolesService.remove(roleId, requestingUser);
   }
 }

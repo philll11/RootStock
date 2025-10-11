@@ -30,13 +30,13 @@ export class OrchardsService {
         private readonly usersService: UsersService,
     ) { }
 
-    async create(createOrchardDto: CreateOrchardDto, user: UserDocument): Promise<OrchardDocument> {
+    async create(createOrchardDto: CreateOrchardDto, requestingUser: UserDocument): Promise<OrchardDocument> {
         const { clientId, userIds } = createOrchardDto;
 
-        await this.clientsService.findOne(clientId, user); // Layer 2 Client Check
+        await this.clientsService.findOne(clientId, requestingUser); // Layer 2 Client Check
 
         if (userIds && userIds.length > 0) {
-            await Promise.all(userIds.map(uid => this.usersService.findOne(uid, user))); // Layer 2 User Check
+            await Promise.all(userIds.map(uid => this.usersService.findOne(uid, requestingUser))); // Layer 2 User Check
         }
 
         const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('orchard', 'ORC');
@@ -70,8 +70,8 @@ export class OrchardsService {
         }
     }
 
-    async findAll(query: QueryOrchardDto, user: UserDocument): Promise<OrchardDocument[]> {
-        const queryBuilder = new OrchardQueryBuilder(query, user, this.clientResolverService);
+    async findAll(query: QueryOrchardDto, requestingUser: UserDocument): Promise<OrchardDocument[]> {
+        const queryBuilder = new OrchardQueryBuilder(query, requestingUser, this.clientResolverService);
         const filter = await queryBuilder.build();
         return this.orchardModel.find(filter)
             .populate('clientId', 'name recordId')
@@ -79,16 +79,16 @@ export class OrchardsService {
             .exec();
     }
 
-    async findAllByClientId(clientId: string, query: QueryOrchardDto, user: UserDocument): Promise<OrchardDocument[]> {
-        const queryBuilder = new OrchardQueryBuilder(query, user, this.clientResolverService);
+    async findAllByClientId(clientId: string, query: QueryOrchardDto, requestingUser: UserDocument): Promise<OrchardDocument[]> {
+        const queryBuilder = new OrchardQueryBuilder(query, requestingUser, this.clientResolverService);
         const filter = await queryBuilder.build();
         filter.clientId = new Types.ObjectId(clientId);
         return this.orchardModel.find(filter).exec();
     }
 
-    async findOne(orchardId: string, user: UserDocument, options: { includeInactive?: boolean } = {}): Promise<OrchardDocument> {
+    async findOne(orchardId: string, requestingUser: UserDocument, options: { includeInactive?: boolean } = {}): Promise<OrchardDocument> {
         const queryDto = options.includeInactive ? { includeInactives: true } : {};
-        const queryBuilder = new OrchardQueryBuilder(queryDto, user, this.clientResolverService);
+        const queryBuilder = new OrchardQueryBuilder(queryDto, requestingUser, this.clientResolverService);
         const securityFilter = await queryBuilder.build();
         const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(orchardId) }] };
 
@@ -102,14 +102,14 @@ export class OrchardsService {
         return orchard;
     }
 
-    async update(orchardId: string, updateOrchardDto: UpdateOrchardDto, user: UserDocument): Promise<OrchardDocument> {
-        const targetOrchard = await this.findOne(orchardId, user, { includeInactive: true }); // Layer 2 Orchard Check and fetch target orchard
+    async update(orchardId: string, updateOrchardDto: UpdateOrchardDto, requestingUser: UserDocument): Promise<OrchardDocument> {
+        const targetOrchard = await this.findOne(orchardId, requestingUser, { includeInactive: true }); // Layer 2 Orchard Check and fetch target orchard
         const targetClientIdString = (targetOrchard.clientId as any)._id.toString();
 
         const { userIds, ...restOfDto } = updateOrchardDto;
 
         if (userIds) {
-            await Promise.all(userIds.map(uid => this.usersService.findOne(uid, user))); // Layer 2 User Check
+            await Promise.all(userIds.map(uid => this.usersService.findOne(uid, requestingUser))); // Layer 2 User Check
         }
 
         const session = await this.connection.startSession();
@@ -142,8 +142,8 @@ export class OrchardsService {
         }
     }
 
-    async remove(orchardId: string, user: UserDocument): Promise<OrchardDocument> {
-        await this.findOne(orchardId, user); // Layer 2 Orchard Check
+    async remove(orchardId: string, requestingUser: UserDocument): Promise<OrchardDocument> {
+        await this.findOne(orchardId, requestingUser); // Layer 2 Orchard Check
 
         // TODO: Add Layer 3 check for active child Blocks before deletion.
 

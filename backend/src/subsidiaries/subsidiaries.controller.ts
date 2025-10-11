@@ -27,14 +27,14 @@ export class SubsidiariesController {
 
   @Post()
   @RequirePermission(PERMISSIONS.SUBSIDIARY_CREATE)
-  create(@Body() createSubsidiaryDto: CreateSubsidiaryDto) {
-    return this.subsidiariesService.create(createSubsidiaryDto);
+  create(@Body() createSubsidiaryDto: CreateSubsidiaryDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.subsidiariesService.create(createSubsidiaryDto, requestingUser);
   }
 
   @Get()
   @RequirePermission(PERMISSIONS.SUBSIDIARY_VIEW)
-  findAll(@Query() query: QuerySubsidiaryDto, @CurrentUser() user: UserDocument) {
-    return this.subsidiariesService.findAll(query, user);
+  findAll(@Query() query: QuerySubsidiaryDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.subsidiariesService.findAll(query, requestingUser);
   }
 
   @Get(':subsidiaryId')
@@ -42,9 +42,9 @@ export class SubsidiariesController {
   findOne(
     @Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string,
     @Query() query: QuerySubsidiaryDto,
-    @CurrentUser() user: UserDocument
+    @CurrentUser() requestingUser: UserDocument
   ) {
-    return this.subsidiariesService.findOne(subsidiaryId, user, { includeInactive: query.includeInactives });
+    return this.subsidiariesService.findOne(subsidiaryId, requestingUser, { includeInactive: query.includeInactives });
   }
 
   @Get(':subsidiaryId/clients')
@@ -52,10 +52,10 @@ export class SubsidiariesController {
   async findAllClientsForSubsidiary(
     @Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string,
     @Query() query: QueryClientDto,
-    @CurrentUser() user: UserDocument,
+    @CurrentUser() requestingUser: UserDocument,
   ) {
-    await this.subsidiariesService.findOne(subsidiaryId, user); 
-    return this.clientsService.findAllBySubsidiaryId(subsidiaryId, query, user);
+    await this.subsidiariesService.findOne(subsidiaryId, requestingUser); 
+    return this.clientsService.findAllBySubsidiaryId(subsidiaryId, query, requestingUser);
   }
 
   @Patch(':subsidiaryId')
@@ -63,14 +63,14 @@ export class SubsidiariesController {
   update(
     @Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string,
     @Body() updateSubsidiaryDto: UpdateSubsidiaryDto,
-    @CurrentUser() user: UserDocument,
+    @CurrentUser() requestingUser: UserDocument,
   ) {
-    return this.subsidiariesService.update(subsidiaryId, updateSubsidiaryDto, user);
+    return this.subsidiariesService.update(subsidiaryId, updateSubsidiaryDto, requestingUser);
   }
 
   @Delete(':subsidiaryId')
   @RequirePermission(PERMISSIONS.SUBSIDIARY_DELETE)
-  remove(@Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string, @CurrentUser() user: UserDocument) {
-    return this.subsidiariesService.remove(subsidiaryId, user);
+  remove(@Param('subsidiaryId', ParseMongoIdPipe) subsidiaryId: string, @CurrentUser() requestingUser: UserDocument) {
+    return this.subsidiariesService.remove(subsidiaryId, requestingUser);
   }
 }

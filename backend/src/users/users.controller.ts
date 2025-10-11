@@ -20,14 +20,14 @@ export class UsersController {
 
   @Post()
   @RequirePermission(PERMISSIONS.USER_CREATE)
-  create(@Body() createUserDto: CreateUserDto, @CurrentUser() user: UserDocument) {
-    return this.usersService.create(createUserDto, user);
+  create(@Body() createUserDto: CreateUserDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.usersService.create(createUserDto, requestingUser);
   }
 
   @Get()
   @RequirePermission(PERMISSIONS.USER_VIEW)
-  findAll(@Query() query: QueryUserDto, @CurrentUser() user: UserDocument) {
-    return this.usersService.findAll(query, user);
+  findAll(@Query() query: QueryUserDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.usersService.findAll(query, requestingUser);
   }
 
   @Get(':userId')
@@ -35,23 +35,23 @@ export class UsersController {
   findOne(
     @Param('userId', ParseMongoIdPipe) userId: string,
     @Query() query: QueryUserDto,
-    @CurrentUser() user: UserDocument
+    @CurrentUser() requestingUser: UserDocument
   ) {
-    return this.usersService.findOne(userId, user, { includeInactive: query.includeInactives });
+    return this.usersService.findOne(userId, requestingUser, { includeInactive: query.includeInactives });
   }
 
   @Patch(':userId')
   update(
     @Param('userId', ParseMongoIdPipe) userId: string,
     @Body() updateUserDto: UpdateUserDto,
-    @CurrentUser() user: UserDocument,
+    @CurrentUser() requestingUser: UserDocument,
   ) {
-    return this.usersService.update(userId, updateUserDto, user);
+    return this.usersService.update(userId, updateUserDto, requestingUser);
   }
 
   @Delete(':userId')
   @RequirePermission(PERMISSIONS.USER_DELETE)
-  remove(@Param('userId', ParseMongoIdPipe) userId: string, @CurrentUser() user: UserDocument) {
-    return this.usersService.remove(userId, user);
+  remove(@Param('userId', ParseMongoIdPipe) userId: string, @CurrentUser() requestingUser: UserDocument) {
+    return this.usersService.remove(userId, requestingUser);
   }
 }

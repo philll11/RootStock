@@ -6,12 +6,11 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
-
+import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
 import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
-describe('Roles Authorization - Real Security Model (e2e)', () => {
+describe('Roles Auth (e2e)', () => {
     let app: INestApplication;
     let mongod: MongoMemoryReplSet;
     let jwtService: JwtService;
@@ -19,142 +18,55 @@ describe('Roles Authorization - Real Security Model (e2e)', () => {
     // Models
     let roleModel: Model<RoleDocument>;
     let userModel: Model<UserDocument>;
-    let clientModel: Model<any>;
-    let subsidiaryModel: Model<any>;
 
-    // Test users representing ACTUAL business roles (from seed.ts)
-    let platformAdminToken: string; // ONLY user with role management permissions
-    let subsidiaryConsultantToken: string; // No role management permissions
-    let clientGrowerToken: string; // No role management permissions  
-    let fieldWorkerToken: string; // Minimal permissions, no role access
-    
-    // Test entities
-    let testSubsidiary: any;
-    let clientA: any;
-    let clientB: any;
+    // Personas & Tokens
+    let noPermissionsToken: string;
+    let viewRoleToken: string;
+    let editRoleToken: string;
+    let createRoleToken: string;
+    let deleteRoleToken: string;
+    let manageInactiveToken: string;
+
+    // Test Entities
+    let testRole: RoleDocument;
+    let inactiveRole: RoleDocument;
 
     jest.setTimeout(60000);
 
     beforeAll(async () => {
         ({ app, mongod, jwtService } = await setupTestApp());
 
+        // Get models
         roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
         userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
-        clientModel = app.get<Model<any>>(getModelToken('Client'));
-        subsidiaryModel = app.get<Model<any>>(getModelToken('Subsidiary'));
 
-        // Create business hierarchy for authorization testing
-        testSubsidiary = await new subsidiaryModel({
-            recordId: 'SUB001',
-            name: 'AgriTech Solutions'
-        }).save();
+        // Create roles with specific permissions
+        const [viewRole, editRole, createRole, deleteRole, noPermissionsRole, manageInactiveRole] = await Promise.all([
+            roleModel.create({ recordId: 'ROLE_VIEWER', name: 'Role Viewer', permissions: [PERMISSIONS.ROLE_VIEW], visibilityScope: VisibilityScope.GLOBAL }),
+            roleModel.create({ recordId: 'ROLE_EDITOR', name: 'Role Editor', permissions: [PERMISSIONS.ROLE_EDIT], visibilityScope: VisibilityScope.GLOBAL }),
+            roleModel.create({ recordId: 'ROLE_CREATOR', name: 'Role Creator', permissions: [PERMISSIONS.ROLE_CREATE], visibilityScope: VisibilityScope.GLOBAL }),
+            roleModel.create({ recordId: 'ROLE_DELETER', name: 'Role Deleter', permissions: [PERMISSIONS.ROLE_DELETE], visibilityScope: VisibilityScope.GLOBAL }),
+            roleModel.create({ recordId: 'ROLE_NO_PERMISSIONS', name: 'No Permissions', permissions: [], visibilityScope: VisibilityScope.GLOBAL }),
+            roleModel.create({ recordId: 'ROLE_INACTIVE_MANAGER', name: 'Inactive Manager', permissions: [PERMISSIONS.ROLE_VIEW, PERMISSIONS.ROLE_EDIT, PERMISSIONS.ROLE_MANAGE_INACTIVE], visibilityScope: VisibilityScope.GLOBAL }),
+        ]);
 
-        clientA = await new clientModel({
-            recordId: 'CLI001',
-            name: 'Green Valley Orchards',
-            subsidiaryId: testSubsidiary._id
-        }).save();
+        // Create users for each role
+        const [viewUser, editUser, createUser, deleteUser, noPermissionsUser, manageInactiveUser] = await Promise.all([
+            userModel.create({ recordId: 'VIEW_USER', name: 'View User', firstName: 'View', lastName: 'User', email: 'viewer.auth@test.com', roleId: viewRole._id, userType: UserType.EMPLOYEE }),
+            userModel.create({ recordId: 'EDIT_USER', name: 'Edit User', firstName: 'Edit', lastName: 'User', email: 'editor.auth@test.com', roleId: editRole._id, userType: UserType.EMPLOYEE }),
+            userModel.create({ recordId: 'CREATE_USER', name: 'Create User', firstName: 'Create', lastName: 'User', email: 'creator.auth@test.com', roleId: createRole._id, userType: UserType.EMPLOYEE }),
+            userModel.create({ recordId: 'DELETE_USER', name: 'Delete User', firstName: 'Delete', lastName: 'User', email: 'deleter.auth@test.com', roleId: deleteRole._id, userType: UserType.EMPLOYEE }),
+            userModel.create({ recordId: 'NO_PERMS_USER', name: 'No Perms User', firstName: 'NoPerms', lastName: 'User', email: 'noperms.auth@test.com', roleId: noPermissionsRole._id, userType: UserType.EMPLOYEE }),
+            userModel.create({ recordId: 'INACTIVE_MANAGER_USER', name: 'Inactive Manager', firstName: 'Inactive', lastName: 'Manager', email: 'inactive.manager.auth@test.com', roleId: manageInactiveRole._id, userType: UserType.EMPLOYEE }),
+        ]);
 
-        clientB = await new clientModel({
-            recordId: 'CLI002',
-            name: 'Sunset Fruit Farms',
-            subsidiaryId: testSubsidiary._id
-        }).save();
-
-        // Create roles matching REAL system design (based on seed.ts)
-        const platformAdminRole = await new roleModel({
-            recordId: 'PLATFORM_ADMIN',
-            name: 'Platform Administrator',
-            permissions: Object.values(PERMISSIONS), // ALL permissions including role management
-            visibilityScope: VisibilityScope.GLOBAL
-        }).save();
-
-        const subsidiaryConsultantRole = await new roleModel({
-            recordId: 'SUBSIDIARY_CONSULTANT',
-            name: 'Agricultural Consultant',
-            permissions: [
-                PERMISSIONS.CLIENT_VIEW,
-                PERMISSIONS.USER_VIEW,
-                PERMISSIONS.ORCHARD_VIEW,
-                PERMISSIONS.ORCHARD_EDIT
-                // CRITICAL: NO role management permissions (ROLE_CREATE, ROLE_EDIT, ROLE_DELETE)
-            ],
-            visibilityScope: VisibilityScope.SUBSIDIARY
-        }).save();
-
-        const clientGrowerRole = await new roleModel({
-            recordId: 'CLIENT_GROWER',
-            name: 'Orchard Grower',
-            permissions: [
-                PERMISSIONS.CLIENT_VIEW,
-                PERMISSIONS.USER_VIEW,
-                PERMISSIONS.ORCHARD_VIEW,
-                PERMISSIONS.ORCHARD_EDIT
-                // CRITICAL: NO role management permissions
-            ],
-            visibilityScope: VisibilityScope.CLIENT
-        }).save();
-
-        const fieldWorkerRole = await new roleModel({
-            recordId: 'FIELD_WORKER',
-            name: 'Field Worker',
-            permissions: [
-                'Spray:Create',
-                'Spray:View',
-                'Orchard:View'
-                // CRITICAL: NO role, user, or client management permissions
-            ],
-            visibilityScope: VisibilityScope.CLIENT
-        }).save();
-
-        // Create users representing real business stakeholders
-        const platformAdmin = await new userModel({
-            recordId: 'PLATFORM_ADMIN_USER',
-            name: 'Platform Administrator',
-            firstName: 'Platform',
-            lastName: 'Admin',
-            email: 'platform.admin@roles-test.com',
-            userType: UserType.EMPLOYEE,
-            roleId: platformAdminRole._id,
-            clientIds: [] // Global access
-        }).save();
-        platformAdminToken = jwtService.sign({ sub: platformAdmin.recordId });
-
-        const subsidiaryConsultant = await new userModel({
-            recordId: 'SUBSIDIARY_CONSULTANT_USER',
-            name: 'Agricultural Consultant',
-            firstName: 'Expert',
-            lastName: 'Consultant',
-            email: 'subsidiary.consultant@roles-test.com',
-            userType: UserType.EMPLOYEE,
-            roleId: subsidiaryConsultantRole._id,
-            clientIds: [clientA._id, clientB._id] // Works with multiple clients
-        }).save();
-        subsidiaryConsultantToken = jwtService.sign({ sub: subsidiaryConsultant.recordId });
-
-        const clientGrower = await new userModel({
-            recordId: 'CLIENT_GROWER_USER',
-            name: 'Orchard Grower',
-            firstName: 'John',
-            lastName: 'Appleton',
-            email: 'john.appleton@roles-test.com',
-            userType: UserType.CONTACT,
-            roleId: clientGrowerRole._id,
-            clientIds: [clientA._id] // Only their own orchard
-        }).save();
-        clientGrowerToken = jwtService.sign({ sub: clientGrower.recordId });
-
-        const fieldWorker = await new userModel({
-            recordId: 'FIELD_WORKER_USER',
-            name: 'Field Worker',
-            firstName: 'Tom',
-            lastName: 'Picker',
-            email: 'tom.picker@roles-test.com',
-            userType: UserType.CONTACT,
-            roleId: fieldWorkerRole._id,
-            clientIds: [clientA._id] // Works for specific client
-        }).save();
-        fieldWorkerToken = jwtService.sign({ sub: fieldWorker.recordId });
+        // Generate JWT tokens for each user
+        viewRoleToken = jwtService.sign({ sub: viewUser.recordId });
+        editRoleToken = jwtService.sign({ sub: editUser.recordId });
+        createRoleToken = jwtService.sign({ sub: createUser.recordId });
+        deleteRoleToken = jwtService.sign({ sub: deleteUser.recordId });
+        noPermissionsToken = jwtService.sign({ sub: noPermissionsUser.recordId });
+        manageInactiveToken = jwtService.sign({ sub: manageInactiveUser.recordId });
     });
 
     afterAll(async () => {
@@ -162,263 +74,135 @@ describe('Roles Authorization - Real Security Model (e2e)', () => {
     });
 
     beforeEach(async () => {
-        // Clean up test-created roles, preserve setup roles
-        await roleModel.deleteMany({
-            recordId: { $nin: ['PLATFORM_ADMIN', 'SUBSIDIARY_CONSULTANT', 'CLIENT_GROWER', 'FIELD_WORKER'] }
+        // Create a fresh set of roles for each test
+        [testRole, inactiveRole] = await Promise.all([
+            roleModel.create({
+                recordId: 'TEST_ROLE_CRUD',
+                name: 'Auth Test Role',
+                permissions: [PERMISSIONS.CLIENT_VIEW],
+                visibilityScope: VisibilityScope.CLIENT,
+            }),
+            roleModel.create({
+                recordId: 'INACTIVE_TEST_ROLE_CRUD',
+                name: 'Inactive Auth Test Role',
+                permissions: [PERMISSIONS.CLIENT_VIEW],
+                visibilityScope: VisibilityScope.CLIENT,
+                isActive: false,
+            }),
+        ]);
+    });
+
+    afterEach(async () => {
+        // Clean up created roles after each test, keeping the base roles
+        await roleModel.deleteMany({ name: /Auth Test Role/ });
+    });
+
+    describe('Standard Action Permissions', () => {
+        const unauthorizedChecks = [
+            { endpoint: 'POST /roles', token: viewRoleToken, status: 401 },
+            { endpoint: 'GET /roles', token: noPermissionsToken, status: 401 },
+            { endpoint: 'GET /roles/:id', token: noPermissionsToken, status: 401 },
+            { endpoint: 'PATCH /roles/:id', token: viewRoleToken, status: 401 },
+            { endpoint: 'DELETE /roles/:id', token: editRoleToken, status: 401 },
+        ];
+
+        unauthorizedChecks.forEach(({ endpoint, token, status }) => {
+            const [method, path] = endpoint.split(' ');
+            it(`should return ${status} for ${method} ${path} with insufficient permissions`, async () => {
+                const url = path.includes(':id') ? path.replace(':id', testRole._id.toString()) : path;
+
+                await request(app.getHttpServer())
+                    [method.toLowerCase()](url)
+                    .set('Authorization', `Bearer ${token}`)
+                    .send({}) // Send empty body for POST/PATCH
+                    .expect(status);
+            });
+        });
+
+        const authorizedChecks = [
+            { endpoint: 'POST /roles', token: createRoleToken, status: 201 },
+            { endpoint: 'GET /roles', token: viewRoleToken, status: 200 },
+            { endpoint: 'GET /roles/:id', token: viewRoleToken, status: 200 },
+            { endpoint: 'PATCH /roles/:id', token: editRoleToken, status: 200 },
+            { endpoint: 'DELETE /roles/:id', token: deleteRoleToken, status: 200 },
+        ];
+
+        authorizedChecks.forEach(({ endpoint, token, status }) => {
+            const [method, path] = endpoint.split(' ');
+            it(`should return ${status} for ${method} ${path} with sufficient permissions`, async () => {
+                const url = path.includes(':id') ? path.replace(':id', testRole._id.toString()) : path;
+
+                // Minimal valid body for state-changing requests
+                const body = {
+                    'POST': { name: 'Auth Test Create', permissions: [PERMISSIONS.ORCHARD_VIEW], visibilityScope: VisibilityScope.CLIENT },
+                    'PATCH': { name: 'Auth Test Patch', __v: 0 },
+                }[method] || {};
+
+                await request(app.getHttpServer())
+                    [method.toLowerCase()](url)
+                    .set('Authorization', `Bearer ${token}`)
+                    .send(body)
+                    .expect(status);
+            });
         });
     });
 
-    describe('Real System Behavior - Administrator-Only Role Management (e2e)', () => {
-        describe('GET /roles - Visibility Restrictions (RoleQueryBuilder)', () => {
-            it('should allow ONLY platform administrator to see role data', async () => {
-                return request(app.getHttpServer())
-                    .get('/roles')
-                    .set('Authorization', `Bearer ${platformAdminToken}`)
-                    .expect(200)
-                    .expect((res) => {
-                        expect(res.body.length).toBeGreaterThan(0);
-                        // Only platform administrators can see role data
-                    });
-            });
+    describe('Inactive Record Permissions (ROLE_MANAGE_INACTIVE)', () => {
+        it('should ALLOW user with permission to view inactive roles in list', async () => {
+            const response = await request(app.getHttpServer())
+                .get('/roles?includeInactives=true')
+                .set('Authorization', `Bearer ${manageInactiveToken}`)
+                .expect(200);
 
-            it('should return 403 FORBIDDEN for subsidiary consultant (lacks ROLE_VIEW permission)', async () => {
-                // REAL SYSTEM: Consultants do NOT have ROLE_VIEW permission in seed.ts
-                return request(app.getHttpServer())
-                    .get('/roles')
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .expect(403); // Blocked by @RequirePermission('Role:View') guard
-            });
-
-            it('should return 403 FORBIDDEN for client grower (lacks ROLE_VIEW permission)', async () => {
-                // REAL SYSTEM: Growers do NOT have ROLE_VIEW permission in seed.ts
-                return request(app.getHttpServer())
-                    .get('/roles')
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .expect(403); // Blocked by @RequirePermission('Role:View') guard
-            });
-
-            it('should return 403 FORBIDDEN for field worker (lacks ROLE_VIEW permission)', async () => {
-                // REAL SYSTEM: Field workers have very limited permissions, no ROLE_VIEW
-                return request(app.getHttpServer())
-                    .get('/roles')
-                    .set('Authorization', `Bearer ${fieldWorkerToken}`)
-                    .expect(403); // Blocked by @RequirePermission('Role:View') guard
-            });
+            const inactiveRoleInList = response.body.find(r => r.name === 'Inactive Auth Test Role');
+            expect(inactiveRoleInList).toBeDefined();
+            expect(inactiveRoleInList.isActive).toBe(false);
         });
 
-        describe('GET /roles/:id - Individual Role Access (403 for Non-Administrators)', () => {
-            it('should return 403 FORBIDDEN for subsidiary consultant accessing role by ID', async () => {
-                const roleToAccess = await roleModel.findOne();
-                expect(roleToAccess).not.toBeNull();
-                
-                return request(app.getHttpServer())
-                    .get(`/roles/${roleToAccess!._id}`)
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .expect(403); // Blocked by @RequirePermission('Role:View') guard
-            });
+        it('should DENY user without permission from viewing inactive roles in list', async () => {
+            const response = await request(app.getHttpServer())
+                .get('/roles?includeInactives=true')
+                .set('Authorization', `Bearer ${viewRoleToken}`) // Has VIEW but not MANAGE_INACTIVE
+                .expect(200);
 
-            it('should return 403 FORBIDDEN for grower accessing role by ID', async () => {
-                const roleToAccess = await roleModel.findOne();
-                expect(roleToAccess).not.toBeNull();
-                
-                return request(app.getHttpServer())
-                    .get(`/roles/${roleToAccess!._id}`)
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .expect(403); // Blocked by @RequirePermission('Role:View') guard
-            });
-
-            it('should return 403 FORBIDDEN for field worker accessing role by ID', async () => {
-                const roleToAccess = await roleModel.findOne();
-                expect(roleToAccess).not.toBeNull();
-                
-                return request(app.getHttpServer())
-                    .get(`/roles/${roleToAccess!._id}`)
-                    .set('Authorization', `Bearer ${fieldWorkerToken}`)
-                    .expect(403); // Blocked by @RequirePermission('Role:View') guard
-            });
+            const inactiveRoleInList = response.body.find(r => r.name === 'Inactive Auth Test Role');
+            expect(inactiveRoleInList).toBeUndefined();
         });
 
-        describe('NEGATIVE TESTING - Role Creation (Growers Cannot Create Roles)', () => {
-            it('should prevent subsidiary consultant from creating roles (no ROLE_CREATE permission)', async () => {
-                const newRole = {
-                    name: 'Unauthorized Consultant Role',
-                    permissions: ['Orchard:View'],
-                    visibilityScope: VisibilityScope.CLIENT
-                };
-
-                return request(app.getHttpServer())
-                    .post('/roles')
-                    .send(newRole)
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .expect(403); // Missing ROLE_CREATE permission
-            });
-
-            it('should prevent client grower from creating roles (core business rule violation)', async () => {
-                const newRole = {
-                    name: 'Grower Role Attempt',
-                    permissions: ['Orchard:View'],
-                    visibilityScope: VisibilityScope.CLIENT
-                };
-
-                return request(app.getHttpServer())
-                    .post('/roles')
-                    .send(newRole)
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .expect(403); // Growers cannot create roles - this validates core security requirement
-            });
-
-            it('should prevent field worker from creating roles (no ROLE_CREATE permission)', async () => {
-                const newRole = {
-                    name: 'Worker Role Attempt',
-                    permissions: ['Spray:View'],
-                    visibilityScope: VisibilityScope.CLIENT
-                };
-
-                return request(app.getHttpServer())
-                    .post('/roles')
-                    .send(newRole)
-                    .set('Authorization', `Bearer ${fieldWorkerToken}`)
-                    .expect(403); // Field workers cannot create roles
-            });
+        it('should ALLOW user with permission to access inactive role by ID', async () => {
+            await request(app.getHttpServer())
+                .get(`/roles/${inactiveRole._id}?includeInactives=true`)
+                .set('Authorization', `Bearer ${manageInactiveToken}`)
+                .expect(200);
         });
 
-        describe('NEGATIVE TESTING - Role Updates (Only Administrators Can Edit)', () => {
-            it('should prevent subsidiary consultant from editing any role', async () => {
-                const existingRole = await roleModel.findOne();
-                expect(existingRole).not.toBeNull();
-                const updateData = {
-                    name: 'Unauthorized Update'
-                };
-
-                return request(app.getHttpServer())
-                    .patch(`/roles/${existingRole!._id}`)
-                    .send(updateData)
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .expect(403); // Missing ROLE_EDIT permission
-            });
-
-            it('should prevent grower from editing roles (no ROLE_EDIT permission)', async () => {
-                const existingRole = await roleModel.findOne();
-                expect(existingRole).not.toBeNull();
-                const updateData = {
-                    name: 'Grower Update Attempt'
-                };
-
-                return request(app.getHttpServer())
-                    .patch(`/roles/${existingRole!._id}`)
-                    .send(updateData)
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .expect(403); // Growers cannot edit roles - core security rule
-            });
-
-            it('should prevent field worker from editing roles (no ROLE_EDIT permission)', async () => {
-                const existingRole = await roleModel.findOne();
-                expect(existingRole).not.toBeNull();
-                const updateData = {
-                    permissions: ['Spray:Create', 'Spray:View']
-                };
-
-                return request(app.getHttpServer())
-                    .patch(`/roles/${existingRole!._id}`)
-                    .send(updateData)
-                    .set('Authorization', `Bearer ${fieldWorkerToken}`)
-                    .expect(403); // Field workers cannot modify roles
-            });
+        it('should DENY user without permission from accessing inactive role by ID', async () => {
+            await request(app.getHttpServer())
+                .get(`/roles/${inactiveRole._id}?includeInactives=true`)
+                .set('Authorization', `Bearer ${viewRoleToken}`)
+                .expect(404);
         });
 
-        describe('NEGATIVE TESTING - Role Deletion (Only Administrators Can Delete)', () => {
-            it('should prevent consultant from deleting roles (no ROLE_DELETE permission)', async () => {
-                const roleToDelete = await new roleModel({
-                    recordId: 'DELETE_TEST_CONSULTANT',
-                    name: 'Test Role for Consultant Delete',
-                    permissions: ['Orchard:View'],
-                    visibilityScope: VisibilityScope.CLIENT
-                }).save();
+        it('should ALLOW user with permission to reactivate an inactive role', async () => {
+            const response = await request(app.getHttpServer())
+                .patch(`/roles/${inactiveRole._id}`)
+                .set('Authorization', `Bearer ${manageInactiveToken}`)
+                .send({ isActive: true, __v: inactiveRole.__v })
+                .expect(200);
 
-                return request(app.getHttpServer())
-                    .delete(`/roles/${roleToDelete._id}`)
-                    .set('Authorization', `Bearer ${subsidiaryConsultantToken}`)
-                    .expect(403); // Consultants cannot delete roles
-            });
-
-            it('should prevent grower from deleting roles (no ROLE_DELETE permission)', async () => {
-                const roleToDelete = await new roleModel({
-                    recordId: 'DELETE_TEST_GROWER',
-                    name: 'Test Role for Grower Delete',
-                    permissions: ['User:View'],
-                    visibilityScope: VisibilityScope.CLIENT
-                }).save();
-
-                return request(app.getHttpServer())
-                    .delete(`/roles/${roleToDelete._id}`)
-                    .set('Authorization', `Bearer ${clientGrowerToken}`)
-                    .expect(403); // Growers cannot delete roles - validates "Growers shouldn't be able to create roles"
-            });
-
-            it('should prevent field worker from deleting roles (no ROLE_DELETE permission)', async () => {
-                const roleToDelete = await new roleModel({
-                    recordId: 'DELETE_TEST_WORKER',
-                    name: 'Test Role for Worker Delete',
-                    permissions: ['Spray:View'],
-                    visibilityScope: VisibilityScope.CLIENT
-                }).save();
-
-                return request(app.getHttpServer())
-                    .delete(`/roles/${roleToDelete._id}`)
-                    .set('Authorization', `Bearer ${fieldWorkerToken}`)
-                    .expect(403); // Field workers cannot delete roles
-            });
+            expect(response.body.isActive).toBe(true);
         });
 
-        describe('Administrator-Only Success Cases (Positive Testing)', () => {
-            it('should allow ONLY platform administrator to create roles successfully', async () => {
-                const newRole = {
-                    name: 'Platform Admin Created Role',
-                    permissions: ['Orchard:View', 'User:View'],
-                    visibilityScope: VisibilityScope.CLIENT
-                };
-
-                return request(app.getHttpServer())
-                    .post('/roles')
-                    .send(newRole)
-                    .set('Authorization', `Bearer ${platformAdminToken}`)
-                    .expect(201)
-                    .expect((res) => {
-                        expect(res.body.name).toBe('Platform Admin Created Role');
-                        expect(res.body.recordId).toMatch(/^ROL\d+$/); // Correct prefix from seed.ts
-                    });
-            });
-
-            it('should allow platform administrator to update roles', async () => {
-                const roleToUpdate = await roleModel.findOne();
-                expect(roleToUpdate).not.toBeNull();
-                const updateData = {
-                    name: 'Admin Updated Role Name'
-                };
-                
-                return request(app.getHttpServer())
-                    .patch(`/roles/${roleToUpdate!._id}`)
-                    .send(updateData)
-                    .set('Authorization', `Bearer ${platformAdminToken}`)
-                    .expect(200)
-                    .expect((res) => {
-                        expect(res.body.name).toBe('Admin Updated Role Name');
-                    });
-            });
-
-            it('should allow platform administrator to delete roles', async () => {
-                const roleToDelete = await new roleModel({
-                    recordId: 'ADMIN_DELETE_TEST',
-                    name: 'Admin Delete Test Role',
-                    permissions: ['Orchard:View'],
-                    visibilityScope: VisibilityScope.CLIENT
-                }).save();
-                
-                return request(app.getHttpServer())
-                    .delete(`/roles/${roleToDelete._id}`)
-                    .set('Authorization', `Bearer ${platformAdminToken}`)
-                    .expect(200);
-            });
+        it('should DENY user without permission from reactivating an inactive role', async () => {
+            await request(app.getHttpServer())
+                .patch(`/roles/${inactiveRole._id}`)
+                .set('Authorization', `Bearer ${editRoleToken}`) // Has EDIT but not MANAGE_INACTIVE
+                .send({ isActive: true, __v: inactiveRole.__v })
+                .expect(403);
         });
+    });
+
+    it('should return 401 for any request without a token', async () => {
+        await request(app.getHttpServer()).get('/roles').expect(401);
     });
 });

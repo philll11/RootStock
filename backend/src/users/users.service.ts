@@ -64,21 +64,21 @@ export class UsersService {
     return userToCreate.save();
   }
 
-  async findAll(query: QueryUserDto, user: UserDocument): Promise<UserDocument[]> {
-    const queryBuilder = new UserQueryBuilder(query, user, this.clientResolverService);
+  async findAll(query: QueryUserDto, requestingUser: UserDocument): Promise<UserDocument[]> {
+    const queryBuilder = new UserQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     return this.userModel.find(filter).exec();
   }
 
-  async findAllByClientId(clientId: string, queryDto: QueryUserDto, user: UserDocument): Promise<UserDocument[]> {
-    const queryBuilder = new UserQueryBuilder(queryDto, user, this.clientResolverService);
+  async findAllByClientId(clientId: string, queryDto: QueryUserDto, requestingUser: UserDocument): Promise<UserDocument[]> {
+    const queryBuilder = new UserQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.clientIds = new Types.ObjectId(clientId);
     return this.userModel.find(filter).exec();
   }
 
-  async findAllByRoleId(roleId: string, queryDto: QueryUserDto, user: UserDocument): Promise<UserDocument[]> {
-    const queryBuilder = new UserQueryBuilder(queryDto, user, this.clientResolverService);
+  async findAllByRoleId(roleId: string, queryDto: QueryUserDto, requestingUser: UserDocument): Promise<UserDocument[]> {
+    const queryBuilder = new UserQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.roleId = new Types.ObjectId(roleId);
     return this.userModel.find(filter).exec();
@@ -87,12 +87,12 @@ export class UsersService {
   /**
    * Finds a single user by their ID, ensuring the requesting user has permission to view them.
    * @param userId - The ID of the user to find.
-   * @param user - The authenticated user making the request.
+   * @param requestingUser - The authenticated user making the request.
    * @returns The found user document.
    */
-  async findOne(userId: string, user: UserDocument, options: { includeInactive?: boolean } = {}): Promise<UserDocument> {
+  async findOne(userId: string, requestingUser: UserDocument, options: { includeInactive?: boolean } = {}): Promise<UserDocument> {
     const queryDto = options.includeInactive ? { includeInactives: true } : {};
-    const queryBuilder = new UserQueryBuilder(queryDto, user, this.clientResolverService);
+    const queryBuilder = new UserQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(userId) }] };
@@ -110,7 +110,7 @@ export class UsersService {
    * Enforces business rules for Contact users (limited to basic personal info).
    * @param userId - The ID of the user to update.
    * @param updateUserDto - The DTO containing update data.
-   * @param user - The authenticated user making the request.
+   * @param requestingUser - The authenticated user making the request.
    * @returns The updated user document.
    */
   async update(userId: string, updateUserDto: UpdateUserDto, requestingUser: UserDocument): Promise<UserDocument> {
@@ -157,7 +157,7 @@ export class UsersService {
    * Deletes a user, ensuring the requesting user has permission to do so.
    * Enforces business rule: Contact users cannot delete other users.
    * @param userId - The ID of the user to delete.
-   * @param user - The authenticated user making the request.
+   * @param requestingUser - The authenticated user making the request.
    * @returns The soft-deleted user document.
    */
   async remove(userId: string, requestingUser: UserDocument): Promise<UserDocument> {

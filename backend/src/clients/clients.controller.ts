@@ -32,14 +32,14 @@ export class ClientsController {
 
   @Post()
   @RequirePermission(PERMISSIONS.CLIENT_CREATE)
-  create(@Body() createClientDto: CreateClientDto, @CurrentUser() user: UserDocument) {
-    return this.clientsService.create(createClientDto, user);
+  create(@Body() createClientDto: CreateClientDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.clientsService.create(createClientDto, requestingUser);
   }
 
   @Get()
   @RequirePermission(PERMISSIONS.CLIENT_VIEW)
-  findAll(@Query() query: QueryClientDto, @CurrentUser() user: UserDocument) {
-    return this.clientsService.findAll(query, user);
+  findAll(@Query() query: QueryClientDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.clientsService.findAll(query, requestingUser);
   }
 
   @Get(':clientId')
@@ -47,9 +47,9 @@ export class ClientsController {
   findOne(
     @Param('clientId', ParseMongoIdPipe) clientId: string,
     @Query() query: QueryClientDto,
-    @CurrentUser() user: UserDocument
+    @CurrentUser() requestingUser: UserDocument
   ) {
-    return this.clientsService.findOne(clientId, user, { includeInactive: query.includeInactives });
+    return this.clientsService.findOne(clientId, requestingUser, { includeInactive: query.includeInactives });
   }
 
   @Get(':clientId/users')
@@ -57,10 +57,10 @@ export class ClientsController {
   async findAllUsersForClient(
     @Param('clientId', ParseMongoIdPipe) clientId: string,
     @Query() query: QueryUserDto,
-    @CurrentUser() user: UserDocument,
+    @CurrentUser() requestingUser: UserDocument,
   ) {
-    await this.clientsService.findOne(clientId, user);
-    return this.usersService.findAllByClientId(clientId, query, user);
+    await this.clientsService.findOne(clientId, requestingUser);
+    return this.usersService.findAllByClientId(clientId, query, requestingUser);
   }
 
   @Get(':clientId/orchards')
@@ -68,12 +68,12 @@ export class ClientsController {
   async findAllOrchardsForClient(
     @Param('clientId', ParseMongoIdPipe) clientId: string,
     @Query() query: QueryOrchardDto,
-    @CurrentUser() user: UserDocument,
+    @CurrentUser() requestingUser: UserDocument,
   ) {
-    // First, validate that the user has access to the parent client.
-    await this.clientsService.findOne(clientId, user);
+    // First, validate that the requestingUser has access to the parent client.
+    await this.clientsService.findOne(clientId, requestingUser);
     // Then, fetch the orchards for that client.
-    return this.orchardsService.findAllByClientId(clientId, query, user);
+    return this.orchardsService.findAllByClientId(clientId, query, requestingUser);
   }
 
   @Patch(':clientId')
@@ -81,9 +81,9 @@ export class ClientsController {
   update(
     @Param('clientId', ParseMongoIdPipe) clientId: string,
     @Body() updateClientDto: UpdateClientDto,
-    @CurrentUser() user: UserDocument,
+    @CurrentUser() requestingUser: UserDocument,
   ) {
-    return this.clientsService.update(clientId, updateClientDto, user);
+    return this.clientsService.update(clientId, updateClientDto, requestingUser);
   }
 
   @Put(':clientId/users')
@@ -92,14 +92,14 @@ export class ClientsController {
   async assignUsers(
     @Param('clientId', ParseMongoIdPipe) clientId: string,
     @Body() assignUsersDto: AssignUsersDto,
-    @CurrentUser() user: UserDocument,
+    @CurrentUser() requestingUser: UserDocument,
   ): Promise<void> {
-    await this.clientsService.assignUsers(clientId, assignUsersDto.userIds, user);
+    await this.clientsService.assignUsers(clientId, assignUsersDto.userIds, requestingUser);
   }
 
   @Delete(':clientId')
   @RequirePermission(PERMISSIONS.CLIENT_DELETE)
-  remove(@Param('clientId', ParseMongoIdPipe) clientId: string, @CurrentUser() user: UserDocument) {
-    return this.clientsService.remove(clientId, user);
+  remove(@Param('clientId', ParseMongoIdPipe) clientId: string, @CurrentUser() requestingUser: UserDocument) {
+    return this.clientsService.remove(clientId, requestingUser);
   }
 }

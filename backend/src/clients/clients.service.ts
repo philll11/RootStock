@@ -51,14 +51,14 @@ export class ClientsService {
     return newClient.save();
   }
 
-  async findAll(query: QueryClientDto, user: UserDocument): Promise<ClientDocument[]> {
-    const queryBuilder = new ClientQueryBuilder(query, user, this.clientResolverService);
+  async findAll(query: QueryClientDto, requestingUser: UserDocument): Promise<ClientDocument[]> {
+    const queryBuilder = new ClientQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     return this.clientModel.find(filter).exec();
   }
 
-  async findAllBySubsidiaryId(subsidiaryId: string, queryDto: QueryClientDto, user: UserDocument): Promise<ClientDocument[]> {
-    const queryBuilder = new ClientQueryBuilder(queryDto, user, this.clientResolverService);
+  async findAllBySubsidiaryId(subsidiaryId: string, queryDto: QueryClientDto, requestingUser: UserDocument): Promise<ClientDocument[]> {
+    const queryBuilder = new ClientQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.subsidiaryId = new Types.ObjectId(subsidiaryId);
     return this.clientModel.find(filter).exec();
@@ -67,12 +67,12 @@ export class ClientsService {
   /**
    * Finds a single client by its ID, ensuring the requesting user has permission to view it.
    * @param clientId - The ID of the client to find.
-   * @param user - The authenticated user making the request.
+   * @param requestingUser - The authenticated user making the request.
    * @returns The found client document.
    */
-  async findOne(clientId: string, user: UserDocument, options: { includeInactive?: boolean } = {}): Promise<ClientDocument> {
+  async findOne(clientId: string, requestingUser: UserDocument, options: { includeInactive?: boolean } = {}): Promise<ClientDocument> {
     const queryDto = options.includeInactive ? { includeInactives: true } : {};
-    const queryBuilder = new ClientQueryBuilder(queryDto, user, this.clientResolverService);
+    const queryBuilder = new ClientQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(clientId) }] };
@@ -88,12 +88,12 @@ export class ClientsService {
    * Updates a client, ensuring the requesting user has permission to modify it.
    * @param clientId - The ID of the client to update.
    * @param updateClientDto - The DTO containing update data.
-   * @param user - The authenticated user making the request.
+   * @param requestingUser - The authenticated user making the request.
    * @returns The updated client document.
    */
-  async update(clientId: string, updateClientDto: UpdateClientDto, user: UserDocument): Promise<ClientDocument> {
+  async update(clientId: string, updateClientDto: UpdateClientDto, requestingUser: UserDocument): Promise<ClientDocument> {
     // The DTO and schema now prevent subsidiaryId from being changed. This check simplifies significantly.
-    const clientToUpdate = await this.findOne(clientId, user, { includeInactive: true });
+    const clientToUpdate = await this.findOne(clientId, requestingUser, { includeInactive: true });
 
     if (updateClientDto.isActive === false) {
       const activeUserCount = await this.usersService.countActiveByClientId(clientId);
@@ -110,7 +110,7 @@ export class ClientsService {
     const updatePayload: Partial<Client> = { ...restOfDto };
 
     if (isActive !== undefined) {
-      const userPermissions = (user.roleId as any)?.permissions || [];
+      const userPermissions = (requestingUser.roleId as any)?.permissions || [];
       if (!userPermissions.includes(PERMISSIONS.CLIENT_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
@@ -169,11 +169,11 @@ export class ClientsService {
   /**
    * Deletes a client, ensuring the requesting user has permission to do so.
    * @param clientId - The ID of the client to delete.
-   * @param user - The authenticated user making the request.
+   * @param requestingUser - The authenticated user making the request.
    * @returns The soft-deleted client document.
    */
-  async remove(clientId: string, user: UserDocument): Promise<ClientDocument> {
-    await this.findOne(clientId, user); // Layer 2 Client Check
+  async remove(clientId: string, requestingUser: UserDocument): Promise<ClientDocument> {
+    await this.findOne(clientId, requestingUser); // Layer 2 Client Check
 
     const session = await this.connection.startSession();
     session.startTransaction();

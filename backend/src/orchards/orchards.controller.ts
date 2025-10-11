@@ -20,14 +20,14 @@ export class OrchardsController {
 
   @Post()
   @RequirePermission(PERMISSIONS.ORCHARD_CREATE)
-  create(@Body() createOrchardDto: CreateOrchardDto, @CurrentUser() user: UserDocument) {
-    return this.orchardsService.create(createOrchardDto, user);
+  create(@Body() createOrchardDto: CreateOrchardDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.orchardsService.create(createOrchardDto, requestingUser);
   }
 
   @Get()
   @RequirePermission(PERMISSIONS.ORCHARD_VIEW)
-  findAll(@Query() query: QueryOrchardDto, @CurrentUser() user: UserDocument) {
-    return this.orchardsService.findAll(query, user);
+  findAll(@Query() query: QueryOrchardDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.orchardsService.findAll(query, requestingUser);
   }
 
   @Get(':orchardId')
@@ -35,20 +35,20 @@ export class OrchardsController {
   findOne(
     @Param('orchardId', ParseMongoIdPipe) orchardId: string,
     @Query() query: QueryOrchardDto,
-    @CurrentUser() user: UserDocument
+    @CurrentUser() requestingUser: UserDocument
   ) {
-    return this.orchardsService.findOne(orchardId, user, { includeInactive: query.includeInactives });
+    return this.orchardsService.findOne(orchardId, requestingUser, { includeInactive: query.includeInactives });
   }
 
   @Patch(':orchardId')
   @RequirePermission(PERMISSIONS.ORCHARD_EDIT)
-  update(@Param('orchardId', ParseMongoIdPipe) orchardId: string, @Body() updateOrchardDto: UpdateOrchardDto, @CurrentUser() user: UserDocument) {
-    return this.orchardsService.update(orchardId, updateOrchardDto, user);
+  update(@Param('orchardId', ParseMongoIdPipe) orchardId: string, @Body() updateOrchardDto: UpdateOrchardDto, @CurrentUser() requestingUser: UserDocument) {
+    return this.orchardsService.update(orchardId, updateOrchardDto, requestingUser);
   }
 
   @Delete(':orchardId')
   @RequirePermission(PERMISSIONS.ORCHARD_DELETE)
-  remove(@Param('orchardId', ParseMongoIdPipe) orchardId: string, @CurrentUser() user: UserDocument) {
-    return this.orchardsService.remove(orchardId, user);
+  remove(@Param('orchardId', ParseMongoIdPipe) orchardId: string, @CurrentUser() requestingUser: UserDocument) {
+    return this.orchardsService.remove(orchardId, requestingUser);
   }
 }
