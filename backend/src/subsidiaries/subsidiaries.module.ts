@@ -1,3 +1,4 @@
+// backend/src/subsidiaries/subsidiaries.module.ts
 import { Module, forwardRef } from '@nestjs/common';
 import { SubsidiariesService } from './subsidiaries.service';
 import { SubsidiariesController } from './subsidiaries.controller';

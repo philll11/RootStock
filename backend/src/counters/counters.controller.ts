@@ -1,3 +1,4 @@
+// backend/src/counters/counters.controller.ts
 import { Controller, Get, Body, Patch, Param, UseGuards } from '@nestjs/common';
 import { CountersService } from './counters.service';
 import { UpdateCounterDto } from './dto/update-counter.dto';

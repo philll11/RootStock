@@ -1,3 +1,4 @@
+// backend/test/subsidiary/subsidiary.crud.e2e-spec.ts
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';

@@ -1,3 +1,4 @@
+// backend/src/roles/roles.module.ts
 import { Module, forwardRef } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { RolesController } from './roles.controller';

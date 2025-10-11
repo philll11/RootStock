@@ -1,3 +1,4 @@
+// backend/src/subsidiaries/subsidiaries.service.ts
 import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';

@@ -1,3 +1,4 @@
+// backend/src/seed.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Role, VisibilityScope } from './roles/schemas/role.schema';

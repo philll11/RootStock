@@ -1,3 +1,4 @@
+// backend/src/clients/clients.service.ts
 import { Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';

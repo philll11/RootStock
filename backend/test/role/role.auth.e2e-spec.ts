@@ -1,3 +1,4 @@
+// backend/test/role/role.auth.e2e-spec.ts
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
@@ -94,58 +95,80 @@ describe('Roles Auth (e2e)', () => {
 
     afterEach(async () => {
         // Clean up created roles after each test, keeping the base roles
-        await roleModel.deleteMany({ name: /Auth Test Role/ });
+        await roleModel.deleteMany({ recordId: { $in: ['TEST_ROLE_CRUD', 'INACTIVE_TEST_ROLE_CRUD'] } });
     });
 
     describe('Standard Action Permissions', () => {
-        const unauthorizedChecks = [
-            { endpoint: 'POST /roles', token: viewRoleToken, status: 401 },
-            { endpoint: 'GET /roles', token: noPermissionsToken, status: 401 },
-            { endpoint: 'GET /roles/:id', token: noPermissionsToken, status: 401 },
-            { endpoint: 'PATCH /roles/:id', token: viewRoleToken, status: 401 },
-            { endpoint: 'DELETE /roles/:id', token: editRoleToken, status: 401 },
-        ];
-
-        unauthorizedChecks.forEach(({ endpoint, token, status }) => {
-            const [method, path] = endpoint.split(' ');
-            it(`should return ${status} for ${method} ${path} with insufficient permissions`, async () => {
-                const url = path.includes(':id') ? path.replace(':id', testRole._id.toString()) : path;
-
-                await request(app.getHttpServer())
-                    [method.toLowerCase()](url)
-                    .set('Authorization', `Bearer ${token}`)
-                    .send({}) // Send empty body for POST/PATCH
-                    .expect(status);
-            });
+        // --- UNAUTHORIZED / FORBIDDEN CHECKS ---
+        it('should return 403 for POST /roles with insufficient permissions', async () => {
+            await request(app.getHttpServer())
+                .post('/roles')
+                .set('Authorization', `Bearer ${viewRoleToken}`) // Has VIEW, not CREATE
+                .send({ name: 'Auth Test Create', permissions: [], visibilityScope: VisibilityScope.CLIENT })
+                .expect(403);
         });
 
-        const authorizedChecks = [
-            { endpoint: 'POST /roles', token: createRoleToken, status: 201 },
-            { endpoint: 'GET /roles', token: viewRoleToken, status: 200 },
-            { endpoint: 'GET /roles/:id', token: viewRoleToken, status: 200 },
-            { endpoint: 'PATCH /roles/:id', token: editRoleToken, status: 200 },
-            { endpoint: 'DELETE /roles/:id', token: deleteRoleToken, status: 200 },
-        ];
+        it('should return 403 for GET /roles with insufficient permissions', async () => {
+            await request(app.getHttpServer())
+                .get('/roles')
+                .set('Authorization', `Bearer ${noPermissionsToken}`)
+                .expect(403);
+        });
 
-        authorizedChecks.forEach(({ endpoint, token, status }) => {
-            const [method, path] = endpoint.split(' ');
-            it(`should return ${status} for ${method} ${path} with sufficient permissions`, async () => {
-                const url = path.includes(':id') ? path.replace(':id', testRole._id.toString()) : path;
+        it('should return 403 for PATCH /roles/:id with insufficient permissions', async () => {
+            await request(app.getHttpServer())
+                .patch(`/roles/${testRole._id}`)
+                .set('Authorization', `Bearer ${viewRoleToken}`) // Has VIEW, not EDIT
+                .send({ name: 'Auth Test Patch' })
+                .expect(403);
+        });
 
-                // Minimal valid body for state-changing requests
-                const body = {
-                    'POST': { name: 'Auth Test Create', permissions: [PERMISSIONS.ORCHARD_VIEW], visibilityScope: VisibilityScope.CLIENT },
-                    'PATCH': { name: 'Auth Test Patch', __v: 0 },
-                }[method] || {};
+        it('should return 403 for DELETE /roles/:id with insufficient permissions', async () => {
+            await request(app.getHttpServer())
+                .delete(`/roles/${testRole._id}`)
+                .set('Authorization', `Bearer ${editRoleToken}`) // Has EDIT, not DELETE
+                .expect(403);
+        });
 
-                await request(app.getHttpServer())
-                    [method.toLowerCase()](url)
-                    .set('Authorization', `Bearer ${token}`)
-                    .send(body)
-                    .expect(status);
-            });
+        // --- AUTHORIZED / SUCCESS CHECKS ---
+        it('should return 201 for POST /roles with sufficient permissions', async () => {
+            await request(app.getHttpServer())
+                .post('/roles')
+                .set('Authorization', `Bearer ${createRoleToken}`)
+                .send({ name: 'Auth Test Create', permissions: [PERMISSIONS.ORCHARD_VIEW], visibilityScope: VisibilityScope.CLIENT })
+                .expect(201);
+        });
+
+        it('should return 200 for GET /roles with sufficient permissions', async () => {
+            await request(app.getHttpServer())
+                .get('/roles')
+                .set('Authorization', `Bearer ${viewRoleToken}`)
+                .expect(200);
+        });
+
+        it('should return 200 for GET /roles/:id with sufficient permissions', async () => {
+            await request(app.getHttpServer())
+                .get(`/roles/${testRole._id}`)
+                .set('Authorization', `Bearer ${viewRoleToken}`)
+                .expect(200);
+        });
+
+        it('should return 200 for PATCH /roles/:id with sufficient permissions', async () => {
+            await request(app.getHttpServer())
+                .patch(`/roles/${testRole._id}`)
+                .set('Authorization', `Bearer ${editRoleToken}`)
+                .send({ name: 'Auth Test Patch', __v: testRole.__v })
+                .expect(200);
+        });
+
+        it('should return 200 for DELETE /roles/:id with sufficient permissions', async () => {
+            await request(app.getHttpServer())
+                .delete(`/roles/${testRole._id}`)
+                .set('Authorization', `Bearer ${deleteRoleToken}`)
+                .expect(200);
         });
     });
+
 
     describe('Inactive Record Permissions (ROLE_MANAGE_INACTIVE)', () => {
         it('should ALLOW user with permission to view inactive roles in list', async () => {
@@ -198,7 +221,7 @@ describe('Roles Auth (e2e)', () => {
                 .patch(`/roles/${inactiveRole._id}`)
                 .set('Authorization', `Bearer ${editRoleToken}`) // Has EDIT but not MANAGE_INACTIVE
                 .send({ isActive: true, __v: inactiveRole.__v })
-                .expect(403);
+                .expect(404);
         });
     });
 

@@ -1,3 +1,4 @@
+// backend/src/database/database.module.ts
 import { Global, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 

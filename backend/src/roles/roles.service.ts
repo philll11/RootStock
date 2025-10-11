@@ -1,3 +1,4 @@
+// backend/src/roles/roles.service.ts
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
@@ -68,7 +69,7 @@ export class RolesService {
 
   async update(roleId: string, updateRoleDto: UpdateRoleDto, requestingUser: User): Promise<Role> {
     // Layer 2 check to ensure requestingUser has permission to see the role they are trying to update.
-    await this.findOne(roleId, requestingUser, { includeInactive: true });
+    const existingRole = await this.findOne(roleId, requestingUser, { includeInactive: true });
 
     // Prevent deactivation of Roles that are assigned to users
     if (updateRoleDto.isActive === false) {
@@ -109,6 +110,11 @@ export class RolesService {
   async remove(roleId: string, requestingUser: User): Promise<Role> {
     await this.findOne(roleId, requestingUser); // Secure authorization check
 
+    const activeUserCount = await this.userModel.countDocuments({ roleId: new Types.ObjectId(roleId), isDeleted: false });
+    if (activeUserCount > 0) {
+      throw new ConflictException('Cannot delete role as it is currently assigned to one or more users.');
+    }
+
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
@@ -119,9 +125,6 @@ export class RolesService {
         session,
         'Role'
       );
-      
-      // Remove role reference from users
-      await this.userModel.updateMany({ roleId: new Types.ObjectId(roleId) }, { $set: { roleId: null } }, { session }).exec();
 
       await session.commitTransaction();
       return deletedRole;
