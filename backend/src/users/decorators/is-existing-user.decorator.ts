@@ -1,3 +1,5 @@
+// backend/src/users/decorators/is-existing-user.decorator.ts
+
 import { registerDecorator, ValidationOptions } from 'class-validator';
 import { IsExistingUserConstraint } from '../validators/is-existing-user.validator';
 

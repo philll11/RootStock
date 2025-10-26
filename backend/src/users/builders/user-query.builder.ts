@@ -1,3 +1,5 @@
+// backend/src/users/builders/user-query.builder.ts
+
 import { BaseQueryBuilder } from '../../common/builders/base-query.builder';
 import { Model } from 'mongoose';
 import { User } from '../schemas/user.schema';

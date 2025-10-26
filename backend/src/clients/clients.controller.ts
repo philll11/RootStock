@@ -1,3 +1,5 @@
+// backend/src/clients/clients.controller.ts
+
 import { Controller, Get, Post, Body, Patch, Put, Param, Delete, UseFilters, Query, HttpCode, HttpStatus } from '@nestjs/common';
 
 import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';

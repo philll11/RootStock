@@ -1,3 +1,4 @@
+// backend/src/users/dto/query-user.dto.ts
 import { IsBoolean, IsEnum, IsOptional, IsString, IsEmail } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UserType } from '../schemas/user.schema';

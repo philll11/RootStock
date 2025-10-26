@@ -1,3 +1,5 @@
+// backend/src/clients/dto/query-client.dto.ts
+
 import { IsBoolean, IsMongoId, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 

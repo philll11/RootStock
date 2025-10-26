@@ -1,3 +1,5 @@
+// backend/src/users/schemas/user.schema.spec.ts
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';

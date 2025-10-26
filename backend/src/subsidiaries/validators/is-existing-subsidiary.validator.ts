@@ -1,3 +1,5 @@
+// backend/src/subsidiaries/validators/is-existing-subsidiary.validator.ts
+
 import { Injectable } from '@nestjs/common';
 import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments, } from 'class-validator';
 import { SubsidiariesService } from '../subsidiaries.service';
