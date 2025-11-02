@@ -29,7 +29,7 @@ export const setupTestApp = async (): Promise<{
         isGlobal: true,
         load: [() => ({
           DATABASE_URL: uri,
-          COGNITO_CLIENT_SECRET: 'test-secret-key-for-jwt-signing'
+          JWT_SECRET: 'test-secret-key-for-jwt-signing'
         })]
       }),
       AppModule,

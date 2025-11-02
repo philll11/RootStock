@@ -348,6 +348,22 @@ export class UsersService {
   }
 
   /**
+ * Finds a single user by their email and populates their role.
+ * This is specifically used for the local authentication login process.
+ * @param email The user's email address.
+ * @returns A user document with the role populated, or null if not found.
+ */
+async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null> {
+  return this.userModel
+    .findOne({ email })
+    .populate({
+      path: 'roleId',
+      model: 'Role',
+    })
+    .exec();
+}
+
+  /**
  * Prepares the payload for an EXISTING user update.
  * Handles partial updates, derived fields, and authorization for sensitive fields.
  * @private

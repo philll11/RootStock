@@ -1,4 +1,5 @@
 // backend/src/auth/jwt.strategy.ts
+
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
@@ -12,14 +13,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         private readonly usersService: UsersService,
         private readonly configService: ConfigService,
     ) {
-        const secret = configService.get<string>('COGNITO_CLIENT_SECRET');
-        if (!secret) throw new Error('JWT secret key is not defined in environment variables. Application cannot start.');
+        // --- DYNAMIC SECRET LOGIC ---
+        // Choose the secret key based on the authentication strategy.
+        const appEnv = configService.get<string>('APP_ENV');
+        const secret = appEnv === 'local'
+            ? configService.get<string>('JWT_SECRET')
+            : configService.get<string>('COGNITO_CLIENT_SECRET');
+
+        if (!secret) {
+            const keyName = appEnv === 'local' ? 'JWT_SECRET' : 'COGNITO_CLIENT_SECRET';
+            throw new Error(`${keyName} is not defined in environment variables. Application cannot start.`);
+        }
 
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            // IMPORTANT: In a real Cognito setup, this would use jwks-rsa
-            // to dynamically fetch the public key from the JWKS URI.
-            // For now, we'll use a placeholder from an environment variable.
+            ignoreExpiration: false,
             secretOrKey: secret,
         });
     }

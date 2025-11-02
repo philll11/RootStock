@@ -1,0 +1,43 @@
+# /docker-compose.yml
+
+services:
+  # The RootStock Backend Application Service
+  backend:
+    build:
+      context: ./backend
+    container_name: rootstock-backend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/.env # Loads environment variables from the .env file
+    environment:
+      - NODE_ENV=development
+      - APP_ENV=local
+    depends_on:
+      - mongodb # Tells Docker to start the mongodb service before the backend
+    networks:
+      - rootstock-net
+
+  # The MongoDB Database Service
+  mongodb:
+    image: mongo:8.0
+    container_name: rootstock-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongo-data:/data/db # Persists database data across container restarts
+    networks:
+      - rootstock-net
+
+# Defines the network that allows services to communicate
+networks:
+  rootstock-net:
+    driver: bridge
+
+# Defines the named volume for data persistence
+volumes:
+  mongo-data:
+    driver: local

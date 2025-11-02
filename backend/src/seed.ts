@@ -5,6 +5,8 @@ import { Role, VisibilityScope } from './roles/schemas/role.schema';
 import { getModelToken } from '@nestjs/mongoose';
 import { PERMISSIONS } from './common/constants/permissions.constants';
 import { Counter } from './counters/schemas/counter.schema';
+import { User, UserType } from './users/schemas/user.schema';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * A standalone NestJS application script for seeding the database.
@@ -17,22 +19,22 @@ import { Counter } from './counters/schemas/counter.schema';
  * To run this script, use the command: `npm run seed`
  */
 async function bootstrap() {
-  // Bootstrap the NestJS application context, which allows us to use the DI container.
   const app = await NestFactory.createApplicationContext(AppModule);
+  const configService = app.get(ConfigService);
 
   try {
     console.log('Starting database seeding process...');
 
-    // Get the Mongoose Model for the Role schema through the DI container.
     const roleModel = app.get(getModelToken(Role.name));
     const counterModel = app.get(getModelToken(Counter.name));
+    const userModel = app.get(getModelToken(User.name));
 
     // --- Define and Seed the Essential Counters ---
     // This array defines the initial state for our recordId counters.
     const seedCounters = [
       { _id: 'subsidiary', prefix: 'SUB', sequence_value: 0 },
       { _id: 'client', prefix: 'CLI', sequence_value: 0 },
-      { _id: 'user', prefix: 'USR', sequence_value: 0 },
+      { _id: 'user', prefix: 'USR', sequence_value: 1 }, // Start from 1 for user to reserve USR000001 for admin
       { _id: 'role', prefix: 'ROL', sequence_value: 0 },
       { _id: 'orchard', prefix: 'ORC', sequence_value: 0 },
     ];
@@ -48,20 +50,16 @@ async function bootstrap() {
 
 
     // --- Define the Essential Roles ---
-    // This array holds the definitions for the roles that are critical for
-    // the application's initial setup.
     const seedRoles = [
       {
-        // The highest-level administrator role. Has all permissions and can see all data.
         recordId: 'ROLE_ADMINISTRATOR',
         name: 'Administrator',
         description: 'Super administrator with access to all system features and data.',
         visibilityScope: VisibilityScope.GLOBAL,
-        permissions: Object.values(PERMISSIONS), // Grants every permission defined in the system.
+        permissions: Object.values(PERMISSIONS),
         isActive: true,
       },
       {
-        // A standard role for a consultant who manages multiple clients within a firm.
         recordId: 'ROLE_CONSULTANT',
         name: 'Consultant',
         description: 'Consultant role with access to clients within their subsidiary.',
@@ -70,12 +68,10 @@ async function bootstrap() {
           PERMISSIONS.CLIENT_VIEW,
           PERMISSIONS.USER_VIEW,
           PERMISSIONS.ORCHARD_VIEW,
-          // Add other permissions a consultant might need by default.
         ],
         isActive: true,
       },
       {
-        // A standard role for a client user (e.g., a grower).
         recordId: 'ROLE_GROWER',
         name: 'Grower',
         description: 'Standard client user with access to their own client data.',
@@ -104,15 +100,48 @@ async function bootstrap() {
       console.log(`Successfully seeded/updated role: ${result.name}`);
     }
 
+    // --- Create an Initial Administrator User ---
+    const adminRole = await roleModel.findOne({ recordId: 'ROLE_ADMINISTRATOR' }).exec();
+    if (!adminRole) {
+      throw new Error('Could not find Administrator role to assign to the admin user.');
+    }
+
+    // Get admin details from environment variables
+    const adminEmail = configService.get<string>('ADMIN_EMAIL');
+    const adminFirstName = configService.get<string>('ADMIN_FIRST_NAME');
+    const adminLastName = configService.get<string>('ADMIN_LAST_NAME');
+
+    if (!adminEmail) {
+      console.warn('Skipping admin user seed because ADMIN_EMAIL is not set in .env file.');
+    } else {
+      await userModel.findOneAndUpdate(
+        { email: adminEmail },
+        {
+          $setOnInsert: {
+            recordId: 'USR000001', // Manually set for the first user
+            firstName: adminFirstName,
+            lastName: adminLastName,
+            name: `${adminFirstName} ${adminLastName}`,
+            email: adminEmail,
+            userType: UserType.EMPLOYEE,
+            roleId: adminRole._id,
+            clientIds: [],
+            isActive: true,
+            isDeleted: false,
+          },
+        },
+        { upsert: true, new: true },
+      );
+      console.log(`Successfully seeded/verified administrator user: ${adminEmail}`);
+    }
+
     console.log('Database seeding completed successfully.');
   } catch (error) {
     console.error('An error occurred during database seeding:', error);
     throw error;
   } finally {
-    // Ensure the application context is closed to allow the script to exit.
     await app.close();
   }
 }
 
-// Execute the bootstrap function.
 bootstrap();
