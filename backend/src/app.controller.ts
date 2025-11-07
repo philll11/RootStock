@@ -1,13 +1,36 @@
 // backend/src/app.controller.ts
-import { Controller, Get } from '@nestjs/common';
+
+import { Controller, Get, InternalServerErrorException, ServiceUnavailableException, } from '@nestjs/common';
 import { AppService } from './app.service';
+import { Public } from './auth/decorators/public.decorator';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  /**
+   * Liveness Probe: Defines the /status route and calls the service.
+   */
+  @Public()
+  @Get('status')
+  getLivenessStatus() {
+    return this.appService.getLivenessStatus();
+  }
+
+  /**
+   * Readiness Probe: Defines the /status/ready route and calls the service.
+   */
+  @Public()
+  @Get('status/ready')
+  async getReadinessStatus() {
+    try {
+      // The call is now clean, just awaiting the service's response
+      return await this.appService.getReadinessStatus();
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw new ServiceUnavailableException(error.getResponse());
+      }
+      throw new ServiceUnavailableException('An unexpected error occurred during the health check.');
+    }
   }
 }

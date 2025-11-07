@@ -13,6 +13,20 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
+  const configService = app.get(ConfigService); // Get ConfigService early
+
+  // --- ENABLE CORS ---
+  const corsOrigin = configService.get<string>('CORS_ORIGIN');
+  if (corsOrigin) {
+    app.enableCors({
+      origin: corsOrigin,
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      credentials: true,
+    });
+    const logger = app.get(Logger);
+    logger.log(`CORS enabled for origin: ${corsOrigin}`);
+  }
+
   app.useLogger(app.get(Logger));
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
@@ -40,7 +54,6 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
 
 
-  const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT') || 3000;
   await app.listen(port);
 

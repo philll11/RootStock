@@ -17,6 +17,7 @@ import { SubsidiariesModule } from './subsidiaries/subsidiaries.module';
 import { OrchardsModule } from './orchards/orchards.module';
 import { CountersModule } from './counters/counters.module';
 import { LocalAuthModule } from './auth/local-auth.module';
+import appConfig from './config/app.config';
 
 // --- Conditional Module Logic ---
 // Only import the LocalAuthModule if APP_ENV is set to 'local'.
@@ -29,7 +30,11 @@ if (process.env.APP_ENV === 'local') {
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ 
+      isGlobal: true, 
+      ignoreEnvFile: process.env.APP_ENV === 'local' || process.env.APP_ENV === 'cloud',
+      load: [appConfig],
+    }),
     LoggerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -39,12 +44,8 @@ if (process.env.APP_ENV === 'local') {
           transport: configService.get<string>('NODE_ENV') !== 'production' ? { target: 'pino-pretty', options: { singleLine: true } } : undefined,
           level: configService.get<string>('LOG_LEVEL', 'info'), // Default to 'info'
           // Define custom log message format for requests
-          customSuccessMessage: (req, res) => {
-            return `Request ${req.id} finished with status ${res.statusCode}`;
-          },
-          customErrorMessage: (req, res, err) => {
-            return `Request ${req.id} failed with status ${res.statusCode}: ${err.message}`;
-          },
+          customSuccessMessage: (req, res) => { return `Request ${req.id} finished with status ${res.statusCode}`; },
+          customErrorMessage: (req, res, err) => { return `Request ${req.id} failed with status ${res.statusCode}: ${err.message}`; },
           // This creates and adds the Correlation ID to every log
           genReqId: (req, res) => {
             const existingId = req.id ?? req.headers["x-request-id"];
@@ -76,14 +77,8 @@ if (process.env.APP_ENV === 'local') {
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: PermissionsGuard,
-    },
+    { provide: APP_GUARD, useClass: JwtAuthGuard, },
+    { provide: APP_GUARD, useClass: PermissionsGuard, },
   ],
 })
 export class AppModule { }
