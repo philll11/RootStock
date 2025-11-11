@@ -1,0 +1,48 @@
+{
+  "name": "@frontend/source",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios"
+  },
+  "private": true,
+  "devDependencies": {
+    "@expo/cli": "~0.24.14",
+    "@nx/expo": "^22.0.3",
+    "@nx/js": "^22.0.3",
+    "@nx/next": "^22.0.3",
+    "@swc-node/register": "~1.9.1",
+    "@swc/cli": "~0.6.0",
+    "@swc/core": "~1.5.7",
+    "@swc/helpers": "~0.5.11",
+    "@types/node": "20.19.9",
+    "@types/react": "~19.0.10",
+    "@types/react-dom": "^19.0.0",
+    "babel-preset-expo": "~13.2.0",
+    "metro-config": "~0.82.4",
+    "metro-resolver": "~0.82.4",
+    "nx": "22.0.3",
+    "tslib": "^2.3.0",
+    "typescript": "~5.9.2"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "dependencies": {
+    "@expo/metro-config": "~0.20.14",
+    "@expo/metro-runtime": "~5.0.4",
+    "expo": "~53.0.10",
+    "expo-splash-screen": "~0.30.9",
+    "expo-status-bar": "~2.2.3",
+    "expo-system-ui": "~5.0.8",
+    "next": "~15.2.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-native": "0.79.3",
+    "react-native-svg": "~15.11.2",
+    "react-native-svg-transformer": "~1.5.1",
+    "react-native-web": "~0.20.0"
+  }
+}

@@ -1,0 +1,1 @@
+export const SHARED_GREETING = 'Hello from the SHARED library! The configuration is working!';
