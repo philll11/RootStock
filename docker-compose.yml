@@ -1,0 +1,61 @@
+# /docker-compose.yml
+
+services:
+  # The RootStock Backend Application Service
+  backend:
+    build:
+      context: ./backend
+    container_name: rootstock-backend
+    ports:
+      - "3330:3330"
+    env_file:
+      - ./backend/.env # Loads environment variables from the .env file
+    environment:
+      - NODE_ENV=development
+      - APP_ENV=local
+    depends_on:
+      mongodb:
+        condition: service_healthy # Wait for MongoDB to be healthy before starting
+    networks:
+      - rootstock-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # The MongoDB Database Service
+  mongodb:
+    image: mongo:8.0
+    container_name: rootstock-mongodb
+    restart: always
+    ports:
+      - "3332:27017"
+    volumes:
+      - mongo-data:/data/db # Persists database data across container restarts
+      - mongo-config:/data/configdb # Persists replica set configuration data
+    networks:
+      - rootstock-net
+    command: ["--replSet", "rs0", "--bind_ip_all"] # Configures MongoDB to use a replica set
+    healthcheck: # Initializes the replica set and checks MongoDB health
+      test:
+        [
+          "CMD-SHELL",
+          "echo \"try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [ { _id: 0, host: 'mongodb:27017' } ] }).ok }\" | mongosh --quiet"
+        ]
+      interval: 5s
+      timeout: 10s
+      start_period: 10s
+      retries: 5
+
+# Defines the network that allows services to communicate
+networks:
+  rootstock-net:
+    driver: bridge
+
+# Defines the named volume for data persistence
+volumes:
+  mongo-data:
+    driver: local
+  mongo-config:
+    driver: local

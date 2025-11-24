@@ -1,0 +1,29 @@
+# Git and version control
+.git
+.gitignore
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Environment files
+.env
+.env.*
+
+# Docker specific files
+Dockerfile
+.dockerignore
+
+# IDE and editor configs
+.vscode
+.idea
+
+# Test files
+test
+
+# Config and documentation files
+README.md
+eslint.config.mjs
+.prettierrc

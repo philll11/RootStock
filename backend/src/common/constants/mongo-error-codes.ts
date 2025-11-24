@@ -1,0 +1,3 @@
+export const MONGO_ERROR_CODES = {
+  DUPLICATE_KEY: 11000,
+};

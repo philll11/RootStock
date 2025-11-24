@@ -1,0 +1,28 @@
+# ---- Base ----
+FROM node:22-alpine AS base
+WORKDIR /usr/src/app
+
+# ---- Dependencies (for building) ----
+FROM base AS dependencies
+COPY package*.json ./
+RUN npm ci
+
+# ---- Build ----
+FROM dependencies AS build
+COPY . .
+RUN npm run build
+
+
+# ---- Production ----
+FROM base AS production
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# Copy the compiled application code from the build stage.
+COPY --from=build /usr/src/app/dist ./dist
+
+# Expose the application port.
+EXPOSE 3000
+
+CMD [ "node", "dist/main" ]
