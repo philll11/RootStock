@@ -8,10 +8,5 @@ export const LoginSchema = z.object({
 export type LoginCredentials = z.infer<typeof LoginSchema>;
 
 export interface AuthResponse {
-  access_token: string;
-  user: {
-    id: string;
-    username: string;
-    role: string;
-  };
+  accessToken: string;
 }

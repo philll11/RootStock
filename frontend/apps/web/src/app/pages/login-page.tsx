@@ -20,11 +20,11 @@ export function LoginPage() {
 
   const form = useForm({
     initialValues: {
-      username: '',
+      username: 'leo.phil.work@gmail.com',
       password: '',
     },
     validate: {
-      username: (value) => (value.length < 1 ? 'Username is required' : null),
+      username: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
       password: (value) => (value.length < 1 ? 'Password is required' : null),
     },
   });
@@ -58,8 +58,8 @@ export function LoginPage() {
       <Paper withBorder shadow="md" p={30} mt={30} radius="md">
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <TextInput 
-            label="Username" 
-            placeholder="Your username" 
+            label="Email" 
+            placeholder="Your email" 
             required 
             {...form.getInputProps('username')}
           />

@@ -4,7 +4,7 @@ import { TextInput, Button, Text, Title } from 'react-native-paper';
 import { useLogin } from '@rootstock/core';
 
 export const LoginScreen = () => {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState('leo.phil.work@gmail.com');
   const [password, setPassword] = useState('');
   const loginMutation = useLogin();
 
@@ -28,12 +28,13 @@ export const LoginScreen = () => {
       <Title style={styles.title}>Welcome to RootStock</Title>
       
       <TextInput
-        label="Username"
+        label="Email"
         value={username}
         onChangeText={setUsername}
         mode="outlined"
         style={styles.input}
         autoCapitalize="none"
+        keyboardType="email-address"
       />
       
       <TextInput

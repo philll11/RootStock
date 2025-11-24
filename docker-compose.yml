@@ -7,7 +7,7 @@ services:
       context: ./backend
     container_name: rootstock-backend
     ports:
-      - "3000:3000"
+      - "3330:3330"
     env_file:
       - ./backend/.env # Loads environment variables from the .env file
     environment:
@@ -30,7 +30,7 @@ services:
     container_name: rootstock-mongodb
     restart: always
     ports:
-      - "27017:27017"
+      - "3332:27017"
     volumes:
       - mongo-data:/data/db # Persists database data across container restarts
       - mongo-config:/data/configdb # Persists replica set configuration data
