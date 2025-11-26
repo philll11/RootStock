@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getToken } from '../auth/auth.store';
 
 // Create a shared Axios instance
 export const apiClient = axios.create({
@@ -10,10 +11,8 @@ export const apiClient = axios.create({
 
 // Add a request interceptor to attach the token if it exists
 apiClient.interceptors.request.use(
-  (config) => {
-    // TODO: Retrieve token from secure storage (platform specific)
-    // For now, we'll just leave this placeholder
-    const token = null; 
+  async (config) => {
+    const token = await getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

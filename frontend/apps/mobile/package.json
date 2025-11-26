@@ -11,6 +11,7 @@
     "@expo/metro-config": "*",
     "@testing-library/react-native": "*",
     "expo": "*",
+    "expo-secure-store": "*",
     "expo-splash-screen": "*",
     "expo-status-bar": "*",
     "expo-system-ui": "*",
@@ -21,6 +22,7 @@
     "react-native": "*",
     "react-native-paper": "*",
     "react-native-safe-area-context": "*",
+    "react-native-screens": "*",
     "react-native-svg": "*",
     "react-native-svg-transformer": "*",
     "react-native-web": "*"

@@ -6,15 +6,25 @@ import { useLogin } from '@rootstock/core';
 export const LoginScreen = () => {
   const [username, setUsername] = useState('leo.phil.work@gmail.com');
   const [password, setPassword] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
   const loginMutation = useLogin();
 
   const handleLogin = () => {
+    setValidationError(null);
+    if (!username) {
+      setValidationError('Email is required');
+      return;
+    }
+    if (!password) {
+      setValidationError('Password is required');
+      return;
+    }
+
     loginMutation.mutate(
       { username, password },
       {
         onSuccess: () => {
           console.log('Mobile Login Success');
-          // TODO: Navigate to Home
         },
         onError: (error) => {
           console.error('Mobile Login Failed', error);
@@ -30,20 +40,28 @@ export const LoginScreen = () => {
       <TextInput
         label="Email"
         value={username}
-        onChangeText={setUsername}
+        onChangeText={(text) => {
+          setUsername(text);
+          setValidationError(null);
+        }}
         mode="outlined"
         style={styles.input}
         autoCapitalize="none"
         keyboardType="email-address"
+        error={!!validationError && !username}
       />
       
       <TextInput
         label="Password"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(text) => {
+          setPassword(text);
+          setValidationError(null);
+        }}
         mode="outlined"
         secureTextEntry
         style={styles.input}
+        error={!!validationError && !password}
       />
 
       <Button 
@@ -55,7 +73,11 @@ export const LoginScreen = () => {
         Sign In
       </Button>
 
-      {loginMutation.isError && (
+      {validationError && (
+        <Text style={styles.error}>{validationError}</Text>
+      )}
+
+      {loginMutation.isError && !validationError && (
         <Text style={styles.error}>Login failed. Please try again.</Text>
       )}
     </View>
