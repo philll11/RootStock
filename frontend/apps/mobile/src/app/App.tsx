@@ -16,7 +16,7 @@ configureAuth({
   getItem: SecureStore.getItemAsync,
   setItem: SecureStore.setItemAsync,
   removeItem: SecureStore.deleteItemAsync,
-});
+}, 'mobile');
 
 const Stack = createNativeStackNavigator();
 

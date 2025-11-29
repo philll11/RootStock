@@ -27,6 +27,9 @@ export class User {
   @Prop({ required: true, unique: true, lowercase: true, index: true })
   email: string;
 
+  @Prop({ required: false, select: false }) // Not required for now to support existing users, but select: false hides it by default
+  password?: string;
+
   @Prop({ required: true, enum: UserType, immutable: true })
   userType: UserType;
 

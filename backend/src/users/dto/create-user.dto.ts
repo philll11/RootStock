@@ -22,6 +22,10 @@ export class CreateUserDto {
     @Transform(({ value }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
     readonly email: string;
 
+    @IsString()
+    @IsOptional()
+    readonly password?: string;
+
     @IsEnum(UserType)
     @IsNotEmpty()
     readonly userType: UserType;

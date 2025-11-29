@@ -78,7 +78,9 @@ export const LoginScreen = () => {
       )}
 
       {loginMutation.isError && !validationError && (
-        <Text style={styles.error}>Login failed. Please try again.</Text>
+        <Text style={styles.error}>
+          {loginMutation.error?.message || 'Login failed. Please try again.'}
+        </Text>
       )}
     </View>
   );

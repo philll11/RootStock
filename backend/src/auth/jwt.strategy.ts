@@ -13,20 +13,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         private readonly usersService: UsersService,
         private readonly configService: ConfigService,
     ) {
-        // --- DYNAMIC SECRET LOGIC ---
-        // Choose the secret key based on the authentication strategy.
-        const appEnv = configService.get<string>('APP_ENV');
-        const secret = appEnv === 'local'
-            ? configService.get<string>('JWT_SECRET')
-            : configService.get<string>('COGNITO_CLIENT_SECRET');
+        const secret = configService.get<string>('JWT_SECRET');
 
         if (!secret) {
-            const keyName = appEnv === 'local' ? 'JWT_SECRET' : 'COGNITO_CLIENT_SECRET';
-            throw new Error(`${keyName} is not defined in environment variables. Application cannot start.`);
+            throw new Error(`JWT_SECRET is not defined in environment variables. Application cannot start.`);
         }
 
         super({
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+            jwtFromRequest: ExtractJwt.fromExtractors([
+                (request: any) => {
+                    // 1. Check for Cookie (Web)
+                    if (request && request.cookies && request.cookies.Authentication) {
+                        return request.cookies.Authentication;
+                    }
+                    // 2. Check for Header (Mobile)
+                    return ExtractJwt.fromAuthHeaderAsBearerToken()(request);
+                },
+            ]),
             ignoreExpiration: false,
             secretOrKey: secret,
         });

@@ -16,17 +16,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { SubsidiariesModule } from './subsidiaries/subsidiaries.module';
 import { OrchardsModule } from './orchards/orchards.module';
 import { CountersModule } from './counters/counters.module';
-import { LocalAuthModule } from './auth/local-auth.module';
 import appConfig from './config/app.config';
-
-// --- Conditional Module Logic ---
-// Only import the LocalAuthModule if APP_ENV is set to 'local'.
-// This allows us to keep development-only authentication code separate
-// from production deployments that use Cognito or other strategies.
-const developmentOnlyModules: any[] = [];
-if (process.env.APP_ENV === 'local') {
-  developmentOnlyModules.push(LocalAuthModule);
-}
 
 @Module({
   imports: [
@@ -72,7 +62,6 @@ if (process.env.APP_ENV === 'local') {
     SubsidiariesModule,
     OrchardsModule,
     CountersModule,
-    ...developmentOnlyModules,
   ],
   controllers: [AppController],
   providers: [

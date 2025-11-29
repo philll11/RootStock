@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { Role } from '../roles/schemas/role.schema';
@@ -10,20 +10,23 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async localLogin(email: string): Promise<{ accessToken: string }> {
-    const user = await this.usersService.findOneByEmailAndPopulateRole(email);
-
-    if (!user) {
-      throw new NotFoundException(`User with email ${email} not found.`);
+  async validateUser(email: string, pass: string): Promise<any> {
+    const user = await this.usersService.validateUser(email, pass);
+    if (user) {
+      const { password, ...result } = user.toObject();
+      return result;
     }
-    
+    return null;
+  }
+
+  async login(user: any): Promise<{ accessToken: string }> {
     if (!user.isActive || user.isDeleted || !user.roleId) {
       throw new UnauthorizedException('User account is not active or has no role.');
     }
 
     const payload = {
       email: user.email,
-      sub: user.recordId, // Use recordId to be consistent with the Cognito flow
+      sub: user.recordId,
     };
 
     return {

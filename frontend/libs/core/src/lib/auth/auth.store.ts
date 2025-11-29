@@ -6,6 +6,7 @@ export interface AuthStorage {
 
 let storage: AuthStorage | null = null;
 let cachedToken: string | null = null;
+let currentPlatform: 'web' | 'mobile' = 'web';
 
 export const AUTH_TOKEN_KEY = 'rootstock_auth_token';
 
@@ -26,9 +27,12 @@ const notifyListeners = (token: string | null) => {
   listeners.forEach(listener => listener(token));
 };
 
-export const configureAuth = (storageImpl: AuthStorage) => {
+export const configureAuth = (storageImpl: AuthStorage, platform: 'web' | 'mobile' = 'web') => {
   storage = storageImpl;
+  currentPlatform = platform;
 };
+
+export const getPlatform = () => currentPlatform;
 
 export const setToken = async (token: string) => {
   cachedToken = token;
@@ -39,6 +43,10 @@ export const setToken = async (token: string) => {
 };
 
 export const getToken = async (): Promise<string | null> => {
+  if (currentPlatform === 'web') {
+    // Web uses HttpOnly cookies, so we don't have access to the token.
+    return null;
+  }
   if (cachedToken) return cachedToken;
   if (storage) {
     const token = await storage.getItem(AUTH_TOKEN_KEY);
