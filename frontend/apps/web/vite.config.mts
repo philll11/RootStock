@@ -23,6 +23,7 @@ export default defineConfig(() => ({
   // worker: {
   //  plugins: [ nxViteTsPaths() ],
   // },
+  // Force reload for new paths
   build: {
     outDir: '../../dist/apps/web',
     emptyOutDir: true,

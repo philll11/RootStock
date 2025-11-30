@@ -15,7 +15,19 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@rootstock/core": ["libs/core/src/index.ts"]
+      "@rootstock/ui": ["libs/ui/src/index.ts"],
+      "@rootstock/shared/util": ["libs/shared/util/src/index.ts"],
+      "@rootstock/shared/api-client": ["libs/shared/api-client/src/index.ts"],
+      "@rootstock/auth/data-access": ["libs/auth/data-access/src/index.ts"],
+      "@rootstock/auth/feature-login": ["libs/auth/feature-login/src/index.ts"],
+      "@rootstock/users/feature-users": [
+        "libs/users/feature-users/src/index.ts"
+      ],
+      "@rootstock/users/data-access": ["libs/users/data-access/src/index.ts"],
+      "@rootstock/clients/data-access": ["libs/clients/data-access/src/index.ts"],
+      "@rootstock/clients/feature-clients": [
+        "libs/clients/feature-clients/src/index.ts"
+      ]
     }
   },
   "exclude": ["node_modules", "tmp"]

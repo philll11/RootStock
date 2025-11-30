@@ -8,7 +8,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LoginScreen } from './screens/LoginScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import * as SecureStore from 'expo-secure-store';
-import { configureAuth, useAuth } from '@rootstock/core';
+import { configureAuth, useAuth } from '@rootstock/auth/data-access';
 
 const queryClient = new QueryClient();
 

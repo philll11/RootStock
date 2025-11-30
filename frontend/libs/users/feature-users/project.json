@@ -1,0 +1,9 @@
+{
+  "name": "feature-users",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/users/feature-users/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project feature-users --web",
+  "targets": {}
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Appbar, Text, Button, Card } from 'react-native-paper';
-import { useAuth } from '@rootstock/core';
+import { useAuth } from '@rootstock/auth/data-access';
 
 export const DashboardScreen = () => {
   const { logout } = useAuth();

@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import * as ReactDOM from 'react-dom/client';
 import App from './app/app';
-import { configureAuth } from '@rootstock/core';
+import { configureAuth } from '@rootstock/auth/data-access';
 
 configureAuth(localStorage, 'web');
 

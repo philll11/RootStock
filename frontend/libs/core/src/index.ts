@@ -5,4 +5,6 @@ export * from './lib/auth/auth.service';
 export * from './lib/auth/auth.hooks';
 export * from './lib/auth/auth.store';
 export * from './lib/auth/use-auth';
+export * from './lib/types/user.types';
+export * from './lib/utils/error-utils';
 

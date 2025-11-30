@@ -120,7 +120,7 @@ async function bootstrap() {
         { email: adminEmail },
         {
           $setOnInsert: {
-            recordId: 'USR000001', // Manually set for the first user
+            recordId: 'USR0001', // Manually set recordId for admin user
             firstName: adminFirstName,
             lastName: adminLastName,
             name: `${adminFirstName} ${adminLastName}`,

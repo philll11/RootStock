@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TextInput, Button, Text, Title } from 'react-native-paper';
-import { useLogin } from '@rootstock/core';
+import { useLogin } from '@rootstock/auth/data-access';
 
 export const LoginScreen = () => {
   const [username, setUsername] = useState('leo.phil.work@gmail.com');
