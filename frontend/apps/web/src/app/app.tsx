@@ -4,13 +4,15 @@ import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
-import { LoginPage } from '@rootstock/auth/feature-login';
+import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '@rootstock/auth/feature-login';
 import { DashboardPage } from './pages/dashboard-page';
-import { UsersListPage } from '@rootstock/users/feature-users';
+import { UsersListPage, UserProfilePage } from '@rootstock/users/feature-users';
 import { ClientsListPage } from '@rootstock/clients/feature-clients';
 import { MainLayout } from './layouts/main-layout';
 import { useAuth, setupAuthInterceptor } from '@rootstock/auth/data-access';
-import { theme } from '@rootstock/ui';
+import { theme } from '@rootstock/ui/web';
+
+import { ThemeController } from './theme-controller';
 
 // Initialize Axios interceptors
 setupAuthInterceptor();
@@ -39,11 +41,20 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme}>
+        <ThemeController />
         <Notifications zIndex={10000} />
         <Routes>
           <Route
             path="/login"
             element={<LoginPage />}
+          />
+          <Route
+            path="/forgot-password"
+            element={<ForgotPasswordPage />}
+          />
+          <Route
+            path="/reset-password/:token"
+            element={<ResetPasswordPage />}
           />
           <Route
             path="/"
@@ -56,6 +67,7 @@ export function App() {
             <Route index element={<DashboardPage />} />
             <Route path="users" element={<UsersListPage />} />
             <Route path="clients" element={<ClientsListPage />} />
+            <Route path="profile" element={<UserProfilePage />} />
           </Route>
         </Routes>
       </MantineProvider>

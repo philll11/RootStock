@@ -1,16 +1,20 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Appbar, Text, Button, Card } from 'react-native-paper';
+import { Appbar, Text, Button, Card, useTheme } from 'react-native-paper';
 import { useAuth } from '@rootstock/auth/data-access';
+import { useDrawer } from '@rootstock/ui/mobile';
 
-export const DashboardScreen = () => {
+export const DashboardScreen = ({ navigation }: any) => {
   const { logout } = useAuth();
+  const { toggleDrawer } = useDrawer();
+  const theme = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header>
+        <Appbar.Action icon="menu" onPress={toggleDrawer} />
         <Appbar.Content title="RootStock" />
-        <Appbar.Action icon="logout" onPress={logout} />
+        <Appbar.Action icon="account-circle" onPress={() => navigation.navigate('Profile')} />
       </Appbar.Header>
       <View style={styles.content}>
         <Card style={styles.card}>
@@ -27,7 +31,6 @@ export const DashboardScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   content: {
     padding: 16,

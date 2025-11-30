@@ -19,7 +19,7 @@ services:
     networks:
       - rootstock-net
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/status"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:$${PORT:-3000}/status || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,7 +36,7 @@ services:
       - mongo-config:/data/configdb # Persists replica set configuration data
     networks:
       - rootstock-net
-    command: ["--replSet", "rs0", "--bind_ip_all"] # Configures MongoDB to use a replica set
+    command: ["--replSet", "rs0", "--bind_ip_all", "--quiet"] # Configures MongoDB to use a replica set
     healthcheck: # Initializes the replica set and checks MongoDB health
       test:
         [

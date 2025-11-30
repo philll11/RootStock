@@ -4,7 +4,7 @@ import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
 import { useClients, Client, CreateClientDto, UpdateClientDto } from '@rootstock/clients/data-access';
 import { ClientForm, ClientFormMode } from './client-form';
 import { useState } from 'react';
-import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui';
+import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui/web';
 
 export function ClientsListPage() {
   const { clients, isLoading, createClient, updateClient, deleteClient, isCreating, isUpdating } = useClients();

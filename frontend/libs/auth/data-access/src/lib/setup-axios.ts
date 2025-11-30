@@ -1,5 +1,5 @@
 import { apiClient } from '@rootstock/shared/api-client';
-import { getToken } from './auth.store';
+import { getToken, clearToken } from './auth.store';
 
 export const setupAuthInterceptor = () => {
   apiClient.interceptors.request.use(
@@ -11,5 +11,15 @@ export const setupAuthInterceptor = () => {
       return config;
     },
     (error) => Promise.reject(error)
+  );
+
+  apiClient.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      if (error.response && error.response.status === 401) {
+        await clearToken();
+      }
+      return Promise.reject(error);
+    }
   );
 };

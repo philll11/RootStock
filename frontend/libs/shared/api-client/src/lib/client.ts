@@ -1,8 +1,12 @@
 import axios from 'axios';
 
+// Determine the base URL based on the environment
+// We rely on NX_PUBLIC_API_URL being set in the environment (e.g. .env files)
+const envUrl = process.env['NX_PUBLIC_API_URL'];
+
 // Create a shared Axios instance
 export const apiClient = axios.create({
-  baseURL: process.env['EXPO_PUBLIC_API_URL'] || 'http://localhost:3330', // Fallback for local dev
+  baseURL: envUrl || 'http://localhost:3330',
   headers: {
     'Content-Type': 'application/json',
   },

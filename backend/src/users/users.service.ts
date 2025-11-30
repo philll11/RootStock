@@ -55,13 +55,18 @@ export class UsersService {
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('user', 'USR');
     const recordId = `${prefix}${sequence_value.toString().padStart(4, '0')}`;
 
-    const { roleId, clientIds, password, ...restOfDto } = createUserDto;
+    const { roleId, clientIds, password, preferences, ...restOfDto } = createUserDto;
     const payload: Partial<User> = { ...restOfDto, recordId };
 
     payload.name = `${createUserDto.firstName} ${createUserDto.lastName}`;
     if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
     if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
     if (password) { payload.password = await bcrypt.hash(password, 10); }
+    if (preferences) {
+      payload.preferences = {
+        theme: preferences.theme || 'auto'
+      };
+    }
 
     const userToCreate = new this.userModel(payload);
     return userToCreate.save();
@@ -125,7 +130,7 @@ export class UsersService {
     else {
       // If they DON'T have the general USER_EDIT permission, they are restricted to personal info.
       if (!hasEditPermission) {
-        const allowedFields = ['firstName', 'lastName', 'email'];
+        const allowedFields = ['firstName', 'lastName', 'email', 'preferences'];
         const attemptedFields = Object.keys(updateUserDto);
         const unauthorizedFields = attemptedFields.filter(field => !allowedFields.includes(field));
 
@@ -381,13 +386,35 @@ async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null>
     return null;
   }
 
+  async setPasswordResetToken(userId: string, token: string, expires: Date): Promise<void> {
+    await this.userModel.findByIdAndUpdate(userId, {
+      passwordResetToken: token,
+      passwordResetExpires: expires,
+    });
+  }
+
+  async findByPasswordResetToken(token: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: new Date() }, // Check if expiration is in the future
+    });
+  }
+
+  async updatePasswordAndClearToken(userId: string, newPasswordHash: string): Promise<void> {
+    await this.userModel.findByIdAndUpdate(userId, {
+      password: newPasswordHash,
+      $unset: { passwordResetToken: 1, passwordResetExpires: 1 },
+      $inc: { tokenVersion: 1 },
+    });
+  }
+
   /**
  * Prepares the payload for an EXISTING user update.
  * Handles partial updates, derived fields, and authorization for sensitive fields.
  * @private
  */
   private async _prepareUpdatePayload(dto: UpdateUserDto, existingUser: UserDocument, loggedInUser: UserDocument): Promise<Partial<UserDocument>> {
-    const { roleId, clientIds, isActive, password, ...restOfDto } = dto;
+    const { roleId, clientIds, isActive, password, preferences, ...restOfDto } = dto;
     const payload: Partial<UserDocument> = { ...restOfDto };
 
     if (payload.firstName || payload.lastName) {
@@ -396,7 +423,15 @@ async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null>
 
     if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
     if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
-    if (password) { payload.password = await bcrypt.hash(password, 10); }
+    if (password) { 
+      payload.password = await bcrypt.hash(password, 10);
+      payload.tokenVersion = (existingUser.tokenVersion || 0) + 1;
+    }
+    if (preferences) {
+      payload.preferences = {
+        theme: preferences.theme || 'auto'
+      };
+    }
 
 
     // System Constraint: Only roles with CLIENT_MANAGE_INACTIVE permissions can change Client status.

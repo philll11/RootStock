@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { UserType, CreateUserDto, UpdateUserDto, User } from '@rootstock/users/data-access';
 import { useEffect, useState } from 'react';
 import { notify } from '@rootstock/shared/util';
-import { SearchableMultiSelect } from '@rootstock/ui';
+import { SearchableMultiSelect } from '@rootstock/ui/web';
 import { searchClients, getClient } from '@rootstock/clients/data-access';
 
 const userSchema = z.object({

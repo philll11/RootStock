@@ -1,0 +1,16 @@
+{
+  "name": "clients-mobile-feature-clients",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/clients/mobile-feature-clients/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["libs/clients/mobile-feature-clients/**/*.{ts,tsx,js,jsx}"]
+      }
+    }
+  }
+}

@@ -5,6 +5,11 @@ import { notify } from '@rootstock/shared/util';
 
 export const USERS_QUERY_KEY = ['users'];
 
+export const getUser = async (id: string): Promise<User> => {
+  const response = await apiClient.get<User>(`/users/${id}`);
+  return response.data;
+};
+
 export function useUsers() {
   const queryClient = useQueryClient();
 
@@ -61,6 +66,7 @@ export function useUsers() {
     users: usersQuery.data ?? [],
     isLoading: usersQuery.isLoading,
     isError: usersQuery.isError,
+    getUser,
     createUser: createUserMutation.mutateAsync,
     updateUser: updateUserMutation.mutateAsync,
     deleteUser: deleteUserMutation.mutateAsync,

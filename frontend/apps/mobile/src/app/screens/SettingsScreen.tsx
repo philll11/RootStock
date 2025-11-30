@@ -1,0 +1,68 @@
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { List, RadioButton, Appbar, useTheme } from 'react-native-paper';
+import { useAuth } from '@rootstock/auth/data-access';
+import { useUsers } from '@rootstock/users/data-access';
+import { useDrawer } from '@rootstock/ui/mobile';
+
+export const SettingsScreen = ({ navigation }: any) => {
+  const { user } = useAuth();
+  const { updateUser } = useUsers();
+  const { toggleDrawer } = useDrawer();
+  const paperTheme = useTheme();
+  const theme = user?.preferences?.theme || 'auto';
+
+  const handleThemeChange = async (value: string) => {
+    if (user) {
+      try {
+        await updateUser({
+          id: user._id,
+          data: { preferences: { theme: value as 'light' | 'dark' | 'auto' } }
+        });
+      } catch (error) {
+        console.error('Failed to update theme', error);
+      }
+    }
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
+      <Appbar.Header>
+        <Appbar.Action icon="menu" onPress={toggleDrawer} />
+        <Appbar.Content title="Settings" />
+      </Appbar.Header>
+      
+      <List.Section title="Appearance">
+        <RadioButton.Group onValueChange={handleThemeChange} value={theme}>
+          <List.Item
+            title="System Default"
+            left={(props) => <List.Icon {...props} icon="theme-light-dark" />}
+            right={() => <RadioButton value="auto" disabled={!user} />}
+            onPress={() => handleThemeChange('auto')}
+            disabled={!user}
+          />
+          <List.Item
+            title="Light"
+            left={(props) => <List.Icon {...props} icon="white-balance-sunny" />}
+            right={() => <RadioButton value="light" disabled={!user} />}
+            onPress={() => handleThemeChange('light')}
+            disabled={!user}
+          />
+          <List.Item
+            title="Dark"
+            left={(props) => <List.Icon {...props} icon="weather-night" />}
+            right={() => <RadioButton value="dark" disabled={!user} />}
+            onPress={() => handleThemeChange('dark')}
+            disabled={!user}
+          />
+        </RadioButton.Group>
+      </List.Section>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

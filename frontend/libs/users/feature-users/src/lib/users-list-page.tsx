@@ -4,7 +4,7 @@ import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
 import { useUsers, User, CreateUserDto, UpdateUserDto } from '@rootstock/users/data-access';
 import { UserForm, UserFormMode } from './user-form';
 import { useState } from 'react';
-import { ConfirmDiscardModal, ConfirmModal, useDiscardWarning } from '@rootstock/ui';
+import { ConfirmDiscardModal, ConfirmModal, useDiscardWarning } from '@rootstock/ui/web';
 
 export function UsersListPage() {
   const { users, isLoading, createUser, updateUser, deleteUser, isCreating, isUpdating } = useUsers();

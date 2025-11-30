@@ -36,6 +36,17 @@ import appConfig from './config/app.config';
           // Define custom log message format for requests
           customSuccessMessage: (req, res) => { return `Request ${req.id} finished with status ${res.statusCode}`; },
           customErrorMessage: (req, res, err) => { return `Request ${req.id} failed with status ${res.statusCode}: ${err.message}`; },
+          serializers: {
+            req: (req) => ({
+              id: req.id,
+              method: req.method,
+              url: req.url,
+              // body: req.raw.body, // Note: pino-http might not have body available depending on middleware order
+            }),
+            res: (res) => ({
+              statusCode: res.statusCode,
+            }),
+          },
           // This creates and adds the Correlation ID to every log
           genReqId: (req, res) => {
             const existingId = req.id ?? req.headers["x-request-id"];

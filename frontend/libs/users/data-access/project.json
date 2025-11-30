@@ -7,12 +7,16 @@
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/libs/users/data-access",
         "main": "libs/users/data-access/src/index.ts",
         "tsConfig": "libs/users/data-access/tsconfig.lib.json",
-        "assets": ["libs/users/data-access/*.md"]
+        "assets": [
+          "libs/users/data-access/*.md"
+        ]
       }
     }
   }

@@ -1,8 +1,9 @@
-import { AppShell, Burger, Group, Title, Button, NavLink, Text } from '@mantine/core';
+import { AppShell, Burger, Group, Title, Button, NavLink, Text, ActionIcon } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useAuth } from '@rootstock/auth/data-access';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { IconHome, IconUsers, IconSettings, IconBuildingSkyscraper } from '@tabler/icons-react';
+import { IconHome, IconUsers, IconSettings, IconBuildingSkyscraper, IconUser } from '@tabler/icons-react';
+import { ThemeToggle } from '../components/theme-toggle';
 
 export function MainLayout() {
   const [opened, { toggle }] = useDisclosure();
@@ -26,7 +27,18 @@ export function MainLayout() {
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
             <Title order={3}>RootStock</Title>
           </Group>
-          <Button variant="subtle" onClick={logout}>Logout</Button>
+          <Group>
+            <ThemeToggle />
+            <ActionIcon 
+              variant="default" 
+              size="lg" 
+              onClick={() => navigate('/profile')}
+              aria-label="My Profile"
+            >
+              <IconUser stroke={1.5} />
+            </ActionIcon>
+            <Button variant="subtle" onClick={logout}>Logout</Button>
+          </Group>
         </Group>
       </AppShell.Header>
 

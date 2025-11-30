@@ -1,0 +1,23 @@
+{
+  "name": "mobile-feature-users",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/users/mobile-feature-users/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/users/mobile-feature-users",
+        "main": "libs/users/mobile-feature-users/src/index.ts",
+        "tsConfig": "libs/users/mobile-feature-users/tsconfig.lib.json",
+        "assets": [
+          "libs/users/mobile-feature-users/*.md"
+        ]
+      }
+    }
+  }
+}

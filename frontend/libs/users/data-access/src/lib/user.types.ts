@@ -3,6 +3,10 @@ export enum UserType {
   Contact = 'contact',
 }
 
+export interface UserPreferences {
+  theme?: 'light' | 'dark' | 'auto';
+}
+
 export interface User {
   _id: string;
   recordId: string;
@@ -17,6 +21,7 @@ export interface User {
   isDeleted: boolean;
   createdAt?: string;
   updatedAt?: string;
+  preferences?: UserPreferences;
 }
 
 export interface CreateUserDto {
@@ -27,6 +32,8 @@ export interface CreateUserDto {
   userType: UserType;
   roleId?: string;
   clientIds?: string[];
+  isActive?: boolean;
+  preferences?: UserPreferences;
 }
 
 export interface UpdateUserDto {
@@ -37,4 +44,5 @@ export interface UpdateUserDto {
   roleId?: string;
   clientIds?: string[];
   isActive?: boolean;
+  preferences?: UserPreferences;
 }

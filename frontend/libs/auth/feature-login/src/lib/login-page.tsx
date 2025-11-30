@@ -72,7 +72,7 @@ export function LoginPage() {
           />
           <Group justify="space-between" mt="lg">
             <Checkbox label="Remember me" />
-            <Anchor component="button" size="sm">
+            <Anchor component="button" type="button" size="sm" onClick={() => navigate('/forgot-password')}>
               Forgot password?
             </Anchor>
           </Group>

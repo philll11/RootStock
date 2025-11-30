@@ -64,7 +64,7 @@ export function ClientForm({
 
   useEffect(() => {
     if (client && (isEditing || isViewing)) {
-      form.setValues({
+      form.initialize({
         name: client.name,
         isActive: client.isActive,
       });

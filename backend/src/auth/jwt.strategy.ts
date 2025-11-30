@@ -62,6 +62,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             throw new UnauthorizedException('User is inactive, deleted, or has no assigned role.');
         }
 
+        // Check if the token is stale (password changed)
+        if (payload.tokenVersion !== (user.tokenVersion || 0)) {
+            throw new UnauthorizedException('Session expired. Please log in again.');
+        }
+
         return user;
     }
 }
