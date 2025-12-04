@@ -30,9 +30,11 @@ export const ClientFormScreen = ({ navigation, route }: any) => {
           // Reset dirty state after loading
           setTimeout(() => setIsDirty(false), 100);
         })
-        .catch(err => {
+        .catch((err: any) => {
           console.error(err);
-          Alert.alert('Error', 'Failed to load client details');
+          if (err.response?.status !== 401) {
+            Alert.alert('Error', 'Failed to load client details');
+          }
           navigation.goBack();
         });
     }
@@ -77,9 +79,11 @@ export const ClientFormScreen = ({ navigation, route }: any) => {
       // Reset dirty state so we can navigate back without warning
       setIsDirty(false);
       navigation.goBack();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      Alert.alert('Error', 'Failed to save client');
+      if (error.response?.status !== 401) {
+        Alert.alert('Error', 'Failed to save client');
+      }
       setIsSubmitting(false);
     }
   };
@@ -98,9 +102,11 @@ export const ClientFormScreen = ({ navigation, route }: any) => {
               await deleteClient(clientId);
               setIsDirty(false);
               navigation.goBack();
-            } catch (error) {
+            } catch (error: any) {
               console.error(error);
-              Alert.alert('Error', 'Failed to delete client');
+              if (error.response?.status !== 401) {
+                Alert.alert('Error', 'Failed to delete client');
+              }
             }
           }
         }

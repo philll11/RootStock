@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
-import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator, Avatar } from 'react-native-paper';
+import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator, Avatar, Chip } from 'react-native-paper';
 import { useUsers } from '@rootstock/users/users-data-access';
-import { useDrawer } from '@rootstock/ui/mobile';
+import { useDrawer, AppTheme } from '@rootstock/ui/mobile';
 
 export const UsersListScreen = ({ navigation }: any) => {
-  const theme = useTheme();
+  const theme = useTheme() as AppTheme;
   const { toggleDrawer } = useDrawer();
   const { users, isLoading } = useUsers();
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,7 +58,26 @@ export const UsersListScreen = ({ navigation }: any) => {
             renderItem={({ item }) => (
               <List.Item
                 title={item.name}
-                description={item.email}
+                description={() => (
+                  <View style={styles.itemDescription}>
+                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
+                      {item.email}
+                    </Text>
+                    <View style={styles.chipContainer}>
+                      <Chip 
+                        compact 
+                        textStyle={{ fontSize: 10, marginVertical: 0, marginHorizontal: 2 }}
+                        style={{ 
+                          backgroundColor: item.userType === 'employee' ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
+                          height: 24,
+                          marginRight: 8
+                        }}
+                      >
+                        {item.userType}
+                      </Chip>
+                    </View>
+                  </View>
+                )}
                 left={props => (
                   <Avatar.Text 
                     {...props} 
@@ -98,6 +117,13 @@ const styles = StyleSheet.create({
   },
   listItem: {
     paddingHorizontal: 8,
+  },
+  itemDescription: {
+    marginTop: 4,
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    marginTop: 4,
   },
   loadingContainer: {
     flex: 1,

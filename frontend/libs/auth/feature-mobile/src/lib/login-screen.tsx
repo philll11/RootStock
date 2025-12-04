@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { TextInput, Button, Text, Title, useTheme } from 'react-native-paper';
 import { useLogin } from '@rootstock/auth/auth-data-access';
 
-export const LoginScreen = () => {
+export const LoginScreen = ({ navigation }: any) => {
   const [username, setUsername] = useState('leo.phil.work@gmail.com');
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -66,6 +66,15 @@ export const LoginScreen = () => {
       />
 
       <Button 
+        mode="text" 
+        onPress={() => navigation.navigate('ForgotPassword')}
+        style={styles.forgotPasswordButton}
+        compact
+      >
+        Forgot Password?
+      </Button>
+
+      <Button 
         mode="contained" 
         onPress={handleLogin} 
         loading={loginMutation.isPending}
@@ -80,7 +89,9 @@ export const LoginScreen = () => {
 
       {loginMutation.isError && !validationError && (
         <Text style={styles.error}>
-          {loginMutation.error?.message || 'Login failed. Please try again.'}
+          {(loginMutation.error as any)?.response?.status === 401 
+            ? 'Invalid username or password' 
+            : 'Login failed. Please try again.'}
         </Text>
       )}
     </View>
@@ -99,6 +110,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   input: {
+    marginBottom: 15,
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
     marginBottom: 15,
   },
   button: {

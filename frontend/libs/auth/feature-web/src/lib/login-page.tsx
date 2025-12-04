@@ -44,18 +44,18 @@ export function LoginPage() {
   };
 
   return (
-    <Container size={420} my={40}>
-      <Title ta="center" className="font-grey-900">
+    <Container size="xs" my="xl">
+      <Title ta="center" c="text.primary">
         Welcome back!
       </Title>
-      <Text c="dimmed" size="sm" ta="center" mt={5}>
+      <Text c="dimmed" size="sm" ta="center" mt="xs">
         Do not have an account yet?{' '}
         <Anchor size="sm" component="button">
           Create account
         </Anchor>
       </Text>
 
-      <Paper withBorder shadow="md" p={30} mt={30} radius="md">
+      <Paper withBorder shadow="md" p="xl" mt="xl" radius="md">
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <TextInput 
             label="Email" 

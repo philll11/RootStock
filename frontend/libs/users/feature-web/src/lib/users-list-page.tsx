@@ -101,21 +101,21 @@ export function UsersListPage() {
       <Table.Td>{user.name}</Table.Td>
       <Table.Td>{user.email}</Table.Td>
       <Table.Td>
-        <Badge color={user.userType === 'employee' ? 'blue' : 'green'}>
+        <Badge color={user.userType === 'employee' ? 'brand' : 'blue'}>
           {user.userType}
         </Badge>
       </Table.Td>
       <Table.Td>
-        <Badge color={user.isActive ? 'teal' : 'gray'}>
+        <Badge color={user.isActive ? 'brand' : 'neutral'} variant="light">
           {user.isActive ? 'Active' : 'Inactive'}
         </Badge>
       </Table.Td>
       <Table.Td>
         <Group gap={0} justify="flex-end">
-          <ActionIcon variant="subtle" color="gray" onClick={(e) => handleEdit(user, e)}>
+          <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(user, e)}>
             <IconEdit size={16} />
           </ActionIcon>
-          <ActionIcon variant="subtle" color="red" onClick={(e) => handleDelete(user._id, e)}>
+          <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(user._id, e)}>
             <IconTrash size={16} />
           </ActionIcon>
         </Group>
@@ -175,7 +175,7 @@ export function UsersListPage() {
         title="Delete User"
         message="Are you sure you want to delete this user? This action cannot be undone."
         confirmLabel="Delete"
-        confirmColor="red"
+        confirmColor="error"
       />
     </>
   );

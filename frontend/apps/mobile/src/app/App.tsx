@@ -2,10 +2,10 @@ import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { StatusBar } from 'react-native';
+import { StatusBar, Alert } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { LoginScreen } from '@rootstock/auth/auth-feature-mobile';
+import { LoginScreen, ForgotPasswordScreen } from '@rootstock/auth/auth-feature-mobile';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
@@ -26,7 +26,9 @@ configureAuth({
 }, 'mobile');
 
 // Initialize Axios interceptors
-setupAuthInterceptor();
+setupAuthInterceptor(() => {
+  Alert.alert('Session Expired', 'Please log in again.');
+});
 
 const Stack = createNativeStackNavigator();
 
@@ -60,7 +62,10 @@ function AppNavigator() {
           <Stack.Screen name="ClientForm" component={ClientFormScreen} />
         </>
       ) : (
-        <Stack.Screen name="Login" component={LoginScreen} />
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        </>
       )}
     </Stack.Navigator>
   );

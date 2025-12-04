@@ -44,15 +44,15 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <Container size={420} my={40}>
-      <Title ta="center" className="font-grey-900">
+    <Container size="xs" my="xl">
+      <Title ta="center" c="text.primary">
         Forgot your password?
       </Title>
-      <Text c="dimmed" size="sm" ta="center" mt={5}>
+      <Text c="dimmed" size="sm" ta="center" mt="xs">
         Enter your email to get a reset link
       </Text>
 
-      <Paper withBorder shadow="md" p={30} mt={30} radius="md">
+      <Paper withBorder shadow="md" p="xl" mt="xl" radius="md">
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <TextInput
             label="Email"

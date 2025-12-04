@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { useColorScheme, StatusBar } from 'react-native';
-import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
+import { PaperProvider } from 'react-native-paper';
 import { useAuth } from '@rootstock/auth/auth-data-access';
+import { mobileLightTheme, mobileDarkTheme } from './mobile-theme';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const colorScheme = useColorScheme();
@@ -14,7 +15,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       : userPref === 'dark';
   }, [user?.preferences?.theme, colorScheme]);
 
-  const theme = isDark ? MD3DarkTheme : MD3LightTheme;
+  const theme = isDark ? mobileDarkTheme : mobileLightTheme;
 
   return (
     <PaperProvider theme={theme}>

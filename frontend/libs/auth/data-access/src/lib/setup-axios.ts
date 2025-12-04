@@ -1,7 +1,13 @@
 import { apiClient } from '@rootstock/shared/api-client';
 import { getToken, clearToken } from './auth.store';
 
-export const setupAuthInterceptor = () => {
+let suppressSessionExpiry = false;
+
+export const setSuppressSessionExpiry = (value: boolean) => {
+  suppressSessionExpiry = value;
+};
+
+export const setupAuthInterceptor = (onSessionExpired?: () => void) => {
   apiClient.interceptors.request.use(
     async (config) => {
       const token = await getToken();
@@ -16,8 +22,13 @@ export const setupAuthInterceptor = () => {
   apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
-      if (error.response && error.response.status === 401) {
+      const isLoginRequest = error.config?.url?.includes('/auth/local/login');
+      
+      if (error.response && error.response.status === 401 && !isLoginRequest && !suppressSessionExpiry) {
         await clearToken();
+        if (onSessionExpired) {
+          onSessionExpired();
+        }
       }
       return Promise.reject(error);
     }

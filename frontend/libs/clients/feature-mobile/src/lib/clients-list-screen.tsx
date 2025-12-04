@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
-import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator } from 'react-native-paper';
+import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator, Chip } from 'react-native-paper';
 import { useClients } from '@rootstock/clients/clients-data-access';
+import { AppTheme } from '@rootstock/ui/mobile';
 
 export const ClientsListScreen = ({ navigation, onMenuPress }: any) => {
-  const theme = useTheme();
+  const theme = useTheme() as AppTheme;
   const { clients, isLoading, searchClients } = useClients();
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -53,7 +54,6 @@ export const ClientsListScreen = ({ navigation, onMenuPress }: any) => {
             renderItem={({ item }) => (
               <List.Item
                 title={item.name}
-                description={item.isActive ? 'Active' : 'Inactive'}
                 left={props => <List.Icon {...props} icon="domain" />}
                 right={props => <List.Icon {...props} icon="chevron-right" />}
                 onPress={() => navigation.navigate('ClientForm', { clientId: item._id })}
@@ -85,6 +85,9 @@ const styles = StyleSheet.create({
   },
   listItem: {
     paddingHorizontal: 8,
+  },
+  chipContainer: {
+    marginTop: 4,
   },
   loadingContainer: {
     flex: 1,

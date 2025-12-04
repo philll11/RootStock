@@ -99,16 +99,16 @@ export function ClientsListPage() {
       <Table.Td>{client.recordId}</Table.Td>
       <Table.Td>{client.name}</Table.Td>
       <Table.Td>
-        <Badge color={client.isActive ? 'teal' : 'gray'}>
+        <Badge color={client.isActive ? 'brand' : 'neutral'} variant="light">
           {client.isActive ? 'Active' : 'Inactive'}
         </Badge>
       </Table.Td>
       <Table.Td>
         <Group gap={0} justify="flex-end">
-          <ActionIcon variant="subtle" color="gray" onClick={(e) => handleEdit(client, e)}>
+          <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(client, e)}>
             <IconEdit size={16} />
           </ActionIcon>
-          <ActionIcon variant="subtle" color="red" onClick={(e) => handleDelete(client._id, e)}>
+          <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(client._id, e)}>
             <IconTrash size={16} />
           </ActionIcon>
         </Group>
@@ -174,7 +174,7 @@ export function ClientsListPage() {
         title="Delete Client"
         message="Are you sure you want to delete this client? This action cannot be undone."
         confirmLabel="Delete"
-        confirmColor="red"
+        confirmColor="error"
       />
     </>
   );

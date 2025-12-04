@@ -1,6 +1,6 @@
 import { Route, Routes, Navigate } from 'react-router-dom';
 import { MantineProvider, Loader, Center } from '@mantine/core';
-import { Notifications } from '@mantine/notifications';
+import { Notifications, notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
@@ -10,12 +10,18 @@ import { UsersListPage, UserProfilePage } from '@rootstock/users/users-feature-w
 import { ClientsListPage } from '@rootstock/clients/clients-feature-web';
 import { MainLayout } from './layouts/main-layout';
 import { useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
-import { theme } from '@rootstock/ui/web';
+import { webTheme } from '@rootstock/ui/web';
 
 import { ThemeController } from './theme-controller';
 
 // Initialize Axios interceptors
-setupAuthInterceptor();
+setupAuthInterceptor(() => {
+  notifications.show({
+    title: 'Session Expired',
+    message: 'Please log in again.',
+    color: 'red',
+  });
+});
 
 const queryClient = new QueryClient();
 
@@ -40,7 +46,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <MantineProvider>
+      <MantineProvider theme={webTheme}>
         <ThemeController />
         <Notifications zIndex={10000} />
         <Routes>

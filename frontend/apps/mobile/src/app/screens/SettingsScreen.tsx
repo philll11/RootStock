@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { List, RadioButton, Appbar, useTheme } from 'react-native-paper';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@rootstock/auth/auth-data-access';
 import { useUsers } from '@rootstock/users/users-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
@@ -10,6 +11,7 @@ export const SettingsScreen = ({ navigation }: any) => {
   const { updateUser } = useUsers();
   const { toggleDrawer } = useDrawer();
   const paperTheme = useTheme();
+  const queryClient = useQueryClient();
   const theme = user?.preferences?.theme || 'auto';
 
   const handleThemeChange = async (value: string) => {
@@ -19,6 +21,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           id: user._id,
           data: { preferences: { theme: value as 'light' | 'dark' | 'auto' } }
         });
+        await queryClient.invalidateQueries({ queryKey: ['auth', 'profile'] });
       } catch (error) {
         console.error('Failed to update theme', error);
       }

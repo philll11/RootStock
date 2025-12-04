@@ -44,9 +44,11 @@ export const UserFormScreen = ({ navigation, route }: any) => {
           // Reset dirty state after loading
           setTimeout(() => setIsDirty(false), 100);
         })
-        .catch(err => {
+        .catch((err: any) => {
           console.error(err);
-          Alert.alert('Error', 'Failed to load user details');
+          if (err.response?.status !== 401) {
+            Alert.alert('Error', 'Failed to load user details');
+          }
           navigation.goBack();
         });
     }
@@ -115,9 +117,11 @@ export const UserFormScreen = ({ navigation, route }: any) => {
       // Reset dirty state so we can navigate back without warning
       setIsDirty(false);
       navigation.goBack();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      Alert.alert('Error', 'Failed to save user');
+      if (error.response?.status !== 401) {
+        Alert.alert('Error', 'Failed to save user');
+      }
       setIsSubmitting(false);
     }
   };
@@ -136,9 +140,11 @@ export const UserFormScreen = ({ navigation, route }: any) => {
               await deleteUser(userId);
               setIsDirty(false);
               navigation.goBack();
-            } catch (error) {
+            } catch (error: any) {
               console.error(error);
-              Alert.alert('Error', 'Failed to delete user');
+              if (error.response?.status !== 401) {
+                Alert.alert('Error', 'Failed to delete user');
+              }
             }
           }
         }

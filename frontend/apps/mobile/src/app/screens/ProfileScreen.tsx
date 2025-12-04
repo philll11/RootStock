@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { TextInput, Button, Appbar, HelperText, useTheme } from 'react-native-paper';
-import { useAuth } from '@rootstock/auth/auth-data-access';
+import { useAuth, setSuppressSessionExpiry } from '@rootstock/auth/auth-data-access';
 import { useUsers } from '@rootstock/users/users-data-access';
 
 export const ProfileScreen = ({ navigation }: any) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { updateUser, isUpdating } = useUsers();
   const theme = useTheme();
 
@@ -54,14 +54,24 @@ export const ProfileScreen = ({ navigation }: any) => {
 
     if (password) {
       updateData.password = password;
+      setSuppressSessionExpiry(true);
     }
 
     try {
       await updateUser({ id: user._id, data: updateData });
+      
+      if (password) {
+        // If password was changed, force logout immediately
+        await logout();
+        setSuppressSessionExpiry(false);
+        return;
+      }
+
       setPassword(''); // Clear password field
       navigation.goBack();
     } catch (error) {
       console.error('Failed to update profile', error);
+      setSuppressSessionExpiry(false);
     }
   };
 

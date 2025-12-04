@@ -246,7 +246,7 @@ export function UserForm({
 
       <Group justify="flex-end">
         {isCreating && (
-          <Button variant="subtle" color="red" onClick={handleClear} mr="auto">
+          <Button variant="subtle" color="error" onClick={handleClear} mr="auto">
             Clear
           </Button>
         )}

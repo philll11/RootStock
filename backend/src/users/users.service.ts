@@ -402,7 +402,7 @@ async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null>
 
   async updatePasswordAndClearToken(userId: string, newPasswordHash: string): Promise<void> {
     await this.userModel.findByIdAndUpdate(userId, {
-      password: newPasswordHash,
+      $set: { password: newPasswordHash },
       $unset: { passwordResetToken: 1, passwordResetExpires: 1 },
       $inc: { tokenVersion: 1 },
     });

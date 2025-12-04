@@ -75,8 +75,18 @@ export class AuthController {
   @Public()
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() body: { token: string; newPassword: string }) {
+  async resetPassword(
+    @Body() body: { token: string; newPassword: string },
+    @Res({ passthrough: true }) response: Response,
+  ) {
     await this.authService.resetPassword(body.token, body.newPassword);
+
+    // Clear the cookie to prevent stale session 401s
+    response.cookie('Authentication', '', {
+      httpOnly: true,
+      expires: new Date(0),
+    });
+
     return { message: 'Password has been successfully reset.' };
   }
 }

@@ -123,7 +123,7 @@ export function UserProfilePage() {
         title="Update Password?"
         message="Are you sure you want to update your password? You will be required to log in again on all devices."
         confirmLabel="Update Password"
-        confirmColor="blue"
+        confirmColor="brand"
       />
     </Container>
   );
