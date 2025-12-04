@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Appbar, Text, Button, Card, useTheme } from 'react-native-paper';
-import { useAuth } from '@rootstock/auth/data-access';
+import { useAuth } from '@rootstock/auth/auth-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
 
 export const DashboardScreen = ({ navigation }: any) => {

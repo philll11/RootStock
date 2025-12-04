@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import { Drawer, useTheme, Text, Avatar, Divider } from 'react-native-paper';
 import { useDrawer } from '@rootstock/ui/mobile';
-import { useAuth } from '@rootstock/auth/data-access';
+import { useAuth } from '@rootstock/auth/auth-data-access';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const DRAWER_WIDTH = 280;

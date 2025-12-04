@@ -1,9 +1,9 @@
 {
-  "name": "ui-web",
+  "name": "web-ui",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/ui/web/src",
   "projectType": "library",
   "tags": [],
-  "// targets": "to see all targets run: nx show project ui-web --web",
+  "// targets": "to see all targets run: nx show project web-ui --web",
   "targets": {}
 }

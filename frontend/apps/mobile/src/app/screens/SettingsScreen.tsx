@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { List, RadioButton, Appbar, useTheme } from 'react-native-paper';
-import { useAuth } from '@rootstock/auth/data-access';
-import { useUsers } from '@rootstock/users/data-access';
+import { useAuth } from '@rootstock/auth/auth-data-access';
+import { useUsers } from '@rootstock/users/users-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
 
 export const SettingsScreen = ({ navigation }: any) => {

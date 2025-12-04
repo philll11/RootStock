@@ -1,6 +1,6 @@
 import { AppShell, Burger, Group, Title, Button, NavLink, Text, ActionIcon } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useAuth } from '@rootstock/auth/data-access';
+import { useAuth } from '@rootstock/auth/auth-data-access';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { IconHome, IconUsers, IconSettings, IconBuildingSkyscraper, IconUser } from '@tabler/icons-react';
 import { ThemeToggle } from '../components/theme-toggle';

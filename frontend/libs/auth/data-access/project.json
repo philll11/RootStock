@@ -4,16 +4,6 @@
   "sourceRoot": "libs/auth/data-access/src",
   "projectType": "library",
   "tags": [],
-  "targets": {
-    "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
-      "options": {
-        "outputPath": "dist/libs/auth/data-access",
-        "main": "libs/auth/data-access/src/index.ts",
-        "tsConfig": "libs/auth/data-access/tsconfig.lib.json",
-        "assets": ["libs/auth/data-access/*.md"]
-      }
-    }
-  }
+  "// targets": "to see all targets run: nx show project data-access --web",
+  "targets": {}
 }

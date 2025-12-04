@@ -4,12 +4,12 @@ import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
-import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '@rootstock/auth/feature-login';
+import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '@rootstock/auth/auth-feature-web';
 import { DashboardPage } from './pages/dashboard-page';
-import { UsersListPage, UserProfilePage } from '@rootstock/users/feature-users';
-import { ClientsListPage } from '@rootstock/clients/feature-clients';
+import { UsersListPage, UserProfilePage } from '@rootstock/users/users-feature-web';
+import { ClientsListPage } from '@rootstock/clients/clients-feature-web';
 import { MainLayout } from './layouts/main-layout';
-import { useAuth, setupAuthInterceptor } from '@rootstock/auth/data-access';
+import { useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
 import { theme } from '@rootstock/ui/web';
 
 import { ThemeController } from './theme-controller';
@@ -40,7 +40,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <MantineProvider theme={theme}>
+      <MantineProvider>
         <ThemeController />
         <Notifications zIndex={10000} />
         <Routes>

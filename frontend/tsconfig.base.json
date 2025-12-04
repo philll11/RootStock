@@ -10,60 +10,25 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@rootstock/shared/util": [
-        "libs/shared/util/src/index.ts"
-      ],
-      "@rootstock/shared/api-client": [
-        "libs/shared/api-client/src/index.ts"
-      ],
-      "@rootstock/auth/data-access": [
-        "libs/auth/data-access/src/index.ts"
-      ],
-      "@rootstock/auth/feature-login": [
-        "libs/auth/feature-login/src/index.ts"
-      ],
-      "@rootstock/users/feature-users": [
-        "libs/users/feature-users/src/index.ts"
-      ],
-      "@rootstock/users/data-access": [
-        "libs/users/data-access/src/index.ts"
-      ],
-      "@rootstock/clients/data-access": [
-        "libs/clients/data-access/src/index.ts"
-      ],
-      "@rootstock/clients/feature-clients": [
-        "libs/clients/feature-clients/src/index.ts"
-      ],
-      "@rootstock/clients/mobile-feature-clients": [
-        "libs/clients/mobile-feature-clients/src/index.ts"
-      ],
-      "@rootstock/users/mobile-feature-users": [
-        "libs/users/mobile-feature-users/src/index.ts"
-      ],
-      "@rootstock/auth/mobile-feature-login": [
-        "libs/auth/mobile-feature-login/src/index.ts"
-      ],
-      "@rootstock/ui/web": [
-        "libs/ui/web/src/index.ts"
-      ],
-      "@rootstock/ui/mobile": [
-        "libs/ui/mobile/src/index.ts"
-      ],
-      "@frontend/mobile-feature-users": [
-        "libs/users/mobile-feature-users/src/index.ts"
-      ]
+      "@rootstock/shared/api-client": ["libs/shared/api-client/src/index.ts"],
+      "@rootstock/shared/util": ["libs/shared/util/src/index.ts"],
+      "@rootstock/ui/web": ["libs/ui/web/src/index.ts"],
+      "@rootstock/ui/mobile": ["libs/ui/mobile/src/index.ts"],
+      "@rootstock/auth/auth-data-access": ["libs/auth/data-access/src/index.ts"],
+      "@rootstock/auth/auth-feature-web": ["libs/auth/feature-web/src/index.ts"],
+      "@rootstock/auth/auth-feature-mobile": ["libs/auth/feature-mobile/src/index.ts"],
+      "@rootstock/users/users-data-access": ["libs/users/data-access/src/index.ts"],
+      "@rootstock/users/users-feature-web": ["libs/users/feature-web/src/index.ts"],
+      "@rootstock/users/users-feature-mobile": ["libs/users/feature-mobile/src/index.ts"],
+      "@rootstock/clients/clients-data-access": ["libs/clients/data-access/src/index.ts"],
+      "@rootstock/clients/clients-feature-web": ["libs/clients/feature-web/src/index.ts"],
+      "@rootstock/clients/clients-feature-mobile": ["libs/clients/feature-mobile/src/index.ts"]
     }
   },
-  "exclude": [
-    "node_modules",
-    "tmp"
-  ]
+  "exclude": ["node_modules", "tmp"]
 }

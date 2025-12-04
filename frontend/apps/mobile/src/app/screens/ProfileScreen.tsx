@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { TextInput, Button, Appbar, HelperText, useTheme } from 'react-native-paper';
-import { useAuth } from '@rootstock/auth/data-access';
-import { useUsers } from '@rootstock/users/data-access';
+import { useAuth } from '@rootstock/auth/auth-data-access';
+import { useUsers } from '@rootstock/users/users-data-access';
 
 export const ProfileScreen = ({ navigation }: any) => {
   const { user } = useAuth();

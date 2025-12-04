@@ -1,7 +1,7 @@
-# clients-data-access
+# data-access
 
 This library was generated with [Nx](https://nx.dev).
 
-## Building
+## Running unit tests
 
-Run `nx build clients-data-access` to build the library.
+Run `nx test data-access` to execute the unit tests via [Vitest](https://vitest.dev/).

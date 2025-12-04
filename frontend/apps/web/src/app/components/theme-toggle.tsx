@@ -1,7 +1,7 @@
 import { ActionIcon, useMantineColorScheme, useComputedColorScheme, Menu } from '@mantine/core';
 import { IconSun, IconMoon, IconDeviceDesktop } from '@tabler/icons-react';
-import { useAuth } from '@rootstock/auth/data-access';
-import { useUsers } from '@rootstock/users/data-access';
+import { useAuth } from '@rootstock/auth/auth-data-access';
+import { useUsers } from '@rootstock/users/users-data-access';
 
 export function ThemeToggle() {
   const { colorScheme, setColorScheme } = useMantineColorScheme();

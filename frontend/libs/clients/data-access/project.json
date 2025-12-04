@@ -4,16 +4,6 @@
   "sourceRoot": "libs/clients/data-access/src",
   "projectType": "library",
   "tags": [],
-  "targets": {
-    "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
-      "options": {
-        "outputPath": "dist/libs/clients/data-access",
-        "main": "libs/clients/data-access/src/index.ts",
-        "tsConfig": "libs/clients/data-access/tsconfig.lib.json",
-        "assets": ["libs/clients/data-access/*.md"]
-      }
-    }
-  }
+  "// targets": "to see all targets run: nx show project data-access --web",
+  "targets": {}
 }

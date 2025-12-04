@@ -1,0 +1,8 @@
+PS C:\dev\Orchard Net\RootStock\frontend> npx nx g @nx/workspace:move --projectName=data-access --destination=libs/auth/data-access --newProjectName=auth-data-access
+
+ NX  Generating @nx/workspace:move
+
+
+ NX   Invalid destination: [libs/auth/data-access] - Path is not empty.
+
+Pass --verbose to see the stacktrace.

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getToken, subscribeToAuth, clearToken, getPlatform } from './auth.store';
 import { apiClient } from '@rootstock/shared/api-client';
 import { AuthService } from './auth.service';
-import { User } from '@rootstock/users/data-access';
+import { User } from '@rootstock/users/users-data-access';
 
 export const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);

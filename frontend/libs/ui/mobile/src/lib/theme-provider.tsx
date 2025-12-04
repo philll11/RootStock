@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useColorScheme, StatusBar } from 'react-native';
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
-import { useAuth } from '@rootstock/auth/data-access';
+import { useAuth } from '@rootstock/auth/auth-data-access';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const colorScheme = useColorScheme();

@@ -1,9 +1,0 @@
-{
-  "name": "feature-login",
-  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/auth/feature-login/src",
-  "projectType": "library",
-  "tags": [],
-  "// targets": "to see all targets run: nx show project feature-login --web",
-  "targets": {}
-}
