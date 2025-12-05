@@ -2,7 +2,7 @@ import { AppShell, Burger, Group, Title, Button, NavLink, Text, ActionIcon } fro
 import { useDisclosure } from '@mantine/hooks';
 import { useAuth } from '@rootstock/auth/auth-data-access';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { IconHome, IconUsers, IconSettings, IconBuildingSkyscraper, IconUser } from '@tabler/icons-react';
+import { IconHome, IconUsers, IconSettings, IconBuildingSkyscraper, IconUser, IconShieldLock } from '@tabler/icons-react';
 import { ThemeToggle } from '../components/theme-toggle';
 
 export function MainLayout() {
@@ -73,6 +73,16 @@ export function MainLayout() {
           active={location.pathname.startsWith('/clients')}
           onClick={() => {
             navigate('/clients');
+            if (opened) toggle();
+          }}
+        />
+        
+        <NavLink
+          label="Roles"
+          leftSection={<IconShieldLock size="1rem" stroke={1.5} />}
+          active={location.pathname.startsWith('/roles')}
+          onClick={() => {
+            navigate('/roles');
             if (opened) toggle();
           }}
         />

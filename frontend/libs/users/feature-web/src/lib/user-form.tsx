@@ -2,6 +2,7 @@ import { TextInput, Select, Button, Group, PasswordInput, Text, Stack } from '@m
 import { useForm } from '@mantine/form';
 import { z } from 'zod';
 import { UserType, CreateUserDto, UpdateUserDto, User } from '@rootstock/users/users-data-access';
+import { useRoles } from '@rootstock/roles/roles-data-access';
 import { useEffect, useState } from 'react';
 import { notify } from '@rootstock/shared/util';
 import { SearchableMultiSelect } from '@rootstock/ui/web';
@@ -12,6 +13,7 @@ const userSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email'),
   userType: z.nativeEnum(UserType),
+  roleId: z.string().optional(),
   password: z.string().optional(),
   clientIds: z.array(z.string()).optional(),
 });
@@ -45,6 +47,7 @@ export function UserForm({
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
   const [initialClientOptions, setInitialClientOptions] = useState<{ value: string; label: string }[]>([]);
+  const { roles } = useRoles();
 
   const form = useForm({
     initialValues: {
@@ -52,6 +55,7 @@ export function UserForm({
       lastName: '',
       email: '',
       userType: UserType.Employee,
+      roleId: '',
       password: '',
       clientIds: [] as string[],
       ...initialValues,
@@ -100,6 +104,7 @@ export function UserForm({
         lastName: user.lastName,
         email: user.email,
         userType: user.userType,
+        roleId: user.roleId || '',
         password: '',
         clientIds: user.clientIds || [],
       });
@@ -110,6 +115,7 @@ export function UserForm({
         lastName: initialValues.lastName || '',
         email: initialValues.email || '',
         userType: initialValues.userType || UserType.Employee,
+        roleId: initialValues.roleId || '',
         password: initialValues.password || '',
         clientIds: initialValues.clientIds || [],
       });
@@ -142,6 +148,7 @@ export function UserForm({
       lastName: '',
       email: '',
       userType: UserType.Employee,
+      roleId: '',
       password: '',
       clientIds: [],
     });
@@ -165,6 +172,10 @@ export function UserForm({
         <div>
           <Text size="sm" c="dimmed">User Type</Text>
           <Text tt="capitalize">{user.userType}</Text>
+        </div>
+        <div>
+          <Text size="sm" c="dimmed">Role</Text>
+          <Text>{roles.find(r => r._id === user.roleId)?.name || '-'}</Text>
         </div>
 
         {user.clientIds && user.clientIds.length > 0 && (
@@ -220,6 +231,15 @@ export function UserForm({
           mb="md"
           disabled={isEditing}
           {...form.getInputProps('userType')}
+        />
+
+        <Select
+          label="Role"
+          placeholder="Select a role"
+          data={roles.map(r => ({ value: r._id, label: r.name }))}
+          mb="md"
+          clearable
+          {...form.getInputProps('roleId')}
         />
 
       <SearchableMultiSelect

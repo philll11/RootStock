@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Appbar, TextInput, Button, Switch, Text, useTheme, HelperText, SegmentedButtons, Chip, Modal, Portal, List, Searchbar } from 'react-native-paper';
 import { useUsers, CreateUserDto, UpdateUserDto, UserType } from '@rootstock/users/users-data-access';
 import { useClients, searchClients } from '@rootstock/clients/clients-data-access';
+import { useRoles } from '@rootstock/roles/roles-data-access';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 
 export const UserFormScreen = ({ navigation, route }: any) => {
@@ -11,15 +12,18 @@ export const UserFormScreen = ({ navigation, route }: any) => {
   const isEditing = !!userId;
   
   const { getUser, createUser, updateUser, deleteUser, isCreating, isUpdating } = useUsers();
+  const { roles } = useRoles();
   
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [userType, setUserType] = useState<UserType>(UserType.Employee);
+  const [roleId, setRoleId] = useState<string | undefined>(undefined);
   const [password, setPassword] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [clientIds, setClientIds] = useState<string[]>([]);
   const [clientModalVisible, setClientModalVisible] = useState(false);
+  const [roleModalVisible, setRoleModalVisible] = useState(false);
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [availableClients, setAvailableClients] = useState<{_id: string, name: string}[]>([]);
   
@@ -38,6 +42,7 @@ export const UserFormScreen = ({ navigation, route }: any) => {
           setLastName(user.lastName);
           setEmail(user.email);
           setUserType(user.userType);
+          setRoleId(user.roleId);
           setIsActive(user.isActive);
           setClientIds(user.clientIds || []);
           setIsLoading(false);
@@ -99,6 +104,7 @@ export const UserFormScreen = ({ navigation, route }: any) => {
             lastName, 
             email, 
             userType, 
+            roleId,
             isActive,
             clientIds
           } 
@@ -109,6 +115,7 @@ export const UserFormScreen = ({ navigation, route }: any) => {
           lastName, 
           email, 
           userType, 
+          roleId,
           password,
           isActive,
           clientIds
@@ -230,6 +237,19 @@ export const UserFormScreen = ({ navigation, route }: any) => {
           style={styles.input}
         />
 
+        <Text variant="bodyMedium" style={styles.label}>Role</Text>
+        <View style={styles.chipContainer}>
+          <Chip 
+            mode="outlined" 
+            onPress={() => setRoleModalVisible(true)} 
+            style={styles.chip}
+            icon="shield-account"
+            onClose={roleId ? () => handleChange(setRoleId, undefined, 'roleId') : undefined}
+          >
+            {roles.find(r => r._id === roleId)?.name || 'Select Role'}
+          </Chip>
+        </View>
+
         <Text variant="bodyMedium" style={styles.label}>Clients</Text>
         <View style={styles.chipContainer}>
           {clientIds.map(id => {
@@ -284,6 +304,26 @@ export const UserFormScreen = ({ navigation, route }: any) => {
             ))}
           </ScrollView>
           <Button onPress={() => setClientModalVisible(false)} style={{ marginTop: 16 }}>Done</Button>
+        </Modal>
+      </Portal>
+
+      <Portal>
+        <Modal visible={roleModalVisible} onDismiss={() => setRoleModalVisible(false)} contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+          <Text variant="titleMedium" style={{ marginBottom: 16 }}>Select Role</Text>
+          <ScrollView style={{ maxHeight: 300 }}>
+            {roles.map(role => (
+              <List.Item
+                key={role._id}
+                title={role.name}
+                right={props => role._id === roleId ? <List.Icon {...props} icon="check" /> : null}
+                onPress={() => {
+                  handleChange(setRoleId, role._id, 'roleId');
+                  setRoleModalVisible(false);
+                }}
+              />
+            ))}
+          </ScrollView>
+          <Button onPress={() => setRoleModalVisible(false)} style={{ marginTop: 16 }}>Cancel</Button>
         </Modal>
       </Portal>
     </View>

@@ -130,6 +130,12 @@ export const AppDrawer = ({ navigationRef, currentRoute }: AppDrawerProps) => {
               onPress={() => handleNavigate('UsersList')}
             />
             <Drawer.Item
+              label="Roles"
+              icon="shield-account"
+              active={currentRoute === 'RolesList'}
+              onPress={() => handleNavigate('RolesList')}
+            />
+            <Drawer.Item
               label="Settings"
               icon="cog"
               active={currentRoute === 'Settings'}

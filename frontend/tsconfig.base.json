@@ -59,6 +59,15 @@
       ],
       "@rootstock/ui/theme": [
         "libs/ui/theme/src/index.ts"
+      ],
+      "@rootstock/roles/roles-data-access": [
+        "libs/roles/data-access/src/index.ts"
+      ],
+      "@rootstock/roles/roles-feature-web": [
+        "libs/roles/feature-web/src/index.ts"
+      ],
+      "@rootstock/roles/roles-feature-mobile": [
+        "libs/roles/feature-mobile/src/index.ts"
       ]
     }
   },

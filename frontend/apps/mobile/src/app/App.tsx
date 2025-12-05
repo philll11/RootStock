@@ -14,6 +14,7 @@ import { configureAuth, useAuth, setupAuthInterceptor } from '@rootstock/auth/au
 import { ThemeProvider } from '@rootstock/ui/mobile';
 import { ClientsListScreen, ClientFormScreen } from '@rootstock/clients/clients-feature-mobile';
 import { UsersListScreen, UserFormScreen } from '@rootstock/users/users-feature-mobile';
+import { RolesListScreen, RoleFormScreen } from '@rootstock/roles/roles-feature-mobile';
 import { DrawerProvider, useDrawer } from '@rootstock/ui/mobile';
 import { AppDrawer } from './components/AppDrawer';
 
@@ -42,6 +43,11 @@ const UsersListScreenWrapper = (props: any) => {
   return <UsersListScreen {...props} onMenuPress={toggleDrawer} />;
 };
 
+const RolesListScreenWrapper = (props: any) => {
+  const { toggleDrawer } = useDrawer();
+  return <RolesListScreen {...props} onMenuPress={toggleDrawer} />;
+};
+
 function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -58,6 +64,8 @@ function AppNavigator() {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="UsersList" component={UsersListScreenWrapper} />
           <Stack.Screen name="UserForm" component={UserFormScreen} />
+          <Stack.Screen name="RolesList" component={RolesListScreenWrapper} />
+          <Stack.Screen name="RoleForm" component={RoleFormScreen} />
           <Stack.Screen name="ClientsList" component={ClientsListScreenWrapper} />
           <Stack.Screen name="ClientForm" component={ClientFormScreen} />
         </>

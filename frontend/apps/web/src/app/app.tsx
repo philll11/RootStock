@@ -8,6 +8,7 @@ import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '@rootstock/aut
 import { DashboardPage } from './pages/dashboard-page';
 import { UsersListPage, UserProfilePage } from '@rootstock/users/users-feature-web';
 import { ClientsListPage } from '@rootstock/clients/clients-feature-web';
+import { RolesListPage } from '@rootstock/roles/roles-feature-web';
 import { MainLayout } from './layouts/main-layout';
 import { useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
 import { webTheme } from '@rootstock/ui/web';
@@ -73,6 +74,7 @@ export function App() {
             <Route index element={<DashboardPage />} />
             <Route path="users" element={<UsersListPage />} />
             <Route path="clients" element={<ClientsListPage />} />
+            <Route path="roles" element={<RolesListPage />} />
             <Route path="profile" element={<UserProfilePage />} />
           </Route>
         </Routes>
