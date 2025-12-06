@@ -2,8 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import { Drawer, useTheme, Text, Avatar, Divider } from 'react-native-paper';
 import { useDrawer } from '@rootstock/ui/mobile';
-import { useAuth } from '@rootstock/auth/auth-data-access';
+import { useAuth, usePermission } from '@rootstock/auth/auth-data-access';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { NAVIGATION_ITEMS } from '../config/navigation';
 
 const DRAWER_WIDTH = 280;
 
@@ -15,6 +16,7 @@ interface AppDrawerProps {
 export const AppDrawer = ({ navigationRef, currentRoute }: AppDrawerProps) => {
   const { isOpen, closeDrawer } = useDrawer();
   const { logout, user } = useAuth();
+  const { hasPermission } = usePermission();
   const theme = useTheme();
   
   // Animation value: 0 = closed, 1 = open
@@ -111,36 +113,20 @@ export const AppDrawer = ({ navigationRef, currentRoute }: AppDrawerProps) => {
           <Divider />
 
           <Drawer.Section showDivider={false} style={styles.section}>
-            <Drawer.Item
-              label="Dashboard"
-              icon="view-dashboard"
-              active={currentRoute === 'Dashboard'}
-              onPress={() => handleNavigate('Dashboard')}
-            />
-            <Drawer.Item
-              label="Clients"
-              icon="domain"
-              active={currentRoute === 'ClientsList'}
-              onPress={() => handleNavigate('ClientsList')}
-            />
-            <Drawer.Item
-              label="Users"
-              icon="account-group"
-              active={currentRoute === 'UsersList'}
-              onPress={() => handleNavigate('UsersList')}
-            />
-            <Drawer.Item
-              label="Roles"
-              icon="shield-account"
-              active={currentRoute === 'RolesList'}
-              onPress={() => handleNavigate('RolesList')}
-            />
-            <Drawer.Item
-              label="Settings"
-              icon="cog"
-              active={currentRoute === 'Settings'}
-              onPress={() => handleNavigate('Settings')}
-            />
+            {NAVIGATION_ITEMS.map((item, index) => {
+              if (item.permission && !hasPermission(item.permission)) {
+                return null;
+              }
+              return (
+                <Drawer.Item
+                  key={index}
+                  label={item.label}
+                  icon={item.icon}
+                  active={currentRoute === item.screen}
+                  onPress={() => handleNavigate(item.screen)}
+                />
+              );
+            })}
           </Drawer.Section>
 
           <View style={styles.footer}>

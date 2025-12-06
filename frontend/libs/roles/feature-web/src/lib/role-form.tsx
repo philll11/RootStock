@@ -2,7 +2,8 @@ import { TextInput, Select, Button, Group, Text, Stack, Checkbox, SimpleGrid, Fi
 import { useForm } from '@mantine/form';
 import { Role, CreateRoleDto, UpdateRoleDto, VisibilityScope, PERMISSIONS } from '@rootstock/roles/roles-data-access';
 import { useEffect, useMemo } from 'react';
-import { notify } from '@rootstock/shared/util';
+import { notify, PERMISSIONS as SHARED_PERMISSIONS } from '@rootstock/shared/util';
+import { usePermission } from '@rootstock/auth/auth-data-access';
 
 export type RoleFormMode = 'create' | 'edit' | 'view';
 
@@ -32,6 +33,7 @@ export function RoleForm({
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
+  const { can } = usePermission();
 
   const form = useForm({
     initialValues: {
@@ -146,7 +148,9 @@ export function RoleForm({
 
         <Group justify="flex-end" mt="xl">
           <Button variant="default" onClick={onCancel}>Close</Button>
-          <Button onClick={onEdit}>Edit</Button>
+          {can(SHARED_PERMISSIONS.ROLE_EDIT) && (
+            <Button onClick={onEdit}>Edit</Button>
+          )}
         </Group>
       </Stack>
     );
@@ -222,9 +226,11 @@ export function RoleForm({
           </Button>
         )}
         <Button variant="default" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={isLoading}>
-          {isEditing ? 'Update Role' : 'Create Role'}
-        </Button>
+        {can(isEditing ? SHARED_PERMISSIONS.ROLE_EDIT : SHARED_PERMISSIONS.ROLE_CREATE) && (
+          <Button type="submit" loading={isLoading}>
+            {isEditing ? 'Update Role' : 'Create Role'}
+          </Button>
+        )}
       </Group>
     </form>
   );

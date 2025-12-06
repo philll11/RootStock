@@ -2,8 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Appbar, TextInput, Button, Text, useTheme, HelperText, Checkbox, List, SegmentedButtons } from 'react-native-paper';
 import { useRoles, VisibilityScope } from '@rootstock/roles/roles-data-access';
-import { PERMISSIONS } from '@rootstock/roles/roles-data-access';
-import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
+import { PERMISSIONS } from '@rootstock/shared/util';
+import { useMobileDiscardWarning, DetailRow } from '@rootstock/ui/mobile';
+import { usePermission } from '@rootstock/auth/auth-data-access';
 
 export const RoleFormScreen = ({ navigation, route }: any) => {
   const theme = useTheme();
@@ -11,6 +12,8 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
   const isEditing = !!roleId;
   
   const { getRole, createRole, updateRole, deleteRole, isCreating, isUpdating } = useRoles();
+  const { can } = usePermission();
+  const canEdit = can(isEditing ? PERMISSIONS.ROLE_EDIT : PERMISSIONS.ROLE_CREATE);
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -22,6 +25,9 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
   const [isDirty, setIsDirty] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{name?: string; description?: string}>({});
+
+  // View mode state - default to edit mode if creating, view mode if editing
+  const [isEditMode, setIsEditMode] = useState(!isEditing);
 
   // Group permissions by resource
   const groupedPermissions = useMemo(() => {
@@ -65,8 +71,8 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
     }
   };
 
-  // Enable discard warning
-  useMobileDiscardWarning(isDirty && !isSubmitting);
+  // Enable discard warning only in edit mode
+  useMobileDiscardWarning(isEditMode && isDirty && !isSubmitting);
 
   const validate = () => {
     const newErrors: typeof errors = {};
@@ -92,6 +98,8 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
             __v: version
           } 
         });
+        // Switch back to view mode on success
+        setIsEditMode(false);
       } else {
         await createRole({ 
           name, 
@@ -99,10 +107,10 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
           visibilityScope,
           permissions: selectedPermissions 
         });
+        navigation.goBack();
       }
       // Reset dirty state so we can navigate back without warning
       setIsDirty(false);
-      navigation.goBack();
     } catch (error: any) {
       console.error(error);
       if (error.response?.status === 409) {
@@ -110,6 +118,7 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
       } else {
         Alert.alert('Error', 'Failed to save role');
       }
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -167,44 +176,63 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={isEditing ? 'Edit Role' : 'New Role'} />
-        {isEditing && (
+        <Appbar.Content title={isEditing ? (isEditMode ? 'Edit Role' : 'Role Details') : 'New Role'} />
+        {!isEditMode && canEdit && (
+          <Appbar.Action icon="pencil" onPress={() => setIsEditMode(true)} />
+        )}
+        {isEditMode && isEditing && (
+          <Appbar.Action icon="close" onPress={() => {
+            // TODO: Revert changes if dirty? For now just switch mode
+            setIsEditMode(false);
+          }} />
+        )}
+        {isEditMode && isEditing && can(PERMISSIONS.ROLE_DELETE) && (
           <Appbar.Action icon="delete" onPress={handleDelete} color={theme.colors.error} />
         )}
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <TextInput
-          mode="outlined"
-          label="Name"
-          value={name}
-          onChangeText={(val) => handleChange(setName, val, 'name')}
-          error={!!errors.name}
-          style={styles.input}
-        />
-        {errors.name && <HelperText type="error">{errors.name}</HelperText>}
+        {isEditMode ? (
+          <>
+            <TextInput
+              mode="outlined"
+              label="Name"
+              value={name}
+              onChangeText={(val) => handleChange(setName, val, 'name')}
+              error={!!errors.name}
+              style={styles.input}
+            />
+            {errors.name && <HelperText type="error">{errors.name}</HelperText>}
 
-        <TextInput
-          mode="outlined"
-          label="Description"
-          value={description}
-          onChangeText={(val) => handleChange(setDescription, val, 'description')}
-          multiline
-          numberOfLines={3}
-          style={styles.input}
-        />
+            <TextInput
+              mode="outlined"
+              label="Description"
+              value={description}
+              onChangeText={(val) => handleChange(setDescription, val, 'description')}
+              multiline
+              numberOfLines={3}
+              style={styles.input}
+            />
 
-        <Text variant="bodyMedium" style={styles.label}>Visibility Scope</Text>
-        <SegmentedButtons
-          value={visibilityScope}
-          onValueChange={(val) => handleChange(setVisibilityScope, val as VisibilityScope, 'visibilityScope')}
-          buttons={[
-            { value: VisibilityScope.Global, label: 'Global' },
-            { value: VisibilityScope.Subsidiary, label: 'Subsidiary' },
-            { value: VisibilityScope.Client, label: 'Client' },
-          ]}
-          style={styles.input}
-        />
+            <Text variant="bodyMedium" style={styles.label}>Visibility Scope</Text>
+            <SegmentedButtons
+              value={visibilityScope}
+              onValueChange={(val) => handleChange(setVisibilityScope, val as VisibilityScope, 'visibilityScope')}
+              buttons={[
+                { value: VisibilityScope.Global, label: 'Global' },
+                { value: VisibilityScope.Subsidiary, label: 'Subsidiary' },
+                { value: VisibilityScope.Client, label: 'Client' },
+              ]}
+              style={styles.input}
+            />
+          </>
+        ) : (
+          <>
+            <DetailRow label="Name" value={name} />
+            <DetailRow label="Description" value={description} />
+            <DetailRow label="Visibility Scope" value={visibilityScope} />
+          </>
+        )}
 
         <Text variant="titleMedium" style={styles.sectionTitle}>Permissions</Text>
         
@@ -219,11 +247,13 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
               left={props => <List.Icon {...props} icon="folder-lock" />}
               description={`${permissions.filter(p => selectedPermissions.includes(p)).length} / ${permissions.length} selected`}
             >
-              <View style={styles.groupAction}>
-                 <Button mode="text" onPress={() => toggleGroup(resource)}>
-                    {allSelected ? 'Deselect All' : 'Select All'}
-                 </Button>
-              </View>
+              {isEditMode && (
+                <View style={styles.groupAction}>
+                   <Button mode="text" onPress={() => toggleGroup(resource)}>
+                      {allSelected ? 'Deselect All' : 'Select All'}
+                   </Button>
+                </View>
+              )}
               {permissions.map(permission => (
                 <List.Item
                   key={permission}
@@ -231,25 +261,28 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
                   left={() => (
                     <Checkbox
                       status={selectedPermissions.includes(permission) ? 'checked' : 'unchecked'}
-                      onPress={() => togglePermission(permission)}
+                      onPress={isEditMode ? () => togglePermission(permission) : undefined}
+                      disabled={!isEditMode}
                     />
                   )}
-                  onPress={() => togglePermission(permission)}
+                  onPress={isEditMode ? () => togglePermission(permission) : undefined}
                 />
               ))}
             </List.Accordion>
           );
         })}
 
-        <Button
-          mode="contained"
-          onPress={handleSave}
-          loading={isSaving}
-          disabled={isSaving || isLoading}
-          style={styles.button}
-        >
-          Save
-        </Button>
+        {isEditMode && (
+          <Button
+            mode="contained"
+            onPress={handleSave}
+            loading={isSaving}
+            disabled={isSaving || isLoading}
+            style={styles.button}
+          >
+            Save
+          </Button>
+        )}
       </ScrollView>
     </View>
   );

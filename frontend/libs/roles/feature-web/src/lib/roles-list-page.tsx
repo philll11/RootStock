@@ -5,9 +5,12 @@ import { useRoles, Role, CreateRoleDto, UpdateRoleDto } from '@rootstock/roles/r
 import { RoleForm, RoleFormMode } from './role-form';
 import { useState } from 'react';
 import { ConfirmDiscardModal, ConfirmModal, useDiscardWarning } from '@rootstock/ui/web';
+import { usePermission } from '@rootstock/auth/auth-data-access';
+import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function RolesListPage() {
   const { roles, isLoading, isError, createRole, updateRole, deleteRole, isCreating, isUpdating } = useRoles();
+  const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   
@@ -107,12 +110,16 @@ export function RolesListPage() {
       </Table.Td>
       <Table.Td>
         <Group gap={0} justify="flex-end">
-          <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(role, e)}>
-            <IconEdit size={16} />
-          </ActionIcon>
-          <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(role._id, e)}>
-            <IconTrash size={16} />
-          </ActionIcon>
+          {can(PERMISSIONS.ROLE_EDIT) && (
+            <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(role, e)}>
+              <IconEdit size={16} />
+            </ActionIcon>
+          )}
+          {can(PERMISSIONS.ROLE_DELETE) && (
+            <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(role._id, e)}>
+              <IconTrash size={16} />
+            </ActionIcon>
+          )}
         </Group>
       </Table.Td>
     </Table.Tr>
@@ -130,9 +137,11 @@ export function RolesListPage() {
     <>
       <Group justify="space-between" mb="lg">
         <Title order={2}>Roles</Title>
-        <Button leftSection={<IconPlus size={14} />} onClick={handleCreate}>
-          Add Role
-        </Button>
+        {can(PERMISSIONS.ROLE_CREATE) && (
+          <Button leftSection={<IconPlus size={14} />} onClick={handleCreate}>
+            Add Role
+          </Button>
+        )}
       </Group>
 
       <Table highlightOnHover>

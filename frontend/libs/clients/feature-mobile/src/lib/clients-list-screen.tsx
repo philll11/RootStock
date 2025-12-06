@@ -3,10 +3,13 @@ import { View, FlatList, StyleSheet } from 'react-native';
 import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator, Chip } from 'react-native-paper';
 import { useClients } from '@rootstock/clients/clients-data-access';
 import { AppTheme } from '@rootstock/ui/mobile';
+import { usePermission } from '@rootstock/auth/auth-data-access';
+import { PERMISSIONS } from '@rootstock/shared/util';
 
 export const ClientsListScreen = ({ navigation, onMenuPress }: any) => {
   const theme = useTheme() as AppTheme;
   const { clients, isLoading, searchClients } = useClients();
+  const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
   
   // Filter clients based on search query locally for now, or use the searchClients from hook if it supports it
@@ -64,12 +67,14 @@ export const ClientsListScreen = ({ navigation, onMenuPress }: any) => {
         )}
       </View>
 
-      <FAB
-        icon="plus"
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        color={theme.colors.onPrimary}
-        onPress={() => navigation.navigate('ClientForm')}
-      />
+      {can(PERMISSIONS.CLIENT_CREATE) && (
+        <FAB
+          icon="plus"
+          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+          color={theme.colors.onPrimary}
+          onPress={() => navigation.navigate('ClientForm')}
+        />
+      )}
     </View>
   );
 };

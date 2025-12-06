@@ -3,11 +3,14 @@ import { View, FlatList, StyleSheet } from 'react-native';
 import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator, Avatar, Chip } from 'react-native-paper';
 import { useUsers } from '@rootstock/users/users-data-access';
 import { useDrawer, AppTheme } from '@rootstock/ui/mobile';
+import { usePermission } from '@rootstock/auth/auth-data-access';
+import { PERMISSIONS } from '@rootstock/shared/util';
 
 export const UsersListScreen = ({ navigation }: any) => {
   const theme = useTheme() as AppTheme;
   const { toggleDrawer } = useDrawer();
   const { users, isLoading } = useUsers();
+  const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
   
   const filteredUsers = users.filter(user => 
@@ -96,12 +99,14 @@ export const UsersListScreen = ({ navigation }: any) => {
         )}
       </View>
 
-      <FAB
-        icon="plus"
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        color={theme.colors.onPrimary}
-        onPress={() => navigation.navigate('UserForm')}
-      />
+      {can(PERMISSIONS.USER_CREATE) && (
+        <FAB
+          icon="plus"
+          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+          color={theme.colors.onPrimary}
+          onPress={() => navigation.navigate('UserForm')}
+        />
+      )}
     </View>
   );
 };

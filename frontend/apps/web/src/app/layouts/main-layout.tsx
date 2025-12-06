@@ -1,13 +1,15 @@
 import { AppShell, Burger, Group, Title, Button, NavLink, Text, ActionIcon } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useAuth } from '@rootstock/auth/auth-data-access';
+import { useAuth, usePermission } from '@rootstock/auth/auth-data-access';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { IconHome, IconUsers, IconSettings, IconBuildingSkyscraper, IconUser, IconShieldLock } from '@tabler/icons-react';
+import { IconUser } from '@tabler/icons-react';
 import { ThemeToggle } from '../components/theme-toggle';
+import { NAVIGATION_ITEMS } from '../config/navigation';
 
 export function MainLayout() {
   const [opened, { toggle }] = useDisclosure();
   const { logout } = useAuth();
+  const { hasPermission } = usePermission();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -43,59 +45,35 @@ export function MainLayout() {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <NavLink
-          label="Dashboard"
-          leftSection={<IconHome size="1rem" stroke={1.5} />}
-          active={location.pathname === '/'}
-          onClick={() => {
-            navigate('/');
-            if (opened) toggle();
-          }}
-        />
-        
-        <Text size="xs" fw={500} c="dimmed" mt="md" mb="xs" tt="uppercase">
-          Management
-        </Text>
-        
-        <NavLink
-          label="Users"
-          leftSection={<IconUsers size="1rem" stroke={1.5} />}
-          active={location.pathname.startsWith('/users')}
-          onClick={() => {
-            navigate('/users');
-            if (opened) toggle();
-          }}
-        />
+        {NAVIGATION_ITEMS.map((item, index) => {
+          if (item.permission && !hasPermission(item.permission)) {
+            return null;
+          }
 
-        <NavLink
-          label="Clients"
-          leftSection={<IconBuildingSkyscraper size="1rem" stroke={1.5} />}
-          active={location.pathname.startsWith('/clients')}
-          onClick={() => {
-            navigate('/clients');
-            if (opened) toggle();
-          }}
-        />
-        
-        <NavLink
-          label="Roles"
-          leftSection={<IconShieldLock size="1rem" stroke={1.5} />}
-          active={location.pathname.startsWith('/roles')}
-          onClick={() => {
-            navigate('/roles');
-            if (opened) toggle();
-          }}
-        />
-        
-        <NavLink
-          label="Settings"
-          leftSection={<IconSettings size="1rem" stroke={1.5} />}
-          active={location.pathname === '/settings'}
-          onClick={() => {
-            navigate('/settings');
-            if (opened) toggle();
-          }}
-        />
+          if (item.type === 'header') {
+            return (
+              <Text key={index} size="xs" fw={500} c="dimmed" mt="md" mb="xs" tt="uppercase">
+                {item.label}
+              </Text>
+            );
+          }
+
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={index}
+              label={item.label}
+              leftSection={Icon ? <Icon size="1rem" stroke={1.5} /> : null}
+              active={item.path ? (item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)) : false}
+              onClick={() => {
+                if (item.path) {
+                  navigate(item.path);
+                  if (opened) toggle();
+                }
+              }}
+            />
+          );
+        })}
       </AppShell.Navbar>
 
       <AppShell.Main>

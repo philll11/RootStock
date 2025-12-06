@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
 import { Client, ClientQuery, CreateClientDto, UpdateClientDto } from './client.types';
-import { notify } from '@rootstock/shared/util';
+import { notify, PERMISSIONS } from '@rootstock/shared/util';
+import { usePermission } from '@rootstock/auth/auth-data-access';
 
 export const CLIENTS_QUERY_KEY = ['clients'];
 
@@ -18,8 +19,10 @@ export const getClient = async (id: string): Promise<Client> => {
   return response.data;
 };
 
-export function useClients() {
+export function useClients(options?: { enabled?: boolean }) {
   const queryClient = useQueryClient();
+  const { can } = usePermission();
+  const isEnabled = (options?.enabled ?? true) && can(PERMISSIONS.CLIENT_VIEW);
 
   const clientsQuery = useQuery({
     queryKey: CLIENTS_QUERY_KEY,
@@ -27,6 +30,7 @@ export function useClients() {
       const response = await apiClient.get<Client[]>('/clients');
       return response.data;
     },
+    enabled: isEnabled,
   });
 
   const createClientMutation = useMutation({

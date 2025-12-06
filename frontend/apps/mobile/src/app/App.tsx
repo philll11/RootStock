@@ -17,6 +17,9 @@ import { UsersListScreen, UserFormScreen } from '@rootstock/users/users-feature-
 import { RolesListScreen, RoleFormScreen } from '@rootstock/roles/roles-feature-mobile';
 import { DrawerProvider, useDrawer } from '@rootstock/ui/mobile';
 import { AppDrawer } from './components/AppDrawer';
+import { ProtectedScreen } from './components/ProtectedScreen';
+import { PermissionDeniedScreen } from './screens/PermissionDeniedScreen';
+import { PERMISSIONS } from '@rootstock/shared/util';
 
 const queryClient = new QueryClient();
 
@@ -35,17 +38,29 @@ const Stack = createNativeStackNavigator();
 
 const ClientsListScreenWrapper = (props: any) => {
   const { toggleDrawer } = useDrawer();
-  return <ClientsListScreen {...props} onMenuPress={toggleDrawer} />;
+  return (
+    <ProtectedScreen permission={PERMISSIONS.CLIENT_VIEW}>
+      <ClientsListScreen {...props} onMenuPress={toggleDrawer} />
+    </ProtectedScreen>
+  );
 };
 
 const UsersListScreenWrapper = (props: any) => {
   const { toggleDrawer } = useDrawer();
-  return <UsersListScreen {...props} onMenuPress={toggleDrawer} />;
+  return (
+    <ProtectedScreen permission={PERMISSIONS.USER_VIEW}>
+      <UsersListScreen {...props} onMenuPress={toggleDrawer} />
+    </ProtectedScreen>
+  );
 };
 
 const RolesListScreenWrapper = (props: any) => {
   const { toggleDrawer } = useDrawer();
-  return <RolesListScreen {...props} onMenuPress={toggleDrawer} />;
+  return (
+    <ProtectedScreen permission={PERMISSIONS.ROLE_VIEW}>
+      <RolesListScreen {...props} onMenuPress={toggleDrawer} />
+    </ProtectedScreen>
+  );
 };
 
 function AppNavigator() {
@@ -68,6 +83,7 @@ function AppNavigator() {
           <Stack.Screen name="RoleForm" component={RoleFormScreen} />
           <Stack.Screen name="ClientsList" component={ClientsListScreenWrapper} />
           <Stack.Screen name="ClientForm" component={ClientFormScreen} />
+          <Stack.Screen name="PermissionDenied" component={PermissionDeniedScreen} />
         </>
       ) : (
         <>

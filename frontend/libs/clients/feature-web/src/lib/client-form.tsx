@@ -3,7 +3,8 @@ import { useForm } from '@mantine/form';
 import { z } from 'zod';
 import { CreateClientDto, UpdateClientDto, Client } from '@rootstock/clients/clients-data-access';
 import { useEffect } from 'react';
-import { notify } from '@rootstock/shared/util';
+import { notify, PERMISSIONS } from '@rootstock/shared/util';
+import { usePermission } from '@rootstock/auth/auth-data-access';
 
 export type ClientFormMode = 'create' | 'edit' | 'view';
 
@@ -33,6 +34,7 @@ export function ClientForm({
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
+  const { can } = usePermission();
 
   const form = useForm({
     initialValues: {
@@ -109,7 +111,9 @@ export function ClientForm({
         
         <Group justify="flex-end" mt="xl">
           <Button variant="default" onClick={onCancel}>Close</Button>
-          <Button onClick={onEdit}>Edit</Button>
+          {can(PERMISSIONS.CLIENT_EDIT) && (
+            <Button onClick={onEdit}>Edit</Button>
+          )}
         </Group>
       </Stack>
     );
@@ -135,9 +139,11 @@ export function ClientForm({
 
       <Group justify="flex-end" mt="xl">
         <Button variant="default" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={isLoading}>
-          {isEditing ? 'Update Client' : 'Create Client'}
-        </Button>
+        {can(isEditing ? PERMISSIONS.CLIENT_EDIT : PERMISSIONS.CLIENT_CREATE) && (
+          <Button type="submit" loading={isLoading}>
+            {isEditing ? 'Update Client' : 'Create Client'}
+          </Button>
+        )}
       </Group>
     </form>
   );

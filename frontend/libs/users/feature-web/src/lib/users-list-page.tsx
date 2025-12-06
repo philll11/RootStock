@@ -5,9 +5,12 @@ import { useUsers, User, CreateUserDto, UpdateUserDto } from '@rootstock/users/u
 import { UserForm, UserFormMode } from './user-form';
 import { useState } from 'react';
 import { ConfirmDiscardModal, ConfirmModal, useDiscardWarning } from '@rootstock/ui/web';
+import { usePermission } from '@rootstock/auth/auth-data-access';
+import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function UsersListPage() {
   const { users, isLoading, createUser, updateUser, deleteUser, isCreating, isUpdating } = useUsers();
+  const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   
@@ -112,12 +115,16 @@ export function UsersListPage() {
       </Table.Td>
       <Table.Td>
         <Group gap={0} justify="flex-end">
-          <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(user, e)}>
-            <IconEdit size={16} />
-          </ActionIcon>
-          <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(user._id, e)}>
-            <IconTrash size={16} />
-          </ActionIcon>
+          {can(PERMISSIONS.USER_EDIT) && (
+            <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(user, e)}>
+              <IconEdit size={16} />
+            </ActionIcon>
+          )}
+          {can(PERMISSIONS.USER_DELETE) && (
+            <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(user._id, e)}>
+              <IconTrash size={16} />
+            </ActionIcon>
+          )}
         </Group>
       </Table.Td>
     </Table.Tr>
@@ -125,11 +132,13 @@ export function UsersListPage() {
 
   return (
     <>
-      <Group justify="space-between" mb="lg">
+      <Group justify="space-between" mb="md">
         <Title order={2}>Users</Title>
-        <Button leftSection={<IconPlus size={14} />} onClick={handleCreate}>
-          Add User
-        </Button>
+        {can(PERMISSIONS.USER_CREATE) && (
+          <Button leftSection={<IconPlus size={16} />} onClick={handleCreate}>
+            Add User
+          </Button>
+        )}
       </Group>
 
       <Table highlightOnHover>

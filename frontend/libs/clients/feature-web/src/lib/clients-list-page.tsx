@@ -5,9 +5,12 @@ import { useClients, Client, CreateClientDto, UpdateClientDto } from '@rootstock
 import { ClientForm, ClientFormMode } from './client-form';
 import { useState } from 'react';
 import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui/web';
+import { usePermission } from '@rootstock/auth/auth-data-access';
+import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function ClientsListPage() {
   const { clients, isLoading, createClient, updateClient, deleteClient, isCreating, isUpdating } = useClients();
+  const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   
@@ -105,12 +108,16 @@ export function ClientsListPage() {
       </Table.Td>
       <Table.Td>
         <Group gap={0} justify="flex-end">
-          <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(client, e)}>
-            <IconEdit size={16} />
-          </ActionIcon>
-          <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(client._id, e)}>
-            <IconTrash size={16} />
-          </ActionIcon>
+          {can(PERMISSIONS.CLIENT_EDIT) && (
+            <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(client, e)}>
+              <IconEdit size={16} />
+            </ActionIcon>
+          )}
+          {can(PERMISSIONS.CLIENT_DELETE) && (
+            <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(client._id, e)}>
+              <IconTrash size={16} />
+            </ActionIcon>
+          )}
         </Group>
       </Table.Td>
     </Table.Tr>
@@ -120,9 +127,11 @@ export function ClientsListPage() {
     <>
       <Group justify="space-between" mb="lg">
         <Title order={2}>Clients</Title>
-        <Button leftSection={<IconPlus size={14} />} onClick={handleCreate}>
-          Add Client
-        </Button>
+        {can(PERMISSIONS.CLIENT_CREATE) && (
+          <Button leftSection={<IconPlus size={14} />} onClick={handleCreate}>
+            Add Client
+          </Button>
+        )}
       </Group>
 
       <Table highlightOnHover>

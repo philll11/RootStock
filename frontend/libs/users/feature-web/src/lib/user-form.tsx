@@ -4,9 +4,10 @@ import { z } from 'zod';
 import { UserType, CreateUserDto, UpdateUserDto, User } from '@rootstock/users/users-data-access';
 import { useRoles } from '@rootstock/roles/roles-data-access';
 import { useEffect, useState } from 'react';
-import { notify } from '@rootstock/shared/util';
+import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { SearchableMultiSelect } from '@rootstock/ui/web';
 import { searchClients, getClient } from '@rootstock/clients/clients-data-access';
+import { usePermission } from '@rootstock/auth/auth-data-access';
 
 const userSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -48,6 +49,7 @@ export function UserForm({
   const isViewing = mode === 'view';
   const [initialClientOptions, setInitialClientOptions] = useState<{ value: string; label: string }[]>([]);
   const { roles } = useRoles();
+  const { can } = usePermission();
 
   const form = useForm({
     initialValues: {
@@ -104,7 +106,7 @@ export function UserForm({
         lastName: user.lastName,
         email: user.email,
         userType: user.userType,
-        roleId: user.roleId || '',
+        roleId: (typeof user.roleId === 'object' ? user.roleId._id : user.roleId) || '',
         password: '',
         clientIds: user.clientIds || [],
       });
@@ -175,7 +177,7 @@ export function UserForm({
         </div>
         <div>
           <Text size="sm" c="dimmed">Role</Text>
-          <Text>{roles.find(r => r._id === user.roleId)?.name || '-'}</Text>
+          <Text>{(typeof user.roleId === 'object' ? user.roleId.name : roles.find(r => r._id === user.roleId)?.name) || '-'}</Text>
         </div>
 
         {user.clientIds && user.clientIds.length > 0 && (
@@ -191,7 +193,9 @@ export function UserForm({
         
         <Group justify="flex-end" mt="xl">
           <Button variant="default" onClick={onCancel}>Close</Button>
-          <Button onClick={onEdit}>Edit</Button>
+          {can(PERMISSIONS.USER_EDIT) && (
+            <Button onClick={onEdit}>Edit</Button>
+          )}
         </Group>
       </Stack>
     );
@@ -271,9 +275,11 @@ export function UserForm({
           </Button>
         )}
         <Button variant="default" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={isLoading}>
-          {isEditing ? 'Update User' : 'Create User'}
-        </Button>
+        {can(isEditing ? PERMISSIONS.USER_EDIT : PERMISSIONS.USER_CREATE) && (
+          <Button type="submit" loading={isLoading}>
+            {isEditing ? 'Update User' : 'Create User'}
+          </Button>
+        )}
       </Group>
     </form>
   );

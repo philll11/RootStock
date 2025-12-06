@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
 import { Role, CreateRoleDto, UpdateRoleDto } from './roles.types';
-import { notify } from '@rootstock/shared/util';
-import { AxiosError } from 'axios';
+import { notify, PERMISSIONS } from '@rootstock/shared/util';
+import axios, { AxiosError } from 'axios';
+import { usePermission } from '@rootstock/auth/auth-data-access';
 
 export const ROLES_QUERY_KEY = ['roles'];
 
@@ -11,8 +12,10 @@ export const getRole = async (id: string): Promise<Role> => {
   return response.data;
 };
 
-export function useRoles() {
+export function useRoles(options?: { enabled?: boolean }) {
   const queryClient = useQueryClient();
+  const { can } = usePermission();
+  const isEnabled = (options?.enabled ?? true) && can(PERMISSIONS.ROLE_VIEW);
 
   const rolesQuery = useQuery({
     queryKey: ROLES_QUERY_KEY,
@@ -20,6 +23,7 @@ export function useRoles() {
       const response = await apiClient.get<Role[]>('/roles');
       return response.data;
     },
+    enabled: isEnabled,
   });
 
   const createRoleMutation = useMutation({
@@ -84,5 +88,3 @@ export function useRoles() {
     isDeleting: deleteRoleMutation.isPending,
   };
 }
-
-import axios from 'axios';

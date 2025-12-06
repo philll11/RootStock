@@ -3,11 +3,14 @@ import { View, FlatList, StyleSheet } from 'react-native';
 import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator } from 'react-native-paper';
 import { useRoles } from '@rootstock/roles/roles-data-access';
 import { useDrawer, AppTheme } from '@rootstock/ui/mobile';
+import { usePermission } from '@rootstock/auth/auth-data-access';
+import { PERMISSIONS } from '@rootstock/shared/util';
 
 export const RolesListScreen = ({ navigation }: any) => {
   const theme = useTheme() as AppTheme;
   const { toggleDrawer } = useDrawer();
   const { roles, isLoading } = useRoles();
+  const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
   
   const filteredRoles = roles.filter(role => 
@@ -59,12 +62,14 @@ export const RolesListScreen = ({ navigation }: any) => {
         )}
       </View>
 
-      <FAB
-        icon="plus"
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        color={theme.colors.onPrimary}
-        onPress={() => navigation.navigate('RoleForm')}
-      />
+      {can(PERMISSIONS.ROLE_CREATE) && (
+        <FAB
+          icon="plus"
+          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+          color={theme.colors.onPrimary}
+          onPress={() => navigation.navigate('RoleForm')}
+        />
+      )}
     </View>
   );
 };

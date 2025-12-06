@@ -12,6 +12,9 @@ import { RolesListPage } from '@rootstock/roles/roles-feature-web';
 import { MainLayout } from './layouts/main-layout';
 import { useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
 import { webTheme } from '@rootstock/ui/web';
+import { ProtectedRoute } from './components/protected-route';
+import { PermissionDeniedPage } from './pages/permission-denied-page';
+import { PERMISSIONS } from '@rootstock/shared/util';
 
 import { ThemeController } from './theme-controller';
 
@@ -64,6 +67,10 @@ export function App() {
             element={<ResetPasswordPage />}
           />
           <Route
+            path="/permission-denied"
+            element={<PermissionDeniedPage />}
+          />
+          <Route
             path="/"
             element={
               <RequireAuth>
@@ -72,9 +79,30 @@ export function App() {
             }
           >
             <Route index element={<DashboardPage />} />
-            <Route path="users" element={<UsersListPage />} />
-            <Route path="clients" element={<ClientsListPage />} />
-            <Route path="roles" element={<RolesListPage />} />
+            <Route 
+              path="users" 
+              element={
+                <ProtectedRoute permission={PERMISSIONS.USER_VIEW}>
+                  <UsersListPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="clients" 
+              element={
+                <ProtectedRoute permission={PERMISSIONS.CLIENT_VIEW}>
+                  <ClientsListPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="roles" 
+              element={
+                <ProtectedRoute permission={PERMISSIONS.ROLE_VIEW}>
+                  <RolesListPage />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="profile" element={<UserProfilePage />} />
           </Route>
         </Routes>

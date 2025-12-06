@@ -7,6 +7,13 @@ export interface UserPreferences {
   theme?: 'light' | 'dark' | 'auto';
 }
 
+export interface Role {
+  _id: string;
+  name: string;
+  permissions: string[];
+  visibilityScope: string;
+}
+
 export interface User {
   _id: string;
   recordId: string;
@@ -15,7 +22,7 @@ export interface User {
   name: string;
   email: string;
   userType: UserType;
-  roleId?: string;
+  roleId?: string | Role;
   clientIds?: string[];
   isActive: boolean;
   isDeleted: boolean;
