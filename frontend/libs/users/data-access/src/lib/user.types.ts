@@ -39,7 +39,6 @@ export interface CreateUserDto {
   userType: UserType;
   roleId?: string;
   clientIds?: string[];
-  isActive?: boolean;
   preferences?: UserPreferences;
 }
 

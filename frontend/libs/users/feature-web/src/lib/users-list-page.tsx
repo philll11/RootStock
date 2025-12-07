@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { ConfirmDiscardModal, ConfirmModal, useDiscardWarning } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { palette } from '@rootstock/ui/theme';
 
 export function UsersListPage() {
   const { users, isLoading, createUser, updateUser, deleteUser, isCreating, isUpdating } = useUsers();
@@ -116,12 +117,12 @@ export function UsersListPage() {
       <Table.Td>
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.USER_EDIT) && (
-            <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(user, e)}>
+            <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(user, e)}>
               <IconEdit size={16} />
             </ActionIcon>
           )}
           {can(PERMISSIONS.USER_DELETE) && (
-            <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(user._id, e)}>
+            <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDelete(user._id, e)}>
               <IconTrash size={16} />
             </ActionIcon>
           )}

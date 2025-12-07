@@ -5,6 +5,7 @@ import { useClients, Client, CreateClientDto, UpdateClientDto } from '@rootstock
 import { ClientForm, ClientFormMode } from './client-form';
 import { useState } from 'react';
 import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui/web';
+import { palette } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
@@ -109,12 +110,12 @@ export function ClientsListPage() {
       <Table.Td>
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.CLIENT_EDIT) && (
-            <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(client, e)}>
+            <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(client, e)}>
               <IconEdit size={16} />
             </ActionIcon>
           )}
           {can(PERMISSIONS.CLIENT_DELETE) && (
-            <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(client._id, e)}>
+            <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDelete(client._id, e)}>
               <IconTrash size={16} />
             </ActionIcon>
           )}

@@ -68,6 +68,15 @@
       ],
       "@rootstock/roles/roles-feature-mobile": [
         "libs/roles/feature-mobile/src/index.ts"
+      ],
+      "@rootstock/orchards/orchards-data-access": [
+        "libs/orchards/data-access/src/index.ts"
+      ],
+      "@rootstock/orchards/orchards-feature-web": [
+        "libs/orchards/feature-web/src/index.ts"
+      ],
+      "@rootstock/orchards/orchards-feature-mobile": [
+        "libs/orchards/feature-mobile/src/index.ts"
       ]
     }
   },

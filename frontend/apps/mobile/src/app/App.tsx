@@ -13,6 +13,7 @@ import * as SecureStore from 'expo-secure-store';
 import { configureAuth, useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
 import { ThemeProvider } from '@rootstock/ui/mobile';
 import { ClientsListScreen, ClientFormScreen } from '@rootstock/clients/clients-feature-mobile';
+import { OrchardsListScreen, OrchardFormScreen } from '@rootstock/orchards/orchards-feature-mobile';
 import { UsersListScreen, UserFormScreen } from '@rootstock/users/users-feature-mobile';
 import { RolesListScreen, RoleFormScreen } from '@rootstock/roles/roles-feature-mobile';
 import { DrawerProvider, useDrawer } from '@rootstock/ui/mobile';
@@ -41,6 +42,15 @@ const ClientsListScreenWrapper = (props: any) => {
   return (
     <ProtectedScreen permission={PERMISSIONS.CLIENT_VIEW}>
       <ClientsListScreen {...props} onMenuPress={toggleDrawer} />
+    </ProtectedScreen>
+  );
+};
+
+const OrchardsListScreenWrapper = (props: any) => {
+  const { toggleDrawer } = useDrawer();
+  return (
+    <ProtectedScreen permission={PERMISSIONS.ORCHARD_VIEW}>
+      <OrchardsListScreen {...props} onMenuPress={toggleDrawer} />
     </ProtectedScreen>
   );
 };
@@ -83,6 +93,8 @@ function AppNavigator() {
           <Stack.Screen name="RoleForm" component={RoleFormScreen} />
           <Stack.Screen name="ClientsList" component={ClientsListScreenWrapper} />
           <Stack.Screen name="ClientForm" component={ClientFormScreen} />
+          <Stack.Screen name="OrchardsList" component={OrchardsListScreenWrapper} />
+          <Stack.Screen name="OrchardForm" component={OrchardFormScreen} />
           <Stack.Screen name="PermissionDenied" component={PermissionDeniedScreen} />
         </>
       ) : (

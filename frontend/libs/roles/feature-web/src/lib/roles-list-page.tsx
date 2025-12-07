@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { ConfirmDiscardModal, ConfirmModal, useDiscardWarning } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { palette } from '@rootstock/ui/theme';
 
 export function RolesListPage() {
   const { roles, isLoading, isError, createRole, updateRole, deleteRole, isCreating, isUpdating } = useRoles();
@@ -111,12 +112,12 @@ export function RolesListPage() {
       <Table.Td>
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.ROLE_EDIT) && (
-            <ActionIcon variant="subtle" color="neutral" onClick={(e) => handleEdit(role, e)}>
+            <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(role, e)}>
               <IconEdit size={16} />
             </ActionIcon>
           )}
           {can(PERMISSIONS.ROLE_DELETE) && (
-            <ActionIcon variant="subtle" color="error" onClick={(e) => handleDelete(role._id, e)}>
+            <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDelete(role._id, e)}>
               <IconTrash size={16} />
             </ActionIcon>
           )}

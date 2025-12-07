@@ -44,6 +44,11 @@ export const palette = {
     active: '#22c55e', // brand[500]
     inactive: '#64748b', // neutral[500]
   },
+  actions: {
+    edit: '#f59e0b', // warning.light
+    delete: '#ef4444', // error.light
+    view: '#3b82f6', // blue
+  },
 };
 
 export const lightColors = {

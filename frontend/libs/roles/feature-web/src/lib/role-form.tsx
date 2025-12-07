@@ -71,8 +71,7 @@ export function RoleForm({
         name: initialValues.name || '',
         description: initialValues.description || '',
         visibilityScope: initialValues.visibilityScope || VisibilityScope.Client,
-        permissions: initialValues.permissions || [],
-        isActive: initialValues.isActive ?? true,
+        permissions: initialValues.permissions || []
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

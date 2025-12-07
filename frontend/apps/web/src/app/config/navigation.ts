@@ -1,4 +1,4 @@
-import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings } from '@tabler/icons-react';
+import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings, IconTree } from '@tabler/icons-react';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export interface NavigationItem {
@@ -11,7 +11,7 @@ export interface NavigationItem {
 
 export const NAVIGATION_ITEMS: NavigationItem[] = [
   {
-    label: 'Dashboard',
+    label: 'Home',
     path: '/',
     icon: IconHome,
     permission: null,
@@ -22,17 +22,24 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     type: 'header',
   },
   {
-    label: 'Users',
-    path: '/users',
-    icon: IconUsers,
-    permission: PERMISSIONS.USER_VIEW,
-    type: 'link',
-  },
-  {
     label: 'Clients',
     path: '/clients',
     icon: IconBuildingSkyscraper,
     permission: PERMISSIONS.CLIENT_VIEW,
+    type: 'link',
+  },
+  {
+    label: 'Orchards',
+    path: '/orchards',
+    icon: IconTree,
+    permission: PERMISSIONS.ORCHARD_VIEW,
+    type: 'link',
+  },
+  {
+    label: 'Users',
+    path: '/users',
+    icon: IconUsers,
+    permission: PERMISSIONS.USER_VIEW,
     type: 'link',
   },
   {

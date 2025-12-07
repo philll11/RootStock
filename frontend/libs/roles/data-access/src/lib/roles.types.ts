@@ -23,7 +23,6 @@ export interface CreateRoleDto {
   description?: string;
   visibilityScope: VisibilityScope;
   permissions?: string[];
-  isActive?: boolean;
 }
 
 export interface UpdateRoleDto {

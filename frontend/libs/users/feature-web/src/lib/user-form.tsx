@@ -1,4 +1,4 @@
-import { TextInput, Select, Button, Group, PasswordInput, Text, Stack } from '@mantine/core';
+import { TextInput, Select, Button, Group, PasswordInput, Text, Stack, Checkbox } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { z } from 'zod';
 import { UserType, CreateUserDto, UpdateUserDto, User } from '@rootstock/users/users-data-access';
@@ -59,6 +59,7 @@ export function UserForm({
       userType: UserType.Employee,
       roleId: '',
       password: '',
+      isActive: true,
       clientIds: [] as string[],
       ...initialValues,
     },
@@ -108,6 +109,7 @@ export function UserForm({
         userType: user.userType,
         roleId: (typeof user.roleId === 'object' ? user.roleId._id : user.roleId) || '',
         password: '',
+        isActive: user.isActive,
         clientIds: user.clientIds || [],
       });
     } else if (isCreating && initialValues) {
@@ -119,6 +121,7 @@ export function UserForm({
         userType: initialValues.userType || UserType.Employee,
         roleId: initialValues.roleId || '',
         password: initialValues.password || '',
+        isActive: (initialValues as any).isActive ?? true,
         clientIds: initialValues.clientIds || [],
       });
     }
@@ -152,6 +155,7 @@ export function UserForm({
       userType: UserType.Employee,
       roleId: '',
       password: '',
+      isActive: true,
       clientIds: [],
     });
   };
@@ -178,6 +182,10 @@ export function UserForm({
         <div>
           <Text size="sm" c="dimmed">Role</Text>
           <Text>{(typeof user.roleId === 'object' ? user.roleId.name : roles.find(r => r._id === user.roleId)?.name) || '-'}</Text>
+        </div>
+        <div>
+          <Text size="sm" c="dimmed">Status</Text>
+          <Text>{user.isActive ? 'Active' : 'Inactive'}</Text>
         </div>
 
         {user.clientIds && user.clientIds.length > 0 && (
@@ -265,6 +273,14 @@ export function UserForm({
           placeholder="Secure password"
           mb="xl"
           {...form.getInputProps('password')}
+        />
+      )}
+
+      {isEditing && (
+        <Checkbox
+          label="Active"
+          mb="md"
+          {...form.getInputProps('isActive', { type: 'checkbox' })}
         />
       )}
 

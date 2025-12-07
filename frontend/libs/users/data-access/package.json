@@ -1,5 +1,5 @@
 {
-  "name": "@rootstock/users/data-access",
+  "name": "@rootstock/users/users-data-access",
   "version": "0.0.1",
   "main": "./index.js",
   "types": "./index.d.ts",

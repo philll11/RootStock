@@ -1,5 +1,5 @@
 {
-  "name": "@rootstock/clients/data-access",
+  "name": "@rootstock/clients/clients-data-access",
   "version": "0.0.1",
   "main": "./index.js",
   "types": "./index.d.ts",

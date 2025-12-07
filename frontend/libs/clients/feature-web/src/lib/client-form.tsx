@@ -51,7 +51,6 @@ export function ClientForm({
   // Sync form values to parent for persistence (only in create mode)
   useEffect(() => {
     if (isCreating && onValuesChange) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { isActive, ...rest } = form.values;
       onValuesChange(rest);
     }

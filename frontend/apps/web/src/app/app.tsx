@@ -8,6 +8,7 @@ import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '@rootstock/aut
 import { DashboardPage } from './pages/dashboard-page';
 import { UsersListPage, UserProfilePage } from '@rootstock/users/users-feature-web';
 import { ClientsListPage } from '@rootstock/clients/clients-feature-web';
+import { OrchardsListPage } from '@rootstock/orchards/orchards-feature-web';
 import { RolesListPage } from '@rootstock/roles/roles-feature-web';
 import { MainLayout } from './layouts/main-layout';
 import { useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
@@ -92,6 +93,14 @@ export function App() {
               element={
                 <ProtectedRoute permission={PERMISSIONS.CLIENT_VIEW}>
                   <ClientsListPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="orchards" 
+              element={
+                <ProtectedRoute permission={PERMISSIONS.ORCHARD_VIEW}>
+                  <OrchardsListPage />
                 </ProtectedRoute>
               } 
             />

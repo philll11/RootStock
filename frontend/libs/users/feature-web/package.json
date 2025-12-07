@@ -1,5 +1,5 @@
 {
-  "name": "@rootstock/users/feature-web",
+  "name": "@rootstock/users/users-feature-web",
   "version": "0.0.1",
   "main": "./index.js",
   "types": "./index.d.ts",
