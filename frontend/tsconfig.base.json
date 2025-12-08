@@ -10,13 +10,78 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": ["es2020", "dom"],
+    "lib": [
+      "es2020",
+      "dom"
+    ],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@rootstock/core": ["libs/core/src/index.ts"]
+      "@rootstock/shared/api-client": [
+        "libs/shared/api-client/src/index.ts"
+      ],
+      "@rootstock/shared/util": [
+        "libs/shared/util/src/index.ts"
+      ],
+      "@rootstock/ui/web": [
+        "libs/ui/web/src/index.ts"
+      ],
+      "@rootstock/ui/mobile": [
+        "libs/ui/mobile/src/index.ts"
+      ],
+      "@rootstock/auth/auth-data-access": [
+        "libs/auth/data-access/src/index.ts"
+      ],
+      "@rootstock/auth/auth-feature-web": [
+        "libs/auth/feature-web/src/index.ts"
+      ],
+      "@rootstock/auth/auth-feature-mobile": [
+        "libs/auth/feature-mobile/src/index.ts"
+      ],
+      "@rootstock/users/users-data-access": [
+        "libs/users/data-access/src/index.ts"
+      ],
+      "@rootstock/users/users-feature-web": [
+        "libs/users/feature-web/src/index.ts"
+      ],
+      "@rootstock/users/users-feature-mobile": [
+        "libs/users/feature-mobile/src/index.ts"
+      ],
+      "@rootstock/clients/clients-data-access": [
+        "libs/clients/data-access/src/index.ts"
+      ],
+      "@rootstock/clients/clients-feature-web": [
+        "libs/clients/feature-web/src/index.ts"
+      ],
+      "@rootstock/clients/clients-feature-mobile": [
+        "libs/clients/feature-mobile/src/index.ts"
+      ],
+      "@rootstock/ui/theme": [
+        "libs/ui/theme/src/index.ts"
+      ],
+      "@rootstock/roles/roles-data-access": [
+        "libs/roles/data-access/src/index.ts"
+      ],
+      "@rootstock/roles/roles-feature-web": [
+        "libs/roles/feature-web/src/index.ts"
+      ],
+      "@rootstock/roles/roles-feature-mobile": [
+        "libs/roles/feature-mobile/src/index.ts"
+      ],
+      "@rootstock/orchards/orchards-data-access": [
+        "libs/orchards/data-access/src/index.ts"
+      ],
+      "@rootstock/orchards/orchards-feature-web": [
+        "libs/orchards/feature-web/src/index.ts"
+      ],
+      "@rootstock/orchards/orchards-feature-mobile": [
+        "libs/orchards/feature-mobile/src/index.ts"
+      ]
     }
   },
-  "exclude": ["node_modules", "tmp"]
+  "exclude": [
+    "node_modules",
+    "tmp"
+  ]
 }

@@ -2,6 +2,7 @@
   "name": "mobile",
   "version": "0.0.1",
   "private": true,
+  "main": "index.js",
   "scripts": {
     "eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . apps/mobile",
     "android": "expo run:android",
@@ -11,6 +12,7 @@
     "@expo/metro-config": "*",
     "@testing-library/react-native": "*",
     "expo": "*",
+    "expo-secure-store": "*",
     "expo-splash-screen": "*",
     "expo-status-bar": "*",
     "expo-system-ui": "*",
@@ -21,8 +23,10 @@
     "react-native": "*",
     "react-native-paper": "*",
     "react-native-safe-area-context": "*",
+    "react-native-screens": "*",
     "react-native-svg": "*",
     "react-native-svg-transformer": "*",
     "react-native-web": "*"
-  }
+  },
+  "devDependencies": {}
 }

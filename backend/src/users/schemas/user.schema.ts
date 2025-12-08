@@ -7,6 +7,12 @@ export enum UserType {
   CONTACT = 'contact',
 }
 
+@Schema({ _id: false })
+export class UserPreferences {
+  @Prop({ required: true, enum: ['light', 'dark', 'auto'], default: 'auto' })
+  theme: 'light' | 'dark' | 'auto';
+}
+
 export type UserDocument = HydratedDocument<User>;
 
 @Schema({ timestamps: true })
@@ -27,6 +33,15 @@ export class User {
   @Prop({ required: true, unique: true, lowercase: true, index: true })
   email: string;
 
+  @Prop({ required: false, select: false }) // Not required for now to support existing users, but select: false hides it by default
+  password?: string;
+
+  @Prop({ required: false, select: false })
+  passwordResetToken?: string;
+
+  @Prop({ required: false, select: false })
+  passwordResetExpires?: Date;
+
   @Prop({ required: true, enum: UserType, immutable: true })
   userType: UserType;
 
@@ -36,11 +51,17 @@ export class User {
   @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Client' }], required: false, default: [] })
   clientIds: Types.ObjectId[];
 
+  @Prop({ type: UserPreferences, default: () => ({ theme: 'auto' }) })
+  preferences: UserPreferences;
+
   @Prop({ required: true, default: true })
   isActive: boolean;
 
   @Prop({ required: true, default: false })
   isDeleted: boolean;
+
+  @Prop({ default: 0 })
+  tokenVersion: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

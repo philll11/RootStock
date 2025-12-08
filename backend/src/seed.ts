@@ -7,6 +7,7 @@ import { PERMISSIONS } from './common/constants/permissions.constants';
 import { Counter } from './counters/schemas/counter.schema';
 import { User, UserType } from './users/schemas/user.schema';
 import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
 
 /**
  * A standalone NestJS application script for seeding the database.
@@ -114,15 +115,17 @@ async function bootstrap() {
     if (!adminEmail) {
       console.warn('Skipping admin user seed because ADMIN_EMAIL is not set in .env file.');
     } else {
+      const hashedPassword = await bcrypt.hash('password123', 10);
       await userModel.findOneAndUpdate(
         { email: adminEmail },
         {
           $setOnInsert: {
-            recordId: 'USR000001', // Manually set for the first user
+            recordId: 'USR0001', // Manually set recordId for admin user
             firstName: adminFirstName,
             lastName: adminLastName,
             name: `${adminFirstName} ${adminLastName}`,
             email: adminEmail,
+            password: hashedPassword,
             userType: UserType.EMPLOYEE,
             roleId: adminRole._id,
             clientIds: [],

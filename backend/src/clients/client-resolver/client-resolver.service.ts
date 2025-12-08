@@ -64,15 +64,26 @@ export class ClientResolverService {
     // Step 2: Get a unique list of all parent subsidiary IDs from those clients.
     // Filter out any null/undefined subsidiaryIds.
     const subsidiaryIds = [...new Set(assignedClients.map(c => c.subsidiaryId).filter(Boolean))];
-    if (subsidiaryIds.length === 0) return [];
-
+    
     // Step 3: Find all clients that belong to any of those subsidiaries.
-    const accessibleClients = await this.clientModel.find({
-      subsidiaryId: { $in: subsidiaryIds },
-    }).select('_id').exec();
+    let accessibleClients: ClientDocument[] = [];
+    if (subsidiaryIds.length > 0) {
+      accessibleClients = await this.clientModel.find({
+        subsidiaryId: { $in: subsidiaryIds },
+      }).select('_id').exec();
+    }
 
-    // Step 4: Return just the array of their IDs.
-    return (accessibleClients || []).map(c => c._id);
+    // Step 4: Combine assigned clients and subsidiary clients
+    // Use a Set of strings to ensure uniqueness, then convert back to ObjectIds
+    const allClientIds = new Set<string>();
+    
+    // Add directly assigned clients
+    assignedClients.forEach(c => allClientIds.add(c._id.toString()));
+    
+    // Add clients from subsidiaries
+    accessibleClients.forEach(c => allClientIds.add(c._id.toString()));
+
+    return Array.from(allClientIds).map(id => new Types.ObjectId(id));
   }
 
   /**

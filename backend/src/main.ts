@@ -7,24 +7,28 @@ import { AppModule } from './app.module';
 import { Logger } from 'nestjs-pino';
 
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
 
+  app.use(cookieParser());
+
   const configService = app.get(ConfigService); // Get ConfigService early
 
   // --- ENABLE CORS ---
   const corsOrigin = configService.get<string>('CORS_ORIGIN');
   if (corsOrigin) {
+    const origins = corsOrigin.includes(',') ? corsOrigin.split(',').map(o => o.trim()) : corsOrigin;
     app.enableCors({
-      origin: corsOrigin,
+      origin: origins,
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
       credentials: true,
     });
     const logger = app.get(Logger);
-    logger.log(`CORS enabled for origin: ${corsOrigin}`);
+    logger.log(`CORS enabled for origin(s): ${origins}`);
   }
 
   app.useLogger(app.get(Logger));

@@ -5,8 +5,6 @@
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "production": [
       "default",
-      "!{projectRoot}/.eslintrc.json",
-      "!{projectRoot}/eslint.config.mjs",
       "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
       "!{projectRoot}/tsconfig.spec.json",
       "!{projectRoot}/jest.config.[jt]s",
@@ -23,12 +21,6 @@
     }
   },
   "plugins": [
-    {
-      "plugin": "@nx/eslint/plugin",
-      "options": {
-        "targetName": "lint"
-      }
-    },
     {
       "plugin": "@nx/jest/plugin",
       "options": {
@@ -71,7 +63,6 @@
       "application": {
         "babel": true,
         "style": "css",
-        "linter": "eslint",
         "bundler": "vite"
       },
       "component": {
@@ -79,7 +70,7 @@
       },
       "library": {
         "style": "css",
-        "linter": "eslint"
+        "unitTestRunner": "jest"
       }
     }
   }

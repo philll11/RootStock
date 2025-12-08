@@ -16,17 +16,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { SubsidiariesModule } from './subsidiaries/subsidiaries.module';
 import { OrchardsModule } from './orchards/orchards.module';
 import { CountersModule } from './counters/counters.module';
-import { LocalAuthModule } from './auth/local-auth.module';
 import appConfig from './config/app.config';
-
-// --- Conditional Module Logic ---
-// Only import the LocalAuthModule if APP_ENV is set to 'local'.
-// This allows us to keep development-only authentication code separate
-// from production deployments that use Cognito or other strategies.
-const developmentOnlyModules: any[] = [];
-if (process.env.APP_ENV === 'local') {
-  developmentOnlyModules.push(LocalAuthModule);
-}
 
 @Module({
   imports: [
@@ -46,6 +36,17 @@ if (process.env.APP_ENV === 'local') {
           // Define custom log message format for requests
           customSuccessMessage: (req, res) => { return `Request ${req.id} finished with status ${res.statusCode}`; },
           customErrorMessage: (req, res, err) => { return `Request ${req.id} failed with status ${res.statusCode}: ${err.message}`; },
+          serializers: {
+            req: (req) => ({
+              id: req.id,
+              method: req.method,
+              url: req.url,
+              // body: req.raw.body, // Note: pino-http might not have body available depending on middleware order
+            }),
+            res: (res) => ({
+              statusCode: res.statusCode,
+            }),
+          },
           // This creates and adds the Correlation ID to every log
           genReqId: (req, res) => {
             const existingId = req.id ?? req.headers["x-request-id"];
@@ -72,7 +73,6 @@ if (process.env.APP_ENV === 'local') {
     SubsidiariesModule,
     OrchardsModule,
     CountersModule,
-    ...developmentOnlyModules,
   ],
   controllers: [AppController],
   providers: [

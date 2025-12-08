@@ -88,6 +88,73 @@ describe('ClientResolverService', () => {
       expect(result.length).toBe(3);
     });
 
+    it('should include standalone clients (no subsidiary) in the result', async () => {
+      const standaloneClientId = toObjectId('65a9a1a7b8e5c6e2f1f4a4c9');
+      const userWithStandaloneClient: Partial<User> = {
+        clientIds: [standaloneClientId]
+      };
+
+      const mockStandaloneClient = { _id: standaloneClientId, subsidiaryId: null };
+
+      (clientModel.find as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValueOnce([mockStandaloneClient]),
+        });
+
+      const result = await service.getAccessibleClientIdsForSubsidiaryScope(userWithStandaloneClient as User);
+
+      expect(clientModel.find).toHaveBeenCalledWith({ 
+        _id: { $in: userWithStandaloneClient.clientIds },
+        isActive: true,
+        isDeleted: false,
+      });
+      
+      // Should not query for subsidiaries if none exist
+      expect(clientModel.find).toHaveBeenCalledTimes(1); 
+
+      expect(result).toEqual([standaloneClientId]);
+    });
+
+    it('should include both standalone clients and clients from subsidiaries', async () => {
+      const standaloneId = toObjectId('65a9a1a7b8e5c6e2f1f4a4c1');
+      const subsidiaryClientId = toObjectId('65a9a1a7b8e5c6e2f1f4a4c2');
+      const otherSubsidiaryClientId = toObjectId('65a9a1a7b8e5c6e2f1f4a4c3');
+      const subId = toObjectId('65a9a1a7b8e5c6e2f1f4a4a1');
+
+      const user: Partial<User> = {
+        clientIds: [standaloneId, subsidiaryClientId]
+      };
+
+      const assignedClients = [
+        { _id: standaloneId, subsidiaryId: null },
+        { _id: subsidiaryClientId, subsidiaryId: subId }
+      ];
+
+      const subsidiaryClients = [
+        { _id: subsidiaryClientId },
+        { _id: otherSubsidiaryClientId }
+      ];
+
+      (clientModel.find as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValueOnce(assignedClients),
+        })
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValueOnce(subsidiaryClients),
+        });
+
+      const result = await service.getAccessibleClientIdsForSubsidiaryScope(user as User);
+
+      // Check results - should be unique union
+      const resultStrings = result.map(id => id.toString()).sort();
+      const expectedStrings = [standaloneId, subsidiaryClientId, otherSubsidiaryClientId].map(id => id.toString()).sort();
+      
+      expect(resultStrings).toEqual(expectedStrings);
+    });
+
     // --- Unhappy Path & Edge Case Tests ---
     it('should return an empty array if user.clientIds is empty', async () => {
       const userWithoutClients: Partial<User> = { clientIds: [] };

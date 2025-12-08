@@ -1,7 +1,8 @@
 // backend/src/users/users.service.ts
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
+import * as bcrypt from 'bcrypt';
 import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
 
 import { CreateUserDto } from './dto/create-user.dto';
@@ -54,12 +55,18 @@ export class UsersService {
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('user', 'USR');
     const recordId = `${prefix}${sequence_value.toString().padStart(4, '0')}`;
 
-    const { roleId, clientIds, ...restOfDto } = createUserDto;
+    const { roleId, clientIds, password, preferences, ...restOfDto } = createUserDto;
     const payload: Partial<User> = { ...restOfDto, recordId };
 
     payload.name = `${createUserDto.firstName} ${createUserDto.lastName}`;
     if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
     if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
+    if (password) { payload.password = await bcrypt.hash(password, 10); }
+    if (preferences) {
+      payload.preferences = {
+        theme: preferences.theme || 'auto'
+      };
+    }
 
     const userToCreate = new this.userModel(payload);
     return userToCreate.save();
@@ -98,7 +105,7 @@ export class UsersService {
 
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(userId) }] };
 
-    const targetUser = await this.userModel.findOne(finalFilter).exec();
+    const targetUser = await this.userModel.findOne(finalFilter).populate('roleId').exec();
 
     if (!targetUser) {
       throw new NotFoundException(`User with ID "${userId}" not found or you do not have permission to view it.`);
@@ -123,7 +130,7 @@ export class UsersService {
     else {
       // If they DON'T have the general USER_EDIT permission, they are restricted to personal info.
       if (!hasEditPermission) {
-        const allowedFields = ['firstName', 'lastName', 'email'];
+        const allowedFields = ['firstName', 'lastName', 'email', 'preferences'];
         const attemptedFields = Object.keys(updateUserDto);
         const unauthorizedFields = attemptedFields.filter(field => !allowedFields.includes(field));
 
@@ -146,7 +153,7 @@ export class UsersService {
       }
     }
 
-    const updatePayload = this._prepareUpdatePayload(updateUserDto, existingUser, requestingUser);
+    const updatePayload = await this._prepareUpdatePayload(updateUserDto, existingUser, requestingUser);
     const updatedUser = await this.userModel.findByIdAndUpdate(userId, { $set: updatePayload }, { new: true }).exec();
     if (!updatedUser) {
       throw new NotFoundException(`User with ID "${userId}" not found.`);
@@ -356,6 +363,7 @@ export class UsersService {
 async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null> {
   return this.userModel
     .findOne({ email })
+    .select('+password') // Explicitly select password as it is hidden by default
     .populate({
       path: 'roleId',
       model: 'Role',
@@ -364,12 +372,49 @@ async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null>
 }
 
   /**
+   * Validates a user's password.
+   * @param email - The user's email.
+   * @param pass - The password to validate.
+   * @returns The user document if validation succeeds, null otherwise.
+   */
+  async validateUser(email: string, pass: string): Promise<UserDocument | null> {
+    const user = await this.findOneByEmailAndPopulateRole(email);
+    if (user && user.password && await bcrypt.compare(pass, user.password)) {
+      const { password, ...result } = user.toObject();
+      return user;
+    }
+    return null;
+  }
+
+  async setPasswordResetToken(userId: string, token: string, expires: Date): Promise<void> {
+    await this.userModel.findByIdAndUpdate(userId, {
+      passwordResetToken: token,
+      passwordResetExpires: expires,
+    });
+  }
+
+  async findByPasswordResetToken(token: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: new Date() }, // Check if expiration is in the future
+    });
+  }
+
+  async updatePasswordAndClearToken(userId: string, newPasswordHash: string): Promise<void> {
+    await this.userModel.findByIdAndUpdate(userId, {
+      $set: { password: newPasswordHash },
+      $unset: { passwordResetToken: 1, passwordResetExpires: 1 },
+      $inc: { tokenVersion: 1 },
+    });
+  }
+
+  /**
  * Prepares the payload for an EXISTING user update.
  * Handles partial updates, derived fields, and authorization for sensitive fields.
  * @private
  */
-  private _prepareUpdatePayload(dto: UpdateUserDto, existingUser: UserDocument, loggedInUser: UserDocument): Partial<UserDocument> {
-    const { roleId, clientIds, isActive, ...restOfDto } = dto;
+  private async _prepareUpdatePayload(dto: UpdateUserDto, existingUser: UserDocument, loggedInUser: UserDocument): Promise<Partial<UserDocument>> {
+    const { roleId, clientIds, isActive, password, preferences, ...restOfDto } = dto;
     const payload: Partial<UserDocument> = { ...restOfDto };
 
     if (payload.firstName || payload.lastName) {
@@ -378,6 +423,15 @@ async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null>
 
     if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
     if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
+    if (password) { 
+      payload.password = await bcrypt.hash(password, 10);
+      payload.tokenVersion = (existingUser.tokenVersion || 0) + 1;
+    }
+    if (preferences) {
+      payload.preferences = {
+        theme: preferences.theme || 'auto'
+      };
+    }
 
 
     // System Constraint: Only roles with CLIENT_MANAGE_INACTIVE permissions can change Client status.
