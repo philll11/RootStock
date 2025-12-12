@@ -1,4 +1,4 @@
-import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings, IconTree } from '@tabler/icons-react';
+import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings, IconTree, IconLeaf } from '@tabler/icons-react';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export interface NavigationItem {
@@ -47,6 +47,17 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     path: '/roles',
     icon: IconShieldLock,
     permission: PERMISSIONS.ROLE_VIEW,
+    type: 'link',
+  },
+  {
+    label: 'Lists',
+    type: 'header',
+  },
+  {
+    label: 'Varieties',
+    path: '/varieties',
+    icon: IconLeaf,
+    permission: PERMISSIONS.VARIETY_VIEW,
     type: 'link',
   },
   {

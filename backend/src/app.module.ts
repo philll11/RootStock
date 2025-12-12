@@ -16,6 +16,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { SubsidiariesModule } from './subsidiaries/subsidiaries.module';
 import { OrchardsModule } from './orchards/orchards.module';
 import { CountersModule } from './counters/counters.module';
+import { VarietiesModule } from './master-data/varieties/varieties.module';
 import appConfig from './config/app.config';
 
 @Module({
@@ -73,6 +74,7 @@ import appConfig from './config/app.config';
     SubsidiariesModule,
     OrchardsModule,
     CountersModule,
+    VarietiesModule,
   ],
   controllers: [AppController],
   providers: [

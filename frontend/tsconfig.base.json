@@ -77,6 +77,15 @@
       ],
       "@rootstock/orchards/orchards-feature-mobile": [
         "libs/orchards/feature-mobile/src/index.ts"
+      ],
+      "@rootstock/master-data/varieties/varieties-data-access": [
+        "libs/master-data/varieties/data-access/src/index.ts"
+      ],
+      "@rootstock/master-data/varieties/varieties-feature-web": [
+        "libs/master-data/varieties/feature-web/src/index.ts"
+      ],
+      "@rootstock/master-data/varieties/varieties-feature-mobile": [
+        "libs/master-data/varieties/feature-mobile/src/index.ts"
       ]
     }
   },

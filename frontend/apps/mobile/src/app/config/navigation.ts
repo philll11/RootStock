@@ -39,6 +39,12 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     permission: PERMISSIONS.ROLE_VIEW,
   },
   {
+    label: 'Varieties',
+    screen: 'VarietiesList',
+    icon: 'leaf',
+    permission: PERMISSIONS.VARIETY_VIEW,
+  },
+  {
     label: 'Settings',
     screen: 'Settings',
     icon: 'cog',

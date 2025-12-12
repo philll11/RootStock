@@ -6,6 +6,8 @@ import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock
 import { palette } from '@rootstock/ui/theme';
 import { useOrchards, Orchard, CreateOrchardDto, UpdateOrchardDto } from '@rootstock/orchards/orchards-data-access';
 import { OrchardForm } from './orchard-form';
+import { usePermission } from '@rootstock/auth/auth-data-access';
+import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function OrchardsListPage() {
   const { 
@@ -18,6 +20,7 @@ export function OrchardsListPage() {
     isUpdating
   } = useOrchards();
   
+  const { can } = usePermission();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   
@@ -35,7 +38,8 @@ export function OrchardsListPage() {
     openDrawer();
   };
 
-  const handleEdit = (orchard: Orchard) => {
+  const handleEdit = (orchard: Orchard, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setSelectedOrchard(orchard);
     setFormMode('edit');
     setIsFormDirty(false);
@@ -56,7 +60,8 @@ export function OrchardsListPage() {
     });
   };
 
-  const handleDeleteClick = (orchard: Orchard) => {
+  const handleDeleteClick = (orchard: Orchard, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setSelectedOrchard(orchard);
     openDeleteModal();
   };

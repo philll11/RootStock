@@ -10,6 +10,7 @@ import { UsersListPage, UserProfilePage } from '@rootstock/users/users-feature-w
 import { ClientsListPage } from '@rootstock/clients/clients-feature-web';
 import { OrchardsListPage } from '@rootstock/orchards/orchards-feature-web';
 import { RolesListPage } from '@rootstock/roles/roles-feature-web';
+import { VarietiesListPage } from '@rootstock/master-data/varieties/varieties-feature-web';
 import { MainLayout } from './layouts/main-layout';
 import { useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
 import { webTheme } from '@rootstock/ui/web';
@@ -109,6 +110,14 @@ export function App() {
               element={
                 <ProtectedRoute permission={PERMISSIONS.ROLE_VIEW}>
                   <RolesListPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="varieties" 
+              element={
+                <ProtectedRoute permission={PERMISSIONS.VARIETY_VIEW}>
+                  <VarietiesListPage />
                 </ProtectedRoute>
               } 
             />

@@ -16,6 +16,7 @@ import { ClientsListScreen, ClientFormScreen } from '@rootstock/clients/clients-
 import { OrchardsListScreen, OrchardFormScreen } from '@rootstock/orchards/orchards-feature-mobile';
 import { UsersListScreen, UserFormScreen } from '@rootstock/users/users-feature-mobile';
 import { RolesListScreen, RoleFormScreen } from '@rootstock/roles/roles-feature-mobile';
+import { VarietiesListScreen, VarietyFormScreen } from '@rootstock/master-data/varieties/varieties-feature-mobile';
 import { DrawerProvider, useDrawer } from '@rootstock/ui/mobile';
 import { AppDrawer } from './components/AppDrawer';
 import { ProtectedScreen } from './components/ProtectedScreen';
@@ -73,6 +74,15 @@ const RolesListScreenWrapper = (props: any) => {
   );
 };
 
+const VarietiesListScreenWrapper = (props: any) => {
+  const { toggleDrawer } = useDrawer();
+  return (
+    <ProtectedScreen permission={PERMISSIONS.VARIETY_VIEW}>
+      <VarietiesListScreen {...props} onMenuPress={toggleDrawer} />
+    </ProtectedScreen>
+  );
+};
+
 function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -95,6 +105,8 @@ function AppNavigator() {
           <Stack.Screen name="ClientForm" component={ClientFormScreen} />
           <Stack.Screen name="OrchardsList" component={OrchardsListScreenWrapper} />
           <Stack.Screen name="OrchardForm" component={OrchardFormScreen} />
+          <Stack.Screen name="VarietiesList" component={VarietiesListScreenWrapper} />
+          <Stack.Screen name="VarietyForm" component={VarietyFormScreen} />
           <Stack.Screen name="PermissionDenied" component={PermissionDeniedScreen} />
         </>
       ) : (

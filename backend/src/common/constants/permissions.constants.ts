@@ -70,6 +70,18 @@ export const PERMISSIONS = {
    */
   SUBSIDIARY_MANAGE_INACTIVE: 'Subsidiary:ManageInactive',
 
+  // --- Variety Management (Master Data) ---
+  // Permissions for managing fruit varieties.
+  VARIETY_CREATE: 'Variety:Create',
+  VARIETY_VIEW: 'Variety:View',
+  VARIETY_EDIT: 'Variety:Edit',
+  VARIETY_DELETE: 'Variety:Delete',
+  /**
+   * Grants the ability to change a variety's `isActive` status and to
+   * include inactive variety records in query results.
+   */
+  VARIETY_MANAGE_INACTIVE: 'Variety:ManageInactive',
+
   // --- System Configuration ---
   // Permissions for managing system-level configurations, like recordId counters.
   COUNTERS_VIEW: 'Counters:View',
@@ -97,4 +109,5 @@ export enum Resource {
   ROLE = 'Role',
   SUBSIDIARY = 'Subsidiary',
   COUNTERS = 'Counters',
+  VARIETY = 'Variety',
 }

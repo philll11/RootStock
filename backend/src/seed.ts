@@ -69,6 +69,7 @@ async function bootstrap() {
           PERMISSIONS.CLIENT_VIEW,
           PERMISSIONS.USER_VIEW,
           PERMISSIONS.ORCHARD_VIEW,
+          PERMISSIONS.VARIETY_VIEW,
         ],
         isActive: true,
       },

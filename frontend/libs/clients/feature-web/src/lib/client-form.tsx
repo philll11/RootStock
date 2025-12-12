@@ -75,12 +75,10 @@ export function ClientForm({
         isActive: true,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, mode]);
 
   const handleSubmit = (values: typeof form.values) => {
     if (isCreating) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { isActive, ...createValues } = values;
       onSubmit(createValues);
     } else {

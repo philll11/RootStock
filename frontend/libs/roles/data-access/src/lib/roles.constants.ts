@@ -34,6 +34,13 @@ export const PERMISSIONS = {
   SUBSIDIARY_DELETE: 'Subsidiary:Delete',
   SUBSIDIARY_MANAGE_INACTIVE: 'Subsidiary:ManageInactive',
 
+  // --- Variety Management (Master Data) ---
+  VARIETY_CREATE: 'Variety:Create',
+  VARIETY_VIEW: 'Variety:View',
+  VARIETY_EDIT: 'Variety:Edit',
+  VARIETY_DELETE: 'Variety:Delete',
+  VARIETY_MANAGE_INACTIVE: 'Variety:ManageInactive',
+
   // --- System Configuration ---
   COUNTERS_VIEW: 'Counters:View',
   COUNTERS_EDIT: 'Counters:Edit',
@@ -49,5 +56,6 @@ export enum Resource {
   ROLE = 'Role',
   SUBSIDIARY = 'Subsidiary',
   COUNTERS = 'Counters',
+  VARIETY = 'Variety',
   GLOBAL = 'Global',
 }

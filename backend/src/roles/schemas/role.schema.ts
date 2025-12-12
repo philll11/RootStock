@@ -23,7 +23,6 @@ export class Role {
     @Prop({ required: true, enum: VisibilityScope })
     visibilityScope: VisibilityScope;
 
-    // This will hold permissions like 'Client:Edit', 'User:Create'
     @Prop({ type: [String], required: true, default: [] })
     permissions: string[];
 
