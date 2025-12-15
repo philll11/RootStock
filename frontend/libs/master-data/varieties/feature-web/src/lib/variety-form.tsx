@@ -106,7 +106,7 @@ export function VarietyForm({ mode, initialValues, onSubmit, onCancel, onEdit, i
               Cancel
             </Button>
             <Button type="submit" loading={isLoading}>
-              {mode === 'create' ? 'Create' : 'Save'}
+              {mode === 'create' ? 'Create Variety' : 'Update Variety'}
             </Button>
           </Group>
         )}

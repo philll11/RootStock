@@ -1,4 +1,5 @@
-import { Title, Table, Button, Group, Drawer, ActionIcon, Badge } from '@mantine/core';
+// frontend/libs/users/feature-web/src/lib/users-list-page.tsx
+import { Title, Table, Button, Group, Drawer, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
 import { useUsers, User, CreateUserDto, UpdateUserDto } from '@rootstock/users/users-data-access';
@@ -7,7 +8,7 @@ import { useState } from 'react';
 import { ConfirmDiscardModal, ConfirmModal, useDiscardWarning } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { palette } from '@rootstock/ui/theme';
+import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function UsersListPage() {
   const { users, isLoading, createUser, updateUser, deleteUser, isCreating, isUpdating } = useUsers();
@@ -15,18 +16,13 @@ export function UsersListPage() {
   const [opened, { open, close }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   
-  // State for drawer mode and selected user
   const [mode, setMode] = useState<UserFormMode>('create');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   
-  // State for persisting create form data
   const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateUserDto>>({});
-  
-  // State for dirty check in edit mode
   const [isFormDirty, setIsFormDirty] = useState(false);
 
-  // Use the shared hook for discard warning
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty);
 
   const handleCreate = () => {
@@ -78,7 +74,7 @@ export function UsersListPage() {
         await updateUser({ id: selectedUser._id, data: values as UpdateUserDto });
       } else if (mode === 'create') {
         await createUser(values as CreateUserDto);
-        setCreateFormDraft({}); // Clear draft on successful create
+        setCreateFormDraft({}); // Clear draft after successful creation
       }
       close();
     } catch (error) {
@@ -118,12 +114,12 @@ export function UsersListPage() {
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.USER_EDIT) && (
             <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(user, e)}>
-              <IconEdit size={16} />
+              <IconEdit size={iconSizes.md} />
             </ActionIcon>
           )}
           {can(PERMISSIONS.USER_DELETE) && (
             <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDelete(user._id, e)}>
-              <IconTrash size={16} />
+              <IconTrash size={iconSizes.md} />
             </ActionIcon>
           )}
         </Group>
@@ -133,16 +129,16 @@ export function UsersListPage() {
 
   return (
     <>
-      <Group justify="space-between" mb="md">
+      <Group justify="space-between" mb="lg">
         <Title order={2}>Users</Title>
         {can(PERMISSIONS.USER_CREATE) && (
-          <Button leftSection={<IconPlus size={16} />} onClick={handleCreate}>
+          <Button leftSection={<IconPlus size={iconSizes.sm} />} onClick={handleCreate}>
             Add User
           </Button>
         )}
       </Group>
 
-      <Table highlightOnHover>
+      <Table>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>ID</Table.Th>
@@ -153,7 +149,15 @@ export function UsersListPage() {
             <Table.Th />
           </Table.Tr>
         </Table.Thead>
-        <Table.Tbody>{rows}</Table.Tbody>
+        <Table.Tbody>
+          {rows.length > 0 ? rows : (
+            <Table.Tr>
+              <Table.Td colSpan={6}>
+                <Text ta="center" c="dimmed" py="xl">No users found</Text>
+              </Table.Td>
+            </Table.Tr>
+          )}
+        </Table.Tbody>
       </Table>
 
       <Drawer
@@ -161,7 +165,7 @@ export function UsersListPage() {
         onClose={handleClose}
         title={getDrawerTitle()}
         position="right"
-        size="md"
+        size={layout.drawers.form}
       >
         <UserForm
           mode={mode}
@@ -185,7 +189,7 @@ export function UsersListPage() {
         title="Delete User"
         message="Are you sure you want to delete this user? This action cannot be undone."
         confirmLabel="Delete"
-        confirmColor="error"
+        confirmColor={palette.actions.delete}
       />
     </>
   );

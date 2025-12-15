@@ -1,27 +1,28 @@
+// frontend/libs/users/feature-mobile/src/lib/user-form-screen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Appbar, TextInput, Button, Switch, Text, useTheme, HelperText, SegmentedButtons, Chip, Modal, Portal, List, Searchbar } from 'react-native-paper';
-import { useUsers, CreateUserDto, UpdateUserDto, UserType } from '@rootstock/users/users-data-access';
+import { useUsers, UserType } from '@rootstock/users/users-data-access';
 import { useClients, searchClients } from '@rootstock/clients/clients-data-access';
 import { useRoles } from '@rootstock/roles/roles-data-access';
 import { useMobileDiscardWarning, DetailRow } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { spacing } from '@rootstock/ui/theme';
 
 export const UserFormScreen = ({ navigation, route }: any) => {
   const theme = useTheme();
   const { userId } = route.params || {};
   const isEditing = !!userId;
-  
+
   const { getUser, createUser, updateUser, deleteUser, isCreating, isUpdating } = useUsers();
   const { roles } = useRoles();
   const { clients } = useClients();
   const { can } = usePermission();
   const canEdit = can(isEditing ? PERMISSIONS.USER_EDIT : PERMISSIONS.USER_CREATE);
-  
-  // Default to edit mode if creating new user, otherwise view mode
+
   const [isEditMode, setIsEditMode] = useState(!isEditing);
-  
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -34,14 +35,13 @@ export const UserFormScreen = ({ navigation, route }: any) => {
   const [clientModalVisible, setClientModalVisible] = useState(false);
   const [roleModalVisible, setRoleModalVisible] = useState(false);
   const [clientSearchQuery, setClientSearchQuery] = useState('');
-  const [availableClients, setAvailableClients] = useState<{_id: string, name: string}[]>([]);
-  
+  const [availableClients, setAvailableClients] = useState<{ _id: string, name: string }[]>([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{firstName?: string; lastName?: string; email?: string; password?: string}>({});
+  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string; email?: string; password?: string }>({});
 
-  // Load user data if editing
   useEffect(() => {
     if (isEditing) {
       setIsLoading(true);
@@ -58,7 +58,6 @@ export const UserFormScreen = ({ navigation, route }: any) => {
           setIsActive(user.isActive);
           setClientIds(user.clientIds || []);
           setIsLoading(false);
-          // Reset dirty state after loading
           setTimeout(() => setIsDirty(false), 100);
         })
         .catch((err: any) => {
@@ -71,14 +70,12 @@ export const UserFormScreen = ({ navigation, route }: any) => {
     }
   }, [userId, isEditing]);
 
-  // Load clients for selection
   useEffect(() => {
     if (clientModalVisible) {
       searchClients(clientSearchQuery).then(setAvailableClients);
     }
   }, [clientModalVisible, clientSearchQuery]);
 
-  // Track dirty state
   const handleChange = (setter: (val: any) => void, value: any, field: string) => {
     setter(value);
     setIsDirty(true);
@@ -87,7 +84,6 @@ export const UserFormScreen = ({ navigation, route }: any) => {
     }
   };
 
-  // Enable discard warning only in edit mode
   useMobileDiscardWarning(isEditMode && isDirty && !isSubmitting);
 
   const validate = () => {
@@ -96,7 +92,7 @@ export const UserFormScreen = ({ navigation, route }: any) => {
     if (!lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!email.trim()) newErrors.email = 'Email is required';
     else if (!/^\S+@\S+$/.test(email)) newErrors.email = 'Invalid email';
-    
+
     if (!isEditing && !password) newErrors.password = 'Password is required';
 
     setErrors(newErrors);
@@ -109,34 +105,17 @@ export const UserFormScreen = ({ navigation, route }: any) => {
     try {
       setIsSubmitting(true);
       if (isEditing) {
-        await updateUser({ 
-          id: userId, 
-          data: { 
-            firstName, 
-            lastName, 
-            email, 
-            userType, 
-            roleId,
-            isActive,
-            clientIds
-          } 
+        await updateUser({
+          id: userId,
+          data: { firstName, lastName, email, userType, roleId, isActive, clientIds }
         });
-        // Switch back to view mode on success
         setIsEditMode(false);
       } else {
-        await createUser({ 
-          firstName, 
-          lastName, 
-          email, 
-          userType, 
-          roleId,
-          password,
-          isActive,
-          clientIds
+        await createUser({
+          firstName, lastName, email, userType, roleId, password, isActive, clientIds
         });
         navigation.goBack();
       }
-      // Reset dirty state so we can navigate back without warning
       setIsDirty(false);
     } catch (error: any) {
       console.error(error);
@@ -154,8 +133,8 @@ export const UserFormScreen = ({ navigation, route }: any) => {
       'Are you sure you want to delete this user? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -192,157 +171,157 @@ export const UserFormScreen = ({ navigation, route }: any) => {
           <Appbar.Action icon="pencil" onPress={() => setIsEditMode(true)} />
         )}
         {isEditMode && isEditing && (
-          <Appbar.Action icon="close" onPress={() => {
-            // TODO: Revert changes if dirty? For now just switch mode
-            setIsEditMode(false);
-          }} />
+          <Appbar.Action icon="close" onPress={() => setIsEditMode(false)} />
         )}
         {isEditMode && isEditing && can(PERMISSIONS.USER_DELETE) && (
           <Appbar.Action icon="delete" onPress={handleDelete} color={theme.colors.error} />
         )}
       </Appbar.Header>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {isEditMode ? (
-          <>
-            <TextInput
-              mode="outlined"
-              label="First Name"
-              value={firstName}
-              onChangeText={(val) => handleChange(setFirstName, val, 'firstName')}
-              error={!!errors.firstName}
-              style={styles.input}
-            />
-            {errors.firstName && <HelperText type="error">{errors.firstName}</HelperText>}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.content}>
+          {isEditMode ? (
+            <>
+              <TextInput
+                mode="outlined"
+                label="First Name"
+                value={firstName}
+                onChangeText={(val) => handleChange(setFirstName, val, 'firstName')}
+                error={!!errors.firstName}
+                style={styles.input}
+              />
+              {errors.firstName && <HelperText type="error">{errors.firstName}</HelperText>}
 
-            <TextInput
-              mode="outlined"
-              label="Last Name"
-              value={lastName}
-              onChangeText={(val) => handleChange(setLastName, val, 'lastName')}
-              error={!!errors.lastName}
-              style={styles.input}
-            />
-            {errors.lastName && <HelperText type="error">{errors.lastName}</HelperText>}
+              <TextInput
+                mode="outlined"
+                label="Last Name"
+                value={lastName}
+                onChangeText={(val) => handleChange(setLastName, val, 'lastName')}
+                error={!!errors.lastName}
+                style={styles.input}
+              />
+              {errors.lastName && <HelperText type="error">{errors.lastName}</HelperText>}
 
-            <TextInput
-              mode="outlined"
-              label="Email"
-              value={email}
-              onChangeText={(val) => handleChange(setEmail, val, 'email')}
-              error={!!errors.email}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={styles.input}
-            />
-            {errors.email && <HelperText type="error">{errors.email}</HelperText>}
+              <TextInput
+                mode="outlined"
+                label="Email"
+                value={email}
+                onChangeText={(val) => handleChange(setEmail, val, 'email')}
+                error={!!errors.email}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                style={styles.input}
+              />
+              {errors.email && <HelperText type="error">{errors.email}</HelperText>}
 
-            {!isEditing && (
-              <>
-                <TextInput
-                  mode="outlined"
-                  label="Password"
-                  value={password}
-                  onChangeText={(val) => handleChange(setPassword, val, 'password')}
-                  error={!!errors.password}
-                  secureTextEntry
-                  style={styles.input}
-                />
-                {errors.password && <HelperText type="error">{errors.password}</HelperText>}
-              </>
-            )}
-
-            <Text variant="bodyMedium" style={styles.label}>User Type</Text>
-            <SegmentedButtons
-              value={userType}
-              onValueChange={(val) => handleChange(setUserType, val as UserType, 'userType')}
-              buttons={[
-                { value: UserType.Employee, label: 'Employee', disabled: isEditing },
-                { value: UserType.Contact, label: 'Contact', disabled: isEditing },
-              ]}
-              style={styles.input}
-            />
-
-            <Text variant="bodyMedium" style={styles.label}>Role</Text>
-            <View style={styles.chipContainer}>
-              <Chip 
-                mode="outlined" 
-                onPress={() => can(PERMISSIONS.ROLE_VIEW) && setRoleModalVisible(true)} 
-                style={styles.chip}
-                icon="shield-account"
-                onClose={roleId ? () => handleChange(setRoleId, undefined, 'roleId') : undefined}
-                disabled={!can(PERMISSIONS.ROLE_VIEW)}
-              >
-                {roles.find(r => r._id === roleId)?.name || roleName || 'Select Role'}
-              </Chip>
-            </View>
-
-            <Text variant="bodyMedium" style={styles.label}>Clients</Text>
-            <View style={styles.chipContainer}>
-              {clientIds.map(id => {
-                 const client = clients?.find(c => c._id === id) || availableClients.find(c => c._id === id);
-                 return (
-                   <Chip key={id} onClose={() => toggleClient(id)} style={styles.chip}>
-                     {client?.name || 'Client ' + id.substring(0, 4)}
-                   </Chip>
-                 );
-              })}
-              <Chip icon="plus" onPress={() => setClientModalVisible(true)} style={styles.chip}>Add Client</Chip>
-            </View>
-
-            {isEditing && (
-              <View style={styles.switchContainer}>
-                <Text variant="bodyLarge">Active</Text>
-                <Switch value={isActive} onValueChange={(val) => handleChange(setIsActive, val, 'isActive')} />
-              </View>
-            )}
-
-            <Button
-              mode="contained"
-              onPress={handleSave}
-              loading={isSaving}
-              disabled={isSaving || isLoading}
-              style={styles.button}
-            >
-              Save
-            </Button>
-          </>
-        ) : (
-          <>
-            <DetailRow label="First Name" value={firstName} />
-            <DetailRow label="Last Name" value={lastName} />
-            <DetailRow label="Email" value={email} />
-            <DetailRow label="User Type" value={userType} />
-            <DetailRow label="Role" value={roles.find(r => r._id === roleId)?.name || roleName} />
-            <DetailRow label="Status" value={isActive ? 'Active' : 'Inactive'} />
-            
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>Clients</Text>
-            <View style={styles.chipContainer}>
-              {clientIds.length > 0 ? clientIds.map(id => {
-                 // Try to find name in available clients, or just show ID if not loaded
-                 // Note: In view mode we might want to fetch these names if not available
-                 const client = clients?.find(c => c._id === id) || availableClients.find(c => c._id === id);
-                 return (
-                   <Chip key={id} style={styles.chip}>
-                     {client?.name || 'Client ' + id.substring(0, 4)}
-                   </Chip>
-                 );
-              }) : (
-                <Text variant="bodyMedium">-</Text>
+              {!isEditing && (
+                <>
+                  <TextInput
+                    mode="outlined"
+                    label="Password"
+                    value={password}
+                    onChangeText={(val) => handleChange(setPassword, val, 'password')}
+                    error={!!errors.password}
+                    secureTextEntry
+                    style={styles.input}
+                  />
+                  {errors.password && <HelperText type="error">{errors.password}</HelperText>}
+                </>
               )}
-            </View>
-          </>
-        )}
-      </ScrollView>
+
+              <Text variant="bodyMedium" style={styles.label}>User Type</Text>
+              <SegmentedButtons
+                value={userType}
+                onValueChange={(val) => handleChange(setUserType, val as UserType, 'userType')}
+                buttons={[
+                  { value: UserType.Employee, label: 'Employee', disabled: isEditing },
+                  { value: UserType.Contact, label: 'Contact', disabled: isEditing },
+                ]}
+                style={styles.input}
+              />
+
+              <Text variant="bodyMedium" style={styles.label}>Role</Text>
+              <View style={styles.chipContainer}>
+                <Chip
+                  mode="outlined"
+                  onPress={() => can(PERMISSIONS.ROLE_VIEW) && setRoleModalVisible(true)}
+                  style={styles.chip}
+                  icon="shield-account"
+                  onClose={roleId ? () => handleChange(setRoleId, undefined, 'roleId') : undefined}
+                  disabled={!can(PERMISSIONS.ROLE_VIEW)}
+                >
+                  {roles.find(r => r._id === roleId)?.name || roleName || 'Select Role'}
+                </Chip>
+              </View>
+
+              <Text variant="bodyMedium" style={styles.label}>Clients</Text>
+              <View style={styles.chipContainer}>
+                {clientIds.map(id => {
+                  const client = clients?.find(c => c._id === id) || availableClients.find(c => c._id === id);
+                  return (
+                    <Chip key={id} onClose={() => toggleClient(id)} style={styles.chip}>
+                      {client?.name || 'Client ' + id.substring(0, 4)}
+                    </Chip>
+                  );
+                })}
+                <Chip icon="plus" onPress={() => setClientModalVisible(true)} style={styles.chip}>Add Client</Chip>
+              </View>
+
+              {isEditing && (
+                <View style={styles.switchContainer}>
+                  <Text variant="bodyLarge">Active</Text>
+                  <Switch value={isActive} onValueChange={(val) => handleChange(setIsActive, val, 'isActive')} />
+                </View>
+              )}
+
+              <Button
+                mode="contained"
+                onPress={handleSave}
+                loading={isSaving}
+                disabled={isSaving || isLoading}
+                style={styles.button}
+              >
+                Save
+              </Button>
+            </>
+          ) : (
+            <>
+              <DetailRow label="First Name" value={firstName} />
+              <DetailRow label="Last Name" value={lastName} />
+              <DetailRow label="Email" value={email} />
+              <DetailRow label="User Type" value={userType} />
+              <DetailRow label="Role" value={roles.find(r => r._id === roleId)?.name || roleName} />
+              <DetailRow label="Status" value={isActive ? 'Active' : 'Inactive'} />
+
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>Clients</Text>
+              <View style={styles.chipContainer}>
+                {clientIds.length > 0 ? clientIds.map(id => {
+                  const client = clients?.find(c => c._id === id) || availableClients.find(c => c._id === id);
+                  return (
+                    <Chip key={id} style={styles.chip}>
+                      {client?.name || 'Client ' + id.substring(0, 4)}
+                    </Chip>
+                  );
+                }) : (
+                  <Text variant="bodyMedium">-</Text>
+                )}
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <Portal>
         <Modal visible={clientModalVisible} onDismiss={() => setClientModalVisible(false)} contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
-          <Text variant="titleMedium" style={{ marginBottom: 16 }}>Select Clients</Text>
+          <Text variant="titleMedium" style={{ marginBottom: spacing.md }}>Select Clients</Text>
           <Searchbar
             placeholder="Search clients"
             onChangeText={setClientSearchQuery}
             value={clientSearchQuery}
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: spacing.md }}
           />
           <ScrollView style={{ maxHeight: 300 }}>
             {availableClients.map(client => (
@@ -354,13 +333,13 @@ export const UserFormScreen = ({ navigation, route }: any) => {
               />
             ))}
           </ScrollView>
-          <Button onPress={() => setClientModalVisible(false)} style={{ marginTop: 16 }}>Done</Button>
+          <Button onPress={() => setClientModalVisible(false)} style={{ marginTop: spacing.md }}>Done</Button>
         </Modal>
       </Portal>
 
       <Portal>
         <Modal visible={roleModalVisible} onDismiss={() => setRoleModalVisible(false)} contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
-          <Text variant="titleMedium" style={{ marginBottom: 16 }}>Select Role</Text>
+          <Text variant="titleMedium" style={{ marginBottom: spacing.md }}>Select Role</Text>
           <ScrollView style={{ maxHeight: 300 }}>
             {roles.map(role => (
               <List.Item
@@ -374,7 +353,7 @@ export const UserFormScreen = ({ navigation, route }: any) => {
               />
             ))}
           </ScrollView>
-          <Button onPress={() => setRoleModalVisible(false)} style={{ marginTop: 16 }}>Cancel</Button>
+          <Button onPress={() => setRoleModalVisible(false)} style={{ marginTop: spacing.md }}>Cancel</Button>
         </Modal>
       </Portal>
     </View>
@@ -383,18 +362,18 @@ export const UserFormScreen = ({ navigation, route }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16 },
-  input: { marginBottom: 8 },
-  label: { marginTop: 8, marginBottom: 4 },
+  content: { padding: spacing.md },
+  input: { marginBottom: spacing.sm },
+  label: { marginTop: spacing.sm, marginBottom: spacing.xs },
   switchContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: 16,
-    paddingHorizontal: 4,
+    marginVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
   },
-  button: { marginTop: 24 },
-  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 },
-  chip: { margin: 4 },
-  modalContent: { padding: 20, margin: 20, borderRadius: 8 }
+  button: { marginTop: spacing.lg },
+  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.md },
+  chip: { margin: spacing.xs },
+  modalContent: { padding: spacing.lg, margin: spacing.lg, borderRadius: 8 }
 });

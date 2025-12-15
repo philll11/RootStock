@@ -1,20 +1,19 @@
+// frontend/libs/clients/feature-mobile/src/lib/clients-list-screen.tsx
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
-import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator, Chip } from 'react-native-paper';
+import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator } from 'react-native-paper';
 import { useClients } from '@rootstock/clients/clients-data-access';
 import { AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { spacing } from '@rootstock/ui/theme';
 
 export const ClientsListScreen = ({ navigation, onMenuPress }: any) => {
   const theme = useTheme() as AppTheme;
-  const { clients, isLoading, searchClients } = useClients();
+  const { clients, isLoading } = useClients();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Filter clients based on search query locally for now, or use the searchClients from hook if it supports it
-  // The current useClients hook returns all clients, but also exports a searchClients function.
-  // For simplicity in this list view, we'll filter the 'clients' array.
   const filteredClients = clients.filter(client => 
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -83,16 +82,13 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1 },
   searchBar: {
-    margin: 16,
+    margin: spacing.md,
   },
   listContent: {
-    paddingBottom: 80, // Space for FAB
+    paddingBottom: 80,
   },
   listItem: {
-    paddingHorizontal: 8,
-  },
-  chipContainer: {
-    marginTop: 4,
+    paddingHorizontal: spacing.sm,
   },
   loadingContainer: {
     flex: 1,
@@ -100,12 +96,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyContainer: {
-    padding: 32,
+    padding: spacing.xl,
     alignItems: 'center',
   },
   fab: {
     position: 'absolute',
-    margin: 16,
+    margin: spacing.md,
     right: 0,
     bottom: 0,
   },

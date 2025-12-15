@@ -1,8 +1,12 @@
+// frontend/libs/master-data/varieties/feature-mobile/src/lib/variety-form-screen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Appbar, TextInput, Button, Switch, Text, useTheme, HelperText } from 'react-native-paper';
 import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
 import { useMobileDiscardWarning, DetailRow } from '@rootstock/ui/mobile';
+import { usePermission } from '@rootstock/auth/auth-data-access';
+import { PERMISSIONS } from '@rootstock/shared/util';
+import { spacing } from '@rootstock/ui/theme';
 
 export const VarietyFormScreen = ({ navigation, route }: any) => {
   const theme = useTheme();
@@ -12,7 +16,8 @@ export const VarietyFormScreen = ({ navigation, route }: any) => {
   const { varietiesQuery, createVarietyMutation, updateVarietyMutation, deleteVarietyMutation } = useVarieties();
   const { data: varieties } = varietiesQuery;
   
-  const canEdit = true; // TODO: Implement permissions
+  const { can } = usePermission();
+  const canEdit = can(isEditing ? PERMISSIONS.VARIETY_EDIT : PERMISSIONS.VARIETY_CREATE);
 
   const [isEditMode, setIsEditMode] = useState(!isEditing);
   const [name, setName] = useState('');
@@ -29,11 +34,13 @@ export const VarietyFormScreen = ({ navigation, route }: any) => {
         setName(variety.name);
         setIsActive(variety.isActive);
         setRecordId(variety.recordId);
+        setTimeout(() => setIsDirty(false), 100);
       }
     }
   }, [isEditing, varietyId, varieties]);
 
-  useMobileDiscardWarning(isDirty);
+  const isSubmitting = createVarietyMutation.isPending || updateVarietyMutation.isPending;
+  useMobileDiscardWarning(isEditMode && isDirty && !isSubmitting);
 
   const validate = () => {
     const newErrors: {name?: string} = {};
@@ -83,90 +90,82 @@ export const VarietyFormScreen = ({ navigation, route }: any) => {
     );
   };
 
-  const handleCancel = () => {
-    if (isEditing) {
-      // Reset form
-      const variety = varieties?.find(v => v._id === varietyId);
-      if (variety) {
-        setName(variety.name);
-        setIsActive(variety.isActive);
-      }
-      setIsEditMode(false);
-      setIsDirty(false);
-    } else {
-      navigation.goBack();
-    }
-  };
-
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={isEditing ? (isEditMode ? 'Edit Variety' : 'Variety Details') : 'Create Variety'} />
-        {isEditing && !isEditMode && canEdit && (
+        <Appbar.Content title={isEditing ? (isEditMode ? 'Edit Variety' : 'Variety Details') : 'New Variety'} />
+        {!isEditMode && canEdit && (
           <Appbar.Action icon="pencil" onPress={() => setIsEditMode(true)} />
         )}
-        {isEditing && isEditMode && (
-          <Appbar.Action icon="delete" onPress={handleDelete} />
+        {isEditMode && isEditing && (
+          <Appbar.Action icon="close" onPress={() => setIsEditMode(false)} />
+        )}
+        {isEditMode && isEditing && can(PERMISSIONS.VARIETY_DELETE) && (
+          <Appbar.Action icon="delete" onPress={handleDelete} color={theme.colors.error} />
         )}
       </Appbar.Header>
 
-      <ScrollView style={styles.content}>
-        {isEditMode ? (
-          <View style={styles.form}>
-            <TextInput
-              label="Name"
-              value={name}
-              onChangeText={(text) => { setName(text); setIsDirty(true); }}
-              mode="outlined"
-              error={!!errors.name}
-              style={styles.input}
-            />
-            {errors.name && <HelperText type="error">{errors.name}</HelperText>}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.content}>
+          {isEditMode ? (
+            <>
+              <TextInput
+                label="Name"
+                value={name}
+                onChangeText={(text) => { setName(text); setIsDirty(true); }}
+                mode="outlined"
+                error={!!errors.name}
+                style={styles.input}
+              />
+              {errors.name && <HelperText type="error">{errors.name}</HelperText>}
 
-            {isEditing && (
-              <View style={styles.switchContainer}>
-                <Text>Active</Text>
-                <Switch 
-                  value={isActive} 
-                  onValueChange={(val) => { setIsActive(val); setIsDirty(true); }} 
-                />
-              </View>
-            )}
+              {isEditing && (
+                <View style={styles.switchContainer}>
+                  <Text variant="bodyLarge">Active</Text>
+                  <Switch 
+                    value={isActive} 
+                    onValueChange={(val) => { setIsActive(val); setIsDirty(true); }} 
+                  />
+                </View>
+              )}
 
-            <View style={styles.actions}>
-              <Button mode="outlined" onPress={handleCancel} style={styles.button}>
-                Cancel
-              </Button>
               <Button 
                 mode="contained" 
                 onPress={handleSave} 
                 style={styles.button}
-                loading={createVarietyMutation.isPending || updateVarietyMutation.isPending}
+                loading={isSubmitting}
+                disabled={isSubmitting}
               >
                 Save
               </Button>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.details}>
-            <DetailRow label="Name" value={name} />
-            <DetailRow label="ID" value={recordId} />
-            <DetailRow label="Status" value={isActive ? 'Active' : 'Inactive'} />
-          </View>
-        )}
-      </ScrollView>
+            </>
+          ) : (
+            <>
+              <DetailRow label="Name" value={name} />
+              <DetailRow label="Record ID" value={recordId} />
+              <DetailRow label="Status" value={isActive ? 'Active' : 'Inactive'} />
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16 },
-  form: { gap: 16 },
-  details: { gap: 16 },
-  input: { backgroundColor: 'transparent' },
-  switchContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 16 },
-  button: { minWidth: 100 },
+  content: { padding: spacing.md },
+  input: { marginBottom: spacing.xs },
+  switchContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginVertical: spacing.md,
+    paddingHorizontal: spacing.xs 
+  },
+  button: { marginTop: spacing.lg },
 });

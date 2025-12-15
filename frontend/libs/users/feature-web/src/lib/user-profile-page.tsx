@@ -1,16 +1,24 @@
+// frontend/libs/users/feature-web/src/lib/user-profile-page.tsx
 import { TextInput, Button, Group, PasswordInput, Stack, Title, Paper, Container, Divider } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useAuth } from '@rootstock/auth/auth-data-access';
-import { useUsers } from '@rootstock/users/users-data-access';
+import { useUsers, UpdateUserDto } from '@rootstock/users/users-data-access';
 import { useEffect, useState } from 'react';
-import { notify } from '@rootstock/shared/util';
 import { ConfirmModal } from '@rootstock/ui/web';
+import { layout, shadows } from '@rootstock/ui/theme';
 
 export function UserProfilePage() {
   const { user } = useAuth();
   const { updateUser, isUpdating } = useUsers();
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [pendingValues, setPendingValues] = useState<typeof form.values | null>(null);
+  
+  // Strongly typed pending state
+  const [pendingValues, setPendingValues] = useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+  } | null>(null);
 
   const form = useForm({
     initialValues: {
@@ -51,7 +59,7 @@ export function UserProfilePage() {
   const executeUpdate = async (values: typeof form.values) => {
     if (!user) return;
 
-    const updateData: any = {
+    const updateData: UpdateUserDto = {
       firstName: values.firstName,
       lastName: values.lastName,
       email: values.email,
@@ -65,7 +73,7 @@ export function UserProfilePage() {
       await updateUser({ id: user._id, data: updateData });
       form.setFieldValue('password', ''); // Clear password field on success
     } catch (error) {
-      // Error handled by useUsers
+      // Error handled by useUsers hook
     } finally {
       setConfirmModalOpen(false);
       setPendingValues(null);
@@ -73,8 +81,9 @@ export function UserProfilePage() {
   };
 
   return (
-    <Container size="sm" py="xl">
-      <Paper shadow="xs" p="xl" withBorder>
+    // Fixed: Use architectural container width (640px)
+    <Container size={layout.container.sm} py="xl">
+      <Paper shadow={shadows.card} p="xl" withBorder radius="md">
         <Title order={2} mb="lg">My Profile</Title>
         
         <form onSubmit={form.onSubmit(handleFormSubmit)}>
@@ -83,11 +92,13 @@ export function UserProfilePage() {
               <TextInput
                 label="First Name"
                 placeholder="John"
+                withAsterisk
                 {...form.getInputProps('firstName')}
               />
               <TextInput
                 label="Last Name"
                 placeholder="Doe"
+                withAsterisk
                 {...form.getInputProps('lastName')}
               />
             </Group>
@@ -95,6 +106,7 @@ export function UserProfilePage() {
             <TextInput
               label="Email"
               placeholder="john.doe@example.com"
+              withAsterisk
               {...form.getInputProps('email')}
             />
 

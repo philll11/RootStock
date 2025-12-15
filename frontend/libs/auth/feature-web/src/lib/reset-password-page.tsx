@@ -1,3 +1,4 @@
+// frontend/libs/auth/feature-web/src/lib/reset-password-page.tsx
 import {
   PasswordInput,
   Paper,
@@ -11,6 +12,7 @@ import { AuthService } from '@rootstock/auth/auth-data-access';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { notify } from '@rootstock/shared/util';
+import { shadows } from '@rootstock/ui/theme';
 
 export function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -47,15 +49,15 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <Container size="xs" my="xl">
-      <Title ta="center" c="text.primary">
+    <Container size={420} my="xl">
+      <Title ta="center">
         Reset Password
       </Title>
       <Text c="dimmed" size="sm" ta="center" mt="xs">
         Enter your new password
       </Text>
 
-      <Paper withBorder shadow="md" p="xl" mt="xl" radius="md">
+      <Paper withBorder shadow={shadows.card} p="xl" mt="xl" radius="md">
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <PasswordInput
             label="New Password"

@@ -1,3 +1,4 @@
+// frontend/libs/auth/feature-web/src/lib/login-page.tsx
 import {
   TextInput,
   PasswordInput,
@@ -13,6 +14,8 @@ import {
 import { useForm } from '@mantine/form';
 import { useLogin } from '@rootstock/auth/auth-data-access';
 import { useNavigate } from 'react-router-dom';
+import { notify } from '@rootstock/shared/util';
+import { shadows } from '@rootstock/ui/theme';
 
 export function LoginPage() {
   const loginMutation = useLogin();
@@ -32,30 +35,28 @@ export function LoginPage() {
   const handleSubmit = (values: typeof form.values) => {
     loginMutation.mutate(values, {
       onSuccess: () => {
-        // Navigate to dashboard on success
         navigate('/');
       },
       onError: (error) => {
-        // In a real app, show a notification
-        console.error('Login failed:', error);
-        form.setErrors({ password: 'Invalid username or password' });
+        notify.error(error, 'Login Failed');
+        form.setFieldValue('password', ''); // Clear password on failure
       }
     });
   };
 
   return (
-    <Container size="xs" my="xl">
-      <Title ta="center" c="text.primary">
+    <Container size={420} my="xl">
+      <Title ta="center">
         Welcome back!
       </Title>
       <Text c="dimmed" size="sm" ta="center" mt="xs">
         Do not have an account yet?{' '}
-        <Anchor size="sm" component="button">
+        <Anchor size="sm" component="button" onClick={() => notify.info('Please contact your administrator.', 'Restricted Access')}>
           Create account
         </Anchor>
       </Text>
 
-      <Paper withBorder shadow="md" p="xl" mt="xl" radius="md">
+      <Paper withBorder shadow={shadows.card} p="xl" mt="xl" radius="md">
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <TextInput 
             label="Email" 

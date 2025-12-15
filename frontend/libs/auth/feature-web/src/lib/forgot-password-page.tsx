@@ -1,3 +1,4 @@
+// frontend/libs/auth/feature-web/src/lib/forgot-password-page.tsx
 import {
   TextInput,
   Paper,
@@ -16,6 +17,7 @@ import { useState } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { notify } from '@rootstock/shared/util';
+import { shadows, iconSizes } from '@rootstock/ui/theme';
 
 export function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -44,15 +46,15 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <Container size="xs" my="xl">
-      <Title ta="center" c="text.primary">
+    <Container size={420} my="xl">
+      <Title ta="center">
         Forgot your password?
       </Title>
       <Text c="dimmed" size="sm" ta="center" mt="xs">
         Enter your email to get a reset link
       </Text>
 
-      <Paper withBorder shadow="md" p="xl" mt="xl" radius="md">
+      <Paper withBorder shadow={shadows.card} p="xl" mt="xl" radius="md">
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <TextInput
             label="Email"
@@ -63,7 +65,7 @@ export function ForgotPasswordPage() {
           <Group justify="space-between" mt="xl">
             <Anchor c="dimmed" size="sm" onClick={() => navigate('/login')}>
               <Center inline>
-                <IconArrowLeft style={{ width: 12, height: 12 }} stroke={1.5} />
+                <IconArrowLeft style={{ width: iconSizes.sm, height: iconSizes.sm }} stroke={1.5} />
                 <Box ml={5}>Back to login</Box>
               </Center>
             </Anchor>

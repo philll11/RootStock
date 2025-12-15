@@ -1,3 +1,4 @@
+// frontend/libs/users/feature-mobile/src/lib/users-list-screen.tsx
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator, Avatar, Chip } from 'react-native-paper';
@@ -5,6 +6,7 @@ import { useUsers } from '@rootstock/users/users-data-access';
 import { useDrawer, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { spacing } from '@rootstock/ui/theme'; // NEW IMPORT
 
 export const UsersListScreen = ({ navigation }: any) => {
   const theme = useTheme() as AppTheme;
@@ -12,8 +14,8 @@ export const UsersListScreen = ({ navigation }: any) => {
   const { users, isLoading } = useUsers();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
-  
-  const filteredUsers = users.filter(user => 
+
+  const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -41,7 +43,7 @@ export const UsersListScreen = ({ navigation }: any) => {
           value={searchQuery}
           style={styles.searchBar}
         />
-        
+
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator animating={true} size="large" />
@@ -67,13 +69,13 @@ export const UsersListScreen = ({ navigation }: any) => {
                       {item.email}
                     </Text>
                     <View style={styles.chipContainer}>
-                      <Chip 
-                        compact 
+                      <Chip
+                        compact
                         textStyle={{ fontSize: 10, marginVertical: 0, marginHorizontal: 2 }}
-                        style={{ 
+                        style={{
                           backgroundColor: item.userType === 'employee' ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
                           height: 24,
-                          marginRight: 8
+                          marginRight: spacing.sm
                         }}
                       >
                         {item.userType}
@@ -82,10 +84,10 @@ export const UsersListScreen = ({ navigation }: any) => {
                   </View>
                 )}
                 left={props => (
-                  <Avatar.Text 
-                    {...props} 
-                    size={40} 
-                    label={getInitials(item.name)} 
+                  <Avatar.Text
+                    {...props}
+                    size={40}
+                    label={getInitials(item.name)}
                     style={{ backgroundColor: theme.colors.primaryContainer }}
                     color={theme.colors.onPrimaryContainer}
                   />
@@ -115,13 +117,13 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1 },
   searchBar: {
-    margin: 16,
+    margin: spacing.md,
   },
   listContent: {
     paddingBottom: 80,
   },
   listItem: {
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
   },
   itemDescription: {
     marginTop: 4,
@@ -136,12 +138,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyContainer: {
-    padding: 32,
+    padding: spacing.xl,
     alignItems: 'center',
   },
   fab: {
     position: 'absolute',
-    margin: 16,
+    margin: spacing.md,
     right: 0,
     bottom: 0,
   },

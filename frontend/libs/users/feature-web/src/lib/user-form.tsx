@@ -1,6 +1,6 @@
+// frontend/libs/users/feature-web/src/lib/user-form.tsx
 import { TextInput, Select, Button, Group, PasswordInput, Text, Stack, Checkbox } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { z } from 'zod';
 import { UserType, CreateUserDto, UpdateUserDto, User } from '@rootstock/users/users-data-access';
 import { useRoles } from '@rootstock/roles/roles-data-access';
 import { useEffect, useState } from 'react';
@@ -8,16 +8,7 @@ import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { SearchableMultiSelect } from '@rootstock/ui/web';
 import { searchClients, getClient } from '@rootstock/clients/clients-data-access';
 import { usePermission } from '@rootstock/auth/auth-data-access';
-
-const userSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email'),
-  userType: z.nativeEnum(UserType),
-  roleId: z.string().optional(),
-  password: z.string().optional(),
-  clientIds: z.array(z.string()).optional(),
-});
+import { palette } from '@rootstock/ui/theme';
 
 export type UserFormMode = 'create' | 'edit' | 'view';
 
@@ -77,7 +68,6 @@ export function UserForm({
     },
   });
 
-  // Load initial client options if needed
   useEffect(() => {
     const loadClients = async () => {
       const idsToFetch = user?.clientIds || initialValues?.clientIds;
@@ -93,7 +83,6 @@ export function UserForm({
     loadClients();
   }, [user, initialValues]);
 
-  // Sync form values to parent for persistence (only in create mode)
   useEffect(() => {
     if (isCreating && onValuesChange) {
       onValuesChange(form.values);
@@ -113,7 +102,6 @@ export function UserForm({
         clientIds: user.clientIds || [],
       });
     } else if (isCreating && initialValues) {
-      // If we have draft values, set them
       form.setValues({
         firstName: initialValues.firstName || '',
         lastName: initialValues.lastName || '',
@@ -125,10 +113,8 @@ export function UserForm({
         clientIds: initialValues.clientIds || [],
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, mode]);
 
-  // Track dirty state for edit mode
   useEffect(() => {
     if (isEditing && onDirtyChange) {
       onDirtyChange(form.isDirty());
@@ -138,7 +124,7 @@ export function UserForm({
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
     if (isEditing) {
-      delete submissionData.password; // Don't send empty password on edit
+      delete submissionData.password;
     }
     onSubmit(submissionData);
   };
@@ -163,6 +149,10 @@ export function UserForm({
   if (isViewing && user) {
     return (
       <Stack>
+        <div>
+          <Text size="sm" c="dimmed">Record ID</Text>
+          <Text>{user.recordId}</Text>
+        </div>
         <div>
           <Text size="sm" c="dimmed">First Name</Text>
           <Text>{user.firstName}</Text>
@@ -286,7 +276,7 @@ export function UserForm({
 
       <Group justify="flex-end">
         {isCreating && (
-          <Button variant="subtle" color="error" onClick={handleClear} mr="auto">
+          <Button variant="subtle" color={palette.actions.delete} onClick={handleClear} mr="auto">
             Clear
           </Button>
         )}

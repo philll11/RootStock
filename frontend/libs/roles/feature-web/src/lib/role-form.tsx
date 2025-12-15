@@ -1,9 +1,11 @@
+// frontend/libs/roles/feature-web/src/lib/role-form.tsx
 import { TextInput, Select, Button, Group, Text, Stack, Checkbox, SimpleGrid, Fieldset, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { Role, CreateRoleDto, UpdateRoleDto, VisibilityScope, PERMISSIONS } from '@rootstock/roles/roles-data-access';
 import { useEffect, useMemo } from 'react';
 import { notify, PERMISSIONS as SHARED_PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/auth/auth-data-access';
+import { palette } from '@rootstock/ui/theme';
 
 export type RoleFormMode = 'create' | 'edit' | 'view';
 
@@ -50,7 +52,6 @@ export function RoleForm({
     },
   });
 
-  // Sync form values to parent for persistence (only in create mode)
   useEffect(() => {
     if (isCreating && onValuesChange) {
       onValuesChange(form.values);
@@ -74,10 +75,8 @@ export function RoleForm({
         permissions: initialValues.permissions || []
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role, mode]);
 
-  // Track dirty state for edit mode
   useEffect(() => {
     if (isEditing && onDirtyChange) {
       onDirtyChange(form.isDirty());
@@ -87,7 +86,7 @@ export function RoleForm({
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
     if (isEditing && role) {
-      submissionData.__v = role.__v; // Include version for OCC
+      submissionData.__v = role.__v;
     }
     onSubmit(submissionData);
   };
@@ -106,7 +105,6 @@ export function RoleForm({
     });
   };
 
-  // Group permissions by resource
   const groupedPermissions = useMemo(() => {
     const groups: Record<string, string[]> = {};
     Object.values(PERMISSIONS).forEach((perm) => {
@@ -122,6 +120,10 @@ export function RoleForm({
   if (isViewing && role) {
     return (
       <Stack>
+        <div>
+          <Text size="sm" c="dimmed">Record ID</Text>
+          <Text>{role.recordId}</Text>
+        </div>
         <div>
           <Text size="sm" c="dimmed">Name</Text>
           <Text>{role.name}</Text>
@@ -199,7 +201,7 @@ export function RoleForm({
               {perms.map((perm) => (
                 <Checkbox
                   key={perm}
-                  label={perm.split(':')[1]} // Show only action name
+                  label={perm.split(':')[1]} // Show only the action part
                   value={perm}
                   checked={form.values.permissions.includes(perm)}
                   onChange={(event) => {
@@ -220,7 +222,7 @@ export function RoleForm({
 
       <Group justify="flex-end" mt="xl">
         {isCreating && (
-          <Button variant="subtle" color="error" onClick={handleClear} mr="auto">
+          <Button variant="subtle" color={palette.actions.delete} onClick={handleClear} mr="auto">
             Clear
           </Button>
         )}

@@ -1,3 +1,4 @@
+// frontend/libs/roles/feature-web/src/lib/roles-list-page.tsx
 import { Title, Table, Button, Group, Drawer, ActionIcon, Badge, Text, Alert } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconPlus, IconAlertCircle } from '@tabler/icons-react';
@@ -7,7 +8,7 @@ import { useState } from 'react';
 import { ConfirmDiscardModal, ConfirmModal, useDiscardWarning } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { palette } from '@rootstock/ui/theme';
+import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function RolesListPage() {
   const { roles, isLoading, isError, createRole, updateRole, deleteRole, isCreating, isUpdating } = useRoles();
@@ -15,18 +16,13 @@ export function RolesListPage() {
   const [opened, { open, close }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   
-  // State for drawer mode and selected role
   const [mode, setMode] = useState<RoleFormMode>('create');
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
   
-  // State for persisting create form data
   const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateRoleDto>>({});
-  
-  // State for dirty check in edit mode
   const [isFormDirty, setIsFormDirty] = useState(false);
 
-  // Use the shared hook for discard warning
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty);
 
   const handleCreate = () => {
@@ -78,7 +74,7 @@ export function RolesListPage() {
         await updateRole({ id: selectedRole._id, data: values as UpdateRoleDto });
       } else if (mode === 'create') {
         await createRole(values as CreateRoleDto);
-        setCreateFormDraft({}); // Clear draft on successful create
+        setCreateFormDraft({});
       }
       close();
     } catch (error) {
@@ -113,12 +109,12 @@ export function RolesListPage() {
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.ROLE_EDIT) && (
             <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(role, e)}>
-              <IconEdit size={16} />
+              <IconEdit size={iconSizes.md} />
             </ActionIcon>
           )}
           {can(PERMISSIONS.ROLE_DELETE) && (
             <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDelete(role._id, e)}>
-              <IconTrash size={16} />
+              <IconTrash size={iconSizes.md} />
             </ActionIcon>
           )}
         </Group>
@@ -128,7 +124,7 @@ export function RolesListPage() {
 
   if (isError) {
     return (
-      <Alert icon={<IconAlertCircle size={16} />} title="Access Denied" color="red">
+      <Alert icon={<IconAlertCircle size={iconSizes.md} />} title="Access Denied" color="red">
         You do not have permission to view roles.
       </Alert>
     );
@@ -139,13 +135,13 @@ export function RolesListPage() {
       <Group justify="space-between" mb="lg">
         <Title order={2}>Roles</Title>
         {can(PERMISSIONS.ROLE_CREATE) && (
-          <Button leftSection={<IconPlus size={14} />} onClick={handleCreate}>
+          <Button leftSection={<IconPlus size={iconSizes.sm} />} onClick={handleCreate}>
             Add Role
           </Button>
         )}
       </Group>
 
-      <Table highlightOnHover>
+      <Table>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>ID</Table.Th>
@@ -159,7 +155,7 @@ export function RolesListPage() {
           {rows.length > 0 ? rows : (
             <Table.Tr>
               <Table.Td colSpan={5}>
-                <Text ta="center" c="dimmed">No roles found.</Text>
+                <Text ta="center" c="dimmed" py="xl">No roles found.</Text>
               </Table.Td>
             </Table.Tr>
           )}
@@ -171,7 +167,7 @@ export function RolesListPage() {
         onClose={handleClose}
         title={getDrawerTitle()}
         position="right"
-        size="lg"
+        size={layout.drawers.form}
       >
         <RoleForm
           mode={mode}
@@ -195,7 +191,7 @@ export function RolesListPage() {
         title="Delete Role"
         message="Are you sure you want to delete this role? This action cannot be undone. Note: Roles assigned to users cannot be deleted."
         confirmLabel="Delete"
-        confirmColor="error"
+        confirmColor={palette.actions.delete}
       />
     </>
   );

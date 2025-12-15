@@ -1,13 +1,14 @@
+// frontend/libs/master-data/varieties/feature-web/src/lib/varieties-list-page.tsx
 import { Title, Table, Button, Group, Drawer, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
 import { useVarieties, Variety } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm, VarietyFormMode } from './variety-form';
 import { useState } from 'react';
-import { ConfirmModal, useDiscardWarning } from '@rootstock/ui/web';
+import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { palette } from '@rootstock/ui/theme';
+import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function VarietiesListPage() {
   const { varietiesQuery, createVarietyMutation, updateVarietyMutation, deleteVarietyMutation } = useVarieties();
@@ -105,12 +106,12 @@ export function VarietiesListPage() {
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.VARIETY_EDIT) && (
             <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(variety, e)}>
-              <IconEdit size={16} />
+              <IconEdit size={iconSizes.md} />
             </ActionIcon>
           )}
           {can(PERMISSIONS.VARIETY_DELETE) && (
             <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDeleteClick(variety, e)}>
-              <IconTrash size={16} />
+              <IconTrash size={iconSizes.md} />
             </ActionIcon>
           )}
         </Group>
@@ -123,13 +124,13 @@ export function VarietiesListPage() {
       <Group justify="space-between" mb="lg">
         <Title order={2}>Varieties</Title>
         {can(PERMISSIONS.VARIETY_CREATE) && (
-          <Button leftSection={<IconPlus size={14} />} onClick={handleCreate}>
+          <Button leftSection={<IconPlus size={iconSizes.sm} />} onClick={handleCreate}>
             Create Variety
           </Button>
         )}
       </Group>
 
-      <Table highlightOnHover>
+      <Table>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Name</Table.Th>
@@ -138,7 +139,15 @@ export function VarietiesListPage() {
             <Table.Th />
           </Table.Tr>
         </Table.Thead>
-        <Table.Tbody>{rows}</Table.Tbody>
+        <Table.Tbody>
+          {rows && rows.length > 0 ? rows : (
+            <Table.Tr>
+              <Table.Td colSpan={4}>
+                <Text ta="center" c="dimmed" py="xl">No varieties found.</Text>
+              </Table.Td>
+            </Table.Tr>
+          )}
+        </Table.Tbody>
       </Table>
 
       <Drawer
@@ -146,6 +155,7 @@ export function VarietiesListPage() {
         onClose={handleClose}
         title={getDrawerTitle()}
         position="right"
+        size={layout.drawers.form}
       >
         <VarietyForm
           mode={mode}
@@ -164,16 +174,11 @@ export function VarietiesListPage() {
         onConfirm={handleConfirmDelete}
         title="Delete Variety"
         message={`Are you sure you want to delete variety "${varietyToDelete?.name}"?`}
+        confirmLabel="Delete"
+        confirmColor={palette.actions.delete}
       />
       
-      <ConfirmModal
-         opened={modalProps.opened}
-         onClose={modalProps.onClose}
-         onConfirm={modalProps.onConfirm}
-         title="Discard Changes?"
-         message="You have unsaved changes. Are you sure you want to discard them?"
-         confirmLabel="Discard"
-      />
+      <ConfirmDiscardModal {...modalProps} />
     </>
   );
 }

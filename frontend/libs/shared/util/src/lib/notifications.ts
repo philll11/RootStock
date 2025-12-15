@@ -1,3 +1,4 @@
+// frontend/libs/shared/util/src/lib/notifications.ts
 import { notifications } from '@mantine/notifications';
 import { getErrorMessage } from './error-utils';
 
@@ -28,6 +29,15 @@ export const notify = {
       message,
       color: 'red',
       autoClose: 7000,
+    });
+  },
+
+  info: (message: string, title = 'Information') => {
+    notifications.show({
+      title,
+      message,
+      color: 'blue',
+      autoClose: 5000,
     });
   }
 };

@@ -13,6 +13,15 @@ export class VarietyQueryBuilder extends BaseQueryBuilder {
     super(queryDto, user, clientResolverService, Resource.VARIETY);
   }
 
+  /**
+   * Override BaseQueryBuilder.applyVisibilityScope
+   * Varieties are global master data and are NOT scoped by client or subsidiary.
+   * They should be visible to all authenticated users with the correct permission.
+   */
+  protected async applyVisibilityScope() {
+    return;
+  }
+
   protected buildSearchFilters(): void {
     const dto = this.queryDto as VarietyQueryDto;
 

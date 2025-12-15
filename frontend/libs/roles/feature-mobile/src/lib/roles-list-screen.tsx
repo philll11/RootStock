@@ -1,3 +1,4 @@
+// frontend/libs/roles/feature-mobile/src/lib/roles-list-screen.tsx
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator } from 'react-native-paper';
@@ -5,6 +6,7 @@ import { useRoles } from '@rootstock/roles/roles-data-access';
 import { useDrawer, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { spacing } from '@rootstock/ui/theme';
 
 export const RolesListScreen = ({ navigation }: any) => {
   const theme = useTheme() as AppTheme;
@@ -78,13 +80,13 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1 },
   searchBar: {
-    margin: 16,
+    margin: spacing.md,
   },
   listContent: {
     paddingBottom: 80,
   },
   listItem: {
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
   },
   loadingContainer: {
     flex: 1,
@@ -92,12 +94,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyContainer: {
-    padding: 32,
+    padding: spacing.xl,
     alignItems: 'center',
   },
   fab: {
     position: 'absolute',
-    margin: 16,
+    margin: spacing.md,
     right: 0,
     bottom: 0,
   },

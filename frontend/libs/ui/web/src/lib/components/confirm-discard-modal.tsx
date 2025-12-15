@@ -1,4 +1,5 @@
 import { Modal, Text, Group, Button } from '@mantine/core';
+import { palette } from '@rootstock/ui/theme';
 
 export interface ConfirmDiscardModalProps {
   opened: boolean;
@@ -13,7 +14,6 @@ export function ConfirmDiscardModal({ opened, onClose, onConfirm }: ConfirmDisca
       onClose={onClose} 
       title="Unsaved Changes" 
       centered
-      zIndex={20000} // Ensure it sits above drawers
     >
       <Text size="sm">
         You have unsaved changes. Are you sure you want to discard them?
@@ -22,7 +22,7 @@ export function ConfirmDiscardModal({ opened, onClose, onConfirm }: ConfirmDisca
         <Button variant="default" onClick={onClose}>
           Keep Editing
         </Button>
-        <Button color="red" onClick={onConfirm}>
+        <Button color={palette.actions.delete} onClick={onConfirm}>
           Discard Changes
         </Button>
       </Group>

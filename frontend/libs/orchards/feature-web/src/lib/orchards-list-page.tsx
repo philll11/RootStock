@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Table, Group, Button, Text, ActionIcon, Drawer, Badge, LoadingOverlay } from '@mantine/core';
+import { Table, Group, Button, Title, ActionIcon, Drawer, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlus, IconEdit, IconTrash, IconEye } from '@tabler/icons-react';
+import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react';
 import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui/web';
-import { palette } from '@rootstock/ui/theme';
+import { palette, iconSizes, layout } from '@rootstock/ui/theme'; // NEW IMPORTS
 import { useOrchards, Orchard, CreateOrchardDto, UpdateOrchardDto } from '@rootstock/orchards/orchards-data-access';
 import { OrchardForm } from './orchard-form';
 import { usePermission } from '@rootstock/auth/auth-data-access';
@@ -99,6 +99,7 @@ export function OrchardsListPage() {
       onClick={() => handleView(orchard)}
       style={{ cursor: 'pointer' }}
     >
+      <Table.Td>{orchard.recordId}</Table.Td>
       <Table.Td>{orchard.name}</Table.Td>
       <Table.Td>{typeof orchard.clientId === 'object' ? orchard.clientId.name : 'Unknown Client'}</Table.Td>
       <Table.Td>
@@ -107,27 +108,31 @@ export function OrchardsListPage() {
         </Badge>
       </Table.Td>
       <Table.Td>
-        <Group gap="xs" justify="flex-end">
-          <ActionIcon 
-            variant="subtle" 
-            color={palette.actions.edit} 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEdit(orchard);
-            }}
-          >
-            <IconEdit size={16} />
-          </ActionIcon>
-          <ActionIcon 
-            variant="subtle" 
-            color={palette.actions.delete} 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteClick(orchard);
-            }}
-          >
-            <IconTrash size={16} />
-          </ActionIcon>
+        <Group gap={0} justify="flex-end">
+          {can(PERMISSIONS.ORCHARD_EDIT) && (
+            <ActionIcon 
+              variant="subtle" 
+              color={palette.actions.edit} 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(orchard);
+              }}
+            >
+              <IconEdit size={iconSizes.md} />
+            </ActionIcon>
+          )}
+          {can(PERMISSIONS.ORCHARD_DELETE) && (
+            <ActionIcon 
+              variant="subtle" 
+              color={palette.actions.delete} 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClick(orchard);
+              }}
+            >
+              <IconTrash size={iconSizes.md} />
+            </ActionIcon>
+          )}
         </Group>
       </Table.Td>
     </Table.Tr>
@@ -135,38 +140,42 @@ export function OrchardsListPage() {
 
   return (
     <>
-      <Group justify="space-between" mb="md">
-        <Text size="xl" fw={700}>Orchards</Text>
-        <Button leftSection={<IconPlus size={16} />} onClick={handleCreate}>
-          Add Orchard
-        </Button>
+      <Group justify="space-between" mb="lg">
+        <Title order={2}>Orchards</Title>
+        {can(PERMISSIONS.ORCHARD_CREATE) && (
+          <Button leftSection={<IconPlus size={iconSizes.sm} />} onClick={handleCreate}>
+            Add Orchard
+          </Button>
+        )}
       </Group>
 
-      <div style={{ position: 'relative', minHeight: 200 }}>
-        <LoadingOverlay visible={isLoading} />
-        <Table striped highlightOnHover>
-          <Table.Thead>
+      <Table highlightOnHover>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>ID</Table.Th>
+            <Table.Th>Name</Table.Th>
+            <Table.Th>Client</Table.Th>
+            <Table.Th>Status</Table.Th>
+            <Table.Th />
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {rows && rows.length > 0 ? rows : (
             <Table.Tr>
-              <Table.Th>Name</Table.Th>
-              <Table.Th>Client</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th />
+              <Table.Td colSpan={5}>
+                <Text ta="center" c="dimmed" py="xl">No orchards found.</Text>
+              </Table.Td>
             </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>{rows}</Table.Tbody>
-        </Table>
-        {!isLoading && orchards?.length === 0 && (
-          <Text c="dimmed" ta="center" py="xl">No orchards found.</Text>
-        )}
-      </div>
+          )}
+        </Table.Tbody>
+      </Table>
 
       <Drawer
         opened={drawerOpened}
         onClose={handleClose}
-        title={formMode === 'create' ? 'Create Orchard' : formMode === 'edit' ? 'Edit Orchard' : 'View Orchard'}
-        padding="md"
-        size="md"
+        title={formMode === 'create' ? 'Create Orchard' : formMode === 'edit' ? 'Edit Orchard' : 'Orchard Details'}
         position="right"
+        size={layout.drawers.form}
       >
         <OrchardForm 
           orchard={selectedOrchard} 
@@ -190,7 +199,7 @@ export function OrchardsListPage() {
         title="Delete Orchard"
         message={`Are you sure you want to delete "${selectedOrchard?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor="red"
+        confirmColor={palette.actions.delete}
       />
     </>
   );

@@ -7,6 +7,7 @@ import { useUsers } from '@rootstock/users/users-data-access';
 import { Orchard, CreateOrchardDto, UpdateOrchardDto } from '@rootstock/orchards/orchards-data-access';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/auth/auth-data-access';
+import { iconSizes } from '@rootstock/ui/theme';
 
 interface OrchardFormProps {
   orchard?: Orchard | null;
@@ -31,7 +32,6 @@ export function OrchardForm({
   initialValues,
   onValuesChange
 }: OrchardFormProps) {
-  // Fetch data for dropdowns
   const { clients, isLoading: isLoadingClients } = useClients();
   const { users, isLoading: isLoadingUsers } = useUsers();
   const { can } = usePermission();
@@ -53,21 +53,19 @@ export function OrchardForm({
       clientId: (value) => (value.trim().length < 1 ? 'Client is required' : null),
     },
   });
-  // Sync form values to parent for persistence (only in create mode)
+
   useEffect(() => {
     if (isCreating && onValuesChange) {
       onValuesChange(form.values);
     }
   }, [form.values, isCreating, onValuesChange]);
 
-  // Track dirty state
   useEffect(() => {
     if (isEditing && onDirtyChange) {
       onDirtyChange(form.isDirty());
     }
   }, [form.values, isEditing, onDirtyChange]);
 
-  // Populate form when editing/viewing
   useEffect(() => {
     if (orchard && (isEditing || isViewing)) {
       form.initialize({
@@ -160,7 +158,7 @@ export function OrchardForm({
           placeholder="Select client"
           data={clients?.map(c => ({ value: c._id, label: c.name })) || []}
           withAsterisk
-          disabled={isEditing} // Immutable Client Rule
+          disabled={isEditing}
           mb={isEditing ? 0 : 'md'}
           {...form.getInputProps('clientId')}
         />
@@ -178,7 +176,8 @@ export function OrchardForm({
           mb="md"
           {...form.getInputProps('userIds')}
         />
-        <Alert icon={<IconInfoCircle size={16} />} title="Smart Assignment" color="blue" variant="light" mb="md">
+        
+        <Alert icon={<IconInfoCircle size={iconSizes.md} />} title="Smart Assignment" color="blue" variant="light" mb="md">
           Assigning users to this orchard will automatically grant them access to the parent Client.
         </Alert>
 
@@ -192,9 +191,11 @@ export function OrchardForm({
 
         <Group justify="flex-end" mt="xl">
           <Button variant="default" onClick={onCancel}>Cancel</Button>
-          <Button type="submit" loading={isLoading}>
-            {isCreating ? 'Create Orchard' : 'Save Changes'}
-          </Button>
+          {can(isEditing ? PERMISSIONS.ORCHARD_EDIT : PERMISSIONS.ORCHARD_CREATE) && (
+            <Button type="submit" loading={isLoading}>
+              {isCreating ? 'Create Orchard' : 'Update Orchard'}
+            </Button>
+          )}
         </Group>
       </Box>
     </form>

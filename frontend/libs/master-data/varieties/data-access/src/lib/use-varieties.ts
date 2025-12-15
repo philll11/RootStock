@@ -13,8 +13,7 @@ export function useVarieties() {
     queryFn: async () => {
       const response = await apiClient.get<Variety[]>('/varieties');
       return response.data;
-    },
-    staleTime: Infinity, // Cache indefinitely as requested
+    }
   });
 
   const createVarietyMutation = useMutation({

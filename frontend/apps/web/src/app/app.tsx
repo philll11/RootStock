@@ -1,9 +1,12 @@
+// frontend/apps/web/src/app/app.tsx
 import { Route, Routes, Navigate } from 'react-router-dom';
 import { MantineProvider, Loader, Center } from '@mantine/core';
-import { Notifications, notifications } from '@mantine/notifications';
+import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+
+// Features
 import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '@rootstock/auth/auth-feature-web';
 import { DashboardPage } from './pages/dashboard-page';
 import { UsersListPage, UserProfilePage } from '@rootstock/users/users-feature-web';
@@ -11,22 +14,22 @@ import { ClientsListPage } from '@rootstock/clients/clients-feature-web';
 import { OrchardsListPage } from '@rootstock/orchards/orchards-feature-web';
 import { RolesListPage } from '@rootstock/roles/roles-feature-web';
 import { VarietiesListPage } from '@rootstock/master-data/varieties/varieties-feature-web';
+
+// Layout & Components
 import { MainLayout } from './layouts/main-layout';
-import { useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
-import { webTheme } from '@rootstock/ui/web';
 import { ProtectedRoute } from './components/protected-route';
 import { PermissionDeniedPage } from './pages/permission-denied-page';
-import { PERMISSIONS } from '@rootstock/shared/util';
-
 import { ThemeController } from './theme-controller';
+
+// Infrastructure
+import { useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
+import { webTheme } from '@rootstock/ui/web';
+import { PERMISSIONS, notify } from '@rootstock/shared/util';
+import { zIndex } from '@rootstock/ui/theme';
 
 // Initialize Axios interceptors
 setupAuthInterceptor(() => {
-  notifications.show({
-    title: 'Session Expired',
-    message: 'Please log in again.',
-    color: 'red',
-  });
+  notify.error('Your session has expired. Please log in again.', 'Session Expired');
 });
 
 const queryClient = new QueryClient();
@@ -54,7 +57,8 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={webTheme}>
         <ThemeController />
-        <Notifications zIndex={10000} />
+        <Notifications zIndex={zIndex.toast} />
+        
         <Routes>
           <Route
             path="/login"
@@ -128,6 +132,5 @@ export function App() {
     </QueryClientProvider>
   );
 }
-
 
 export default App;

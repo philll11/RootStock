@@ -1,3 +1,4 @@
+// frontend/apps/mobile/src/app/screens/SettingsScreen.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { List, RadioButton, Appbar, useTheme } from 'react-native-paper';

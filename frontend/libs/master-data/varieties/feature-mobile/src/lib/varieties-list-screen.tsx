@@ -1,13 +1,15 @@
+// frontend/libs/master-data/varieties/feature-mobile/src/lib/varieties-list-screen.tsx
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
-import { Appbar, List, FAB, useTheme, Searchbar, ActivityIndicator, Chip } from 'react-native-paper';
+import { Appbar, List, FAB, useTheme, Searchbar, ActivityIndicator, Text } from 'react-native-paper';
 import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
-import { useDrawer } from '@rootstock/ui/mobile';
+import { useDrawer, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { spacing } from '@rootstock/ui/theme';
 
 export const VarietiesListScreen = ({ navigation }: any) => {
-  const theme = useTheme();
+  const theme = useTheme() as AppTheme;
   const { toggleDrawer } = useDrawer();
   const { varietiesQuery } = useVarieties();
   const { data: varieties, isLoading } = varietiesQuery;
@@ -43,23 +45,27 @@ export const VarietiesListScreen = ({ navigation }: any) => {
           <FlatList
             data={filteredVarieties}
             keyExtractor={(item) => item._id}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+                  No varieties found
+                </Text>
+              </View>
+            }
             renderItem={({ item }) => (
               <List.Item
                 title={item.name}
                 description={item.recordId}
-                left={props => <List.Icon {...props} icon="leaf" />}
+                left={props => <List.Icon {...props} icon="sprout" />} // Use consistent icon
                 right={props => (
                   <View style={styles.statusContainer}>
-                    <Chip 
-                      mode="flat" 
-                      compact 
-                      style={{ backgroundColor: item.isActive ? theme.colors.primaryContainer : theme.colors.surfaceDisabled }}
-                    >
-                      {item.isActive ? 'Active' : 'Inactive'}
-                    </Chip>
+                    {!item.isActive && <Text style={{ color: theme.colors.error, marginRight: spacing.sm }}>Inactive</Text>}
+                    <List.Icon {...props} icon="chevron-right" />
                   </View>
                 )}
                 onPress={() => navigation.navigate('VarietyForm', { varietyId: item._id })}
+                style={styles.listItem}
               />
             )}
           />
@@ -70,6 +76,7 @@ export const VarietiesListScreen = ({ navigation }: any) => {
         <FAB
           icon="plus"
           style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+          color={theme.colors.onPrimary}
           onPress={() => navigation.navigate('VarietyForm')}
         />
       )}
@@ -80,8 +87,11 @@ export const VarietiesListScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1 },
-  searchBar: { margin: 16 },
+  searchBar: { margin: spacing.md },
+  listContent: { paddingBottom: 80 },
+  listItem: { paddingHorizontal: spacing.sm },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  statusContainer: { justifyContent: 'center', marginRight: 8 },
-  fab: { position: 'absolute', margin: 16, right: 0, bottom: 0 },
+  emptyContainer: { padding: spacing.xl, alignItems: 'center' },
+  statusContainer: { flexDirection: 'row', alignItems: 'center' },
+  fab: { position: 'absolute', margin: spacing.md, right: 0, bottom: 0 },
 });

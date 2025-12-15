@@ -1,6 +1,6 @@
+// frontend/libs/clients/feature-web/src/lib/client-form.tsx
 import { TextInput, Button, Group, Checkbox, Stack, Text } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { z } from 'zod';
 import { CreateClientDto, UpdateClientDto, Client } from '@rootstock/clients/clients-data-access';
 import { useEffect } from 'react';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
@@ -40,7 +40,6 @@ export function ClientForm({
     initialValues: {
       name: '',
       isActive: true,
-      // subsidiaryId: '', // TODO: Implement subsidiary selection
       ...initialValues,
     },
     validate: {
@@ -48,7 +47,6 @@ export function ClientForm({
     },
   });
 
-  // Sync form values to parent for persistence (only in create mode)
   useEffect(() => {
     if (isCreating && onValuesChange) {
       const { isActive, ...rest } = form.values;
@@ -56,7 +54,6 @@ export function ClientForm({
     }
   }, [form.values, isCreating, onValuesChange]);
 
-  // Track dirty state for edit mode
   useEffect(() => {
     if (isEditing && onDirtyChange) {
       onDirtyChange(form.isDirty());

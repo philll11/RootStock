@@ -1,3 +1,5 @@
+// frontend/libs/ui/theme/src/lib/typography.ts
+
 export const typography = {
   fontFamily: {
     // System fonts for now, can be replaced with custom fonts later
@@ -42,4 +44,11 @@ export const radius = {
   lg: 16,
   xl: 32,
   full: 9999,
+};
+
+export const iconSizes = {
+  sm: 14, // Standard for specific actions
+  md: 16, // Standard for button icons
+  lg: 20, // Standard for navigation/headers
+  xl: 24,
 };

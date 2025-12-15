@@ -1,8 +1,10 @@
+// frontend/apps/mobile/src/app/screens/ProfileScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button, Appbar, HelperText, useTheme } from 'react-native-paper';
 import { useAuth, setSuppressSessionExpiry } from '@rootstock/auth/auth-data-access';
-import { useUsers } from '@rootstock/users/users-data-access';
+import { useUsers, UpdateUserDto } from '@rootstock/users/users-data-access';
+import { spacing } from '@rootstock/ui/theme';
 
 export const ProfileScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();
@@ -46,7 +48,7 @@ export const ProfileScreen = ({ navigation }: any) => {
   const executeUpdate = async () => {
     if (!user) return;
 
-    const updateData: any = {
+    const updateData: UpdateUserDto = {
       firstName,
       lastName,
       email,
@@ -61,13 +63,12 @@ export const ProfileScreen = ({ navigation }: any) => {
       await updateUser({ id: user._id, data: updateData });
       
       if (password) {
-        // If password was changed, force logout immediately
         await logout();
         setSuppressSessionExpiry(false);
         return;
       }
 
-      setPassword(''); // Clear password field
+      setPassword('');
       navigation.goBack();
     } catch (error) {
       console.error('Failed to update profile', error);
@@ -82,53 +83,58 @@ export const ProfileScreen = ({ navigation }: any) => {
         <Appbar.Content title="Edit Profile" />
       </Appbar.Header>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <TextInput
-          label="First Name"
-          value={firstName}
-          onChangeText={setFirstName}
-          mode="outlined"
-          style={styles.input}
-        />
-        <TextInput
-          label="Last Name"
-          value={lastName}
-          onChangeText={setLastName}
-          mode="outlined"
-          style={styles.input}
-        />
-        <TextInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          mode="outlined"
-          style={styles.input}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        
-        <TextInput
-          label="New Password"
-          value={password}
-          onChangeText={setPassword}
-          mode="outlined"
-          style={styles.input}
-          secureTextEntry
-          placeholder="Leave blank to keep current"
-        />
-        <HelperText type="info">
-          Leave password blank to keep current password.
-        </HelperText>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.content}>
+          <TextInput
+            label="First Name"
+            value={firstName}
+            onChangeText={setFirstName}
+            mode="outlined"
+            style={styles.input}
+          />
+          <TextInput
+            label="Last Name"
+            value={lastName}
+            onChangeText={setLastName}
+            mode="outlined"
+            style={styles.input}
+          />
+          <TextInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            mode="outlined"
+            style={styles.input}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          
+          <TextInput
+            label="New Password"
+            value={password}
+            onChangeText={setPassword}
+            mode="outlined"
+            style={styles.input}
+            secureTextEntry
+            placeholder="Leave blank to keep current"
+          />
+          <HelperText type="info">
+            Leave password blank to keep current password.
+          </HelperText>
 
-        <Button 
-          mode="contained" 
-          onPress={handleSavePress} 
-          loading={isUpdating} 
-          style={styles.button}
-        >
-          Save Changes
-        </Button>
-      </ScrollView>
+          <Button 
+            mode="contained" 
+            onPress={handleSavePress} 
+            loading={isUpdating} 
+            style={styles.button}
+          >
+            Save Changes
+          </Button>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };
@@ -138,12 +144,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.md,
   },
   input: {
-    marginBottom: 12,
+    marginBottom: spacing.sm,
   },
   button: {
-    marginTop: 16,
+    marginTop: spacing.md,
   },
 });

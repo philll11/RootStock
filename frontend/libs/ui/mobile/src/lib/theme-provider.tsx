@@ -1,3 +1,4 @@
+// frontend/libs/ui/mobile/src/lib/theme-provider.tsx
 import React, { useMemo } from 'react';
 import { useColorScheme, StatusBar } from 'react-native';
 import { PaperProvider } from 'react-native-paper';

@@ -1,3 +1,4 @@
+// frontend/libs/users/feature-web/src/lib/users-list-page.tsx
 import { Title, Table, Button, Group, Drawer, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
@@ -5,7 +6,7 @@ import { useClients, Client, CreateClientDto, UpdateClientDto } from '@rootstock
 import { ClientForm, ClientFormMode } from './client-form';
 import { useState } from 'react';
 import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui/web';
-import { palette } from '@rootstock/ui/theme';
+import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
@@ -19,13 +20,8 @@ export function ClientsListPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
 
-  // State for persisting create form data
   const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateClientDto>>({});
-  
-  // State for dirty check in edit mode
   const [isFormDirty, setIsFormDirty] = useState(false);
-
-  // Use the shared hook for discard warning
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty);
 
   const handleCreate = () => {
@@ -77,7 +73,7 @@ export function ClientsListPage() {
         await updateClient({ id: selectedClient._id, data: values as UpdateClientDto });
       } else if (mode === 'create') {
         await createClient(values as CreateClientDto);
-        setCreateFormDraft({}); // Clear draft on successful create
+        setCreateFormDraft({}); // Clear draft after successful creation
       }
       close();
     } catch (error) {
@@ -111,12 +107,12 @@ export function ClientsListPage() {
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.CLIENT_EDIT) && (
             <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(client, e)}>
-              <IconEdit size={16} />
+              <IconEdit size={iconSizes.md} />
             </ActionIcon>
           )}
           {can(PERMISSIONS.CLIENT_DELETE) && (
             <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDelete(client._id, e)}>
-              <IconTrash size={16} />
+              <IconTrash size={iconSizes.md} />
             </ActionIcon>
           )}
         </Group>
@@ -129,13 +125,13 @@ export function ClientsListPage() {
       <Group justify="space-between" mb="lg">
         <Title order={2}>Clients</Title>
         {can(PERMISSIONS.CLIENT_CREATE) && (
-          <Button leftSection={<IconPlus size={14} />} onClick={handleCreate}>
+          <Button leftSection={<IconPlus size={iconSizes.sm} />} onClick={handleCreate}>
             Add Client
           </Button>
         )}
       </Group>
 
-      <Table highlightOnHover>
+      <Table>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>ID</Table.Th>
@@ -160,7 +156,7 @@ export function ClientsListPage() {
         onClose={handleClose}
         title={getDrawerTitle()}
         position="right"
-        size="md"
+        size={layout.drawers.form}
       >
         <ClientForm
           mode={mode}
@@ -184,7 +180,7 @@ export function ClientsListPage() {
         title="Delete Client"
         message="Are you sure you want to delete this client? This action cannot be undone."
         confirmLabel="Delete"
-        confirmColor="error"
+        confirmColor={palette.actions.delete}
       />
     </>
   );

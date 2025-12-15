@@ -1,7 +1,9 @@
+// frontend/libs/auth/feature-mobile/src/lib/forgot-password-screen.tsx
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { TextInput, Button, Text, Title, useTheme, Appbar } from 'react-native-paper';
 import { AuthService } from '@rootstock/auth/auth-data-access';
+import { spacing } from '@rootstock/ui/theme'; // NEW IMPORT
 
 export const ForgotPasswordScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
@@ -30,8 +32,6 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
       );
     } catch (err: any) {
       console.error('Forgot Password Failed', err);
-      // For security reasons, we might not want to show specific errors, 
-      // but for now let's show a generic one or the error message if it's safe.
       setError('Failed to process request. Please try again.');
     } finally {
       setLoading(false);
@@ -45,40 +45,45 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
         <Appbar.Content title="Forgot Password" />
       </Appbar.Header>
 
-      <View style={styles.content}>
-        <Title style={styles.title}>Reset Password</Title>
-        <Text style={styles.description}>
-          Enter your email address and we'll send you a link to reset your password.
-        </Text>
-        
-        <TextInput
-          label="Email"
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setError(null);
-          }}
-          mode="outlined"
-          style={styles.input}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          error={!!error}
-        />
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.content}>
+          <Text variant="titleLarge" style={styles.title}>Reset Password</Text>
+          <Text style={[styles.description, { color: theme.colors.onSurfaceVariant }]}>
+            Enter your email address and we'll send you a link to reset your password.
+          </Text>
+          
+          <TextInput
+            label="Email"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              setError(null);
+            }}
+            mode="outlined"
+            style={styles.input}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            error={!!error}
+          />
 
-        {error && (
-          <Text style={styles.error}>{error}</Text>
-        )}
+          {error && (
+            <Text style={[styles.error, { color: theme.colors.error }]}>{error}</Text>
+          )}
 
-        <Button 
-          mode="contained" 
-          onPress={handleReset} 
-          loading={loading}
-          disabled={loading}
-          style={styles.button}
-        >
-          Send Reset Link
-        </Button>
-      </View>
+          <Button 
+            mode="contained" 
+            onPress={handleReset} 
+            loading={loading}
+            disabled={loading}
+            style={styles.button}
+          >
+            Send Reset Link
+          </Button>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };
@@ -88,30 +93,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
-    flex: 1,
+    padding: spacing.lg,
+    flexGrow: 1,
     justifyContent: 'center',
   },
   title: {
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: spacing.sm,
     fontSize: 24,
   },
   description: {
     textAlign: 'center',
-    marginBottom: 30,
-    color: '#666',
+    marginBottom: spacing.xl,
   },
   input: {
-    marginBottom: 15,
+    marginBottom: spacing.md,
   },
   button: {
-    marginTop: 10,
+    marginTop: spacing.sm,
     paddingVertical: 6,
   },
   error: {
-    color: 'red',
     textAlign: 'center',
-    marginBottom: 15,
+    marginBottom: spacing.md,
   },
 });
