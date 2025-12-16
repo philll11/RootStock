@@ -7,7 +7,7 @@ export class UpdateRoleDto extends PartialType(CreateRoleDto) {
   @IsBoolean()
   @IsOptional()
   @Type(() => Boolean)
-  readonly isActive?: boolean;
+  declare readonly isActive?: boolean;
 
   /**
    * The document version for optimistic concurrency control.

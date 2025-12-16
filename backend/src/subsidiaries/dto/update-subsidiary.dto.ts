@@ -7,5 +7,5 @@ export class UpdateSubsidiaryDto extends PartialType(CreateSubsidiaryDto) {
   @IsBoolean()
   @IsOptional()
   @Type(() => Boolean)
-  isActive?: boolean;
+  declare readonly isActive?: boolean;
 }

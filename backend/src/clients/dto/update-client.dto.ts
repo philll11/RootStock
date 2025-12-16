@@ -7,5 +7,5 @@ export class UpdateClientDto extends OmitType(PartialType(CreateClientDto), ['su
   @IsBoolean()
   @IsOptional()
   @Type(() => Boolean)
-  readonly isActive?: boolean;
+  declare readonly isActive?: boolean;
 }

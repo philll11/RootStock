@@ -8,5 +8,5 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
     @IsBoolean()
     @IsOptional()
     @Type(() => Boolean)
-    readonly isActive?: boolean;
+    declare readonly isActive?: boolean;
 }

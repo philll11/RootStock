@@ -130,7 +130,7 @@ export class UsersService {
     else {
       // If they DON'T have the general USER_EDIT permission, they are restricted to personal info.
       if (!hasEditPermission) {
-        const allowedFields = ['firstName', 'lastName', 'email', 'preferences'];
+        const allowedFields = ['firstName', 'lastName', 'email', "password", 'preferences'];
         const attemptedFields = Object.keys(updateUserDto);
         const unauthorizedFields = attemptedFields.filter(field => !allowedFields.includes(field));
 
@@ -154,11 +154,25 @@ export class UsersService {
     }
 
     const updatePayload = await this._prepareUpdatePayload(updateUserDto, existingUser, requestingUser);
-    const updatedUser = await this.userModel.findByIdAndUpdate(userId, { $set: updatePayload }, { new: true }).exec();
+    
+    const updateOp: any = { $set: updatePayload };
+    if (updatePayload.password) {
+      updateOp.$inc = { tokenVersion: 1 };
+    }
+
+    const updatedUser = await this.userModel.findByIdAndUpdate(userId, updateOp, { new: true }).exec();
     if (!updatedUser) {
       throw new NotFoundException(`User with ID "${userId}" not found.`);
     }
     return updatedUser;
+  }
+
+  /**
+   * Invalidates all existing tokens for a user by incrementing their token version.
+   * @param userId - The ID of the user to invalidate tokens for.
+   */
+  async invalidateTokens(userId: string): Promise<void> {
+    await this.userModel.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } });
   }
 
   /**
@@ -425,7 +439,7 @@ async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null>
     if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
     if (password) { 
       payload.password = await bcrypt.hash(password, 10);
-      payload.tokenVersion = (existingUser.tokenVersion || 0) + 1;
+      // tokenVersion increment is handled in the update method via $inc
     }
     if (preferences) {
       payload.preferences = {

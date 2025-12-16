@@ -5,7 +5,7 @@ import { IsBoolean, IsOptional, IsNumber } from 'class-validator';
 export class UpdateVarietyDto extends PartialType(CreateVarietyDto) {
   @IsBoolean()
   @IsOptional()
-  readonly isActive?: boolean;
+  declare readonly isActive?: boolean;
 
   @IsNumber()
   @IsOptional()

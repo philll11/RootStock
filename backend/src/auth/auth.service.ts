@@ -39,6 +39,10 @@ export class AuthService {
     };
   }
 
+  async logout(userId: string): Promise<void> {
+    await this.usersService.invalidateTokens(userId);
+  }
+
   async forgotPassword(email: string): Promise<void> {
     // 1. Find user
     const user = await this.usersService.findOneByEmailAndPopulateRole(email);

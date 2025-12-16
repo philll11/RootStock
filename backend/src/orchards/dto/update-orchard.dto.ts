@@ -8,7 +8,7 @@ export class UpdateOrchardDto extends OmitType(PartialType(CreateOrchardDto), ['
     @IsBoolean()
     @IsOptional()
     @Type(() => Boolean)
-    readonly isActive?: boolean;
+    declare readonly isActive?: boolean;
 
     @IsArray()
     @IsMongoId({ each: true })
