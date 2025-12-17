@@ -7,12 +7,12 @@ import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Orchard, OrchardDocument } from '../../src/orchards/schemas/orchard.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { CreateOrchardDto } from '../../src/orchards/dto/create-orchard.dto';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Orchard, OrchardDocument } from '../../src/assets/orchards/schemas/orchard.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { CreateOrchardDto } from '../../src/assets/orchards/dto/create-orchard.dto';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
 describe('Orchards CRUD & Business Logic (e2e)', () => {
@@ -62,8 +62,8 @@ describe('Orchards CRUD & Business Logic (e2e)', () => {
             { recordId: 'OWNER_CRUD', name: 'Owner', firstName: 'Owner', lastName: 'User', email: 'owner_crud@test.com', userType: UserType.CONTACT, roleId: clientOwnerRole._id, clientIds: [testClientA._id] },
         ]);
 
-        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId });
-        clientOwnerToken = jwtService.sign({ sub: clientOwner.recordId });
+        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId, tokenVersion: 0 });
+        clientOwnerToken = jwtService.sign({ sub: clientOwner.recordId, tokenVersion: 0 });
 
         [validContactUserA, validContactUserB, inactiveContactUser, employeeUser] = await userModel.create([
             { recordId: 'CONTACT_CRUD_A', name: 'Contact A', firstName: 'Contact', lastName: 'A', email: 'contact_crud_a@test.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [testClientA._id] },

@@ -9,11 +9,11 @@ import { JwtService } from '@nestjs/jwt';
 import { setupTestApp, teardownTestApp } from '../test-utils';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { Orchard, OrchardDocument } from '../../src/orchards/schemas/orchard.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { Orchard, OrchardDocument } from '../../src/assets/orchards/schemas/orchard.schema';
 
 describe('Clients Advanced Business Logic (e2e)', () => {
     let app: INestApplication;
@@ -84,10 +84,10 @@ describe('Clients Advanced Business Logic (e2e)', () => {
         ]);
 
         // Generate tokens
-        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId });
-        subsidiaryManagerToken = jwtService.sign({ sub: subManager.recordId });
-        clientOwnerToken = jwtService.sign({ sub: clientOwner.recordId });
-        fieldSupervisorToken = jwtService.sign({ sub: fieldSupervisor.recordId });
+        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId, tokenVersion: 0 });
+        subsidiaryManagerToken = jwtService.sign({ sub: subManager.recordId, tokenVersion: 0 });
+        clientOwnerToken = jwtService.sign({ sub: clientOwner.recordId, tokenVersion: 0 });
+        fieldSupervisorToken = jwtService.sign({ sub: fieldSupervisor.recordId, tokenVersion: 0 });
     });
 
     afterAll(async () => {

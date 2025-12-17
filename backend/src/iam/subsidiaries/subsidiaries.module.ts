@@ -4,8 +4,8 @@ import { SubsidiariesService } from './subsidiaries.service';
 import { SubsidiariesController } from './subsidiaries.controller';
 import { IsExistingSubsidiaryConstraint } from './validators/is-existing-subsidiary.validator';
 import { ClientsModule } from '../clients/clients.module';
-import { ClientResolverModule } from '../clients/client-resolver/client-resolver.module';
-import { CountersModule } from '../counters/counters.module';
+import { ClientResolverModule } from '../client-resolver/client-resolver.module';
+import { CountersModule } from '../../system/counters/counters.module';
 
 @Module({
   imports: [

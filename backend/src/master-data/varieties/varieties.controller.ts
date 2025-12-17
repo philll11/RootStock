@@ -8,7 +8,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PERMISSIONS } from '../../common/constants/permissions.constants';
 import { MongoExceptionFilter } from '../../common/filters/mongo-exception.filter';
 import { ParseMongoIdPipe } from '../../common/pipes/parse-mongo-id.pipe';
-import type { UserDocument } from '../../users/schemas/user.schema';
+import type { UserDocument } from '../../iam/users/schemas/user.schema';
 
 @Controller('varieties')
 @UseFilters(new MongoExceptionFilter())

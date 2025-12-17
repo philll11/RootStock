@@ -8,8 +8,8 @@ import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
 
 describe('Roles CRUD (e2e)', () => {
     let app: INestApplication;
@@ -55,7 +55,7 @@ describe('Roles CRUD (e2e)', () => {
             userType: UserType.EMPLOYEE,
             roleId: globalAdminRole._id,
         });
-        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId });
+        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId, tokenVersion: 0 });
     });
 
     afterAll(async () => {

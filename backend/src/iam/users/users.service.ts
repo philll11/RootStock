@@ -1,9 +1,9 @@
 // backend/src/users/users.service.ts
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
+import { handleConcurrentSoftDelete } from '../../common/utils/concurrent-deletion.util';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
@@ -12,10 +12,10 @@ import { User, UserDocument, UserType } from './schemas/user.schema';
 import { UserQueryBuilder } from './builders/user-query.builder';
 
 import { Client } from '../clients/schemas/client.schema';
-import { ClientResolverService } from '../clients/client-resolver/client-resolver.service';
+import { ClientResolverService } from '../client-resolver/client-resolver.service';
 
-import { PERMISSIONS } from '../common/constants/permissions.constants';
-import { CountersService } from '../counters/counters.service';
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
+import { CountersService } from '../../system/counters/counters.service';
 
 @Injectable()
 export class UsersService {
@@ -69,7 +69,14 @@ export class UsersService {
     }
 
     const userToCreate = new this.userModel(payload);
-    return userToCreate.save();
+    try {
+      return await userToCreate.save();
+    } catch (error: any) {
+      if (error.code === 11000) {
+        throw new ConflictException('User with this email already exists.');
+      }
+      throw error;
+    }
   }
 
   async findAll(query: QueryUserDto, requestingUser: UserDocument): Promise<UserDocument[]> {

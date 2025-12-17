@@ -8,9 +8,9 @@ import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
 
 describe('Roles Advanced (e2e)', () => {
     let app: INestApplication;
@@ -81,7 +81,7 @@ describe('Roles Advanced (e2e)', () => {
             subsidiaryId: testSubsidiary._id,
         });
 
-        globalAdminToken = jwtService.sign({ sub: adminUser.recordId });
+        globalAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
     });
 
     afterAll(async () => {

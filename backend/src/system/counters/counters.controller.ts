@@ -2,8 +2,8 @@
 import { Controller, Get, Body, Patch, Param, UseGuards } from '@nestjs/common';
 import { CountersService } from './counters.service';
 import { UpdateCounterDto } from './dto/update-counter.dto';
-import { RequirePermission } from '../common/decorators/permissions.decorator';
-import { PERMISSIONS } from '../common/constants/permissions.constants';
+import { RequirePermission } from '../../common/decorators/permissions.decorator';
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
 
 // Note: Guards are applied globally, so they are active here by default.
 

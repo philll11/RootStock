@@ -1,17 +1,17 @@
 // backend/src/roles/roles.controller.ts
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseFilters, Req } from '@nestjs/common';
 
-import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
-import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
+import { MongoExceptionFilter } from '../../common/filters/mongo-exception.filter';
+import { ParseMongoIdPipe } from '../../common/pipes/parse-mongo-id.pipe';
 
 import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { QueryRoleDto } from './dto/query-role.dto';
 
-import { RequirePermission } from '../common/decorators/permissions.decorator';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { PERMISSIONS } from '../common/constants/permissions.constants';
+import { RequirePermission } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
 
 import { UsersService } from '../users/users.service';
 import { QueryUserDto } from '../users/dto/query-user.dto';

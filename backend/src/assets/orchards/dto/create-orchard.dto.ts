@@ -1,7 +1,7 @@
 import { IsString, IsNotEmpty, IsMongoId, ValidateNested, IsOptional, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
-import { IsExistingSingleClient } from '../../clients/decorators/is-existing-single-client.decorator';
-import { IsExistingUsers } from '../../users/decorators/is-existing-contact-users.decorator';
+import { IsExistingSingleClient } from '../../../iam/clients/decorators/is-existing-single-client.decorator';
+import { IsExistingUsers } from '../../../iam/users/decorators/is-existing-contact-users.decorator';
 
 class CreateAddressDto {
     @IsString()

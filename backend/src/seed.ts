@@ -1,11 +1,11 @@
 // backend/src/seed.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Role, VisibilityScope } from './roles/schemas/role.schema';
+import { Role, VisibilityScope } from './iam/roles/schemas/role.schema';
 import { getModelToken } from '@nestjs/mongoose';
 import { PERMISSIONS } from './common/constants/permissions.constants';
-import { Counter } from './counters/schemas/counter.schema';
-import { User, UserType } from './users/schemas/user.schema';
+import { Counter } from './system/counters/schemas/counter.schema';
+import { User, UserType } from './iam/users/schemas/user.schema';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 

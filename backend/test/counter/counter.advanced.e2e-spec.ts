@@ -9,12 +9,12 @@ import { Model } from 'mongoose';
 import { setupTestApp, teardownTestApp } from '../test-utils';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { Counter, CounterDocument } from '../../src/counters/schemas/counter.schema';
-import { UpdateCounterDto } from '../../src/counters/dto/update-counter.dto';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { CreateSubsidiaryDto } from '../../src/subsidiaries/dto/create-subsidiary.dto';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { Counter, CounterDocument } from '../../src/system/counters/schemas/counter.schema';
+import { UpdateCounterDto } from '../../src/system/counters/dto/update-counter.dto';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { CreateSubsidiaryDto } from '../../src/iam/subsidiaries/dto/create-subsidiary.dto';
 
 describe('Counters Advanced (e2e)', () => {
     let app: INestApplication;
@@ -67,7 +67,7 @@ describe('Counters Advanced (e2e)', () => {
             userType: UserType.EMPLOYEE, roleId: adminRole._id
         }]);
 
-        globalAdminToken = jwtService.sign({ sub: adminUser.recordId });
+        globalAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
 
         // Create a baseline subsidiary to test against
         [existingSubsidiary] = await subsidiaryModel.create([

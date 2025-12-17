@@ -5,9 +5,9 @@ import { Variety, VarietyDocument } from './schemas/variety.schema';
 import { CreateVarietyDto } from './dto/create-variety.dto';
 import { UpdateVarietyDto } from './dto/update-variety.dto';
 import { VarietyQueryDto } from './dto/variety-query.dto';
-import { CountersService } from '../../counters/counters.service';
-import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
-import { UserDocument } from '../../users/schemas/user.schema';
+import { CountersService } from '../../system/counters/counters.service';
+import { ClientResolverService } from '../../iam/client-resolver/client-resolver.service';
+import { UserDocument } from '../../iam/users/schemas/user.schema';
 import { VarietyQueryBuilder } from './builders/variety-query.builder';
 
 @Injectable()

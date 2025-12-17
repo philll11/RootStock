@@ -9,7 +9,7 @@ import { ClientsModule } from '../clients/clients.module';
 import { IsClientIdsValidForUserTypeConstraint } from './validators/is-client-ids-valid-for-user-type.validator';
 import { IsExistingUserConstraint } from './validators/is-existing-user.validator';
 import { IsExistingUsersConstraint } from './validators/is-existing-contact-users.validator';
-import { CountersModule } from '../counters/counters.module';
+import { CountersModule } from '../../system/counters/counters.module';
 
 @Module({
   imports: [

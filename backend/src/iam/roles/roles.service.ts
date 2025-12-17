@@ -8,13 +8,13 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { QueryRoleDto } from './dto/query-role.dto';
 import { Role, RoleDocument } from './schemas/role.schema';
 import { RoleQueryBuilder } from './builders/roles-query.builder';
-import { ClientResolverService } from '../clients/client-resolver/client-resolver.service';
+import { ClientResolverService } from '../client-resolver/client-resolver.service';
 
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
-import { CountersService } from '../counters/counters.service';
-import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
-import { PERMISSIONS } from '../common/constants/permissions.constants';
+import { CountersService } from '../../system/counters/counters.service';
+import { handleConcurrentSoftDelete } from '../../common/utils/concurrent-deletion.util';
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
 
 @Injectable()
 export class RolesService {

@@ -7,10 +7,10 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
 describe('Clients Authorization & Security (e2e)', () => {
@@ -78,10 +78,10 @@ describe('Clients Authorization & Security (e2e)', () => {
             { recordId: 'STANDALONE', name: 'Standalone', firstName: 'Standalone', lastName: 'User', email: 'standalone@test.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [independentClient._id] },
         ]);
 
-        platformAdminToken = jwtService.sign({ sub: adminUser.recordId });
-        subsidiaryManagerToken = jwtService.sign({ sub: managerUser.recordId });
-        clientOwnerToken = jwtService.sign({ sub: ownerUser.recordId });
-        unauthorizedUserToken = jwtService.sign({ sub: unauthUser.recordId });
+        platformAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
+        subsidiaryManagerToken = jwtService.sign({ sub: managerUser.recordId, tokenVersion: 0 });
+        clientOwnerToken = jwtService.sign({ sub: ownerUser.recordId, tokenVersion: 0 });
+        unauthorizedUserToken = jwtService.sign({ sub: unauthUser.recordId, tokenVersion: 0 });
     });
 
     afterAll(async () => await teardownTestApp({ app, mongod }));

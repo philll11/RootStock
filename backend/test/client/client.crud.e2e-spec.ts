@@ -7,14 +7,14 @@ import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { CreateClientDto } from '../../src/clients/dto/create-client.dto';
-import { UpdateClientDto } from '../../src/clients/dto/update-client.dto';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { CreateClientDto } from '../../src/iam/clients/dto/create-client.dto';
+import { UpdateClientDto } from '../../src/iam/clients/dto/update-client.dto';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { Orchard } from '../../src/orchards/schemas/orchard.schema';
+import { Orchard } from '../../src/assets/orchards/schemas/orchard.schema';
 
 describe('Clients CRUD & Business Logic (e2e)', () => {
     let app: INestApplication;
@@ -60,7 +60,7 @@ describe('Clients CRUD & Business Logic (e2e)', () => {
         ]);
 
         const globalAdmin = await userModel.create({ recordId: 'ADMIN_CRUD', name: 'Admin', firstName: 'Admin', lastName: 'User', email: 'admin_crud_client@test.com', userType: UserType.EMPLOYEE, roleId: adminRole._id });
-        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId });
+        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId, tokenVersion: 0 });
 
         [contactUserSubA, contactUserSubB] = await userModel.create([
             { recordId: 'CONTACT_A', name: 'Contact A', firstName: 'Contact', lastName: 'A', email: 'contact_a_client@test.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [testClientA._id] },

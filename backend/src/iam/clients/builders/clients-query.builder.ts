@@ -1,9 +1,9 @@
-import { BaseQueryBuilder } from '../../common/builders/base-query.builder';
+import { BaseQueryBuilder } from '../../../common/builders/base-query.builder';
 import { Types } from 'mongoose';
 import { User } from '../../users/schemas/user.schema';
 import { QueryClientDto } from '../dto/query-client.dto';
-import { ClientResolverService } from '../client-resolver/client-resolver.service';
-import { Resource } from '../../common/constants/permissions.constants';
+import { ClientResolverService } from '../../client-resolver/client-resolver.service';
+import { Resource } from '../../../common/constants/permissions.constants';
 
 
 export class ClientQueryBuilder extends BaseQueryBuilder {

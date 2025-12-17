@@ -9,10 +9,10 @@ import { JwtService } from '@nestjs/jwt';
 import { setupTestApp, teardownTestApp } from '../test-utils';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { Counter, CounterDocument } from '../../src/counters/schemas/counter.schema';
-import { UpdateCounterDto } from '../../src/counters/dto/update-counter.dto';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { Counter, CounterDocument } from '../../src/system/counters/schemas/counter.schema';
+import { UpdateCounterDto } from '../../src/system/counters/dto/update-counter.dto';
 
 
 describe('Counters CRUD (e2e)', () => {
@@ -55,7 +55,7 @@ describe('Counters CRUD (e2e)', () => {
             userType: UserType.EMPLOYEE, roleId: adminRole._id
         }]);
         
-        globalAdminToken = jwtService.sign({ sub: adminUser.recordId });
+        globalAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
 
         // Create test counters using Promise.all for efficiency
         [subsidiaryCounter] = await counterModel.create([

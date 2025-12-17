@@ -1,7 +1,7 @@
 import { BaseQueryBuilder } from '../../../common/builders/base-query.builder';
 import { VarietyQueryDto } from '../dto/variety-query.dto';
-import { User } from '../../../users/schemas/user.schema';
-import { ClientResolverService } from '../../../clients/client-resolver/client-resolver.service';
+import { User } from '../../../iam/users/schemas/user.schema';
+import { ClientResolverService } from '../../../iam/client-resolver/client-resolver.service';
 import { Resource } from '../../../common/constants/permissions.constants';
 
 export class VarietyQueryBuilder extends BaseQueryBuilder {

@@ -2,8 +2,8 @@
 
 import { Controller, Get, Post, Body, Patch, Put, Param, Delete, UseFilters, Query, HttpCode, HttpStatus } from '@nestjs/common';
 
-import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
-import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
+import { ParseMongoIdPipe } from '../../common/pipes/parse-mongo-id.pipe';
+import { MongoExceptionFilter } from '../../common/filters/mongo-exception.filter';
 
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -15,13 +15,13 @@ import { UsersService } from '../users/users.service';
 import { QueryUserDto } from '../users/dto/query-user.dto';
 import type { UserDocument } from '../users/schemas/user.schema';
 
-import { OrchardsService } from '../orchards/orchards.service';
-import { QueryOrchardDto } from '../orchards/dto/query-orchard.dto';
+import { OrchardsService } from '../../assets/orchards/orchards.service';
+import { QueryOrchardDto } from '../../assets/orchards/dto/query-orchard.dto';
 
-import { RequirePermission } from '../common/decorators/permissions.decorator';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { RequirePermission } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
-import { PERMISSIONS } from '../common/constants/permissions.constants';
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
 
 @Controller('clients')
 @UseFilters(MongoExceptionFilter)

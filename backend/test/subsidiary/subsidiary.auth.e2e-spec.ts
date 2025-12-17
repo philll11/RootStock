@@ -8,12 +8,12 @@ import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { CreateSubsidiaryDto } from '../../src/subsidiaries/dto/create-subsidiary.dto';
-import { UpdateSubsidiaryDto } from '../../src/subsidiaries/dto/update-subsidiary.dto';
+import { CreateSubsidiaryDto } from '../../src/iam/subsidiaries/dto/create-subsidiary.dto';
+import { UpdateSubsidiaryDto } from '../../src/iam/subsidiaries/dto/update-subsidiary.dto';
 
 describe('Subsidiaries Authorization - Security Model (e2e)', () => {
     let app: INestApplication;
@@ -62,10 +62,10 @@ describe('Subsidiaries Authorization - Security Model (e2e)', () => {
         ]);
 
         // Generate tokens
-        platformAdminToken = jwtService.sign({ sub: adminUser.recordId });
-        subsidiaryManagerToken = jwtService.sign({ sub: managerUser.recordId });
-        readOnlyToken = jwtService.sign({ sub: readOnlyUser.recordId });
-        noPermissionsToken = jwtService.sign({ sub: noPermsUser.recordId });
+        platformAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
+        subsidiaryManagerToken = jwtService.sign({ sub: managerUser.recordId, tokenVersion: 0 });
+        readOnlyToken = jwtService.sign({ sub: readOnlyUser.recordId, tokenVersion: 0 });
+        noPermissionsToken = jwtService.sign({ sub: noPermsUser.recordId, tokenVersion: 0 });
 
         [activeSubsidiary, inactiveSubsidiary, deletedSubsidiary] = await subsidiaryModel.create([
             { recordId: 'SUB_AUTH_ACTIVE', name: 'Auth Active Sub' },

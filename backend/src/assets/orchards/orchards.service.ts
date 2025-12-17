@@ -3,7 +3,7 @@ import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/commo
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { ClientSession, Connection, Model, Types } from 'mongoose';
 
-import { handleConcurrentSoftDelete } from "../common/utils/concurrent-deletion.util";
+import { handleConcurrentSoftDelete } from "../../common/utils/concurrent-deletion.util";
 
 import { Orchard, OrchardDocument } from './schemas/orchard.schema';
 import { CreateOrchardDto } from './dto/create-orchard.dto';
@@ -11,12 +11,12 @@ import { UpdateOrchardDto } from './dto/update-orchard.dto';
 import { QueryOrchardDto } from './dto/query-orchard.dto';
 import { OrchardQueryBuilder } from './builders/orchards-query.builder';
 
-import { ClientsService } from '../clients/clients.service';
-import { ClientResolverService } from '../clients/client-resolver/client-resolver.service';
+import { ClientsService } from '../../iam/clients/clients.service';
+import { ClientResolverService } from '../../iam/client-resolver/client-resolver.service';
 
-import { UserDocument } from '../users/schemas/user.schema';
-import { UsersService } from '../users/users.service';
-import { CountersService } from '../counters/counters.service';
+import { UserDocument } from '../../iam/users/schemas/user.schema';
+import { UsersService } from '../../iam/users/users.service';
+import { CountersService } from '../../system/counters/counters.service';
 
 
 @Injectable()

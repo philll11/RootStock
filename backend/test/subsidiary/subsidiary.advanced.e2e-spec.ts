@@ -8,12 +8,12 @@ import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { UpdateSubsidiaryDto } from '../../src/subsidiaries/dto/update-subsidiary.dto';
+import { UpdateSubsidiaryDto } from '../../src/iam/subsidiaries/dto/update-subsidiary.dto';
 
 describe('Subsidiaries Advanced Business Logic (e2e)', () => {
     let app: INestApplication;
@@ -53,7 +53,7 @@ describe('Subsidiaries Advanced Business Logic (e2e)', () => {
             userType: UserType.EMPLOYEE,
             roleId: adminRole._id,
         });
-        platformAdminToken = jwtService.sign({ sub: adminUser.recordId });
+        platformAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
     });
 
     afterAll(async () => await teardownTestApp({ app, mongod }));

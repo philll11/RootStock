@@ -5,14 +5,14 @@ import { CreateOrchardDto } from './dto/create-orchard.dto';
 import { UpdateOrchardDto } from './dto/update-orchard.dto';
 import { QueryOrchardDto } from './dto/query-orchard.dto';
 
-import { RequirePermission } from '../common/decorators/permissions.decorator';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { RequirePermission } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
-import { PERMISSIONS } from '../common/constants/permissions.constants';
-import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
-import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
+import { ParseMongoIdPipe } from '../../common/pipes/parse-mongo-id.pipe';
+import { MongoExceptionFilter } from '../../common/filters/mongo-exception.filter';
 
-import type { UserDocument } from '../users/schemas/user.schema';
+import type { UserDocument } from '../../iam/users/schemas/user.schema';
 
 @Controller('orchards')
 @UseFilters(MongoExceptionFilter)

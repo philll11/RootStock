@@ -4,12 +4,12 @@ import { UsersService } from './users.service';
 import { QueryUserDto } from './dto/query-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { MongoExceptionFilter } from '../common/filters/mongo-exception.filter';
-import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe';
+import { MongoExceptionFilter } from '../../common/filters/mongo-exception.filter';
+import { ParseMongoIdPipe } from '../../common/pipes/parse-mongo-id.pipe';
 
-import { RequirePermission } from '../common/decorators/permissions.decorator';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { PERMISSIONS } from '../common/constants/permissions.constants';
+import { RequirePermission } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
 
 import type { UserDocument } from '../users/schemas/user.schema';
 

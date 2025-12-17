@@ -6,7 +6,7 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { Public } from './decorators/public.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { UserDocument } from '../users/schemas/user.schema';
 
 @Controller('auth')

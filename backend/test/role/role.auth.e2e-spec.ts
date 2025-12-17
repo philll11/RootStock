@@ -8,8 +8,8 @@ import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
 
 describe('Roles Auth (e2e)', () => {
     let app: INestApplication;
@@ -62,12 +62,12 @@ describe('Roles Auth (e2e)', () => {
         ]);
 
         // Generate JWT tokens for each user
-        viewRoleToken = jwtService.sign({ sub: viewUser.recordId });
-        editRoleToken = jwtService.sign({ sub: editUser.recordId });
-        createRoleToken = jwtService.sign({ sub: createUser.recordId });
-        deleteRoleToken = jwtService.sign({ sub: deleteUser.recordId });
-        noPermissionsToken = jwtService.sign({ sub: noPermissionsUser.recordId });
-        manageInactiveToken = jwtService.sign({ sub: manageInactiveUser.recordId });
+        viewRoleToken = jwtService.sign({ sub: viewUser.recordId, tokenVersion: 0 });
+        editRoleToken = jwtService.sign({ sub: editUser.recordId, tokenVersion: 0 });
+        createRoleToken = jwtService.sign({ sub: createUser.recordId, tokenVersion: 0 });
+        deleteRoleToken = jwtService.sign({ sub: deleteUser.recordId, tokenVersion: 0 });
+        noPermissionsToken = jwtService.sign({ sub: noPermissionsUser.recordId, tokenVersion: 0 });
+        manageInactiveToken = jwtService.sign({ sub: manageInactiveUser.recordId, tokenVersion: 0 });
     });
 
     afterAll(async () => {

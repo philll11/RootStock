@@ -1,9 +1,9 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { VisibilityScope } from '../../roles/schemas/role.schema';
-import { User } from '../../users/schemas/user.schema';
-import { Client, ClientDocument } from '../schemas/client.schema';
+import { VisibilityScope } from '../roles/schemas/role.schema';
+import { User } from '../users/schemas/user.schema';
+import { Client, ClientDocument } from '../clients/schemas/client.schema';
 
 @Injectable()
 export class ClientResolverService {

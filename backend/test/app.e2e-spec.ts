@@ -1,33 +1,33 @@
 // backend/test/app.e2e-spec.ts
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from './../src/app.module'; // We keep this import for context, but won't use it directly
-import { AppController } from './../src/app.controller';
-import { AppService } from './../src/app.service';
+import { setupTestApp, teardownTestApp } from './test-utils';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
+  let mongod: MongoMemoryReplSet;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      controllers: [AppController],
-      providers: [AppService],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+    const setup = await setupTestApp();
+    app = setup.app;
+    mongod = setup.mongod;
   });
 
   afterAll(async () => {
-    await app.close();
+    await teardownTestApp(app, mongod);
   });
 
   // Test Case: Verifying the root endpoint returns "Hello World!".
-  it('/ (GET)', () => {
+  it('/status (GET)', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/status')
       .expect(200)
+      .expect((res) => {
+        expect(res.body).toHaveProperty('status', 'up');
+      });
+  });
+});
       .expect('Hello World!');
   });
 });

@@ -3,8 +3,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { VarietiesService } from './varieties.service';
 import { VarietiesController } from './varieties.controller';
 import { Variety, VarietySchema } from './schemas/variety.schema';
-import { CountersModule } from '../../counters/counters.module';
-import { ClientsModule } from '../../clients/clients.module';
+import { CountersModule } from '../../system/counters/counters.module';
+import { ClientsModule } from '../../iam/clients/clients.module';
 
 @Module({
   imports: [

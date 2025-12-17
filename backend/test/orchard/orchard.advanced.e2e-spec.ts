@@ -8,11 +8,11 @@ import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { Orchard, OrchardDocument } from '../../src/orchards/schemas/orchard.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { Orchard, OrchardDocument } from '../../src/assets/orchards/schemas/orchard.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
 describe('Orchards Advanced Logic - Complex Agricultural Business Operations (e2e)', () => {
@@ -219,7 +219,7 @@ describe('Orchards Advanced Logic - Complex Agricultural Business Operations (e2
             roleId: platformAdministratorRole._id,
             isActive: true
         }).save();
-        platformAdminToken = jwtService.sign({ sub: platformAdmin.recordId });
+        platformAdminToken = jwtService.sign({ sub: platformAdmin.recordId, tokenVersion: 0 });
 
         const regionalManager = await new userModel({
             recordId: 'REGIONAL_MANAGER_ORCHARD_ADV',
@@ -232,7 +232,7 @@ describe('Orchards Advanced Logic - Complex Agricultural Business Operations (e2
             clientIds: [enterpriseOrchardClient._id, boutiqueWineryClient._id],
             isActive: true
         }).save();
-        regionalManagerToken = jwtService.sign({ sub: regionalManager.recordId });
+        regionalManagerToken = jwtService.sign({ sub: regionalManager.recordId, tokenVersion: 0 });
 
         const farmOwner = await new userModel({
             recordId: 'FARM_OWNER_ORCHARD_ADV',
@@ -245,7 +245,7 @@ describe('Orchards Advanced Logic - Complex Agricultural Business Operations (e2
             clientIds: [familyFarmClient._id],
             isActive: true
         }).save();
-        farmOwnerToken = jwtService.sign({ sub: farmOwner.recordId });
+        farmOwnerToken = jwtService.sign({ sub: farmOwner.recordId, tokenVersion: 0 });
 
         const orchardManager = await new userModel({
             recordId: 'ORCHARD_MANAGER_ADV',
@@ -258,7 +258,7 @@ describe('Orchards Advanced Logic - Complex Agricultural Business Operations (e2
             clientIds: [enterpriseOrchardClient._id, organicCertifiedClient._id],
             isActive: true
         }).save();
-        orchardManagerToken = jwtService.sign({ sub: orchardManager.recordId });
+        orchardManagerToken = jwtService.sign({ sub: orchardManager.recordId, tokenVersion: 0 });
 
         const migrationSpecialist = await new userModel({
             recordId: 'MIGRATION_SPECIALIST_ORCHARD_ADV',
@@ -270,7 +270,7 @@ describe('Orchards Advanced Logic - Complex Agricultural Business Operations (e2
             roleId: migrationSpecialistRole._id,
             isActive: true
         }).save();
-        migrationSpecialistToken = jwtService.sign({ sub: migrationSpecialist.recordId });
+        migrationSpecialistToken = jwtService.sign({ sub: migrationSpecialist.recordId, tokenVersion: 0 });
 
         const emergencyAccess = await new userModel({
             recordId: 'EMERGENCY_ACCESS_ORCHARD_ADV',
@@ -283,7 +283,7 @@ describe('Orchards Advanced Logic - Complex Agricultural Business Operations (e2
             clientIds: [emergencyResponseClient._id],
             isActive: true
         }).save();
-        emergencyAccessToken = jwtService.sign({ sub: emergencyAccess.recordId });
+        emergencyAccessToken = jwtService.sign({ sub: emergencyAccess.recordId, tokenVersion: 0 });
 
         const auditSpecialist = await new userModel({
             recordId: 'AUDIT_SPECIALIST_ORCHARD_ADV',
@@ -295,7 +295,7 @@ describe('Orchards Advanced Logic - Complex Agricultural Business Operations (e2
             roleId: auditingRole._id,
             isActive: true
         }).save();
-        auditSpecialistToken = jwtService.sign({ sub: auditSpecialist.recordId });
+        auditSpecialistToken = jwtService.sign({ sub: auditSpecialist.recordId, tokenVersion: 0 });
 
         const crossSubsidiaryConsultant = await new userModel({
             recordId: 'CROSS_SUB_CONSULTANT_ORCHARD_ADV',
@@ -308,7 +308,7 @@ describe('Orchards Advanced Logic - Complex Agricultural Business Operations (e2
             clientIds: [crossSubsidiaryClient._id, enterpriseOrchardClient._id],
             isActive: true
         }).save();
-        crossSubsidiaryConsultantToken = jwtService.sign({ sub: crossSubsidiaryConsultant.recordId });
+        crossSubsidiaryConsultantToken = jwtService.sign({ sub: crossSubsidiaryConsultant.recordId, tokenVersion: 0 });
     });
 
     afterAll(async () => {

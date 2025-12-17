@@ -4,8 +4,8 @@ import { RolesService } from './roles.service';
 import { RolesController } from './roles.controller';
 import { IsExistingRoleConstraint } from "./validators/is-existing-role.validator";
 import { UsersModule } from '../users/users.module';
-import { CountersModule } from '../counters/counters.module';
-import { ClientResolverModule } from '../clients/client-resolver/client-resolver.module';
+import { CountersModule } from '../../system/counters/counters.module';
+import { ClientResolverModule } from '../client-resolver/client-resolver.module';
 
 @Module({
   imports: [

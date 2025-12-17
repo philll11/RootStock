@@ -8,15 +8,15 @@ import { UpdateClientDto } from './dto/update-client.dto';
 import { QueryClientDto } from './dto/query-client.dto';
 import { Client, ClientDocument } from './schemas/client.schema';
 import { ClientQueryBuilder } from './builders/clients-query.builder';
-import { ClientResolverService } from './client-resolver/client-resolver.service';
+import { ClientResolverService } from '../client-resolver/client-resolver.service';
 
 import { UsersService } from '../users/users.service';
 import { User, UserDocument, UserType } from '../users/schemas/user.schema';
-import { OrchardsService } from '../orchards/orchards.service';
+import { OrchardsService } from '../../assets/orchards/orchards.service';
 
-import { PERMISSIONS } from '../common/constants/permissions.constants';
-import { CountersService } from '../counters/counters.service';
-import { handleConcurrentSoftDelete } from '../common/utils/concurrent-deletion.util';
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
+import { CountersService } from '../../system/counters/counters.service';
+import { handleConcurrentSoftDelete } from '../../common/utils/concurrent-deletion.util';
 import { VisibilityScope } from '../roles/schemas/role.schema';
 
 

@@ -4,9 +4,9 @@ import { OrchardsService } from './orchards.service';
 import { OrchardsController } from './orchards.controller';
 
 import { IsExistingOrchardConstraint } from './validators/is-existing-orchard.validator';
-import { ClientsModule } from '../clients/clients.module';
-import { UsersModule } from '../users/users.module';
-import { CountersModule } from '../counters/counters.module';
+import { ClientsModule } from '../../iam/clients/clients.module';
+import { UsersModule } from '../../iam/users/users.module';
+import { CountersModule } from '../../system/counters/counters.module';
 
 @Module({
   imports: [

@@ -1,9 +1,9 @@
-import { BaseQueryBuilder } from '../../common/builders/base-query.builder';
+import { BaseQueryBuilder } from '../../../common/builders/base-query.builder';
 import { Types } from 'mongoose';
-import { User } from '../../users/schemas/user.schema';
+import { User } from '../../../iam/users/schemas/user.schema';
 import { QueryOrchardDto } from '../dto/query-orchard.dto';
-import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
-import { Resource } from '../../common/constants/permissions.constants';
+import { ClientResolverService } from '../../../iam/client-resolver/client-resolver.service';
+import { Resource } from '../../../common/constants/permissions.constants';
 
 export class OrchardQueryBuilder extends BaseQueryBuilder {
   constructor( queryDto: QueryOrchardDto, user: User, clientResolverService: ClientResolverService ) {

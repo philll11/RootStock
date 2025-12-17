@@ -7,11 +7,11 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Orchard, OrchardDocument } from '../../src/orchards/schemas/orchard.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Orchard, OrchardDocument } from '../../src/assets/orchards/schemas/orchard.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
 describe('Orchards Authorization & Security - Agricultural Business Scenarios (e2e)', () => {
@@ -81,11 +81,11 @@ describe('Orchards Authorization & Security - Agricultural Business Scenarios (e
             { recordId: 'CONTACT_OR', name: 'Oregon Contact', firstName: 'Oregon', lastName: 'Contact', email: 'contact@or.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [berryFarmClient._id] },
         ]);
 
-        platformAdminToken = jwtService.sign({ sub: adminUser.recordId });
-        regionManagerToken = jwtService.sign({ sub: managerUser.recordId });
-        farmOwnerToken = jwtService.sign({ sub: ownerUser.recordId });
-        consultantToken = jwtService.sign({ sub: consultantUser.recordId });
-        unauthorizedUserToken = jwtService.sign({ sub: unauthUser.recordId });
+        platformAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
+        regionManagerToken = jwtService.sign({ sub: managerUser.recordId, tokenVersion: 0 });
+        farmOwnerToken = jwtService.sign({ sub: ownerUser.recordId, tokenVersion: 0 });
+        consultantToken = jwtService.sign({ sub: consultantUser.recordId, tokenVersion: 0 });
+        unauthorizedUserToken = jwtService.sign({ sub: unauthUser.recordId, tokenVersion: 0 });
 
         [orchardA, orchardB, orchardC] = await orchardModel.create([
             { recordId: 'ORCH_A', name: 'Orchard A', clientId: appleOrchardClient._id },
