@@ -1,7 +1,7 @@
+import { IsBoolean, IsOptional, IsNumber, IsNotEmpty } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PartialType } from '@nestjs/swagger';
 import { CreateRoleDto } from './create-role.dto';
-import { IsBoolean, IsOptional, IsNumber } from 'class-validator';
-import { Type } from 'class-transformer';
 
 export class UpdateRoleDto extends PartialType(CreateRoleDto) {
   @IsBoolean()
@@ -14,5 +14,6 @@ export class UpdateRoleDto extends PartialType(CreateRoleDto) {
    * This is required for all update operations.
    */
   @IsNumber()
+  @IsNotEmpty()
   readonly __v: number;
 }

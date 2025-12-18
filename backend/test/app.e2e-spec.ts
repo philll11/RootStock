@@ -15,7 +15,7 @@ describe('AppController (e2e)', () => {
   });
 
   afterAll(async () => {
-    await teardownTestApp(app, mongod);
+    await teardownTestApp({ app, mongod });
   });
 
   // Test Case: Verifying the root endpoint returns "Hello World!".
@@ -26,8 +26,5 @@ describe('AppController (e2e)', () => {
       .expect((res) => {
         expect(res.body).toHaveProperty('status', 'up');
       });
-  });
-});
-      .expect('Hello World!');
   });
 });

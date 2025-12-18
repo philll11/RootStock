@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { VarietiesService } from './varieties.service';
 import { VarietiesController } from './varieties.controller';
 import { Variety, VarietySchema } from './schemas/variety.schema';
+import { IsExistingVarietyConstraint } from './validators/is-existing-variety.validator';
 import { CountersModule } from '../../system/counters/counters.module';
 import { ClientsModule } from '../../iam/clients/clients.module';
 
@@ -13,7 +14,7 @@ import { ClientsModule } from '../../iam/clients/clients.module';
     ClientsModule,
   ],
   controllers: [VarietiesController],
-  providers: [VarietiesService],
+  providers: [VarietiesService, IsExistingVarietyConstraint],
   exports: [VarietiesService],
 })
 export class VarietiesModule {}

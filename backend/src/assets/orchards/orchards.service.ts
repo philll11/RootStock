@@ -1,5 +1,5 @@
 // backend/src/orchards/orchards.service.ts
-import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef, ConflictException } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { ClientSession, Connection, Model, Types } from 'mongoose';
 
@@ -105,9 +105,15 @@ export class OrchardsService {
 
     async update(orchardId: string, updateOrchardDto: UpdateOrchardDto, requestingUser: UserDocument): Promise<OrchardDocument> {
         const targetOrchard = await this.findOne(orchardId, requestingUser, { includeInactive: true }); // Layer 2 Orchard Check and fetch target orchard
+
+        //  Optimistic Concurrency Control Check
+        if (targetOrchard.__v !== updateOrchardDto.__v) {
+            throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+        }
+
         const targetClientIdString = (targetOrchard.clientId as any)._id.toString();
 
-        const { userIds, ...restOfDto } = updateOrchardDto;
+        const { userIds, __v, ...restOfDto } = updateOrchardDto;
 
         if (userIds) {
             await Promise.all(userIds.map(uid => this.usersService.findOne(uid, requestingUser))); // Layer 2 User Check

@@ -1,3 +1,4 @@
+// backend/src/iam/clients/builders/clients-query.builder.ts
 import { BaseQueryBuilder } from '../../../common/builders/base-query.builder';
 import { Types } from 'mongoose';
 import { User } from '../../users/schemas/user.schema';

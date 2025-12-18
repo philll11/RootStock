@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsMongoId, IsArray } from 'class-validator';
+import { IsBoolean, IsOptional, IsMongoId, IsArray, IsNumber, IsNotEmpty } from 'class-validator';
 import { OmitType, PartialType } from '@nestjs/swagger';
 import { CreateOrchardDto } from './create-orchard.dto';
 import { Type } from 'class-transformer';
@@ -15,4 +15,12 @@ export class UpdateOrchardDto extends OmitType(PartialType(CreateOrchardDto), ['
     @IsExistingUsers()
     @IsOptional()
     readonly userIds?: string[];
+
+    /**
+     * The document version for optimistic concurrency control.
+     * Required to prevent overwriting updates from other users.
+     */
+    @IsNumber()
+    @IsNotEmpty()
+    readonly __v: number;
 }

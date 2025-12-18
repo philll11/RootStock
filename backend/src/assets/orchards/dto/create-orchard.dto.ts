@@ -6,23 +6,23 @@ import { IsExistingUsers } from '../../../iam/users/decorators/is-existing-conta
 class CreateAddressDto {
     @IsString()
     @IsOptional()
-    street?: string;
+    readonly street?: string;
 
     @IsString()
     @IsOptional()
-    city?: string;
+    readonly city?: string;
 
     @IsString()
     @IsOptional()
-    state?: string;
+    readonly state?: string;
 
     @IsString()
     @IsOptional()
-    postalCode?: string;
+    readonly postalCode?: string;
 
     @IsString()
     @IsOptional()
-    country?: string;
+    readonly country?: string;
 }
 
 export class CreateOrchardDto {

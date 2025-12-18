@@ -45,6 +45,18 @@ export const PERMISSIONS = {
    */
   ORCHARD_MANAGE_INACTIVE: 'Orchard:ManageInactive',
 
+  // --- Block Management ---
+  // Permissions for managing block entities (child of Orchard).
+  BLOCK_CREATE: 'Block:Create',
+  BLOCK_VIEW: 'Block:View',
+  BLOCK_EDIT: 'Block:Edit',
+  BLOCK_DELETE: 'Block:Delete',
+  /**
+   * Grants the ability to change a block's `isActive` status and to
+   * include inactive block records in query results.
+   */
+  BLOCK_MANAGE_INACTIVE: 'Block:ManageInactive',
+
   // --- Role Management ---
   // Permissions for managing user roles and their associated permissions.
   // These are typically restricted to top-level administrators.
@@ -106,6 +118,7 @@ export enum Resource {
   USER = 'User',
   CLIENT = 'Client',
   ORCHARD = 'Orchard',
+  BLOCK = 'Block',
   ROLE = 'Role',
   SUBSIDIARY = 'Subsidiary',
   COUNTERS = 'Counters',

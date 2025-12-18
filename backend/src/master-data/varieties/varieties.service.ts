@@ -103,4 +103,18 @@ export class VarietiesService {
     }
     return deletedVariety;
   }
+
+  /**
+   * Validates if a variety exists, is active, and is not deleted.
+   * @param id The variety ID to check.
+   * @returns true if valid, false otherwise.
+   */
+  async validateVarietyId(id: string): Promise<boolean> {
+    const variety = await this.varietyModel.findOne({
+      _id: id,
+      isActive: true,
+      isDeleted: false,
+    }).exec();
+    return !!variety;
+  }
 }
