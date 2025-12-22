@@ -1,5 +1,5 @@
 // backend/src/assets/blocks/blocks.service.ts
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 
@@ -21,7 +21,7 @@ export class BlocksService {
   constructor(
     @InjectModel(Block.name) private blockModel: Model<BlockDocument>,
     @InjectConnection() private connection: Connection,
-    private readonly orchardsService: OrchardsService,
+    @Inject(forwardRef(() => OrchardsService)) private readonly orchardsService: OrchardsService,
     private readonly countersService: CountersService,
     private readonly clientResolverService: ClientResolverService,
   ) { }
@@ -33,12 +33,13 @@ export class BlocksService {
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('block', 'BLK');
     const recordId = `${prefix}${sequence_value.toString().padStart(4, '0')}`;
 
+    const clientId = (orchard.clientId as any)._id;
+
     const newBlock = new this.blockModel({
       ...createBlockDto,
       recordId,
       orchardId: new Types.ObjectId(orchardId),
-      // Denormalize Client ID for faster scope filtering
-      clientId: orchard.clientId,
+      clientId: clientId,
     });
 
     // Simple atomic save since Block has no children yet
@@ -92,24 +93,20 @@ export class BlocksService {
   }
 
   async update(orchardId: string, blockId: string, updateBlockDto: UpdateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {
-    const targetBlock = await this.findOne(orchardId, blockId, requestingUser, { includeInactive: true });
-
-    // Optimistic Concurrency Control
-    if (updateBlockDto.__v !== undefined && targetBlock['__v'] !== updateBlockDto.__v) {
-      throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
-    }
+    await this.findOne(orchardId, blockId, requestingUser, { includeInactive: true });
 
     const { __v, ...updateData } = updateBlockDto;
 
-    // Direct update since we already validated access via findOne
-    const updatedBlock = await this.blockModel.findByIdAndUpdate(
-      blockId,
-      { $set: updateData },
-      { new: true } // Return the modified document
-    ).populate('plantings.varietyId', 'name').exec();
+    const updatedBlock = await this.blockModel.findOneAndUpdate(
+      { _id: blockId, __v: __v },
+      { $set: updateData, $inc: { __v: 1 } },
+      { new: true } // Return the updated doc
+    )
+      .populate('plantings.varietyId', 'name')
+      .exec();
 
     if (!updatedBlock) {
-      throw new NotFoundException(`Block with ID "${blockId}" could not be updated.`);
+      throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
     }
 
     return updatedBlock;
@@ -137,5 +134,27 @@ export class BlocksService {
     } finally {
       session.endSession();
     }
+  }
+
+  /**
+   * Internal helper to fetch a block by ID to establish context (e.g., finding the parent Orchard).
+   * strictly for internal service usage where the parent ID is unknown.
+   */
+  async findByIdInternal(blockId: string): Promise<BlockDocument> {
+    const block = await this.blockModel.findById(blockId).exec();
+    if (!block) throw new NotFoundException('Block not found');
+    return block;
+  }
+
+  /**
+   * Counts active blocks for a specific orchard.
+   * Used by OrchardsService to prevent deleting parents with active children.
+   */
+  async countActiveByOrchardId(orchardId: string): Promise<number> {
+    return this.blockModel.countDocuments({
+      orchardId: new Types.ObjectId(orchardId),
+      isActive: true,
+      isDeleted: false
+    }).exec();
   }
 }

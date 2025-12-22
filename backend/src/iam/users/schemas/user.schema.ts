@@ -1,6 +1,6 @@
 // backend/src/users/schemas/user.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 
 export enum UserType {
   EMPLOYEE = 'employee',
@@ -45,10 +45,10 @@ export class User {
   @Prop({ required: true, enum: UserType, immutable: true })
   userType: UserType;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Role', required: false })
+  @Prop({ type: Types.ObjectId, ref: 'Role', required: false })
   roleId: Types.ObjectId;
 
-  @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Client' }], required: false, default: [] })
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Client' }], required: false, default: [] })
   clientIds: Types.ObjectId[];
 
   @Prop({ type: UserPreferences, default: () => ({ theme: 'auto' }) })

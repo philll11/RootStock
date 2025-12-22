@@ -18,6 +18,8 @@ import { UserDocument } from '../../iam/users/schemas/user.schema';
 import { UsersService } from '../../iam/users/users.service';
 import { CountersService } from '../../system/counters/counters.service';
 
+import { BlocksService } from '../blocks/blocks.service';
+
 
 @Injectable()
 export class OrchardsService {
@@ -25,8 +27,8 @@ export class OrchardsService {
         @InjectModel(Orchard.name) private orchardModel: Model<OrchardDocument>,
         @InjectConnection() private connection: Connection,
         private readonly clientResolverService: ClientResolverService,
-        @Inject(forwardRef(() => ClientsService))
-        private readonly clientsService: ClientsService,
+        @Inject(forwardRef(() => ClientsService)) private readonly clientsService: ClientsService,
+        @Inject(forwardRef(() => BlocksService)) private readonly blocksService: BlocksService,
         private readonly countersService: CountersService,
         private readonly usersService: UsersService,
     ) { }
@@ -152,16 +154,15 @@ export class OrchardsService {
     async remove(orchardId: string, requestingUser: UserDocument): Promise<OrchardDocument> {
         await this.findOne(orchardId, requestingUser); // Layer 2 Orchard Check
 
-        // TODO: Add Layer 3 check for active child Blocks before deletion.
+        const activeBlockCount = await this.blocksService.countActiveByOrchardId(orchardId);
+        if (activeBlockCount > 0) {
+            throw new ConflictException(`Cannot delete orchard because it has ${activeBlockCount} active block(s).`);
+        }
 
         const session = await this.connection.startSession();
         session.startTransaction();
         try {
             const deletedOrchard = await handleConcurrentSoftDelete<OrchardDocument>(this.orchardModel, orchardId, session, "Orchard");
-
-            // In the future, if an Orchard had children that needed to be soft-deleted,
-            // that logic would go here, using the same session.
-            // e.g., await this.blocksService.softDeleteByOrchardId(orchardId, session);
 
             await session.commitTransaction();
             return deletedOrchard;
@@ -172,6 +173,7 @@ export class OrchardsService {
             session.endSession();
         }
     }
+
 
     async validateOrchardIds(orchardIds: string[]): Promise<boolean> {
         if (!orchardIds || orchardIds.length === 0) {

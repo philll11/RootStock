@@ -16,6 +16,7 @@ import { JwtAuthGuard } from './iam/auth/jwt-auth.guard';
 import { SubsidiariesModule } from './iam/subsidiaries/subsidiaries.module';
 import { OrchardsModule } from './assets/orchards/orchards.module';
 import { BlocksModule } from './assets/blocks/blocks.module';
+import { AssessmentsModule } from './operations/assessments/assessments.module';
 import { CountersModule } from './system/counters/counters.module';
 import { VarietiesModule } from './master-data/varieties/varieties.module';
 import appConfig from './config/app.config';
@@ -75,6 +76,7 @@ import appConfig from './config/app.config';
     SubsidiariesModule,
     OrchardsModule,
     BlocksModule,
+    AssessmentsModule,
     CountersModule,
     VarietiesModule,
   ],

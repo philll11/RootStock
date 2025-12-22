@@ -57,6 +57,19 @@ export const PERMISSIONS = {
    */
   BLOCK_MANAGE_INACTIVE: 'Block:ManageInactive',
 
+  // --- Assessment Management ---
+  // Permissions for managing assessment entities.
+  ASSESSMENT_CREATE: 'Assessment:Create',
+  ASSESSMENT_VIEW: 'Assessment:View',
+  ASSESSMENT_EDIT: 'Assessment:Edit',
+  ASSESSMENT_DELETE: 'Assessment:Delete',
+
+  /**
+   * Grants the ability to change an assessment's `isActive` status and to
+   * include inactive assessment records in query results.
+   */
+  ASSESSMENT_MANAGE_INACTIVE: 'Assessment:ManageInactive',
+
   // --- Role Management ---
   // Permissions for managing user roles and their associated permissions.
   // These are typically restricted to top-level administrators.
@@ -119,6 +132,7 @@ export enum Resource {
   CLIENT = 'Client',
   ORCHARD = 'Orchard',
   BLOCK = 'Block',
+  ASSESSMENT = 'Assessment',
   ROLE = 'Role',
   SUBSIDIARY = 'Subsidiary',
   COUNTERS = 'Counters',

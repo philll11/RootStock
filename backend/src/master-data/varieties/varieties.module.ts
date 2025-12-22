@@ -1,17 +1,15 @@
+// backend/src/master-data/varieties/varieties.module.ts
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { VarietiesService } from './varieties.service';
 import { VarietiesController } from './varieties.controller';
-import { Variety, VarietySchema } from './schemas/variety.schema';
 import { IsExistingVarietyConstraint } from './validators/is-existing-variety.validator';
 import { CountersModule } from '../../system/counters/counters.module';
-import { ClientsModule } from '../../iam/clients/clients.module';
+import { ClientResolverModule } from '../../iam/client-resolver/client-resolver.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Variety.name, schema: VarietySchema }]),
     CountersModule,
-    ClientsModule,
+    ClientResolverModule,
   ],
   controllers: [VarietiesController],
   providers: [VarietiesService, IsExistingVarietyConstraint],

@@ -1,6 +1,6 @@
 // backend/src/clients/schemas/client.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 
 export type ClientDocument = HydratedDocument<Client>;
 
@@ -13,7 +13,7 @@ export class Client {
   @Prop({ required: true })
   name: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Subsidiary', required: false, immutable: true })
+  @Prop({ type: Types.ObjectId, ref: 'Subsidiary', required: false, immutable: true })
   subsidiaryId?: Types.ObjectId;
 
   @Prop({ required: true, default: true })

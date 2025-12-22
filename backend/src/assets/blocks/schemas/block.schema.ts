@@ -27,8 +27,11 @@ export class Block {
   @Prop({ required: true, unique: true, index: true })
   recordId: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Orchard', required: true, index: true })
+  @Prop({ type: Types.ObjectId, ref: 'Orchard', required: true, index: true, immutable: true })
   orchardId: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'Client', required: true, index: true, immutable: true })
+  clientId: Types.ObjectId;
 
   @Prop({ required: true })
   name: string;

@@ -1,21 +1,20 @@
 // backend/src/assets/blocks/blocks.module.ts
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { Module, forwardRef } from '@nestjs/common';
 
 import { BlocksService } from './blocks.service';
 import { BlocksController } from './blocks.controller';
-import { Block, BlockSchema } from './schemas/block.schema';
 
 import { OrchardsModule } from '../orchards/orchards.module';
 import { CountersModule } from '../../system/counters/counters.module';
 import { ClientResolverModule } from '../../iam/client-resolver/client-resolver.module';
+import { VarietiesModule } from '../../master-data/varieties/varieties.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Block.name, schema: BlockSchema }]),
-    OrchardsModule,
+    forwardRef(() => OrchardsModule),
+    forwardRef(() => VarietiesModule),
     CountersModule,
-    ClientResolverModule // Required for Scope Resolution
+    ClientResolverModule,
   ],
   controllers: [BlocksController],
   providers: [BlocksService],

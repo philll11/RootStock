@@ -8,6 +8,9 @@ import { Role, RoleSchema } from '../iam/roles/schemas/role.schema';
 import { Subsidiary, SubsidiarySchema } from '../iam/subsidiaries/schemas/subsidiary.schema';
 import { User, UserSchema } from '../iam/users/schemas/user.schema';
 import { Counter, CounterSchema } from '../system/counters/schemas/counter.schema';
+import { Block, BlockSchema } from '../assets/blocks/schemas/block.schema';
+import { Assessment, AssessmentSchema } from '../operations/assessments/schemas/assessment.schema';
+import { Variety, VarietySchema } from '../master-data/varieties/schemas/variety.schema';
 
 @Global()
 @Module({
@@ -19,6 +22,9 @@ import { Counter, CounterSchema } from '../system/counters/schemas/counter.schem
             { name: Subsidiary.name, schema: SubsidiarySchema },
             { name: User.name, schema: UserSchema },
             { name: Counter.name, schema: CounterSchema },
+            { name: Block.name, schema: BlockSchema },
+            { name: Assessment.name, schema: AssessmentSchema },
+            { name: Variety.name, schema: VarietySchema },
         ]),
     ],
     exports: [MongooseModule],
