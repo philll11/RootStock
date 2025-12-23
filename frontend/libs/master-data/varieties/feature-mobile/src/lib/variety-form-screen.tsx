@@ -1,9 +1,8 @@
-// frontend/libs/master-data/varieties/feature-mobile/src/lib/variety-form-screen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { Appbar, TextInput, Button, Switch, Text, useTheme, HelperText } from 'react-native-paper';
+import { View, StyleSheet, Alert } from 'react-native';
+import { TextInput, Button, Switch, Text, useTheme, HelperText } from 'react-native-paper';
 import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
-import { useMobileDiscardWarning, DetailRow } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, FormLayout, FormMode, confirmDiscard } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
@@ -26,6 +25,9 @@ export const VarietyFormScreen = ({ navigation, route }: any) => {
 
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<{name?: string}>({});
+
+  const mode: FormMode = isEditing ? (isEditMode ? 'edit' : 'view') : 'create';
+  const isView = mode === 'view';
 
   useEffect(() => {
     if (isEditing && varieties) {
@@ -91,68 +93,82 @@ export const VarietyFormScreen = ({ navigation, route }: any) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Appbar.Header>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={isEditing ? (isEditMode ? 'Edit Variety' : 'Variety Details') : 'New Variety'} />
-        {!isEditMode && canEdit && (
-          <Appbar.Action icon="pencil" onPress={() => setIsEditMode(true)} />
-        )}
-        {isEditMode && isEditing && (
-          <Appbar.Action icon="close" onPress={() => setIsEditMode(false)} />
-        )}
-        {isEditMode && isEditing && can(PERMISSIONS.VARIETY_DELETE) && (
-          <Appbar.Action icon="delete" onPress={handleDelete} color={theme.colors.error} />
-        )}
-      </Appbar.Header>
+    <FormLayout
+      mode={mode}
+      title={isEditing ? (isEditMode ? 'Edit Variety' : 'Variety Details') : 'New Variety'}
+      onCancel={() => {
+        if (isEditMode && isEditing) {
+          const cancelEdit = () => {
+            setIsEditMode(false);
+            // Reset form
+            if (varieties) {
+              const variety = varieties.find(v => v._id === varietyId);
+              if (variety) {
+                setName(variety.name);
+                setIsActive(variety.isActive);
+                setIsDirty(false);
+              }
+            }
+          };
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-        style={styles.container}
-      >
-        <ScrollView contentContainerStyle={styles.content}>
-          {isEditMode ? (
-            <>
-              <TextInput
-                label="Name"
-                value={name}
-                onChangeText={(text) => { setName(text); setIsDirty(true); }}
-                mode="outlined"
-                error={!!errors.name}
-                style={styles.input}
-              />
-              {errors.name && <HelperText type="error">{errors.name}</HelperText>}
+          if (isDirty) {
+            confirmDiscard(cancelEdit);
+          } else {
+            cancelEdit();
+          }
+        } else {
+          navigation.goBack();
+        }
+      }}
+      onSubmit={handleSave}
+      onEdit={() => setIsEditMode(true)}
+      canEdit={canEdit}
+      isLoading={isSubmitting}
+      isDirty={isDirty}
+    >
+      <TextInput
+        label="Name"
+        value={name}
+        onChangeText={(text) => { setName(text); setIsDirty(true); }}
+        mode="outlined"
+        error={!!errors.name}
+        editable={!isView}
+        style={styles.input}
+      />
+      {!isView && errors.name && <HelperText type="error">{errors.name}</HelperText>}
 
-              {isEditing && (
-                <View style={styles.switchContainer}>
-                  <Text variant="bodyLarge">Active</Text>
-                  <Switch 
-                    value={isActive} 
-                    onValueChange={(val) => { setIsActive(val); setIsDirty(true); }} 
-                  />
-                </View>
-              )}
+      {isView && (
+        <TextInput
+          label="Record ID"
+          value={recordId}
+          mode="outlined"
+          editable={false}
+          style={styles.input}
+        />
+      )}
 
-              <Button 
-                mode="contained" 
-                onPress={handleSave} 
-                style={styles.button}
-                loading={isSubmitting}
-                disabled={isSubmitting}
-              >
-                Save
-              </Button>
-            </>
-          ) : (
-            <>
-              <DetailRow label="Name" value={name} />
-              <DetailRow label="Record ID" value={recordId} />
-              <DetailRow label="Status" value={isActive ? 'Active' : 'Inactive'} />
-            </>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+      {isEditing && (
+        <View style={styles.switchContainer}>
+          <Text variant="bodyLarge">Active</Text>
+          <Switch 
+            value={isActive} 
+            onValueChange={(val) => { setIsActive(val); setIsDirty(true); }} 
+            disabled={isView}
+          />
+        </View>
+      )}
+
+      {isEditMode && isEditing && can(PERMISSIONS.VARIETY_DELETE) && (
+        <Button 
+          mode="outlined" 
+          onPress={handleDelete} 
+          textColor={theme.colors.error} 
+          style={{ marginTop: spacing.xl, borderColor: theme.colors.error }}
+        >
+          Delete Variety
+        </Button>
+      )}
+    </FormLayout>
   );
 };
 

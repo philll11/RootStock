@@ -1,11 +1,19 @@
 // frontend/libs/roles/feature-web/src/lib/roles-list-page.tsx
-import { Title, Table, Button, Group, Drawer, ActionIcon, Badge, Text, Alert } from '@mantine/core';
+import { useState } from 'react';
+import { Group, ActionIcon, Badge, Text, Alert } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash, IconPlus, IconAlertCircle } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconAlertCircle } from '@tabler/icons-react';
 import { useRoles, Role, CreateRoleDto, UpdateRoleDto } from '@rootstock/roles/roles-data-access';
 import { RoleForm, RoleFormMode } from './role-form';
-import { useState } from 'react';
-import { ConfirmDiscardModal, ConfirmModal, useDiscardWarning } from '@rootstock/ui/web';
+import { 
+  ConfirmDiscardModal, 
+  ConfirmModal, 
+  useDiscardWarning,
+  PageHeader,
+  DataTable,
+  FormDrawer,
+  DataTableColumn
+} from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
@@ -24,6 +32,8 @@ export function RolesListPage() {
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty);
+  
+  const [sortState, setSortState] = useState<{ accessor: string; direction: 'asc' | 'desc' }>({ accessor: 'name', direction: 'asc' });
 
   const handleCreate = () => {
     setMode('create');
@@ -91,21 +101,24 @@ export function RolesListPage() {
     }
   };
 
-  const rows = roles.map((role) => (
-    <Table.Tr 
-      key={role._id} 
-      onClick={() => handleView(role)}
-      style={{ cursor: 'pointer' }}
-    >
-      <Table.Td>{role.recordId}</Table.Td>
-      <Table.Td>{role.name}</Table.Td>
-      <Table.Td>{role.visibilityScope}</Table.Td>
-      <Table.Td>
+  const columns: DataTableColumn<Role>[] = [
+    { accessor: 'recordId', title: 'ID', sortable: true },
+    { accessor: 'name', title: 'Name', sortable: true },
+    { accessor: 'visibilityScope', title: 'Visibility Scope', sortable: true },
+    {
+      accessor: 'isActive',
+      title: 'Status',
+      render: (role) => (
         <Badge color={role.isActive ? 'brand' : 'neutral'} variant="light">
           {role.isActive ? 'Active' : 'Inactive'}
         </Badge>
-      </Table.Td>
-      <Table.Td>
+      )
+    },
+    {
+      accessor: 'actions',
+      title: '',
+      align: 'right',
+      render: (role) => (
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.ROLE_EDIT) && (
             <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(role, e)}>
@@ -118,9 +131,23 @@ export function RolesListPage() {
             </ActionIcon>
           )}
         </Group>
-      </Table.Td>
-    </Table.Tr>
-  ));
+      )
+    }
+  ];
+
+  const sortedRoles = roles ? [...roles].sort((a, b) => {
+    const { accessor, direction } = sortState;
+    const aValue = (a as any)[accessor] || '';
+    const bValue = (b as any)[accessor] || '';
+    
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    }
+    
+    if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+    return 0;
+  }) : undefined;
 
   if (isError) {
     return (
@@ -132,42 +159,28 @@ export function RolesListPage() {
 
   return (
     <>
-      <Group justify="space-between" mb="lg">
-        <Title order={2}>Roles</Title>
-        {can(PERMISSIONS.ROLE_CREATE) && (
-          <Button leftSection={<IconPlus size={iconSizes.sm} />} onClick={handleCreate}>
-            Add Role
-          </Button>
-        )}
-      </Group>
+      <PageHeader 
+        title="Roles"
+        actionLabel="Add Role"
+        onActionClick={can(PERMISSIONS.ROLE_CREATE) ? handleCreate : undefined}
+      />
 
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>ID</Table.Th>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>Visibility Scope</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {rows.length > 0 ? rows : (
-            <Table.Tr>
-              <Table.Td colSpan={5}>
-                <Text ta="center" c="dimmed" py="xl">No roles found.</Text>
-              </Table.Td>
-            </Table.Tr>
-          )}
-        </Table.Tbody>
-      </Table>
+      <DataTable 
+        data={sortedRoles}
+        columns={columns}
+        isLoading={isLoading}
+        onRowClick={handleView}
+        noDataMessage="No roles found."
+        onSort={(accessor, direction) => setSortState({ accessor, direction })}
+        initialSort={sortState}
+      />
 
-      <Drawer
+      <FormDrawer
         opened={opened}
         onClose={handleClose}
         title={getDrawerTitle()}
-        position="right"
         size={layout.drawers.form}
+        isLoading={isCreating || isUpdating}
       >
         <RoleForm
           mode={mode}
@@ -180,7 +193,7 @@ export function RolesListPage() {
           onValuesChange={setCreateFormDraft}
           onDirtyChange={setIsFormDirty}
         />
-      </Drawer>
+      </FormDrawer>
 
       <ConfirmDiscardModal {...modalProps} />
       

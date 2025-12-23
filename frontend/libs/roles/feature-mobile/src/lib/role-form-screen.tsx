@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { Appbar, TextInput, Button, Text, useTheme, HelperText, Checkbox, List, SegmentedButtons } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { TextInput, Button, Text, useTheme, HelperText, Checkbox, List, SegmentedButtons } from 'react-native-paper';
 import { useRoles, VisibilityScope } from '@rootstock/roles/roles-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { useMobileDiscardWarning, DetailRow } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, FormLayout, FormMode, confirmDiscard } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { spacing } from '@rootstock/ui/theme';
 
@@ -16,6 +16,10 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
   const { can } = usePermission();
   const canEdit = can(isEditing ? PERMISSIONS.ROLE_EDIT : PERMISSIONS.ROLE_CREATE);
   
+  const [isEditMode, setIsEditMode] = useState(!isEditing);
+  const mode: FormMode = !roleId ? 'create' : (isEditMode ? 'edit' : 'view');
+  const isView = mode === 'view';
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [visibilityScope, setVisibilityScope] = useState<VisibilityScope>(VisibilityScope.Client);
@@ -26,8 +30,6 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
   const [isDirty, setIsDirty] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{name?: string; description?: string}>({});
-
-  const [isEditMode, setIsEditMode] = useState(!isEditing);
 
   const groupedPermissions = useMemo(() => {
     return Object.values(PERMISSIONS).reduce((acc, permission) => {
@@ -76,7 +78,7 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
 
     try {
@@ -149,120 +151,120 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
     handleChange(setSelectedPermissions, newPermissions, 'permissions');
   };
 
-  const isSaving = isCreating || isUpdating;
-
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Appbar.Header>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={isEditing ? (isEditMode ? 'Edit Role' : 'Role Details') : 'New Role'} />
-        {!isEditMode && canEdit && (
-          <Appbar.Action icon="pencil" onPress={() => setIsEditMode(true)} />
-        )}
-        {isEditMode && isEditing && (
-          <Appbar.Action icon="close" onPress={() => setIsEditMode(false)} />
-        )}
-        {isEditMode && isEditing && can(PERMISSIONS.ROLE_DELETE) && (
-          <Appbar.Action icon="delete" onPress={handleDelete} color={theme.colors.error} />
-        )}
-      </Appbar.Header>
+    <FormLayout
+      mode={mode}
+      title={isEditing ? (isEditMode ? 'Edit Role' : 'Role Details') : 'New Role'}
+      onCancel={() => {
+        if (isEditMode && isEditing) {
+          const cancelEdit = () => {
+            setIsEditMode(false);
+            setIsLoading(true);
+            getRole(roleId).then(role => {
+              setName(role.name);
+              setDescription(role.description || '');
+              setVisibilityScope(role.visibilityScope);
+              setSelectedPermissions(role.permissions || []);
+              setVersion(role.__v);
+              setIsLoading(false);
+              setIsDirty(false);
+            });
+          };
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-        style={styles.container}
-      >
-        <ScrollView contentContainerStyle={styles.content}>
-          {isEditMode ? (
-            <>
-              <TextInput
-                mode="outlined"
-                label="Name"
-                value={name}
-                onChangeText={(val) => handleChange(setName, val, 'name')}
-                error={!!errors.name}
-                style={styles.input}
+          if (isDirty) {
+            confirmDiscard(cancelEdit);
+          } else {
+            cancelEdit();
+          }
+        } else {
+          navigation.goBack();
+        }
+      }}
+      onSubmit={handleSubmit}
+      onEdit={() => setIsEditMode(true)}
+      canEdit={canEdit}
+      isLoading={isLoading || isSubmitting}
+      isDirty={isDirty}
+    >
+      <TextInput
+        mode="outlined"
+        label="Name"
+        value={name}
+        onChangeText={(val) => handleChange(setName, val, 'name')}
+        error={!!errors.name}
+        editable={!isView}
+        style={styles.input}
+      />
+      {!isView && errors.name && <HelperText type="error">{errors.name}</HelperText>}
+
+      <TextInput
+        mode="outlined"
+        label="Description"
+        value={description}
+        onChangeText={(val) => handleChange(setDescription, val, 'description')}
+        multiline
+        numberOfLines={3}
+        editable={!isView}
+        style={styles.input}
+      />
+
+      <Text variant="bodyMedium" style={styles.label}>Visibility Scope</Text>
+      <SegmentedButtons
+        value={visibilityScope}
+        onValueChange={(val) => handleChange(setVisibilityScope, val as VisibilityScope, 'visibilityScope')}
+        buttons={[
+          { value: VisibilityScope.Client, label: 'Client', disabled: isView },
+          { value: VisibilityScope.Subsidiary, label: 'Subsidiary', disabled: isView },
+          { value: VisibilityScope.Global, label: 'Global', disabled: isView },
+        ]}
+        style={styles.input}
+      />
+
+      <Text variant="titleMedium" style={[styles.label, { marginTop: spacing.lg }]}>Permissions</Text>
+      {Object.entries(groupedPermissions).map(([resource, permissions]) => {
+        const allSelected = permissions.every(p => selectedPermissions.includes(p));
+        const someSelected = permissions.some(p => selectedPermissions.includes(p));
+        
+        return (
+          <List.Accordion
+            key={resource}
+            title={resource.charAt(0).toUpperCase() + resource.slice(1)}
+            left={props => (
+              <Checkbox
+                status={allSelected ? 'checked' : (someSelected ? 'indeterminate' : 'unchecked')}
+                onPress={() => !isView && toggleGroup(resource)}
+                disabled={isView}
               />
-              {errors.name && <HelperText type="error">{errors.name}</HelperText>}
-
-              <TextInput
-                mode="outlined"
-                label="Description"
-                value={description}
-                onChangeText={(val) => handleChange(setDescription, val, 'description')}
-                multiline
-                numberOfLines={3}
-                style={styles.input}
-              />
-
-              <Text variant="bodyMedium" style={styles.label}>Visibility Scope</Text>
-              <SegmentedButtons
-                value={visibilityScope}
-                onValueChange={(val) => handleChange(setVisibilityScope, val as VisibilityScope, 'visibilityScope')}
-                buttons={[
-                  { value: VisibilityScope.Global, label: 'Global' },
-                  { value: VisibilityScope.Subsidiary, label: 'Subsidiary' },
-                  { value: VisibilityScope.Client, label: 'Client' },
-                ]}
-                style={styles.input}
-              />
-            </>
-          ) : (
-            <>
-              <DetailRow label="Name" value={name} />
-              <DetailRow label="Description" value={description} />
-              <DetailRow label="Visibility Scope" value={visibilityScope} />
-            </>
-          )}
-
-          <Text variant="titleMedium" style={styles.sectionTitle}>Permissions</Text>
-          
-          {Object.entries(groupedPermissions).map(([resource, permissions]) => {
-            return (
-              <List.Accordion
-                key={resource}
-                title={resource}
-                left={props => <List.Icon {...props} icon="folder-lock" />}
-                description={`${permissions.filter(p => selectedPermissions.includes(p)).length} / ${permissions.length} selected`}
-              >
-                {isEditMode && (
-                  <View style={styles.groupAction}>
-                     <Button mode="text" onPress={() => toggleGroup(resource)}>
-                        Select / Deselect All
-                     </Button>
-                  </View>
-                )}
-                {permissions.map(permission => (
-                  <List.Item
-                    key={permission}
-                    title={permission.split(':')[1]}
-                    left={() => (
-                      <Checkbox
-                        status={selectedPermissions.includes(permission) ? 'checked' : 'unchecked'}
-                        onPress={isEditMode ? () => togglePermission(permission) : undefined}
-                        disabled={!isEditMode}
-                      />
-                    )}
-                    onPress={isEditMode ? () => togglePermission(permission) : undefined}
+            )}
+          >
+            {permissions.map(permission => (
+              <List.Item
+                key={permission}
+                title={permission.split(':')[1]}
+                left={props => (
+                  <Checkbox
+                    status={selectedPermissions.includes(permission) ? 'checked' : 'unchecked'}
+                    onPress={() => !isView && togglePermission(permission)}
+                    disabled={isView}
                   />
-                ))}
-              </List.Accordion>
-            );
-          })}
+                )}
+              />
+            ))}
+          </List.Accordion>
+        );
+      })}
 
-          {isEditMode && (
-            <Button
-              mode="contained"
-              onPress={handleSave}
-              loading={isSaving}
-              disabled={isSaving || isLoading}
-              style={styles.button}
-            >
-              Save
-            </Button>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+      {isEditMode && isEditing && can(PERMISSIONS.ROLE_DELETE) && (
+        <Button 
+          mode="outlined" 
+          onPress={handleDelete} 
+          textColor={theme.colors.error} 
+          style={{ marginTop: spacing.xl, borderColor: theme.colors.error }}
+        >
+          Delete Role
+        </Button>
+      )}
+    </FormLayout>
   );
 };
 

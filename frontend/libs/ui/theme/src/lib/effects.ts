@@ -1,5 +1,4 @@
 // frontend/libs/ui/theme/src/lib/layout.ts
-import { palette } from './palette';
 
 export const shadows = {
   // Maps to React Native Paper Elevation and Mantine Shadows

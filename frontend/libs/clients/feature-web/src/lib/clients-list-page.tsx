@@ -1,11 +1,19 @@
 // frontend/libs/users/feature-web/src/lib/users-list-page.tsx
-import { Title, Table, Button, Group, Drawer, ActionIcon, Badge, Text } from '@mantine/core';
+import { useState } from 'react';
+import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
+import { IconEdit, IconTrash } from '@tabler/icons-react';
 import { useClients, Client, CreateClientDto, UpdateClientDto } from '@rootstock/clients/clients-data-access';
 import { ClientForm, ClientFormMode } from './client-form';
-import { useState } from 'react';
-import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui/web';
+import { 
+  ConfirmModal, 
+  ConfirmDiscardModal, 
+  useDiscardWarning,
+  PageHeader,
+  DataTable,
+  FormDrawer,
+  DataTableColumn
+} from '@rootstock/ui/web';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -23,6 +31,8 @@ export function ClientsListPage() {
   const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateClientDto>>({});
   const [isFormDirty, setIsFormDirty] = useState(false);
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty);
+  
+  const [sortState, setSortState] = useState<{ accessor: string; direction: 'asc' | 'desc' }>({ accessor: 'name', direction: 'asc' });
 
   const handleCreate = () => {
     setMode('create');
@@ -90,20 +100,23 @@ export function ClientsListPage() {
     }
   };
 
-  const rows = clients.map((client) => (
-    <Table.Tr 
-      key={client._id} 
-      onClick={() => handleView(client)}
-      style={{ cursor: 'pointer' }}
-    >
-      <Table.Td>{client.recordId}</Table.Td>
-      <Table.Td>{client.name}</Table.Td>
-      <Table.Td>
+  const columns: DataTableColumn<Client>[] = [
+    { accessor: 'recordId', title: 'ID', sortable: true },
+    { accessor: 'name', title: 'Name', sortable: true },
+    {
+      accessor: 'isActive',
+      title: 'Status',
+      render: (client) => (
         <Badge color={client.isActive ? 'brand' : 'neutral'} variant="light">
           {client.isActive ? 'Active' : 'Inactive'}
         </Badge>
-      </Table.Td>
-      <Table.Td>
+      )
+    },
+    {
+      accessor: 'actions',
+      title: '',
+      align: 'right',
+      render: (client) => (
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.CLIENT_EDIT) && (
             <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(client, e)}>
@@ -116,47 +129,48 @@ export function ClientsListPage() {
             </ActionIcon>
           )}
         </Group>
-      </Table.Td>
-    </Table.Tr>
-  ));
+      )
+    }
+  ];
+
+  const sortedClients = clients ? [...clients].sort((a, b) => {
+    const { accessor, direction } = sortState;
+    const aValue = (a as any)[accessor] || '';
+    const bValue = (b as any)[accessor] || '';
+    
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    }
+    
+    if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+    return 0;
+  }) : undefined;
 
   return (
     <>
-      <Group justify="space-between" mb="lg">
-        <Title order={2}>Clients</Title>
-        {can(PERMISSIONS.CLIENT_CREATE) && (
-          <Button leftSection={<IconPlus size={iconSizes.sm} />} onClick={handleCreate}>
-            Add Client
-          </Button>
-        )}
-      </Group>
+      <PageHeader 
+        title="Clients"
+        actionLabel="Add Client"
+        onActionClick={can(PERMISSIONS.CLIENT_CREATE) ? handleCreate : undefined}
+      />
 
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>ID</Table.Th>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {rows.length > 0 ? rows : (
-            <Table.Tr>
-              <Table.Td colSpan={4}>
-                <Text ta="center" c="dimmed" py="xl">No clients found</Text>
-              </Table.Td>
-            </Table.Tr>
-          )}
-        </Table.Tbody>
-      </Table>
+      <DataTable 
+        data={sortedClients}
+        columns={columns}
+        isLoading={isLoading}
+        onRowClick={handleView}
+        noDataMessage="No clients found."
+        onSort={(accessor, direction) => setSortState({ accessor, direction })}
+        initialSort={sortState}
+      />
 
-      <Drawer
+      <FormDrawer
         opened={opened}
         onClose={handleClose}
         title={getDrawerTitle()}
-        position="right"
         size={layout.drawers.form}
+        isLoading={isCreating || isUpdating}
       >
         <ClientForm
           mode={mode}
@@ -169,7 +183,7 @@ export function ClientsListPage() {
           onValuesChange={setCreateFormDraft}
           onDirtyChange={setIsFormDirty}
         />
-      </Drawer>
+      </FormDrawer>
 
       <ConfirmDiscardModal {...modalProps} />
 

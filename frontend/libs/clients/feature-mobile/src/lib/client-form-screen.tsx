@@ -1,9 +1,8 @@
-// frontend/libs/clients/feature-mobile/src/lib/client-form-screen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { Appbar, TextInput, Button, Switch, Text, useTheme, HelperText } from 'react-native-paper';
+import { View, StyleSheet, Alert } from 'react-native';
+import { TextInput, Button, Switch, Text, useTheme, HelperText } from 'react-native-paper';
 import { useClients } from '@rootstock/clients/clients-data-access';
-import { useMobileDiscardWarning, DetailRow } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, FormLayout, FormMode, confirmDiscard } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
@@ -25,6 +24,9 @@ export const ClientFormScreen = ({ navigation, route }: any) => {
   const [errors, setErrors] = useState<{name?: string}>({});
   
   const [isEditMode, setIsEditMode] = useState(!isEditing);
+
+  const mode: FormMode = isEditing ? (isEditMode ? 'edit' : 'view') : 'create';
+  const isView = mode === 'view';
 
   useEffect(() => {
     if (isEditing) {
@@ -122,64 +124,72 @@ export const ClientFormScreen = ({ navigation, route }: any) => {
   const isSaving = isCreating || isUpdating;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Appbar.Header>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={isEditing ? (isEditMode ? 'Edit Client' : 'Client Details') : 'New Client'} />
-        {!isEditMode && canEdit && (
-          <Appbar.Action icon="pencil" onPress={() => setIsEditMode(true)} />
-        )}
-        {isEditMode && isEditing && (
-          <Appbar.Action icon="close" onPress={() => setIsEditMode(false)} />
-        )}
-        {isEditMode && isEditing && can(PERMISSIONS.CLIENT_DELETE) && (
-          <Appbar.Action icon="delete" onPress={handleDelete} color={theme.colors.error} />
-        )}
-      </Appbar.Header>
+    <FormLayout
+      mode={mode}
+      title={isEditing ? (isEditMode ? 'Edit Client' : 'Client Details') : 'New Client'}
+      onCancel={() => {
+        if (isEditMode && isEditing) {
+          const cancelEdit = () => {
+            setIsEditMode(false);
+            // Reset form
+            setIsLoading(true);
+            getClient(clientId)
+              .then(client => {
+                setName(client.name);
+                setIsActive(client.isActive);
+                setIsLoading(false);
+                setIsDirty(false);
+              });
+          };
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-        style={styles.container}
-      >
-        <ScrollView contentContainerStyle={styles.content}>
-          {isEditMode ? (
-            <>
-              <TextInput
-                mode="outlined"
-                label="Name"
-                value={name}
-                onChangeText={handleNameChange}
-                error={!!errors.name}
-                style={styles.input}
-              />
-              {errors.name && <HelperText type="error">{errors.name}</HelperText>}
+          if (isDirty) {
+            confirmDiscard(cancelEdit);
+          } else {
+            cancelEdit();
+          }
+        } else {
+          navigation.goBack();
+        }
+      }}
+      onSubmit={handleSave}
+      onEdit={() => setIsEditMode(true)}
+      canEdit={canEdit}
+      isLoading={isLoading || isSaving || isSubmitting}
+      isDirty={isDirty}
+    >
+      <TextInput
+        mode="outlined"
+        label="Name"
+        value={name}
+        onChangeText={handleNameChange}
+        error={!!errors.name}
+        editable={!isView}
+        style={styles.input}
+      />
+      {!isView && errors.name && <HelperText type="error">{errors.name}</HelperText>}
 
-              {isEditing && (
-                <View style={styles.switchContainer}>
-                  <Text variant="bodyLarge">Active</Text>
-                  <Switch value={isActive} onValueChange={handleActiveChange} />
-                </View>
-              )}
+      {isEditing && (
+        <View style={styles.switchContainer}>
+          <Text variant="bodyLarge">Active</Text>
+          <Switch 
+            value={isActive} 
+            onValueChange={handleActiveChange} 
+            disabled={isView}
+          />
+        </View>
+      )}
 
-              <Button
-                mode="contained"
-                onPress={handleSave}
-                loading={isSaving}
-                disabled={isSaving || isLoading}
-                style={styles.button}
-              >
-                Save
-              </Button>
-            </>
-          ) : (
-            <>
-              <DetailRow label="Name" value={name} />
-              <DetailRow label="Status" value={isActive ? 'Active' : 'Inactive'} />
-            </>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+      {isEditMode && isEditing && can(PERMISSIONS.CLIENT_DELETE) && (
+        <Button 
+          mode="outlined" 
+          onPress={handleDelete} 
+          textColor={theme.colors.error} 
+          style={{ marginTop: spacing.xl, borderColor: theme.colors.error }}
+        >
+          Delete Client
+        </Button>
+      )}
+    </FormLayout>
   );
 };
 

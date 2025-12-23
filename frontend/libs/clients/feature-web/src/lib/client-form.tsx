@@ -1,10 +1,11 @@
 // frontend/libs/clients/feature-web/src/lib/client-form.tsx
-import { TextInput, Button, Group, Checkbox, Stack, Text } from '@mantine/core';
+import { TextInput, Checkbox, Text } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { CreateClientDto, UpdateClientDto, Client } from '@rootstock/clients/clients-data-access';
 import { useEffect } from 'react';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/auth/auth-data-access';
+import { FormLayout } from '@rootstock/ui/web';
 
 export type ClientFormMode = 'create' | 'edit' | 'view';
 
@@ -87,58 +88,34 @@ export function ClientForm({
     notify.validation();
   };
 
-  if (isViewing && client) {
-    return (
-      <Stack>
-        <div>
-          <Text size="sm" c="dimmed">Record ID</Text>
-          <Text>{client.recordId}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Name</Text>
-          <Text>{client.name}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Status</Text>
-          <Text>{client.isActive ? 'Active' : 'Inactive'}</Text>
-        </div>
-        
-        <Group justify="flex-end" mt="xl">
-          <Button variant="default" onClick={onCancel}>Close</Button>
-          {can(PERMISSIONS.CLIENT_EDIT) && (
-            <Button onClick={onEdit}>Edit</Button>
-          )}
-        </Group>
-      </Stack>
-    );
-  }
+  const isView = mode === 'view';
 
   return (
-    <form onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}>
+    <FormLayout 
+      mode={mode} 
+      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
+      isLoading={isLoading}
+      onCancel={onCancel}
+      onEdit={onEdit}
+      canEdit={can(PERMISSIONS.CLIENT_EDIT)}
+      submitLabel={isEditing ? 'Update Client' : 'Create Client'}
+    >
       <TextInput
-        withAsterisk
+        withAsterisk={!isView}
         label="Name"
         placeholder="Client Name"
-        mb="md"
+        readOnly={isView}
         {...form.getInputProps('name')}
       />
 
-      {isEditing && (
+      {mode !== 'create' && (
         <Checkbox
           label="Active"
-          mb="md"
+          disabled={isView}
+          checked={form.values.isActive}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
         />
       )}
-
-      <Group justify="flex-end" mt="xl">
-        <Button variant="default" onClick={onCancel}>Cancel</Button>
-        {can(isEditing ? PERMISSIONS.CLIENT_EDIT : PERMISSIONS.CLIENT_CREATE) && (
-          <Button type="submit" loading={isLoading}>
-            {isEditing ? 'Update Client' : 'Create Client'}
-          </Button>
-        )}
-      </Group>
-    </form>
+    </FormLayout>
   );
 }

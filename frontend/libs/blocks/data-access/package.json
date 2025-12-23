@@ -1,5 +1,5 @@
 {
-  "name": "@rootstock/orchards/feature-mobile",
+  "name": "@rootstock/blocks/blocks-data-access",
   "version": "0.0.1",
   "main": "./index.js",
   "types": "./index.d.ts",

@@ -1,9 +1,10 @@
-import { TextInput, Button, Group, Switch, Stack, Text } from '@mantine/core';
+import { TextInput, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useEffect } from 'react';
 import { Variety, CreateVarietyDto, UpdateVarietyDto } from '@rootstock/master-data/varieties/varieties-data-access';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { FormLayout } from '@rootstock/ui/web';
 
 export type VarietyFormMode = 'create' | 'edit' | 'view';
 
@@ -52,65 +53,33 @@ export function VarietyForm({ mode, initialValues, onSubmit, onCancel, onEdit, i
     }
   };
 
-  if (mode === 'view' && initialValues) {
-    return (
-      <Stack>
-        <div>
-          <Text size="sm" c="dimmed">Record ID</Text>
-          <Text>{initialValues.recordId}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Name</Text>
-          <Text>{initialValues.name}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Status</Text>
-          <Text>{initialValues.isActive ? 'Active' : 'Inactive'}</Text>
-        </div>
-        
-        <Group justify="flex-end" mt="xl">
-          <Button variant="default" onClick={onCancel}>Close</Button>
-          {can(PERMISSIONS.VARIETY_EDIT) && (
-            <Button onClick={onEdit}>Edit</Button>
-          )}
-        </Group>
-      </Stack>
-    );
-  }
-
-  const isReadOnly = mode === 'view';
-
   return (
-    <form onSubmit={form.onSubmit(handleSubmit)}>
-      <Stack>
-        <TextInput
-          label="Name"
-          placeholder="Variety Name"
-          required
-          readOnly={isReadOnly}
-          {...form.getInputProps('name')}
+    <FormLayout
+      mode={mode}
+      isDirty={form.isDirty()}
+      isLoading={isLoading}
+      onCancel={onCancel}
+      onSubmit={form.onSubmit(handleSubmit)}
+      onEdit={onEdit}
+      canEdit={can(PERMISSIONS.VARIETY_EDIT)}
+    >
+      <TextInput
+        label="Name"
+        placeholder="Variety Name"
+        required={mode !== 'view'}
+        readOnly={mode === 'view'}
+        {...form.getInputProps('name')}
+      />
+
+      {mode !== 'create' && (
+        <Switch
+          label="Active"
+          readOnly={mode === 'view'}
+          disabled={mode === 'view'}
+          {...form.getInputProps('isActive', { type: 'checkbox' })}
+          mt="md"
         />
-
-        {mode !== 'create' && (
-          <Switch
-            label="Active"
-            readOnly={isReadOnly}
-            disabled={isReadOnly}
-            {...form.getInputProps('isActive', { type: 'checkbox' })}
-          />
-        )}
-
-        {!isReadOnly && (
-          <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={isLoading}>
-              {mode === 'create' ? 'Create Variety' : 'Update Variety'}
-            </Button>
-          </Group>
-        )}
-      </Stack>
-    </form>
+      )}
+    </FormLayout>
   );
 }

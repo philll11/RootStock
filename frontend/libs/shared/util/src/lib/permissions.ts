@@ -20,6 +20,13 @@ export const PERMISSIONS = {
   ORCHARD_DELETE: 'Orchard:Delete',
   ORCHARD_MANAGE_INACTIVE: 'Orchard:ManageInactive',
 
+  // --- Block Management ---
+  BLOCK_CREATE: 'Block:Create',
+  BLOCK_VIEW: 'Block:View',
+  BLOCK_EDIT: 'Block:Edit',
+  BLOCK_DELETE: 'Block:Delete',
+  BLOCK_MANAGE_INACTIVE: 'Block:ManageInactive',
+
   // --- Role Management ---
   ROLE_CREATE: 'Role:Create',
   ROLE_VIEW: 'Role:View',

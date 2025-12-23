@@ -36,6 +36,13 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     type: 'link',
   },
   {
+    label: 'Blocks',
+    path: '/blocks',
+    icon: IconLeaf,
+    permission: PERMISSIONS.BLOCK_VIEW,
+    type: 'link',
+  },
+  {
     label: 'Users',
     path: '/users',
     icon: IconUsers,

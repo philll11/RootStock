@@ -12,6 +12,7 @@ import { DashboardPage } from './pages/dashboard-page';
 import { UsersListPage, UserProfilePage } from '@rootstock/users/users-feature-web';
 import { ClientsListPage } from '@rootstock/clients/clients-feature-web';
 import { OrchardsListPage } from '@rootstock/orchards/orchards-feature-web';
+import { BlocksListPage } from '@rootstock/blocks/blocks-feature-web';
 import { RolesListPage } from '@rootstock/roles/roles-feature-web';
 import { VarietiesListPage } from '@rootstock/master-data/varieties/varieties-feature-web';
 
@@ -106,6 +107,14 @@ export function App() {
               element={
                 <ProtectedRoute permission={PERMISSIONS.ORCHARD_VIEW}>
                   <OrchardsListPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="orchards/:orchardId/blocks" 
+              element={
+                <ProtectedRoute permission={PERMISSIONS.BLOCK_VIEW}>
+                  <BlocksListPage />
                 </ProtectedRoute>
               } 
             />

@@ -1,11 +1,12 @@
 // frontend/libs/roles/feature-web/src/lib/role-form.tsx
-import { TextInput, Select, Button, Group, Text, Stack, Checkbox, SimpleGrid, Fieldset, Switch } from '@mantine/core';
+import { TextInput, Select, Button, Text, Checkbox, SimpleGrid, Fieldset, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { Role, CreateRoleDto, UpdateRoleDto, VisibilityScope, PERMISSIONS } from '@rootstock/roles/roles-data-access';
 import { useEffect, useMemo } from 'react';
 import { notify, PERMISSIONS as SHARED_PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { palette } from '@rootstock/ui/theme';
+import { FormLayout } from '@rootstock/ui/web';
 
 export type RoleFormMode = 'create' | 'edit' | 'view';
 
@@ -88,6 +89,9 @@ export function RoleForm({
     if (isEditing && role) {
       submissionData.__v = role.__v;
     }
+    if (isCreating) {
+      delete submissionData.isActive;
+    }
     onSubmit(submissionData);
   };
 
@@ -117,85 +121,55 @@ export function RoleForm({
     return groups;
   }, []);
 
-  if (isViewing && role) {
-    return (
-      <Stack>
-        <div>
-          <Text size="sm" c="dimmed">Record ID</Text>
-          <Text>{role.recordId}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Name</Text>
-          <Text>{role.name}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Description</Text>
-          <Text>{role.description || '-'}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Visibility Scope</Text>
-          <Text>{role.visibilityScope}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Status</Text>
-          <Text>{role.isActive ? 'Active' : 'Inactive'}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Permissions</Text>
-          <SimpleGrid cols={2} spacing="xs">
-             {role.permissions.map(p => <Text key={p} size="xs">{p}</Text>)}
-          </SimpleGrid>
-        </div>
-
-        <Group justify="flex-end" mt="xl">
-          <Button variant="default" onClick={onCancel}>Close</Button>
-          {can(SHARED_PERMISSIONS.ROLE_EDIT) && (
-            <Button onClick={onEdit}>Edit</Button>
-          )}
-        </Group>
-      </Stack>
-    );
-  }
+  const isView = mode === 'view';
 
   return (
-    <form onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}>
+    <FormLayout 
+      mode={mode} 
+      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
+      isLoading={isLoading}
+      onCancel={onCancel}
+      onEdit={onEdit}
+      canEdit={can(SHARED_PERMISSIONS.ROLE_EDIT)}
+      submitLabel={isEditing ? 'Update Role' : 'Create Role'}
+    >
       <TextInput
-        withAsterisk
+        withAsterisk={!isView}
         label="Name"
         placeholder="Role Name"
-        mb="md"
+        readOnly={isView}
         {...form.getInputProps('name')}
       />
       <TextInput
         label="Description"
         placeholder="Role Description"
-        mb="md"
+        readOnly={isView}
         {...form.getInputProps('description')}
       />
 
       <Select
-        withAsterisk
+        withAsterisk={!isView}
         label="Visibility Scope"
         data={[
           { value: VisibilityScope.Global, label: 'Global' },
           { value: VisibilityScope.Subsidiary, label: 'Subsidiary' },
           { value: VisibilityScope.Client, label: 'Client' },
         ]}
-        mb="md"
+        readOnly={isView}
         {...form.getInputProps('visibilityScope')}
       />
 
-      {isEditing && (
+      {mode !== 'create' && (
         <Switch
           label="Active"
-          mb="md"
+          disabled={isView}
+          checked={form.values.isActive}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
         />
       )}
 
       <Text fw={500} mb="xs">Permissions</Text>
-      <Stack gap="md">
-        {Object.entries(groupedPermissions).map(([resource, perms]) => (
+      {Object.entries(groupedPermissions).map(([resource, perms]) => (
           <Fieldset key={resource} legend={resource}>
             <SimpleGrid cols={2}>
               {perms.map((perm) => (
@@ -203,6 +177,7 @@ export function RoleForm({
                   key={perm}
                   label={perm.split(':')[1]} // Show only the action part
                   value={perm}
+                  disabled={isView}
                   checked={form.values.permissions.includes(perm)}
                   onChange={(event) => {
                     const checked = event.currentTarget.checked;
@@ -218,21 +193,12 @@ export function RoleForm({
             </SimpleGrid>
           </Fieldset>
         ))}
-      </Stack>
 
-      <Group justify="flex-end" mt="xl">
-        {isCreating && (
-          <Button variant="subtle" color={palette.actions.delete} onClick={handleClear} mr="auto">
-            Clear
+      {isCreating && (
+          <Button variant="subtle" color={palette.actions.delete} onClick={handleClear} style={{ alignSelf: 'flex-start' }}>
+            Clear Form
           </Button>
-        )}
-        <Button variant="default" onClick={onCancel}>Cancel</Button>
-        {can(isEditing ? SHARED_PERMISSIONS.ROLE_EDIT : SHARED_PERMISSIONS.ROLE_CREATE) && (
-          <Button type="submit" loading={isLoading}>
-            {isEditing ? 'Update Role' : 'Create Role'}
-          </Button>
-        )}
-      </Group>
-    </form>
+      )}
+    </FormLayout>
   );
 }

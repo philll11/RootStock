@@ -1,9 +1,17 @@
 import { useState } from 'react';
-import { Table, Group, Button, Title, ActionIcon, Drawer, Badge, Text } from '@mantine/core';
+import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react';
-import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui/web';
-import { palette, iconSizes, layout } from '@rootstock/ui/theme'; // NEW IMPORTS
+import { IconEdit, IconTrash } from '@tabler/icons-react';
+import { 
+  ConfirmModal, 
+  ConfirmDiscardModal, 
+  useDiscardWarning,
+  PageHeader,
+  DataTable,
+  FormDrawer,
+  DataTableColumn
+} from '@rootstock/ui/web';
+import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 import { useOrchards, Orchard, CreateOrchardDto, UpdateOrchardDto } from '@rootstock/orchards/orchards-data-access';
 import { OrchardForm } from './orchard-form';
 import { usePermission } from '@rootstock/auth/auth-data-access';
@@ -23,6 +31,7 @@ export function OrchardsListPage() {
   const { can } = usePermission();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
+  const [sortState, setSortState] = useState<{ accessor: string; direction: 'asc' | 'desc' }>({ accessor: 'name', direction: 'asc' });
   
   const [selectedOrchard, setSelectedOrchard] = useState<Orchard | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
@@ -93,89 +102,91 @@ export function OrchardsListPage() {
     }
   };
 
-  const rows = orchards?.map((orchard) => (
-    <Table.Tr 
-      key={orchard._id}
-      onClick={() => handleView(orchard)}
-      style={{ cursor: 'pointer' }}
-    >
-      <Table.Td>{orchard.recordId}</Table.Td>
-      <Table.Td>{orchard.name}</Table.Td>
-      <Table.Td>{typeof orchard.clientId === 'object' ? orchard.clientId.name : 'Unknown Client'}</Table.Td>
-      <Table.Td>
+  const columns: DataTableColumn<Orchard>[] = [
+    { accessor: 'recordId', title: 'ID', sortable: true },
+    { accessor: 'name', title: 'Name', sortable: true },
+    { 
+      accessor: 'clientId', 
+      title: 'Client',
+      sortable: true,
+      render: (orchard) => typeof orchard.clientId === 'object' ? orchard.clientId.name : 'Unknown Client'
+    },
+    {
+      accessor: 'isActive',
+      title: 'Status',
+      render: (orchard) => (
         <Badge color={orchard.isActive ? 'brand' : 'neutral'} variant="light">
           {orchard.isActive ? 'Active' : 'Inactive'}
         </Badge>
-      </Table.Td>
-      <Table.Td>
+      )
+    },
+    {
+      accessor: 'actions',
+      title: '',
+      align: 'right',
+      render: (orchard) => (
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.ORCHARD_EDIT) && (
-            <ActionIcon 
-              variant="subtle" 
-              color={palette.actions.edit} 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEdit(orchard);
-              }}
-            >
+            <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(orchard, e)}>
               <IconEdit size={iconSizes.md} />
             </ActionIcon>
           )}
           {can(PERMISSIONS.ORCHARD_DELETE) && (
-            <ActionIcon 
-              variant="subtle" 
-              color={palette.actions.delete} 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteClick(orchard);
-              }}
-            >
+            <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDeleteClick(orchard, e)}>
               <IconTrash size={iconSizes.md} />
             </ActionIcon>
           )}
         </Group>
-      </Table.Td>
-    </Table.Tr>
-  ));
+      )
+    }
+  ];
+
+  const sortedOrchards = orchards ? [...orchards].sort((a, b) => {
+    const { accessor, direction } = sortState;
+    let aValue = (a as any)[accessor];
+    let bValue = (b as any)[accessor];
+    
+    if (accessor === 'clientId') {
+        aValue = typeof a.clientId === 'object' ? a.clientId.name : '';
+        bValue = typeof b.clientId === 'object' ? b.clientId.name : '';
+    }
+    
+    aValue = aValue || '';
+    bValue = bValue || '';
+
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    }
+    
+    if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+    return 0;
+  }) : undefined;
 
   return (
     <>
-      <Group justify="space-between" mb="lg">
-        <Title order={2}>Orchards</Title>
-        {can(PERMISSIONS.ORCHARD_CREATE) && (
-          <Button leftSection={<IconPlus size={iconSizes.sm} />} onClick={handleCreate}>
-            Add Orchard
-          </Button>
-        )}
-      </Group>
+      <PageHeader 
+        title="Orchards"
+        actionLabel="Add Orchard"
+        onActionClick={can(PERMISSIONS.ORCHARD_CREATE) ? handleCreate : undefined}
+      />
 
-      <Table highlightOnHover>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>ID</Table.Th>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>Client</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {rows && rows.length > 0 ? rows : (
-            <Table.Tr>
-              <Table.Td colSpan={5}>
-                <Text ta="center" c="dimmed" py="xl">No orchards found.</Text>
-              </Table.Td>
-            </Table.Tr>
-          )}
-        </Table.Tbody>
-      </Table>
+      <DataTable 
+        data={sortedOrchards}
+        columns={columns}
+        isLoading={isLoading}
+        onRowClick={handleView}
+        noDataMessage="No orchards found."
+        onSort={(accessor, direction) => setSortState({ accessor, direction })}
+        initialSort={sortState}
+      />
 
-      <Drawer
+      <FormDrawer
         opened={drawerOpened}
         onClose={handleClose}
         title={formMode === 'create' ? 'Create Orchard' : formMode === 'edit' ? 'Edit Orchard' : 'Orchard Details'}
-        position="right"
         size={layout.drawers.form}
+        isLoading={isCreating || isUpdating}
       >
         <OrchardForm 
           orchard={selectedOrchard} 
@@ -188,7 +199,7 @@ export function OrchardsListPage() {
           initialValues={createFormDraft}
           onValuesChange={(values) => setCreateFormDraft(values as CreateOrchardDto)}
         />
-      </Drawer>
+      </FormDrawer>
 
       <ConfirmDiscardModal {...modalProps} />
 

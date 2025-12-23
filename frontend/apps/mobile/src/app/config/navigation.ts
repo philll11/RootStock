@@ -27,6 +27,12 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     permission: PERMISSIONS.ORCHARD_VIEW,
   },
   {
+    label: 'Blocks',
+    screen: 'BlocksList',
+    icon: 'sprout',
+    permission: PERMISSIONS.BLOCK_VIEW,
+  },
+  {
     label: 'Users',
     screen: 'UsersList',
     icon: 'account-group',

@@ -1,11 +1,18 @@
-// frontend/libs/master-data/varieties/feature-web/src/lib/varieties-list-page.tsx
-import { Title, Table, Button, Group, Drawer, ActionIcon, Badge, Text } from '@mantine/core';
+import { useState } from 'react';
+import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
+import { IconEdit, IconTrash } from '@tabler/icons-react';
 import { useVarieties, Variety } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm, VarietyFormMode } from './variety-form';
-import { useState } from 'react';
-import { ConfirmModal, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui/web';
+import { 
+  ConfirmModal, 
+  ConfirmDiscardModal, 
+  useDiscardWarning,
+  PageHeader,
+  DataTable,
+  FormDrawer,
+  DataTableColumn
+} from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
@@ -23,6 +30,8 @@ export function VarietiesListPage() {
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty);
+  
+  const [sortState, setSortState] = useState<{ accessor: string; direction: 'asc' | 'desc' }>({ accessor: 'name', direction: 'asc' });
 
   const handleCreate = () => {
     setMode('create');
@@ -89,20 +98,23 @@ export function VarietiesListPage() {
     }
   };
 
-  const rows = varieties?.map((variety) => (
-    <Table.Tr 
-      key={variety._id}
-      onClick={() => handleView(variety)}
-      style={{ cursor: 'pointer' }}
-    >
-      <Table.Td>{variety.name}</Table.Td>
-      <Table.Td>{variety.recordId}</Table.Td>
-      <Table.Td>
+  const columns: DataTableColumn<Variety>[] = [
+    { accessor: 'name', title: 'Name', sortable: true },
+    { accessor: 'recordId', title: 'Record ID', sortable: true },
+    {
+      accessor: 'isActive',
+      title: 'Status',
+      render: (variety) => (
         <Badge color={variety.isActive ? 'brand' : 'neutral'} variant="light">
           {variety.isActive ? 'Active' : 'Inactive'}
         </Badge>
-      </Table.Td>
-      <Table.Td>
+      )
+    },
+    {
+      accessor: 'actions',
+      title: '',
+      align: 'right',
+      render: (variety) => (
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.VARIETY_EDIT) && (
             <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(variety, e)}>
@@ -115,47 +127,48 @@ export function VarietiesListPage() {
             </ActionIcon>
           )}
         </Group>
-      </Table.Td>
-    </Table.Tr>
-  ));
+      )
+    }
+  ];
+
+  const sortedVarieties = varieties ? [...varieties].sort((a, b) => {
+    const { accessor, direction } = sortState;
+    const aValue = (a as any)[accessor] || '';
+    const bValue = (b as any)[accessor] || '';
+    
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    }
+    
+    if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+    return 0;
+  }) : undefined;
 
   return (
     <>
-      <Group justify="space-between" mb="lg">
-        <Title order={2}>Varieties</Title>
-        {can(PERMISSIONS.VARIETY_CREATE) && (
-          <Button leftSection={<IconPlus size={iconSizes.sm} />} onClick={handleCreate}>
-            Create Variety
-          </Button>
-        )}
-      </Group>
+      <PageHeader 
+        title="Varieties"
+        actionLabel="Add Variety"
+        onActionClick={can(PERMISSIONS.VARIETY_CREATE) ? handleCreate : undefined}
+      />
 
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>ID</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {rows && rows.length > 0 ? rows : (
-            <Table.Tr>
-              <Table.Td colSpan={4}>
-                <Text ta="center" c="dimmed" py="xl">No varieties found.</Text>
-              </Table.Td>
-            </Table.Tr>
-          )}
-        </Table.Tbody>
-      </Table>
+      <DataTable 
+        data={sortedVarieties}
+        columns={columns}
+        isLoading={isLoading}
+        onRowClick={handleView}
+        noDataMessage="No varieties found."
+        onSort={(accessor, direction) => setSortState({ accessor, direction })}
+        initialSort={sortState}
+      />
 
-      <Drawer
+      <FormDrawer
         opened={opened}
         onClose={handleClose}
         title={getDrawerTitle()}
-        position="right"
         size={layout.drawers.form}
+        isLoading={createVarietyMutation.isPending || updateVarietyMutation.isPending}
       >
         <VarietyForm
           mode={mode}
@@ -166,19 +179,19 @@ export function VarietiesListPage() {
           isLoading={createVarietyMutation.isPending || updateVarietyMutation.isPending}
           onDirtyChange={setIsFormDirty}
         />
-      </Drawer>
+      </FormDrawer>
+
+      <ConfirmDiscardModal {...modalProps} />
 
       <ConfirmModal
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
         onConfirm={handleConfirmDelete}
         title="Delete Variety"
-        message={`Are you sure you want to delete variety "${varietyToDelete?.name}"?`}
+        message={`Are you sure you want to delete variety "${varietyToDelete?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
         confirmColor={palette.actions.delete}
       />
-      
-      <ConfirmDiscardModal {...modalProps} />
     </>
   );
 }

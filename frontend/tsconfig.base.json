@@ -86,6 +86,15 @@
       ],
       "@rootstock/master-data/varieties/varieties-feature-mobile": [
         "libs/master-data/varieties/feature-mobile/src/index.ts"
+      ],
+      "@rootstock/blocks/blocks-data-access": [
+        "libs/blocks/data-access/src/index.ts"
+      ],
+      "@rootstock/blocks/blocks-feature-web": [
+        "libs/blocks/feature-web/src/index.ts"
+      ],
+      "@rootstock/blocks/blocks-feature-mobile": [
+        "libs/blocks/feature-mobile/src/index.ts"
       ]
     }
   },

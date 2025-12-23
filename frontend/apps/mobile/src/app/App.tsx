@@ -26,6 +26,7 @@ import { OrchardsListScreen, OrchardFormScreen } from '@rootstock/orchards/orcha
 import { UsersListScreen, UserFormScreen } from '@rootstock/users/users-feature-mobile';
 import { RolesListScreen, RoleFormScreen } from '@rootstock/roles/roles-feature-mobile';
 import { VarietiesListScreen, VarietyFormScreen } from '@rootstock/master-data/varieties/varieties-feature-mobile';
+import { BlocksListScreen, BlockFormScreen } from '@rootstock/blocks/blocks-feature-mobile';
 
 // Components
 import { AppDrawer } from './components/AppDrawer';
@@ -92,6 +93,14 @@ const VarietiesListScreenWrapper = (props: any) => {
   );
 };
 
+const BlocksListScreenWrapper = (props: any) => {
+  return (
+    <ProtectedScreen permission={PERMISSIONS.BLOCK_VIEW}>
+      <BlocksListScreen {...props} />
+    </ProtectedScreen>
+  );
+};
+
 function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -121,6 +130,9 @@ function AppNavigator() {
           
           <Stack.Screen name="VarietiesList" component={VarietiesListScreenWrapper} />
           <Stack.Screen name="VarietyForm" component={VarietyFormScreen} />
+          
+          <Stack.Screen name="BlocksList" component={BlocksListScreenWrapper} />
+          <Stack.Screen name="BlockForm" component={BlockFormScreen} />
           
           <Stack.Screen name="PermissionDenied" component={PermissionDeniedScreen} />
         </>

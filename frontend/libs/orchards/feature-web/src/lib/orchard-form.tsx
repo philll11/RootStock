@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useForm } from '@mantine/form';
-import { TextInput, Button, Group, Stack, LoadingOverlay, Checkbox, Select, MultiSelect, Text, Alert, Box } from '@mantine/core';
+import { TextInput, Checkbox, Select, MultiSelect, Text, Alert, Box } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { useClients } from '@rootstock/clients/clients-data-access';
 import { useUsers } from '@rootstock/users/users-data-access';
@@ -8,6 +8,7 @@ import { Orchard, CreateOrchardDto, UpdateOrchardDto } from '@rootstock/orchards
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { iconSizes } from '@rootstock/ui/theme';
+import { FormLayout } from '@rootstock/ui/web';
 
 interface OrchardFormProps {
   orchard?: Orchard | null;
@@ -105,99 +106,67 @@ export function OrchardForm({
     notify.validation();
   };
 
-  if (isViewing && orchard) {
-    return (
-      <Stack>
-        <div>
-          <Text size="sm" c="dimmed">Record ID</Text>
-          <Text>{orchard.recordId}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Name</Text>
-          <Text>{orchard.name}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Client</Text>
-          <Text>{typeof orchard.clientId === 'object' ? orchard.clientId.name : 'Unknown'}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Assigned Users</Text>
-          <Text>
-            {orchard.userIds?.map(u => typeof u === 'object' ? u.name : '').filter(Boolean).join(', ') || 'None'}
-          </Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Status</Text>
-          <Text>{orchard.isActive ? 'Active' : 'Inactive'}</Text>
-        </div>
-        <Group justify="flex-end" mt="md">
-          <Button variant="default" onClick={onCancel}>Close</Button>
-          {can(PERMISSIONS.ORCHARD_EDIT) && (
-            <Button onClick={onEdit}>Edit</Button>
-          )}
-        </Group>
-      </Stack>
-    );
-  }
-
   return (
-    <form onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}>
-      <Box pos="relative">
-        <LoadingOverlay visible={isLoading || isLoadingClients || isLoadingUsers} />
-        
-        <TextInput
-          label="Orchard Name"
-          placeholder="Enter orchard name"
-          withAsterisk
-          mb="md"
-          {...form.getInputProps('name')}
-        />
+    <FormLayout
+      mode={mode}
+      isDirty={form.isDirty()}
+      isLoading={isLoading || isLoadingClients || isLoadingUsers}
+      onCancel={onCancel}
+      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
+      onEdit={onEdit}
+      canEdit={can(PERMISSIONS.ORCHARD_EDIT)}
+    >
+      <TextInput
+        label="Orchard Name"
+        placeholder="Enter orchard name"
+        withAsterisk={!isViewing}
+        readOnly={isViewing}
+        {...form.getInputProps('name')}
+      />
 
+      <Box mt="md">
         <Select
           label="Client"
           placeholder="Select client"
           data={clients?.map(c => ({ value: c._id, label: c.name })) || []}
-          withAsterisk
+          withAsterisk={!isViewing}
           disabled={isEditing}
-          mb={isEditing ? 0 : 'md'}
+          readOnly={isViewing}
           {...form.getInputProps('clientId')}
         />
         {isEditing && (
-          <Text size="xs" c="dimmed" mt={4} mb="md">
+          <Text size="xs" c="dimmed" mt={4}>
             Client cannot be changed after creation.
           </Text>
         )}
+      </Box>
 
+      <Box mt="md">
         <MultiSelect
           label="Assign Users"
           placeholder="Select users"
           data={users?.map(u => ({ value: u._id, label: `${u.firstName} ${u.lastName}` })) || []}
           searchable
-          mb="md"
+          readOnly={isViewing}
           {...form.getInputProps('userIds')}
         />
         
-        <Alert icon={<IconInfoCircle size={iconSizes.md} />} title="Smart Assignment" color="blue" variant="light" mb="md">
-          Assigning users to this orchard will automatically grant them access to the parent Client.
-        </Alert>
-
-        {isEditing && (
-          <Checkbox
-            label="Active"
-            mb="md"
-            {...form.getInputProps('isActive', { type: 'checkbox' })}
-          />
+        {!isViewing && (
+          <Alert icon={<IconInfoCircle size={iconSizes.md} />} title="Smart Assignment" color="blue" variant="light" mt="sm">
+            Assigning users to this orchard will automatically grant them access to the parent Client.
+          </Alert>
         )}
-
-        <Group justify="flex-end" mt="xl">
-          <Button variant="default" onClick={onCancel}>Cancel</Button>
-          {can(isEditing ? PERMISSIONS.ORCHARD_EDIT : PERMISSIONS.ORCHARD_CREATE) && (
-            <Button type="submit" loading={isLoading}>
-              {isCreating ? 'Create Orchard' : 'Update Orchard'}
-            </Button>
-          )}
-        </Group>
       </Box>
-    </form>
+
+      {!isCreating && (
+        <Checkbox
+          label="Active"
+          mt="md"
+          readOnly={isViewing}
+          disabled={isViewing}
+          {...form.getInputProps('isActive', { type: 'checkbox' })}
+        />
+      )}
+    </FormLayout>
   );
 }

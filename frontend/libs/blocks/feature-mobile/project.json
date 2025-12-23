@@ -1,0 +1,9 @@
+{
+  "name": "blocks-feature-mobile",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/blocks/feature-mobile/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project feature-mobile --web",
+  "targets": {}
+}

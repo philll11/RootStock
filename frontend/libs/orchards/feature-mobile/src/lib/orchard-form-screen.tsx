@@ -1,11 +1,11 @@
 // frontend/libs/orchards/feature-mobile/src/lib/orchard-form-screen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
-import { Appbar, TextInput, Button, Switch, Text, useTheme, HelperText, Portal, Modal, List, Searchbar, Checkbox } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Alert, TouchableOpacity, FlatList } from 'react-native';
+import { TextInput, Button, Switch, Text, useTheme, HelperText, Portal, Modal, List, Searchbar, Checkbox } from 'react-native-paper';
 import { useOrchards, CreateOrchardDto } from '@rootstock/orchards/orchards-data-access';
 import { useClients } from '@rootstock/clients/clients-data-access';
 import { useUsers } from '@rootstock/users/users-data-access';
-import { useMobileDiscardWarning, DetailRow } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, FormLayout, FormMode, confirmDiscard } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
@@ -37,6 +37,9 @@ export function OrchardFormScreen({ navigation, route }: any) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [isEditMode, setIsEditMode] = useState(!isEditing);
+
+  const mode: FormMode = isEditing ? (isEditMode ? 'edit' : 'view') : 'create';
+  const isView = mode === 'view';
 
   useEffect(() => {
     if (isEditing) {
@@ -138,7 +141,7 @@ export function OrchardFormScreen({ navigation, route }: any) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
 
     try {
@@ -179,127 +182,99 @@ export function OrchardFormScreen({ navigation, route }: any) {
   ) || [];
   
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Appbar.Header>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={isEditing ? (isEditMode ? 'Edit Orchard' : 'Orchard Details') : 'New Orchard'} />
-        {!isEditMode && canEdit && (
-          <Appbar.Action icon="pencil" onPress={() => setIsEditMode(true)} />
-        )}
-        {isEditMode && isEditing && (
-          <Appbar.Action icon="close" onPress={() => {
-             setIsEditMode(false);
-             setIsDirty(false);
-             getOrchard(orchardId).then(o => {
-                setName(o.name);
-                setIsActive(o.isActive);
-                setUserIds(o.userIds?.map(u => typeof u === 'object' ? u._id : u) || []);
-             });
-          }} />
-        )}
-        {isEditMode && isEditing && can(PERMISSIONS.ORCHARD_DELETE) && (
-          <Appbar.Action icon="delete" onPress={handleDelete} color={theme.colors.error} />
-        )}
-      </Appbar.Header>
+    <FormLayout
+      mode={mode}
+      title={isEditing ? (isEditMode ? 'Edit Orchard' : 'Orchard Details') : 'New Orchard'}
+      onCancel={() => {
+        if (isEditMode && isEditing) {
+          const cancelEdit = () => {
+            setIsEditMode(false);
+            setIsDirty(false);
+            getOrchard(orchardId).then(o => {
+               setName(o.name);
+               setIsActive(o.isActive);
+               setUserIds(o.userIds?.map(u => typeof u === 'object' ? u._id : u) || []);
+            });
+          };
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-        style={styles.container}
+          if (isDirty) {
+            confirmDiscard(cancelEdit);
+          } else {
+            cancelEdit();
+          }
+        } else {
+          navigation.goBack();
+        }
+      }}
+      onSubmit={handleSubmit}
+      onEdit={() => setIsEditMode(true)}
+      canEdit={canEdit}
+      isLoading={isLoading || isSubmitting}
+      isDirty={isDirty}
+    >
+      <TextInput
+        mode="outlined"
+        label="Name"
+        value={name}
+        onChangeText={handleNameChange}
+        error={!!errors.name}
+        editable={!isView}
+        style={styles.input}
+      />
+      {!isView && errors.name && <HelperText type="error">{errors.name}</HelperText>}
+
+      <TouchableOpacity 
+        onPress={() => !isView && !isEditing && setClientModalVisible(true)}
+        disabled={isView || isEditing}
       >
-        <ScrollView contentContainerStyle={styles.content}>
-          {isEditMode ? (
-            <>
-              <TextInput
-                label="Name"
-                value={name}
-                onChangeText={handleNameChange}
-                mode="outlined"
-                style={styles.input}
-                error={!!errors.name}
-              />
-              <HelperText type="error" visible={!!errors.name}>
-                {errors.name}
-              </HelperText>
+        <View pointerEvents="none">
+          <TextInput
+            mode="outlined"
+            label="Client"
+            value={getClientName(clientId)}
+            editable={false}
+            error={!!errors.clientId}
+            right={!isView && !isEditing ? <TextInput.Icon icon="menu-down" /> : null}
+            style={styles.input}
+          />
+        </View>
+      </TouchableOpacity>
+      {!isView && errors.clientId && <HelperText type="error">{errors.clientId}</HelperText>}
 
-              <TouchableOpacity 
-                onPress={() => {
-                  setSearchQuery('');
-                  setClientModalVisible(true);
-                }}
-                disabled={isEditing} 
-              >
-                <View pointerEvents="none">
-                  <TextInput
-                    label="Client"
-                    value={getClientName(clientId)}
-                    mode="outlined"
-                    disabled={isEditing} 
-                    style={styles.input}
-                    error={!!errors.clientId}
-                    right={<TextInput.Icon icon="chevron-down" />}
-                  />
-                </View>
-              </TouchableOpacity>
-              <HelperText type="info" visible={!isEditing}>
-                Tap to select a client
-              </HelperText>
-              {isEditing && (
-                <HelperText type="info" visible={true}>
-                  Client cannot be changed after creation.
-                </HelperText>
-              )}
+      <TouchableOpacity 
+        onPress={() => !isView && setUserModalVisible(true)}
+        disabled={isView}
+      >
+        <View pointerEvents="none">
+          <TextInput
+            mode="outlined"
+            label="Assigned Users"
+            value={getUserNames()}
+            editable={false}
+            multiline
+            right={!isView ? <TextInput.Icon icon="menu-down" /> : null}
+            style={styles.input}
+          />
+        </View>
+      </TouchableOpacity>
 
-              <TouchableOpacity 
-                onPress={() => {
-                  setSearchQuery('');
-                  setUserModalVisible(true);
-                }}
-              >
-                <View pointerEvents="none">
-                  <TextInput
-                    label="Assigned Users"
-                    value={getUserNames()}
-                    mode="outlined"
-                    style={styles.input}
-                    multiline
-                    right={<TextInput.Icon icon="account-multiple-plus" />}
-                  />
-                </View>
-              </TouchableOpacity>
-              <HelperText type="info" visible={true}>
-                Tap to manage assigned users
-              </HelperText>
+      {isEditing && (
+        <View style={styles.switchContainer}>
+          <Text variant="bodyLarge">Active</Text>
+          <Switch value={isActive} onValueChange={handleActiveChange} disabled={isView} />
+        </View>
+      )}
 
-              {isEditing && (
-                <View style={styles.switchContainer}>
-                  <Text variant="bodyLarge">Active</Text>
-                  <Switch
-                    value={isActive}
-                    onValueChange={handleActiveChange}
-                  />
-                </View>
-              )}
-
-              <Button
-                mode="contained"
-                onPress={handleSave}
-                loading={isSubmitting}
-                disabled={isSubmitting}
-                style={styles.button}
-              >
-                Save
-              </Button>
-            </>
-          ) : (
-            <>
-              <DetailRow label="Name" value={name} />
-              <DetailRow label="Client" value={getClientName(clientId)} />
-              <DetailRow label="Assigned Users" value={getUserNames()} />
-              <DetailRow label="Status" value={isActive ? 'Active' : 'Inactive'} />
-            </>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+      {isEditMode && isEditing && can(PERMISSIONS.ORCHARD_DELETE) && (
+        <Button 
+          mode="outlined" 
+          onPress={handleDelete} 
+          textColor={theme.colors.error} 
+          style={{ marginTop: spacing.xl, borderColor: theme.colors.error }}
+        >
+          Delete Orchard
+        </Button>
+      )}
 
       <Portal>
         <Modal visible={clientModalVisible} onDismiss={() => setClientModalVisible(false)} contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
@@ -351,7 +326,7 @@ export function OrchardFormScreen({ navigation, route }: any) {
           <Button onPress={() => setUserModalVisible(false)} style={styles.modalButton}>Done</Button>
         </Modal>
       </Portal>
-    </View>
+    </FormLayout>
   );
 }
 

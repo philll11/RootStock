@@ -1,11 +1,19 @@
 // frontend/libs/users/feature-web/src/lib/users-list-page.tsx
-import { Title, Table, Button, Group, Drawer, ActionIcon, Badge, Text } from '@mantine/core';
+import { useState } from 'react';
+import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
+import { IconEdit, IconTrash } from '@tabler/icons-react';
 import { useUsers, User, CreateUserDto, UpdateUserDto } from '@rootstock/users/users-data-access';
 import { UserForm, UserFormMode } from './user-form';
-import { useState } from 'react';
-import { ConfirmDiscardModal, ConfirmModal, useDiscardWarning } from '@rootstock/ui/web';
+import { 
+  ConfirmDiscardModal, 
+  ConfirmModal, 
+  useDiscardWarning,
+  PageHeader,
+  DataTable,
+  FormDrawer,
+  DataTableColumn
+} from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
@@ -24,6 +32,8 @@ export function UsersListPage() {
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty);
+  
+  const [sortState, setSortState] = useState<{ accessor: string; direction: 'asc' | 'desc' }>({ accessor: 'name', direction: 'asc' });
 
   const handleCreate = () => {
     setMode('create');
@@ -91,26 +101,34 @@ export function UsersListPage() {
     }
   };
 
-  const rows = users.map((user) => (
-    <Table.Tr 
-      key={user._id} 
-      onClick={() => handleView(user)}
-      style={{ cursor: 'pointer' }}
-    >
-      <Table.Td>{user.recordId}</Table.Td>
-      <Table.Td>{user.name}</Table.Td>
-      <Table.Td>{user.email}</Table.Td>
-      <Table.Td>
+  const columns: DataTableColumn<User>[] = [
+    { accessor: 'recordId', title: 'ID', sortable: true },
+    { accessor: 'name', title: 'Name', sortable: true },
+    { accessor: 'email', title: 'Email', sortable: true },
+    {
+      accessor: 'userType',
+      title: 'Type',
+      sortable: true,
+      render: (user) => (
         <Badge color={user.userType === 'employee' ? 'brand' : 'blue'}>
           {user.userType}
         </Badge>
-      </Table.Td>
-      <Table.Td>
+      )
+    },
+    {
+      accessor: 'isActive',
+      title: 'Status',
+      render: (user) => (
         <Badge color={user.isActive ? 'brand' : 'neutral'} variant="light">
           {user.isActive ? 'Active' : 'Inactive'}
         </Badge>
-      </Table.Td>
-      <Table.Td>
+      )
+    },
+    {
+      accessor: 'actions',
+      title: '',
+      align: 'right',
+      render: (user) => (
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.USER_EDIT) && (
             <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(user, e)}>
@@ -123,49 +141,48 @@ export function UsersListPage() {
             </ActionIcon>
           )}
         </Group>
-      </Table.Td>
-    </Table.Tr>
-  ));
+      )
+    }
+  ];
+
+  const sortedUsers = users ? [...users].sort((a, b) => {
+    const { accessor, direction } = sortState;
+    const aValue = (a as any)[accessor] || '';
+    const bValue = (b as any)[accessor] || '';
+    
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    }
+    
+    if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+    return 0;
+  }) : undefined;
 
   return (
     <>
-      <Group justify="space-between" mb="lg">
-        <Title order={2}>Users</Title>
-        {can(PERMISSIONS.USER_CREATE) && (
-          <Button leftSection={<IconPlus size={iconSizes.sm} />} onClick={handleCreate}>
-            Add User
-          </Button>
-        )}
-      </Group>
+      <PageHeader 
+        title="Users"
+        actionLabel="Add User"
+        onActionClick={can(PERMISSIONS.USER_CREATE) ? handleCreate : undefined}
+      />
 
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>ID</Table.Th>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>Email</Table.Th>
-            <Table.Th>Type</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {rows.length > 0 ? rows : (
-            <Table.Tr>
-              <Table.Td colSpan={6}>
-                <Text ta="center" c="dimmed" py="xl">No users found</Text>
-              </Table.Td>
-            </Table.Tr>
-          )}
-        </Table.Tbody>
-      </Table>
+      <DataTable 
+        data={sortedUsers}
+        columns={columns}
+        isLoading={isLoading}
+        onRowClick={handleView}
+        noDataMessage="No users found."
+        onSort={(accessor, direction) => setSortState({ accessor, direction })}
+        initialSort={sortState}
+      />
 
-      <Drawer
+      <FormDrawer
         opened={opened}
         onClose={handleClose}
         title={getDrawerTitle()}
-        position="right"
         size={layout.drawers.form}
+        isLoading={isCreating || isUpdating}
       >
         <UserForm
           mode={mode}
@@ -178,7 +195,7 @@ export function UsersListPage() {
           onValuesChange={setCreateFormDraft}
           onDirtyChange={setIsFormDirty}
         />
-      </Drawer>
+      </FormDrawer>
 
       <ConfirmDiscardModal {...modalProps} />
       

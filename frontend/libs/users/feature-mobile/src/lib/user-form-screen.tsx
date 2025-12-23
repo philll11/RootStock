@@ -5,7 +5,7 @@ import { Appbar, TextInput, Button, Switch, Text, useTheme, HelperText, Segmente
 import { useUsers, UserType } from '@rootstock/users/users-data-access';
 import { useClients, searchClients } from '@rootstock/clients/clients-data-access';
 import { useRoles } from '@rootstock/roles/roles-data-access';
-import { useMobileDiscardWarning, DetailRow } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, FormLayout, FormMode, confirmDiscard } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
@@ -22,6 +22,8 @@ export const UserFormScreen = ({ navigation, route }: any) => {
   const canEdit = can(isEditing ? PERMISSIONS.USER_EDIT : PERMISSIONS.USER_CREATE);
 
   const [isEditMode, setIsEditMode] = useState(!isEditing);
+  const mode: FormMode = !userId ? 'create' : (isEditMode ? 'edit' : 'view');
+  const isView = mode === 'view';
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -99,7 +101,7 @@ export const UserFormScreen = ({ navigation, route }: any) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
 
     try {
@@ -112,7 +114,7 @@ export const UserFormScreen = ({ navigation, route }: any) => {
         setIsEditMode(false);
       } else {
         await createUser({
-          firstName, lastName, email, userType, roleId, password, isActive, clientIds
+          firstName, lastName, email, userType, roleId, password, clientIds
         });
         navigation.goBack();
       }
@@ -160,159 +162,151 @@ export const UserFormScreen = ({ navigation, route }: any) => {
     handleChange(setClientIds, newClientIds, 'clientIds');
   };
 
-  const isSaving = isCreating || isUpdating;
-
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Appbar.Header>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={isEditing ? (isEditMode ? 'Edit User' : 'User Details') : 'New User'} />
-        {!isEditMode && canEdit && (
-          <Appbar.Action icon="pencil" onPress={() => setIsEditMode(true)} />
-        )}
-        {isEditMode && isEditing && (
-          <Appbar.Action icon="close" onPress={() => setIsEditMode(false)} />
-        )}
-        {isEditMode && isEditing && can(PERMISSIONS.USER_DELETE) && (
-          <Appbar.Action icon="delete" onPress={handleDelete} color={theme.colors.error} />
-        )}
-      </Appbar.Header>
+    <FormLayout
+      mode={mode}
+      title={isEditing ? (isEditMode ? 'Edit User' : 'User Details') : 'New User'}
+      onCancel={() => {
+        if (isEditMode && isEditing) {
+          const cancelEdit = () => {
+            setIsEditMode(false);
+            setIsLoading(true);
+            getUser(userId).then(user => {
+              setFirstName(user.firstName);
+              setLastName(user.lastName);
+              setEmail(user.email);
+              setUserType(user.userType);
+              setRoleId(typeof user.roleId === 'object' ? user.roleId._id : user.roleId);
+              if (typeof user.roleId === 'object') {
+                setRoleName(user.roleId.name);
+              }
+              setIsActive(user.isActive);
+              setClientIds(user.clientIds || []);
+              setIsLoading(false);
+              setIsDirty(false);
+            });
+          };
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
-      >
-        <ScrollView contentContainerStyle={styles.content}>
-          {isEditMode ? (
-            <>
-              <TextInput
-                mode="outlined"
-                label="First Name"
-                value={firstName}
-                onChangeText={(val) => handleChange(setFirstName, val, 'firstName')}
-                error={!!errors.firstName}
-                style={styles.input}
-              />
-              {errors.firstName && <HelperText type="error">{errors.firstName}</HelperText>}
+          if (isDirty) {
+            confirmDiscard(cancelEdit);
+          } else {
+            cancelEdit();
+          }
+        } else {
+          navigation.goBack();
+        }
+      }}
+      onSubmit={handleSubmit}
+      onEdit={() => setIsEditMode(true)}
+      canEdit={canEdit}
+      isLoading={isLoading || isSubmitting}
+      isDirty={isDirty}
+    >
+      <TextInput
+        mode="outlined"
+        label="First Name"
+        value={firstName}
+        onChangeText={(val) => handleChange(setFirstName, val, 'firstName')}
+        error={!!errors.firstName}
+        editable={!isView}
+        style={styles.input}
+      />
+      {!isView && errors.firstName && <HelperText type="error">{errors.firstName}</HelperText>}
 
-              <TextInput
-                mode="outlined"
-                label="Last Name"
-                value={lastName}
-                onChangeText={(val) => handleChange(setLastName, val, 'lastName')}
-                error={!!errors.lastName}
-                style={styles.input}
-              />
-              {errors.lastName && <HelperText type="error">{errors.lastName}</HelperText>}
+      <TextInput
+        mode="outlined"
+        label="Last Name"
+        value={lastName}
+        onChangeText={(val) => handleChange(setLastName, val, 'lastName')}
+        error={!!errors.lastName}
+        editable={!isView}
+        style={styles.input}
+      />
+      {!isView && errors.lastName && <HelperText type="error">{errors.lastName}</HelperText>}
 
-              <TextInput
-                mode="outlined"
-                label="Email"
-                value={email}
-                onChangeText={(val) => handleChange(setEmail, val, 'email')}
-                error={!!errors.email}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                style={styles.input}
-              />
-              {errors.email && <HelperText type="error">{errors.email}</HelperText>}
+      <TextInput
+        mode="outlined"
+        label="Email"
+        value={email}
+        onChangeText={(val) => handleChange(setEmail, val, 'email')}
+        error={!!errors.email}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        editable={!isView}
+        style={styles.input}
+      />
+      {!isView && errors.email && <HelperText type="error">{errors.email}</HelperText>}
 
-              {!isEditing && (
-                <>
-                  <TextInput
-                    mode="outlined"
-                    label="Password"
-                    value={password}
-                    onChangeText={(val) => handleChange(setPassword, val, 'password')}
-                    error={!!errors.password}
-                    secureTextEntry
-                    style={styles.input}
-                  />
-                  {errors.password && <HelperText type="error">{errors.password}</HelperText>}
-                </>
-              )}
+      {!isEditing && (
+        <>
+          <TextInput
+            mode="outlined"
+            label="Password"
+            value={password}
+            onChangeText={(val) => handleChange(setPassword, val, 'password')}
+            error={!!errors.password}
+            secureTextEntry
+            style={styles.input}
+          />
+          {errors.password && <HelperText type="error">{errors.password}</HelperText>}
+        </>
+      )}
 
-              <Text variant="bodyMedium" style={styles.label}>User Type</Text>
-              <SegmentedButtons
-                value={userType}
-                onValueChange={(val) => handleChange(setUserType, val as UserType, 'userType')}
-                buttons={[
-                  { value: UserType.Employee, label: 'Employee', disabled: isEditing },
-                  { value: UserType.Contact, label: 'Contact', disabled: isEditing },
-                ]}
-                style={styles.input}
-              />
+      <Text variant="bodyMedium" style={styles.label}>User Type</Text>
+      <SegmentedButtons
+        value={userType}
+        onValueChange={(val) => handleChange(setUserType, val as UserType, 'userType')}
+        buttons={[
+          { value: UserType.Employee, label: 'Employee', disabled: isView },
+          { value: UserType.Contact, label: 'Contact', disabled: isView },
+        ]}
+        style={styles.input}
+      />
 
-              <Text variant="bodyMedium" style={styles.label}>Role</Text>
-              <View style={styles.chipContainer}>
-                <Chip
-                  mode="outlined"
-                  onPress={() => can(PERMISSIONS.ROLE_VIEW) && setRoleModalVisible(true)}
-                  style={styles.chip}
-                  icon="shield-account"
-                  onClose={roleId ? () => handleChange(setRoleId, undefined, 'roleId') : undefined}
-                  disabled={!can(PERMISSIONS.ROLE_VIEW)}
-                >
-                  {roles.find(r => r._id === roleId)?.name || roleName || 'Select Role'}
-                </Chip>
-              </View>
+      <Text variant="bodyMedium" style={styles.label}>Role</Text>
+      <View style={styles.chipContainer}>
+        <Chip
+          mode="outlined"
+          onPress={() => !isView && can(PERMISSIONS.ROLE_VIEW) && setRoleModalVisible(true)}
+          style={styles.chip}
+          icon="shield-account"
+          onClose={!isView && roleId ? () => handleChange(setRoleId, undefined, 'roleId') : undefined}
+          disabled={isView || !can(PERMISSIONS.ROLE_VIEW)}
+        >
+          {roles.find(r => r._id === roleId)?.name || roleName || 'Select Role'}
+        </Chip>
+      </View>
 
-              <Text variant="bodyMedium" style={styles.label}>Clients</Text>
-              <View style={styles.chipContainer}>
-                {clientIds.map(id => {
-                  const client = clients?.find(c => c._id === id) || availableClients.find(c => c._id === id);
-                  return (
-                    <Chip key={id} onClose={() => toggleClient(id)} style={styles.chip}>
-                      {client?.name || 'Client ' + id.substring(0, 4)}
-                    </Chip>
-                  );
-                })}
-                <Chip icon="plus" onPress={() => setClientModalVisible(true)} style={styles.chip}>Add Client</Chip>
-              </View>
+      <Text variant="bodyMedium" style={styles.label}>Clients</Text>
+      <View style={styles.chipContainer}>
+        {clientIds.map(id => {
+          const client = clients?.find(c => c._id === id) || availableClients.find(c => c._id === id);
+          return (
+            <Chip key={id} onClose={!isView ? () => toggleClient(id) : undefined} style={styles.chip}>
+              {client?.name || 'Client ' + id.substring(0, 4)}
+            </Chip>
+          );
+        })}
+        {!isView && <Chip icon="plus" onPress={() => setClientModalVisible(true)} style={styles.chip}>Add Client</Chip>}
+      </View>
 
-              {isEditing && (
-                <View style={styles.switchContainer}>
-                  <Text variant="bodyLarge">Active</Text>
-                  <Switch value={isActive} onValueChange={(val) => handleChange(setIsActive, val, 'isActive')} />
-                </View>
-              )}
+      {isEditing && (
+        <View style={styles.switchContainer}>
+          <Text variant="bodyLarge">Active</Text>
+          <Switch value={isActive} onValueChange={(val) => handleChange(setIsActive, val, 'isActive')} disabled={isView} />
+        </View>
+      )}
 
-              <Button
-                mode="contained"
-                onPress={handleSave}
-                loading={isSaving}
-                disabled={isSaving || isLoading}
-                style={styles.button}
-              >
-                Save
-              </Button>
-            </>
-          ) : (
-            <>
-              <DetailRow label="First Name" value={firstName} />
-              <DetailRow label="Last Name" value={lastName} />
-              <DetailRow label="Email" value={email} />
-              <DetailRow label="User Type" value={userType} />
-              <DetailRow label="Role" value={roles.find(r => r._id === roleId)?.name || roleName} />
-              <DetailRow label="Status" value={isActive ? 'Active' : 'Inactive'} />
-
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>Clients</Text>
-              <View style={styles.chipContainer}>
-                {clientIds.length > 0 ? clientIds.map(id => {
-                  const client = clients?.find(c => c._id === id) || availableClients.find(c => c._id === id);
-                  return (
-                    <Chip key={id} style={styles.chip}>
-                      {client?.name || 'Client ' + id.substring(0, 4)}
-                    </Chip>
-                  );
-                }) : (
-                  <Text variant="bodyMedium">-</Text>
-                )}
-              </View>
-            </>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+      {isEditMode && isEditing && can(PERMISSIONS.USER_DELETE) && (
+        <Button 
+          mode="outlined" 
+          onPress={handleDelete} 
+          textColor={theme.colors.error} 
+          style={{ marginTop: spacing.xl, borderColor: theme.colors.error }}
+        >
+          Delete User
+        </Button>
+      )}
 
       <Portal>
         <Modal visible={clientModalVisible} onDismiss={() => setClientModalVisible(false)} contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
@@ -356,7 +350,7 @@ export const UserFormScreen = ({ navigation, route }: any) => {
           <Button onPress={() => setRoleModalVisible(false)} style={{ marginTop: spacing.md }}>Cancel</Button>
         </Modal>
       </Portal>
-    </View>
+    </FormLayout>
   );
 };
 

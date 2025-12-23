@@ -1,11 +1,11 @@
 // frontend/libs/users/feature-web/src/lib/user-form.tsx
-import { TextInput, Select, Button, Group, PasswordInput, Text, Stack, Checkbox } from '@mantine/core';
+import { TextInput, Select, Button, PasswordInput, Text, Checkbox, Group, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { UserType, CreateUserDto, UpdateUserDto, User } from '@rootstock/users/users-data-access';
 import { useRoles } from '@rootstock/roles/roles-data-access';
 import { useEffect, useState } from 'react';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
-import { SearchableMultiSelect } from '@rootstock/ui/web';
+import { SearchableMultiSelect, FormLayout } from '@rootstock/ui/web';
 import { searchClients, getClient } from '@rootstock/clients/clients-data-access';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { palette } from '@rootstock/ui/theme';
@@ -126,6 +126,9 @@ export function UserForm({
     if (isEditing) {
       delete submissionData.password;
     }
+    if (isCreating) {
+      delete submissionData.isActive;
+    }
     onSubmit(submissionData);
   };
 
@@ -146,147 +149,110 @@ export function UserForm({
     });
   };
 
-  if (isViewing && user) {
-    return (
-      <Stack>
-        <div>
-          <Text size="sm" c="dimmed">Record ID</Text>
-          <Text>{user.recordId}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">First Name</Text>
-          <Text>{user.firstName}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Last Name</Text>
-          <Text>{user.lastName}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Email</Text>
-          <Text>{user.email}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">User Type</Text>
-          <Text tt="capitalize">{user.userType}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Role</Text>
-          <Text>{(typeof user.roleId === 'object' ? user.roleId.name : roles.find(r => r._id === user.roleId)?.name) || '-'}</Text>
-        </div>
-        <div>
-          <Text size="sm" c="dimmed">Status</Text>
-          <Text>{user.isActive ? 'Active' : 'Inactive'}</Text>
-        </div>
-
-        {user.clientIds && user.clientIds.length > 0 && (
-          <div>
-            <Text size="sm" c="dimmed">Clients</Text>
-            <Text>
-              {initialClientOptions
-                .map((opt) => opt.label)
-                .join(', ')}
-            </Text>
-          </div>
-        )}
-        
-        <Group justify="flex-end" mt="xl">
-          <Button variant="default" onClick={onCancel}>Close</Button>
-          {can(PERMISSIONS.USER_EDIT) && (
-            <Button onClick={onEdit}>Edit</Button>
-          )}
-        </Group>
-      </Stack>
-    );
-  }
+  const isView = mode === 'view';
 
   return (
-    <form onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}>
+    <FormLayout 
+      mode={mode} 
+      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
+      isLoading={isLoading}
+      onCancel={onCancel}
+      onEdit={onEdit}
+      canEdit={can(PERMISSIONS.USER_EDIT)}
+      submitLabel={isEditing ? 'Update User' : 'Create User'}
+    >
+      <Group grow>
+        <TextInput
+          withAsterisk={!isView}
+          label="First Name"
+          placeholder="First Name"
+          readOnly={isView}
+          {...form.getInputProps('firstName')}
+        />
+        <TextInput
+          withAsterisk={!isView}
+          label="Last Name"
+          placeholder="Last Name"
+          readOnly={isView}
+          {...form.getInputProps('lastName')}
+        />
+      </Group>
+
       <TextInput
-        withAsterisk
-        label="First Name"
-        placeholder="John"
-        mb="md"
-        {...form.getInputProps('firstName')}
-      />
-      <TextInput
-        withAsterisk
-        label="Last Name"
-        placeholder="Doe"
-        mb="md"
-        {...form.getInputProps('lastName')}
-      />
-      <TextInput
-        withAsterisk
+        withAsterisk={!isView}
         label="Email"
-        placeholder="john.doe@example.com"
-        mb="md"
+        placeholder="Email"
+        readOnly={isView}
         {...form.getInputProps('email')}
       />
 
-        <Select
-          withAsterisk
-          label="User Type"
-          data={[
-            { value: UserType.Employee, label: 'Employee' },
-            { value: UserType.Contact, label: 'Contact' },
-          ]}
-          mb="md"
-          disabled={isEditing}
-          {...form.getInputProps('userType')}
-        />
-
-        <Select
-          label="Role"
-          placeholder="Select a role"
-          data={roles.map(r => ({ value: r._id, label: r.name }))}
-          mb="md"
-          clearable
-          {...form.getInputProps('roleId')}
-        />
-
-      <SearchableMultiSelect
-        label="Clients"
-        placeholder="Search for clients..."
-        mb="md"
-        fetchOptions={async (query) => {
-          const clients = await searchClients(query);
-          return clients.map(c => ({ value: c._id, label: c.name }));
-        }}
-        initialOptions={initialClientOptions}
-        {...form.getInputProps('clientIds')}
+      <Select
+        withAsterisk={!isView}
+        label="User Type"
+        placeholder="Select User Type"
+        data={[
+          { value: UserType.Employee, label: 'Employee' },
+          { value: UserType.Contact, label: 'Contact' },
+        ]}
+        readOnly={isView}
+        {...form.getInputProps('userType')}
       />
-      
-      {isCreating && (
+
+      <Select
+        withAsterisk={!isView}
+        label="Role"
+        placeholder="Select Role"
+        data={(roles || []).map(r => ({ value: r._id, label: r.name }))}
+        readOnly={isView}
+        {...form.getInputProps('roleId')}
+      />
+
+      {!isView && (
         <PasswordInput
-          withAsterisk
-          label="Password"
-          placeholder="Secure password"
-          mb="xl"
+          withAsterisk={isCreating}
+          label={isCreating ? "Password" : "New Password"}
+          placeholder={isCreating ? "Password" : "Leave blank to keep current"}
           {...form.getInputProps('password')}
         />
       )}
 
-      {isEditing && (
-        <Checkbox
+      {isView ? (
+         user?.clientIds && user.clientIds.length > 0 && (
+          <div>
+            <Text size="sm" fw={500} mb={3}>Clients</Text>
+            <Text>
+              {initialClientOptions.map((opt) => opt.label).join(', ')}
+            </Text>
+          </div>
+        )
+      ) : (
+        <SearchableMultiSelect
+          label="Clients"
+          placeholder="Search clients..."
+          initialOptions={initialClientOptions}
+          fetchOptions={async (query) => {
+            const clients = await searchClients(query);
+            return clients.map(c => ({ value: c._id, label: c.name }));
+          }}
+          value={form.values.clientIds}
+          onChange={(value) => form.setFieldValue('clientIds', value)}
+        />
+      )}
+
+      {mode !== 'create' && (
+        <Switch
           label="Active"
-          mb="md"
+          disabled={isView}
+          checked={form.values.isActive}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
         />
       )}
 
-      <Group justify="flex-end">
-        {isCreating && (
-          <Button variant="subtle" color={palette.actions.delete} onClick={handleClear} mr="auto">
-            Clear
+      {isCreating && (
+          <Button variant="subtle" color={palette.actions.delete} onClick={handleClear} style={{ alignSelf: 'flex-start' }} type="button">
+            Clear Form
           </Button>
-        )}
-        <Button variant="default" onClick={onCancel}>Cancel</Button>
-        {can(isEditing ? PERMISSIONS.USER_EDIT : PERMISSIONS.USER_CREATE) && (
-          <Button type="submit" loading={isLoading}>
-            {isEditing ? 'Update User' : 'Create User'}
-          </Button>
-        )}
-      </Group>
-    </form>
+      )}
+    </FormLayout>
   );
 }

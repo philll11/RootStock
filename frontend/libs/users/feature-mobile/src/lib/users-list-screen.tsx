@@ -1,16 +1,14 @@
-// frontend/libs/users/feature-mobile/src/lib/users-list-screen.tsx
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
-import { Appbar, List, FAB, useTheme, Searchbar, Text, ActivityIndicator, Avatar, Chip } from 'react-native-paper';
+import { List, useTheme, Text, Avatar, Chip } from 'react-native-paper';
 import { useUsers } from '@rootstock/users/users-data-access';
-import { useDrawer, AppTheme } from '@rootstock/ui/mobile';
+import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { spacing } from '@rootstock/ui/theme'; // NEW IMPORT
+import { spacing } from '@rootstock/ui/theme';
 
 export const UsersListScreen = ({ navigation }: any) => {
   const theme = useTheme() as AppTheme;
-  const { toggleDrawer } = useDrawer();
   const { users, isLoading } = useUsers();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,95 +28,63 @@ export const UsersListScreen = ({ navigation }: any) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Appbar.Header>
-        <Appbar.Action icon="menu" onPress={toggleDrawer} />
-        <Appbar.Content title="Users" />
-      </Appbar.Header>
-
-      <View style={styles.content}>
-        <Searchbar
-          placeholder="Search users"
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          style={styles.searchBar}
-        />
-
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator animating={true} size="large" />
-          </View>
-        ) : (
-          <FlatList
-            data={filteredUsers}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-                  No users found
+    <ListLayout
+      title="Users"
+      isLoading={isLoading}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      searchPlaceholder="Search users"
+      emptyText="No users found"
+      isEmpty={!isLoading && filteredUsers.length === 0}
+      onAdd={can(PERMISSIONS.USER_CREATE) ? () => navigation.navigate('UserForm') : undefined}
+    >
+      <FlatList
+        data={filteredUsers}
+        keyExtractor={(item) => item._id}
+        contentContainerStyle={styles.listContent}
+        renderItem={({ item }) => (
+          <List.Item
+            title={item.name}
+            description={() => (
+              <View style={styles.itemDescription}>
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
+                  {item.email}
                 </Text>
+                <View style={styles.chipContainer}>
+                  <Chip
+                    compact
+                    textStyle={{ fontSize: 10, marginVertical: 0, marginHorizontal: 2 }}
+                    style={{
+                      backgroundColor: item.userType === 'employee' ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
+                      height: 24,
+                      marginRight: spacing.sm
+                    }}
+                  >
+                    {item.userType}
+                  </Chip>
+                </View>
               </View>
-            }
-            renderItem={({ item }) => (
-              <List.Item
-                title={item.name}
-                description={() => (
-                  <View style={styles.itemDescription}>
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
-                      {item.email}
-                    </Text>
-                    <View style={styles.chipContainer}>
-                      <Chip
-                        compact
-                        textStyle={{ fontSize: 10, marginVertical: 0, marginHorizontal: 2 }}
-                        style={{
-                          backgroundColor: item.userType === 'employee' ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
-                          height: 24,
-                          marginRight: spacing.sm
-                        }}
-                      >
-                        {item.userType}
-                      </Chip>
-                    </View>
-                  </View>
-                )}
-                left={props => (
-                  <Avatar.Text
-                    {...props}
-                    size={40}
-                    label={getInitials(item.name)}
-                    style={{ backgroundColor: theme.colors.primaryContainer }}
-                    color={theme.colors.onPrimaryContainer}
-                  />
-                )}
-                right={props => <List.Icon {...props} icon="chevron-right" />}
-                onPress={() => navigation.navigate('UserForm', { userId: item._id })}
-                style={styles.listItem}
+            )}
+            left={props => (
+              <Avatar.Text
+                {...props}
+                size={40}
+                label={getInitials(item.name)}
+                style={{ backgroundColor: theme.colors.primaryContainer }}
+                color={theme.colors.onPrimaryContainer}
               />
             )}
+            right={props => <List.Icon {...props} icon="chevron-right" />}
+            onPress={() => navigation.navigate('UserForm', { userId: item._id })}
+            style={styles.listItem}
           />
         )}
-      </View>
-
-      {can(PERMISSIONS.USER_CREATE) && (
-        <FAB
-          icon="plus"
-          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-          color={theme.colors.onPrimary}
-          onPress={() => navigation.navigate('UserForm')}
-        />
-      )}
-    </View>
+      />
+    </ListLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flex: 1 },
-  searchBar: {
-    margin: spacing.md,
-  },
   listContent: {
     paddingBottom: 80,
   },
@@ -131,20 +97,5 @@ const styles = StyleSheet.create({
   chipContainer: {
     flexDirection: 'row',
     marginTop: 4,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    margin: spacing.md,
-    right: 0,
-    bottom: 0,
   },
 });
