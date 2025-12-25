@@ -54,7 +54,7 @@ export function UsersListPage() {
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const { handleAction: handleCloseWithWarning, modalProps } =
-    useDiscardWarning(isFormDirty);
+    useDiscardWarning(isFormDirty && mode === 'edit');
 
   const [sortState, setSortState] = useState<{
     accessor: string;
@@ -252,7 +252,7 @@ export function UsersListPage() {
               mainIcon={<IconPlus size={16} />}
               options={[
                 {
-                  label: 'Create (Form Page)',
+                  label: 'Create Page',
                   onClick: handleCreatePage,
                   icon: <IconFilePlus size={16} />,
                 },

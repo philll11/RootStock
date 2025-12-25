@@ -1,8 +1,9 @@
 // frontend/libs/roles/feature-web/src/lib/roles-list-page.tsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge, Text, Alert } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash, IconAlertCircle } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconAlertCircle, IconEye, IconLayoutSidebarRight } from '@tabler/icons-react';
 import {
   useRoles,
   Role,
@@ -18,6 +19,7 @@ import {
   DataTable,
   FormDrawer,
   DataTableColumn,
+  ActionSplitButton,
 } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -41,6 +43,8 @@ export function RolesListPage() {
     { open: openDeleteModal, close: closeDeleteModal },
   ] = useDisclosure(false);
 
+  const navigate = useNavigate();
+
   const [mode, setMode] = useState<RoleFormMode>('create');
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
@@ -51,7 +55,7 @@ export function RolesListPage() {
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const { handleAction: handleCloseWithWarning, modalProps } =
-    useDiscardWarning(isFormDirty);
+    useDiscardWarning(isFormDirty && mode === 'edit');
 
   const [sortState, setSortState] = useState<{
     accessor: string;
@@ -63,6 +67,20 @@ export function RolesListPage() {
     setSelectedRole(null);
     setIsFormDirty(false);
     open();
+  };
+
+  const handleCreatePage = () => {
+    navigate('/roles/new');
+  };
+
+  const handleViewPage = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/roles/${id}`);
+  };
+
+  const handleEditPage = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/roles/${id}/edit`);
   };
 
   const handleView = (role: Role) => {
@@ -150,20 +168,42 @@ export function RolesListPage() {
       align: 'right',
       render: (role) => (
         <Group gap={0} justify="flex-end">
-          {can(PERMISSIONS.ROLE_EDIT) && (
+          {can(PERMISSIONS.ROLE_VIEW) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.edit}
-              onClick={(e) => handleEdit(role, e)}
+              color={palette.actions.view}
+              onClick={(e) => handleViewPage(role._id, e)}
+              title="View Page"
             >
-              <IconEdit size={iconSizes.md} />
+              <IconEye size={iconSizes.md} />
             </ActionIcon>
+          )}
+          {can(PERMISSIONS.ROLE_EDIT) && (
+            <>
+              <ActionIcon
+                variant="subtle"
+                color={palette.actions.edit}
+                onClick={(e) => handleEditPage(role._id, e)}
+                title="Edit Page"
+              >
+                <IconEdit size={iconSizes.md} />
+              </ActionIcon>
+              <ActionIcon
+                variant="subtle"
+                color={palette.actions.edit}
+                onClick={(e) => handleEdit(role, e)}
+                title="Quick Edit"
+              >
+                <IconLayoutSidebarRight size={iconSizes.md} />
+              </ActionIcon>
+            </>
           )}
           {can(PERMISSIONS.ROLE_DELETE) && (
             <ActionIcon
               variant="subtle"
               color={palette.actions.delete}
               onClick={(e) => handleDelete(role._id, e)}
+              title="Delete Role"
             >
               <IconTrash size={iconSizes.md} />
             </ActionIcon>
@@ -207,8 +247,21 @@ export function RolesListPage() {
     <>
       <PageHeader
         title="Roles"
-        actionLabel="Add Role"
-        onActionClick={can(PERMISSIONS.ROLE_CREATE) ? handleCreate : undefined}
+        action={
+          can(PERMISSIONS.ROLE_CREATE) ? (
+            <ActionSplitButton
+              mainLabel="Create"
+              onMainClick={handleCreate}
+              options={[
+                {
+                  label: 'Create Page',
+                  onClick: handleCreatePage,
+                  icon: <IconEdit size={14} />,
+                },
+              ]}
+            />
+          ) : undefined
+        }
       />
 
       <DataTable

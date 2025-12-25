@@ -12,6 +12,14 @@ export const getRole = async (id: string): Promise<Role> => {
   return response.data;
 };
 
+export function useRole(id: string | undefined) {
+  return useQuery({
+    queryKey: [...ROLES_QUERY_KEY, id],
+    queryFn: () => getRole(id!),
+    enabled: !!id,
+  });
+}
+
 export function useRoles(options?: { enabled?: boolean }) {
   const queryClient = useQueryClient();
   const { can } = usePermission();
@@ -45,8 +53,10 @@ export function useRoles(options?: { enabled?: boolean }) {
       const response = await apiClient.patch<Role>(`/roles/${id}`, data);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData([...ROLES_QUERY_KEY, variables.id], data);
       queryClient.invalidateQueries({ queryKey: ROLES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: [...ROLES_QUERY_KEY, variables.id] });
       notify.success('The role details have been updated.', 'Role Updated');
     },
     onError: (error: any) => {

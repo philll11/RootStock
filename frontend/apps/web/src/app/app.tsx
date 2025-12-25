@@ -19,7 +19,12 @@ import {
 import { ClientsListPage } from '@rootstock/clients/clients-feature-web';
 import { OrchardsListPage } from '@rootstock/orchards/orchards-feature-web';
 import { BlocksListPage } from '@rootstock/blocks/blocks-feature-web';
-import { RolesListPage } from '@rootstock/roles/roles-feature-web';
+import { 
+  RolesListPage,
+  RoleCreatePage,
+  RoleEditPage,
+  RoleViewPage
+} from '@rootstock/roles/roles-feature-web';
 import { VarietiesListPage } from '@rootstock/master-data/varieties/varieties-feature-web';
 
 // Layout & Components
@@ -158,14 +163,40 @@ export function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="roles" 
-              element={
-                <ProtectedRoute permission={PERMISSIONS.ROLE_VIEW}>
-                  <RolesListPage />
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="roles">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ROLE_VIEW}>
+                    <RolesListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="new" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ROLE_CREATE}>
+                    <RoleCreatePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ROLE_VIEW}>
+                    <RoleViewPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id/edit" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ROLE_EDIT}>
+                    <RoleEditPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
             <Route 
               path="varieties" 
               element={
