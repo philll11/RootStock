@@ -1,8 +1,9 @@
 // frontend/libs/users/feature-web/src/lib/users-list-page.tsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
   useUsers,
   User,
@@ -18,6 +19,7 @@ import {
   DataTable,
   FormDrawer,
   DataTableColumn,
+  ActionSplitButton,
 } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -39,6 +41,8 @@ export function UsersListPage() {
     deleteModalOpened,
     { open: openDeleteModal, close: closeDeleteModal },
   ] = useDisclosure(false);
+
+  const navigate = useNavigate();
 
   const [mode, setMode] = useState<UserFormMode>('create');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -62,6 +66,20 @@ export function UsersListPage() {
     setSelectedUser(null);
     setIsFormDirty(false);
     open();
+  };
+
+  const handleCreatePage = () => {
+    navigate('/users/new');
+  };
+
+  const handleViewPage = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/users/${id}`);
+  };
+
+  const handleEditPage = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/users/${id}/edit`);
   };
 
   const handleView = (user: User) => {
@@ -159,20 +177,42 @@ export function UsersListPage() {
       align: 'right',
       render: (user) => (
         <Group gap={0} justify="flex-end">
-          {can(PERMISSIONS.USER_EDIT) && (
+          {can(PERMISSIONS.USER_VIEW) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.edit}
-              onClick={(e) => handleEdit(user, e)}
+              color={palette.actions.view}
+              onClick={(e) => handleViewPage(user._id, e)}
+              title="View Page"
             >
-              <IconEdit size={iconSizes.md} />
+              <IconEye size={iconSizes.md} />
             </ActionIcon>
+          )}
+          {can(PERMISSIONS.USER_EDIT) && (
+            <>
+              <ActionIcon
+                variant="subtle"
+                color={palette.actions.edit}
+                onClick={(e) => handleEditPage(user._id, e)}
+                title="Edit Page"
+              >
+                <IconEdit size={iconSizes.md} />
+              </ActionIcon>
+              <ActionIcon
+                variant="subtle"
+                color={palette.actions.edit}
+                onClick={(e) => handleEdit(user, e)}
+                title="Quick Edit"
+              >
+                <IconLayoutSidebarRight size={iconSizes.md} />
+              </ActionIcon>
+            </>
           )}
           {can(PERMISSIONS.USER_DELETE) && (
             <ActionIcon
               variant="subtle"
               color={palette.actions.delete}
               onClick={(e) => handleDelete(user._id, e)}
+              title="Delete User"
             >
               <IconTrash size={iconSizes.md} />
             </ActionIcon>
@@ -204,8 +244,22 @@ export function UsersListPage() {
     <>
       <PageHeader
         title="Users"
-        actionLabel="Add User"
-        onActionClick={can(PERMISSIONS.USER_CREATE) ? handleCreate : undefined}
+        action={
+          can(PERMISSIONS.USER_CREATE) ? (
+            <ActionSplitButton
+              mainLabel="Create"
+              onMainClick={handleCreate}
+              mainIcon={<IconPlus size={16} />}
+              options={[
+                {
+                  label: 'Create (Form Page)',
+                  onClick: handleCreatePage,
+                  icon: <IconFilePlus size={16} />,
+                },
+              ]}
+            />
+          ) : undefined
+        }
       />
 
       <DataTable

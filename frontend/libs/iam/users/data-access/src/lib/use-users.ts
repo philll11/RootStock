@@ -10,6 +10,14 @@ export const getUser = async (id: string): Promise<User> => {
   return response.data;
 };
 
+export function useUser(id: string | undefined) {
+  return useQuery({
+    queryKey: [...USERS_QUERY_KEY, id],
+    queryFn: () => getUser(id!),
+    enabled: !!id,
+  });
+}
+
 export function useUsers() {
   const queryClient = useQueryClient();
 
@@ -40,8 +48,10 @@ export function useUsers() {
       const response = await apiClient.patch<User>(`/users/${id}`, data);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData([...USERS_QUERY_KEY, variables.id], data);
       queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: [...USERS_QUERY_KEY, variables.id] });
       notify.success('The user details have been updated.', 'User Updated');
     },
     onError: (error: any) => {

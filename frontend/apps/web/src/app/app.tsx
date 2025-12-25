@@ -9,7 +9,13 @@ import '@mantine/notifications/styles.css';
 // Features
 import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '@rootstock/auth/auth-feature-web';
 import { DashboardPage } from './pages/dashboard-page';
-import { UsersListPage, UserProfilePage } from '@rootstock/users/users-feature-web';
+import { 
+  UsersListPage, 
+  UserProfilePage,
+  UserCreatePage,
+  UserEditPage,
+  UserViewPage
+} from '@rootstock/users/users-feature-web';
 import { ClientsListPage } from '@rootstock/clients/clients-feature-web';
 import { OrchardsListPage } from '@rootstock/orchards/orchards-feature-web';
 import { BlocksListPage } from '@rootstock/blocks/blocks-feature-web';
@@ -86,14 +92,40 @@ export function App() {
             }
           >
             <Route index element={<DashboardPage />} />
-            <Route 
-              path="users" 
-              element={
-                <ProtectedRoute permission={PERMISSIONS.USER_VIEW}>
-                  <UsersListPage />
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="users">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.USER_VIEW}>
+                    <UsersListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="new" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.USER_CREATE}>
+                    <UserCreatePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.USER_VIEW}>
+                    <UserViewPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id/edit" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.USER_EDIT}>
+                    <UserEditPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
             <Route 
               path="clients" 
               element={

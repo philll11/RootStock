@@ -15,6 +15,7 @@ export interface FormLayoutProps extends Omit<StackProps, 'onSubmit'> {
   canEdit?: boolean;
   isDirty?: boolean;
   submitLabel?: string;
+  fullHeight?: boolean;
 }
 
 export function FormLayout({ 
@@ -29,13 +30,14 @@ export function FormLayout({
   canEdit = true,
   isDirty,
   submitLabel,
+  fullHeight = true,
   ...stackProps 
 }: FormLayoutProps) {
   const isView = mode === 'view';
   const isCreate = mode === 'create';
 
   return (
-    <form onSubmit={onSubmit} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <form onSubmit={onSubmit} style={{ height: fullHeight ? '100%' : 'auto', display: 'flex', flexDirection: 'column' }}>
       <Box pos="relative" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <LoadingOverlay visible={isLoading} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
         <Stack gap={gap} {...stackProps} style={{ flex: 1 }}>

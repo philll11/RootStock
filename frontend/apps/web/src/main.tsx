@@ -1,6 +1,6 @@
 // frontend/apps/web/src/main.tsx
 import { StrictMode } from 'react';
-import { BrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Route, createRoutesFromElements } from 'react-router-dom';
 import * as ReactDOM from 'react-dom/client';
 import App from './app/app';
 import { configureAuth } from '@rootstock/auth/auth-data-access';
@@ -11,10 +11,14 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route path="/*" element={<App />} />
+  )
+);
+
 root.render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <RouterProvider router={router} />
   </StrictMode>
 );

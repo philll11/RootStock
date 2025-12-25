@@ -8,3 +8,4 @@ export * from './lib/components/page-header/page-header';
 export * from './lib/components/form-drawer/form-drawer';
 export * from './lib/components/form-actions/form-actions';
 export * from './lib/components/form-layout/form-layout';
+export * from './lib/components/action-split-button/action-split-button';

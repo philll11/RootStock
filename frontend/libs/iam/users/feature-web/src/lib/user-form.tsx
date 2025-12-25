@@ -39,6 +39,7 @@ interface UserFormProps {
   onEdit?: () => void;
   onValuesChange?: (values: Partial<CreateUserDto>) => void;
   onDirtyChange?: (isDirty: boolean) => void;
+  fullHeight?: boolean;
 }
 
 export function UserForm({
@@ -51,6 +52,7 @@ export function UserForm({
   onEdit,
   onValuesChange,
   onDirtyChange,
+  fullHeight = true,
 }: UserFormProps) {
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
@@ -92,7 +94,13 @@ export function UserForm({
   useEffect(() => {
     const loadClients = async () => {
       const idsToFetch = user?.clientIds || initialValues?.clientIds;
-      if (idsToFetch && idsToFetch.length > 0) {
+      // Avoid reloading if we already have options for these IDs
+      // This prevents the infinite loop/freeze when typing in other fields
+      // because initialValues changes on every keystroke.
+      const currentIds = initialClientOptions.map(o => o.value).sort().join(',');
+      const newIds = (idsToFetch || []).sort().join(',');
+      
+      if (idsToFetch && idsToFetch.length > 0 && currentIds !== newIds) {
         try {
           const clients = await Promise.all(
             idsToFetch.map((id) => getClient(id))
@@ -106,7 +114,8 @@ export function UserForm({
       }
     };
     loadClients();
-  }, [user, initialValues]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.clientIds, initialValues?.clientIds]);
 
   useEffect(() => {
     if (isCreating && onValuesChange) {
@@ -143,10 +152,10 @@ export function UserForm({
   }, [user, mode]);
 
   useEffect(() => {
-    if (isEditing && onDirtyChange) {
+    if (onDirtyChange) {
       onDirtyChange(form.isDirty());
     }
-  }, [form.values, isEditing, onDirtyChange]);
+  }, [form.values, onDirtyChange]);
 
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
@@ -188,6 +197,7 @@ export function UserForm({
       onEdit={onEdit}
       canEdit={can(PERMISSIONS.USER_EDIT)}
       submitLabel={isEditing ? 'Update User' : 'Create User'}
+      fullHeight={fullHeight}
     >
       <Group grow>
         <TextInput
@@ -206,43 +216,47 @@ export function UserForm({
         />
       </Group>
 
-      <TextInput
-        withAsterisk={!isView}
-        label="Email"
-        placeholder="Email"
-        readOnly={isView}
-        {...form.getInputProps('email')}
-      />
-
-      <Select
-        withAsterisk={!isView}
-        label="User Type"
-        placeholder="Select User Type"
-        data={[
-          { value: UserType.Employee, label: 'Employee' },
-          { value: UserType.Contact, label: 'Contact' },
-        ]}
-        readOnly={isView}
-        {...form.getInputProps('userType')}
-      />
-
-      <Select
-        withAsterisk={!isView}
-        label="Role"
-        placeholder="Select Role"
-        data={(roles || []).map((r) => ({ value: r._id, label: r.name }))}
-        readOnly={isView}
-        {...form.getInputProps('roleId')}
-      />
-
-      {!isView && (
-        <PasswordInput
-          withAsterisk={isCreating}
-          label={isCreating ? 'Password' : 'New Password'}
-          placeholder={isCreating ? 'Password' : 'Leave blank to keep current'}
-          {...form.getInputProps('password')}
+      <Group grow>
+        <TextInput
+          withAsterisk={!isView}
+          label="Email"
+          placeholder="Email"
+          readOnly={isView}
+          {...form.getInputProps('email')}
         />
-      )}
+        <Select
+          withAsterisk={!isView}
+          label="User Type"
+          placeholder="Select User Type"
+          data={[
+            { value: UserType.Employee, label: 'Employee' },
+            { value: UserType.Contact, label: 'Contact' },
+          ]}
+          readOnly={isView}
+          {...form.getInputProps('userType')}
+        />
+      </Group>
+
+      <Group grow>
+        <Select
+          withAsterisk={!isView}
+          label="Role"
+          placeholder="Select Role"
+          data={(roles || []).map((r) => ({ value: r._id, label: r.name }))}
+          readOnly={isView}
+          {...form.getInputProps('roleId')}
+        />
+        {!isView ? (
+          <PasswordInput
+            withAsterisk={isCreating}
+            label={isCreating ? 'Password' : 'New Password'}
+            placeholder={isCreating ? 'Password' : 'Leave blank to keep current'}
+            {...form.getInputProps('password')}
+          />
+        ) : (
+          <div /> // Empty div to maintain grid structure in view mode if needed, or just let Role take 50%
+        )}
+      </Group>
 
       {isView ? (
         user?.clientIds &&
