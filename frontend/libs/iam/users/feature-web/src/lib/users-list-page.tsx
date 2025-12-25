@@ -249,12 +249,12 @@ export function UsersListPage() {
             <ActionSplitButton
               mainLabel="Create"
               onMainClick={handleCreate}
-              mainIcon={<IconPlus size={16} />}
+              mainIcon={<IconPlus size={iconSizes.md} />}
               options={[
                 {
-                  label: 'Create Page',
+                  label: 'Create in New Page',
                   onClick: handleCreatePage,
-                  icon: <IconFilePlus size={16} />,
+                  icon: <IconFilePlus size={iconSizes.md} />,
                 },
               ]}
             />

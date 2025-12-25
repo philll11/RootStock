@@ -1,5 +1,5 @@
 // frontend/libs/clients/feature-web/src/lib/client-form.tsx
-import { TextInput, Checkbox, Text } from '@mantine/core';
+import { TextInput, Checkbox, Text, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import {
   CreateClientDto,
@@ -23,6 +23,7 @@ interface ClientFormProps {
   onEdit?: () => void;
   onValuesChange?: (values: Partial<CreateClientDto>) => void;
   onDirtyChange?: (isDirty: boolean) => void;
+  fullHeight?: boolean;
 }
 
 export function ClientForm({
@@ -35,6 +36,7 @@ export function ClientForm({
   onEdit,
   onValuesChange,
   onDirtyChange,
+  fullHeight = true,
 }: ClientFormProps) {
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
@@ -60,10 +62,10 @@ export function ClientForm({
   }, [form.values, isCreating, onValuesChange]);
 
   useEffect(() => {
-    if (isEditing && onDirtyChange) {
+    if (onDirtyChange) {
       onDirtyChange(form.isDirty());
     }
-  }, [form.values, isEditing, onDirtyChange]);
+  }, [form.values, onDirtyChange]);
 
   useEffect(() => {
     if (client && (isEditing || isViewing)) {
@@ -72,7 +74,7 @@ export function ClientForm({
         isActive: client.isActive,
       });
     } else if (isCreating && initialValues) {
-      form.setValues({
+      form.initialize({
         name: initialValues.name || '',
         isActive: true,
       });
@@ -111,6 +113,7 @@ export function ClientForm({
       onClear={isCreating ? handleClear : undefined}
       canEdit={can(PERMISSIONS.CLIENT_EDIT)}
       submitLabel={isEditing ? 'Update Client' : 'Create Client'}
+      fullHeight={fullHeight}
     >
       <TextInput
         withAsterisk={!isView}
@@ -121,7 +124,7 @@ export function ClientForm({
       />
 
       {mode !== 'create' && (
-        <Checkbox
+        <Switch
           label="Active"
           disabled={isView}
           checked={form.values.isActive}

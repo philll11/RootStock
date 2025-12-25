@@ -26,6 +26,14 @@ export const getClient = async (id: string): Promise<Client> => {
   return response.data;
 };
 
+export function useClient(id: string | undefined) {
+  return useQuery({
+    queryKey: [...CLIENTS_QUERY_KEY, id],
+    queryFn: () => getClient(id!),
+    enabled: !!id,
+  });
+}
+
 export function useClients(options?: { enabled?: boolean }) {
   const queryClient = useQueryClient();
   const { can } = usePermission();
@@ -62,8 +70,10 @@ export function useClients(options?: { enabled?: boolean }) {
       const response = await apiClient.patch<Client>(`/clients/${id}`, data);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData([...CLIENTS_QUERY_KEY, variables.id], data);
       queryClient.invalidateQueries({ queryKey: CLIENTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: [...CLIENTS_QUERY_KEY, variables.id] });
       notify.success('The client details have been updated.', 'Client Updated');
     },
     onError: (error: any) => {

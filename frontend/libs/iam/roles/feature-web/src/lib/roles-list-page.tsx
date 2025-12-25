@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge, Text, Alert } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash, IconAlertCircle, IconEye, IconLayoutSidebarRight } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconAlertCircle, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
   useRoles,
   Role,
@@ -252,11 +252,12 @@ export function RolesListPage() {
             <ActionSplitButton
               mainLabel="Create"
               onMainClick={handleCreate}
+              mainIcon={<IconPlus size={iconSizes.md} />}
               options={[
                 {
-                  label: 'Create Page',
+                  label: 'Create in New Page',
                   onClick: handleCreatePage,
-                  icon: <IconEdit size={14} />,
+                  icon: <IconFilePlus size={iconSizes.md} />,
                 },
               ]}
             />

@@ -16,7 +16,12 @@ import {
   UserEditPage,
   UserViewPage
 } from '@rootstock/users/users-feature-web';
-import { ClientsListPage } from '@rootstock/clients/clients-feature-web';
+import { 
+  ClientsListPage,
+  ClientCreatePage,
+  ClientEditPage,
+  ClientViewPage
+} from '@rootstock/clients/clients-feature-web';
 import { OrchardsListPage } from '@rootstock/orchards/orchards-feature-web';
 import { BlocksListPage } from '@rootstock/blocks/blocks-feature-web';
 import { 
@@ -131,14 +136,40 @@ export function App() {
                 } 
               />
             </Route>
-            <Route 
-              path="clients" 
-              element={
-                <ProtectedRoute permission={PERMISSIONS.CLIENT_VIEW}>
-                  <ClientsListPage />
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="clients">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.CLIENT_VIEW}>
+                    <ClientsListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="new" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.CLIENT_CREATE}>
+                    <ClientCreatePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.CLIENT_VIEW}>
+                    <ClientViewPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id/edit" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.CLIENT_EDIT}>
+                    <ClientEditPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
             <Route 
               path="orchards" 
               element={

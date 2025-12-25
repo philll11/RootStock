@@ -1,8 +1,9 @@
 // frontend/libs/users/feature-web/src/lib/users-list-page.tsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash } from '@tabler/icons-react';
+import { IconFilePlus, IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus } from '@tabler/icons-react';
 import {
   useClients,
   Client,
@@ -18,12 +19,14 @@ import {
   DataTable,
   FormDrawer,
   DataTableColumn,
+  ActionSplitButton,
 } from '@rootstock/ui/web';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function ClientsListPage() {
+  const navigate = useNavigate();
   const {
     clients,
     isLoading,
@@ -63,11 +66,20 @@ export function ClientsListPage() {
     open();
   };
 
+  const handleCreatePage = () => {
+    navigate('/clients/new');
+  };
+
   const handleView = (client: Client) => {
     setMode('view');
     setSelectedClient(client);
     setIsFormDirty(false);
     open();
+  };
+
+  const handleViewPage = (client: Client, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/clients/${client._id}`);
   };
 
   const handleEdit = (client: Client, e?: React.MouseEvent) => {
@@ -76,6 +88,11 @@ export function ClientsListPage() {
     setSelectedClient(client);
     setIsFormDirty(false);
     open();
+  };
+
+  const handleEditPage = (client: Client, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/clients/${client._id}/edit`);
   };
 
   const handleClose = () => {
@@ -147,14 +164,33 @@ export function ClientsListPage() {
       align: 'right',
       render: (client) => (
         <Group gap={0} justify="flex-end">
+          <ActionIcon
+            variant="subtle"
+            color={palette.actions.view}
+            onClick={(e) => handleViewPage(client, e)}
+            title="View Page"
+          >
+            <IconEye size={iconSizes.md} />
+          </ActionIcon>
           {can(PERMISSIONS.CLIENT_EDIT) && (
-            <ActionIcon
-              variant="subtle"
-              color={palette.actions.edit}
-              onClick={(e) => handleEdit(client, e)}
-            >
-              <IconEdit size={iconSizes.md} />
-            </ActionIcon>
+            <>
+              <ActionIcon
+                variant="subtle"
+                color={palette.actions.edit}
+                onClick={(e) => handleEditPage(client, e)}
+                title="Edit Page"
+              >
+                <IconEdit size={iconSizes.md} />
+              </ActionIcon>
+              <ActionIcon
+                variant="subtle"
+                color={palette.actions.edit}
+                onClick={(e) => handleEdit(client, e)}
+                title="Quick Edit"
+              >
+                <IconLayoutSidebarRight size={iconSizes.md} />
+              </ActionIcon>
+            </>
           )}
           {can(PERMISSIONS.CLIENT_DELETE) && (
             <ActionIcon
@@ -192,9 +228,21 @@ export function ClientsListPage() {
     <>
       <PageHeader
         title="Clients"
-        actionLabel="Add Client"
-        onActionClick={
-          can(PERMISSIONS.CLIENT_CREATE) ? handleCreate : undefined
+        action={
+          can(PERMISSIONS.CLIENT_CREATE) ? (
+            <ActionSplitButton
+              mainLabel="Create"
+              onMainClick={handleCreate}
+              mainIcon={<IconPlus size={iconSizes.md} />}
+              options={[
+                {
+                  label: 'Create in New Page',
+                  onClick: handleCreatePage,
+                  icon: <IconFilePlus size={iconSizes.md} />,
+                },
+              ]}
+            />
+          ) : undefined
         }
       />
 

@@ -1,6 +1,7 @@
 import { Button, Menu, Group, ActionIcon, useMantineTheme, rem } from '@mantine/core';
 import { IconChevronDown } from '@tabler/icons-react';
 import { ReactNode } from 'react';
+import { iconSizes } from '@rootstock/ui/theme';
 
 export interface ActionSplitButtonOption {
   label: string;
@@ -33,7 +34,7 @@ export function ActionSplitButton({ mainLabel, onMainClick, mainIcon, options }:
             style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderLeft: `1px solid rgba(255, 255, 255, 0.2)` }}
             px={4}
           >
-            <IconChevronDown style={{ width: rem(16), height: rem(16) }} stroke={1.5} />
+            <IconChevronDown style={{ width: rem(iconSizes.md), height: rem(iconSizes.md) }} stroke={1.5} />
           </Button>
         </Menu.Target>
         <Menu.Dropdown>
