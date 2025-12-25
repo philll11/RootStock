@@ -22,7 +22,12 @@ import {
   ClientEditPage,
   ClientViewPage
 } from '@rootstock/clients/clients-feature-web';
-import { OrchardsListPage } from '@rootstock/orchards/orchards-feature-web';
+import { 
+  OrchardsListPage,
+  OrchardCreatePage,
+  OrchardEditPage,
+  OrchardViewPage
+} from '@rootstock/orchards/orchards-feature-web';
 import { BlocksListPage } from '@rootstock/blocks/blocks-feature-web';
 import { 
   RolesListPage,
@@ -175,22 +180,48 @@ export function App() {
                 } 
               />
             </Route>
-            <Route 
-              path="orchards" 
-              element={
-                <ProtectedRoute permission={PERMISSIONS.ORCHARD_VIEW}>
-                  <OrchardsListPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="orchards/:orchardId/blocks" 
-              element={
-                <ProtectedRoute permission={PERMISSIONS.BLOCK_VIEW}>
-                  <BlocksListPage />
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="orchards">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ORCHARD_VIEW}>
+                    <OrchardsListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="new" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ORCHARD_CREATE}>
+                    <OrchardCreatePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ORCHARD_VIEW}>
+                    <OrchardViewPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id/edit" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ORCHARD_EDIT}>
+                    <OrchardEditPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":orchardId/blocks" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.BLOCK_VIEW}>
+                    <BlocksListPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
             <Route 
               path="blocks" 
               element={

@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
   ConfirmModal,
   ConfirmDiscardModal,
@@ -10,6 +11,7 @@ import {
   DataTable,
   FormDrawer,
   DataTableColumn,
+  ActionSplitButton,
 } from '@rootstock/ui/web';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 import {
@@ -23,6 +25,7 @@ import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function OrchardsListPage() {
+  const navigate = useNavigate();
   const {
     orchards,
     isLoading,
@@ -55,13 +58,17 @@ export function OrchardsListPage() {
   >({});
 
   const { handleAction: handleCloseWithWarning, modalProps } =
-    useDiscardWarning(isFormDirty);
+    useDiscardWarning(isFormDirty && formMode === 'edit');
 
   const handleCreate = () => {
     setSelectedOrchard(null);
     setFormMode('create');
     setIsFormDirty(false);
     openDrawer();
+  };
+
+  const handleCreatePage = () => {
+    navigate('/orchards/new');
   };
 
   const handleEdit = (orchard: Orchard, e?: React.MouseEvent) => {
@@ -72,11 +79,21 @@ export function OrchardsListPage() {
     openDrawer();
   };
 
+  const handleEditPage = (orchard: Orchard, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/orchards/${orchard._id}/edit`);
+  };
+
   const handleView = (orchard: Orchard) => {
     setSelectedOrchard(orchard);
     setFormMode('view');
     setIsFormDirty(false);
     openDrawer();
+  };
+
+  const handleViewPage = (orchard: Orchard, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/orchards/${orchard._id}`);
   };
 
   const handleClose = () => {
@@ -149,14 +166,33 @@ export function OrchardsListPage() {
       align: 'right',
       render: (orchard) => (
         <Group gap={0} justify="flex-end">
+          <ActionIcon
+            variant="subtle"
+            color={palette.actions.view}
+            onClick={(e) => handleViewPage(orchard, e)}
+            title="View Page"
+          >
+            <IconEye size={iconSizes.md} />
+          </ActionIcon>
           {can(PERMISSIONS.ORCHARD_EDIT) && (
-            <ActionIcon
-              variant="subtle"
-              color={palette.actions.edit}
-              onClick={(e) => handleEdit(orchard, e)}
-            >
-              <IconEdit size={iconSizes.md} />
-            </ActionIcon>
+            <>
+              <ActionIcon
+                variant="subtle"
+                color={palette.actions.edit}
+                onClick={(e) => handleEditPage(orchard, e)}
+                title="Edit Page"
+              >
+                <IconEdit size={iconSizes.md} />
+              </ActionIcon>
+              <ActionIcon
+                variant="subtle"
+                color={palette.actions.edit}
+                onClick={(e) => handleEdit(orchard, e)}
+                title="Quick Edit"
+              >
+                <IconLayoutSidebarRight size={iconSizes.md} />
+              </ActionIcon>
+            </>
           )}
           {can(PERMISSIONS.ORCHARD_DELETE) && (
             <ActionIcon
@@ -202,9 +238,21 @@ export function OrchardsListPage() {
     <>
       <PageHeader
         title="Orchards"
-        actionLabel="Add Orchard"
-        onActionClick={
-          can(PERMISSIONS.ORCHARD_CREATE) ? handleCreate : undefined
+        action={
+          can(PERMISSIONS.ORCHARD_CREATE) ? (
+            <ActionSplitButton
+              mainLabel="Create"
+              onMainClick={handleCreate}
+              mainIcon={<IconPlus size={iconSizes.md} />}
+              options={[
+                {
+                  label: 'Create in New Page',
+                  onClick: handleCreatePage,
+                  icon: <IconFilePlus size={iconSizes.md} />,
+                },
+              ]}
+            />
+          ) : undefined
         }
       />
 

@@ -8,6 +8,7 @@ import {
   Text,
   Alert,
   Box,
+  Group,
 } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { useClients } from '@rootstock/clients/clients-data-access';
@@ -32,6 +33,7 @@ interface OrchardFormProps {
   onDirtyChange?: (isDirty: boolean) => void;
   initialValues?: Partial<CreateOrchardDto>;
   onValuesChange?: (values: Partial<CreateOrchardDto>) => void;
+  fullHeight?: boolean;
 }
 
 export function OrchardForm({
@@ -44,6 +46,7 @@ export function OrchardForm({
   onDirtyChange,
   initialValues,
   onValuesChange,
+  fullHeight = true,
 }: OrchardFormProps) {
   const { clients, isLoading: isLoadingClients } = useClients();
   const { users, isLoading: isLoadingUsers } = useUsers();
@@ -142,31 +145,34 @@ export function OrchardForm({
       onEdit={onEdit}
       onClear={isCreating ? handleClear : undefined}
       canEdit={can(PERMISSIONS.ORCHARD_EDIT)}
+      fullHeight={fullHeight}
     >
-      <TextInput
-        label="Orchard Name"
-        placeholder="Enter orchard name"
-        withAsterisk={!isViewing}
-        readOnly={isViewing}
-        {...form.getInputProps('name')}
-      />
-
-      <Box mt="md">
-        <Select
-          label="Client"
-          placeholder="Select client"
-          data={clients?.map((c) => ({ value: c._id, label: c.name })) || []}
+      <Group grow align="flex-start">
+        <TextInput
+          label="Orchard Name"
+          placeholder="Enter orchard name"
           withAsterisk={!isViewing}
-          disabled={isEditing}
           readOnly={isViewing}
-          {...form.getInputProps('clientId')}
+          {...form.getInputProps('name')}
         />
-        {isEditing && (
-          <Text size="xs" c="dimmed" mt={4}>
-            Client cannot be changed after creation.
-          </Text>
-        )}
-      </Box>
+
+        <Box>
+          <Select
+            label="Client"
+            placeholder="Select client"
+            data={clients?.map((c) => ({ value: c._id, label: c.name })) || []}
+            withAsterisk={!isViewing}
+            disabled={isEditing}
+            readOnly={isViewing}
+            {...form.getInputProps('clientId')}
+          />
+          {isEditing && (
+            <Text size="xs" c="dimmed" mt={4}>
+              Client cannot be changed after creation.
+            </Text>
+          )}
+        </Box>
+      </Group>
 
       <Box mt="md">
         <MultiSelect
