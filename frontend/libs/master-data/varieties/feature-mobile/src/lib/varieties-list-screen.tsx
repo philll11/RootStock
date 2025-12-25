@@ -9,8 +9,7 @@ import { spacing } from '@rootstock/ui/theme';
 
 export const VarietiesListScreen = ({ navigation }: any) => {
   const theme = useTheme() as AppTheme;
-  const { varietiesQuery } = useVarieties();
-  const { data: varieties, isLoading } = varietiesQuery;
+  const { varieties, isLoading: isVarietiesLoading } = useVarieties();
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.VARIETY_CREATE);
 
@@ -23,12 +22,12 @@ export const VarietiesListScreen = ({ navigation }: any) => {
   return (
     <ListLayout
       title="Varieties"
-      isLoading={isLoading}
+      isLoading={isVarietiesLoading}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder="Search varieties"
       emptyText="No varieties found"
-      isEmpty={!isLoading && filteredVarieties.length === 0}
+      isEmpty={!isVarietiesLoading && filteredVarieties.length === 0}
       onAdd={canCreate ? () => navigation.navigate('VarietyForm') : undefined}
     >
       <FlatList

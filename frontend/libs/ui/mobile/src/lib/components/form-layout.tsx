@@ -12,6 +12,7 @@ interface FormLayoutProps {
   onCancel: () => void;
   onSubmit?: () => void;
   onEdit?: () => void;
+  onClear?: () => void;
   canEdit?: boolean;
   isLoading?: boolean;
   isDirty?: boolean;
@@ -25,6 +26,7 @@ export function FormLayout({
   onCancel,
   onSubmit,
   onEdit,
+  onClear,
   canEdit = true,
   isLoading = false,
   isDirty = false,
@@ -42,11 +44,14 @@ export function FormLayout({
         {isView ? (
           canEdit && onEdit && <Appbar.Action icon="pencil" onPress={onEdit} />
         ) : (
-          <Appbar.Action 
-            icon="check" 
-            onPress={onSubmit} 
-            disabled={isLoading || (!isCreate && !isDirty)} 
-          />
+          <>
+            {onClear && <Appbar.Action icon="delete" onPress={onClear} disabled={isLoading} />}
+            <Appbar.Action 
+              icon="check" 
+              onPress={onSubmit} 
+              disabled={isLoading || (!isCreate && !isDirty)} 
+            />
+          </>
         )}
       </Appbar.Header>
 

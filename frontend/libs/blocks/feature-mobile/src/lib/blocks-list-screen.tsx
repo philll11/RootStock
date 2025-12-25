@@ -10,8 +10,7 @@ import { spacing } from '@rootstock/ui/theme';
 export const BlocksListScreen = ({ navigation, route }: any) => {
   const theme = useTheme() as AppTheme;
   const { orchardId } = route.params || {};
-  const { blocksQuery } = useBlocks(orchardId);
-  const { data: blocks, isLoading } = blocksQuery;
+  const { blocks, isLoading } = useBlocks(orchardId);
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.BLOCK_CREATE);
 

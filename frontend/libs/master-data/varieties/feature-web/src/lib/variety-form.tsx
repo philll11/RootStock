@@ -16,19 +16,38 @@ interface VarietyFormProps {
   onEdit?: () => void;
   isLoading?: boolean;
   onDirtyChange?: (isDirty: boolean) => void;
+  draftValues?: Partial<CreateVarietyDto>;
+  onValuesChange?: (values: Partial<CreateVarietyDto>) => void;
 }
 
-export function VarietyForm({ mode, initialValues, onSubmit, onCancel, onEdit, isLoading, onDirtyChange }: VarietyFormProps) {
+export function VarietyForm({ 
+  mode, 
+  initialValues, 
+  onSubmit, 
+  onCancel, 
+  onEdit, 
+  isLoading, 
+  onDirtyChange,
+  draftValues,
+  onValuesChange
+}: VarietyFormProps) {
   const { can } = usePermission();
   const form = useForm({
     initialValues: {
       name: initialValues?.name || '',
       isActive: initialValues?.isActive ?? true,
+      ...draftValues,
     },
     validate: {
       name: (value) => (value.length < 2 ? 'Name must be at least 2 characters' : null),
     },
   });
+
+  useEffect(() => {
+    if (mode === 'create' && onValuesChange) {
+      onValuesChange(form.values);
+    }
+  }, [form.values, mode, onValuesChange]);
 
   useEffect(() => {
     if (initialValues) {
@@ -37,12 +56,19 @@ export function VarietyForm({ mode, initialValues, onSubmit, onCancel, onEdit, i
         isActive: initialValues.isActive,
       });
       form.resetDirty();
+    } else if (mode === 'create') {
+      form.setValues({
+        name: draftValues?.name || '',
+        isActive: true,
+      });
     }
-  }, [initialValues]);
+  }, [initialValues, mode]);
 
   useEffect(() => {
-    onDirtyChange?.(form.isDirty());
-  }, [form.isDirty(), onDirtyChange]);
+    if (mode === 'edit') {
+      onDirtyChange?.(form.isDirty());
+    }
+  }, [form.isDirty(), onDirtyChange, mode]);
 
   const handleSubmit = (values: typeof form.values) => {
     if (mode === 'create') {
@@ -53,6 +79,13 @@ export function VarietyForm({ mode, initialValues, onSubmit, onCancel, onEdit, i
     }
   };
 
+  const handleClear = () => {
+    form.setValues({
+      name: '',
+      isActive: true,
+    });
+  };
+
   return (
     <FormLayout
       mode={mode}
@@ -61,6 +94,7 @@ export function VarietyForm({ mode, initialValues, onSubmit, onCancel, onEdit, i
       onCancel={onCancel}
       onSubmit={form.onSubmit(handleSubmit)}
       onEdit={onEdit}
+      onClear={mode === 'create' ? handleClear : undefined}
       canEdit={can(PERMISSIONS.VARIETY_EDIT)}
     >
       <TextInput

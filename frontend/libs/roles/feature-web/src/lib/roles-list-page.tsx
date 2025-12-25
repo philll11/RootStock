@@ -183,6 +183,7 @@ export function RolesListPage() {
         isLoading={isCreating || isUpdating}
       >
         <RoleForm
+          key={opened ? 'opened' : 'closed'}
           mode={mode}
           role={selectedRole}
           initialValues={createFormDraft}

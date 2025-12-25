@@ -12,8 +12,7 @@ export const VarietyFormScreen = ({ navigation, route }: any) => {
   const { varietyId } = route.params || {};
   const isEditing = !!varietyId;
 
-  const { varietiesQuery, createVarietyMutation, updateVarietyMutation, deleteVarietyMutation } = useVarieties();
-  const { data: varieties } = varietiesQuery;
+  const { varieties, isLoading: isVarietiesLoading, createVarietyMutation, updateVarietyMutation, deleteVarietyMutation } = useVarieties();
   
   const { can } = usePermission();
   const canEdit = can(isEditing ? PERMISSIONS.VARIETY_EDIT : PERMISSIONS.VARIETY_CREATE);
@@ -92,6 +91,13 @@ export const VarietyFormScreen = ({ navigation, route }: any) => {
     );
   };
 
+  const handleClear = () => {
+    setName('');
+    setIsActive(true);
+    setIsDirty(false);
+    setErrors({});
+  };
+
   return (
     <FormLayout
       mode={mode}
@@ -122,6 +128,7 @@ export const VarietyFormScreen = ({ navigation, route }: any) => {
       }}
       onSubmit={handleSave}
       onEdit={() => setIsEditMode(true)}
+      onClear={!isEditing ? handleClear : undefined}
       canEdit={canEdit}
       isLoading={isSubmitting}
       isDirty={isDirty}

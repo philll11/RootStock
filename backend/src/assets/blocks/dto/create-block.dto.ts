@@ -2,6 +2,7 @@
 import { IsArray, IsMongoId, IsNotEmpty, IsNumber, IsString, Min, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { IsExistingVariety } from '../../../master-data/varieties/decorators/is-existing-variety.decorator';
+import { IsExistingOrchard } from '../../orchards/decorators/is-existing-orchard.decorator';
 
 class PlantingDto {
   @IsMongoId()
@@ -16,6 +17,11 @@ class PlantingDto {
 }
 
 export class CreateBlockDto {
+
+  @IsMongoId()
+  @IsNotEmpty()
+  @IsExistingOrchard()
+  readonly orchardId: string;
 
   @IsString()
   @IsNotEmpty()

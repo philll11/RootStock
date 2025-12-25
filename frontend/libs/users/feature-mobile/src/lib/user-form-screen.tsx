@@ -162,6 +162,20 @@ export const UserFormScreen = ({ navigation, route }: any) => {
     handleChange(setClientIds, newClientIds, 'clientIds');
   };
 
+  const handleClear = () => {
+    setFirstName('');
+    setLastName('');
+    setEmail('');
+    setUserType(UserType.Employee);
+    setRoleId(undefined);
+    setRoleName(undefined);
+    setPassword('');
+    setIsActive(true);
+    setClientIds([]);
+    setIsDirty(false);
+    setErrors({});
+  };
+
   return (
     <FormLayout
       mode={mode}
@@ -198,6 +212,7 @@ export const UserFormScreen = ({ navigation, route }: any) => {
       }}
       onSubmit={handleSubmit}
       onEdit={() => setIsEditMode(true)}
+      onClear={!isEditing ? handleClear : undefined}
       canEdit={canEdit}
       isLoading={isLoading || isSubmitting}
       isDirty={isDirty}

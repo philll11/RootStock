@@ -44,20 +44,20 @@ export function OrchardForm({
   const form = useForm({
     initialValues: {
       name: '',
-      clientId: '',
+      clientId: null as string | null,
       userIds: [] as string[],
       isActive: true,
       ...initialValues,
     },
     validate: {
       name: (value) => (value.trim().length < 1 ? 'Name is required' : null),
-      clientId: (value) => (value.trim().length < 1 ? 'Client is required' : null),
+      clientId: (value) => (!value ? 'Client is required' : null),
     },
   });
 
   useEffect(() => {
     if (isCreating && onValuesChange) {
-      onValuesChange(form.values);
+      onValuesChange(form.values as any);
     }
   }, [form.values, isCreating, onValuesChange]);
 
@@ -78,7 +78,7 @@ export function OrchardForm({
     } else if (isCreating && initialValues) {
       form.setValues({
         name: initialValues.name || '',
-        clientId: initialValues.clientId || '',
+        clientId: initialValues.clientId || null,
         userIds: initialValues.userIds || []
       });
     }
@@ -88,7 +88,7 @@ export function OrchardForm({
     if (isCreating) {
       const dto: CreateOrchardDto = {
         name: values.name,
-        clientId: values.clientId,
+        clientId: values.clientId as string,
         userIds: values.userIds,
       };
       onSubmit(dto);
@@ -106,6 +106,15 @@ export function OrchardForm({
     notify.validation();
   };
 
+  const handleClear = () => {
+    form.setValues({
+      name: '',
+      clientId: null,
+      userIds: [],
+      isActive: true,
+    });
+  };
+
   return (
     <FormLayout
       mode={mode}
@@ -114,6 +123,7 @@ export function OrchardForm({
       onCancel={onCancel}
       onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       onEdit={onEdit}
+      onClear={isCreating ? handleClear : undefined}
       canEdit={can(PERMISSIONS.ORCHARD_EDIT)}
     >
       <TextInput

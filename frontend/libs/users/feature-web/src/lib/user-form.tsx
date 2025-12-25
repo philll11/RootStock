@@ -48,7 +48,7 @@ export function UserForm({
       lastName: '',
       email: '',
       userType: UserType.Employee,
-      roleId: '',
+      roleId: null as string | null,
       password: '',
       isActive: true,
       clientIds: [] as string[],
@@ -85,7 +85,7 @@ export function UserForm({
 
   useEffect(() => {
     if (isCreating && onValuesChange) {
-      onValuesChange(form.values);
+      onValuesChange(form.values as any);
     }
   }, [form.values, isCreating, onValuesChange]);
 
@@ -96,7 +96,7 @@ export function UserForm({
         lastName: user.lastName,
         email: user.email,
         userType: user.userType,
-        roleId: (typeof user.roleId === 'object' ? user.roleId._id : user.roleId) || '',
+        roleId: (typeof user.roleId === 'object' ? user.roleId._id : user.roleId) || null,
         password: '',
         isActive: user.isActive,
         clientIds: user.clientIds || [],
@@ -107,7 +107,7 @@ export function UserForm({
         lastName: initialValues.lastName || '',
         email: initialValues.email || '',
         userType: initialValues.userType || UserType.Employee,
-        roleId: initialValues.roleId || '',
+        roleId: initialValues.roleId || null,
         password: initialValues.password || '',
         isActive: (initialValues as any).isActive ?? true,
         clientIds: initialValues.clientIds || [],
@@ -142,7 +142,7 @@ export function UserForm({
       lastName: '',
       email: '',
       userType: UserType.Employee,
-      roleId: '',
+      roleId: null,
       password: '',
       isActive: true,
       clientIds: [],
@@ -157,6 +157,7 @@ export function UserForm({
       onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       isLoading={isLoading}
       onCancel={onCancel}
+      onClear={isCreating ? handleClear : undefined}
       onEdit={onEdit}
       canEdit={can(PERMISSIONS.USER_EDIT)}
       submitLabel={isEditing ? 'Update User' : 'Create User'}
@@ -246,12 +247,6 @@ export function UserForm({
           checked={form.values.isActive}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
         />
-      )}
-
-      {isCreating && (
-          <Button variant="subtle" color={palette.actions.delete} onClick={handleClear} style={{ alignSelf: 'flex-start' }} type="button">
-            Clear Form
-          </Button>
       )}
     </FormLayout>
   );

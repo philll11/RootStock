@@ -60,7 +60,9 @@ export function useVarieties() {
   });
 
   return {
-    varietiesQuery,
+    varieties: varietiesQuery.data ?? [],
+    isLoading: varietiesQuery.isLoading,
+    isError: varietiesQuery.isError,
     createVarietyMutation,
     updateVarietyMutation,
     deleteVarietyMutation,

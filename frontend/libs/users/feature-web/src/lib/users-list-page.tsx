@@ -185,6 +185,7 @@ export function UsersListPage() {
         isLoading={isCreating || isUpdating}
       >
         <UserForm
+          key={opened ? 'opened' : 'closed'}
           mode={mode}
           user={selectedUser}
           initialValues={createFormDraft}

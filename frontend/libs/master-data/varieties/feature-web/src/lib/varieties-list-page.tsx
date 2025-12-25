@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash } from '@tabler/icons-react';
-import { useVarieties, Variety } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useVarieties, Variety, CreateVarietyDto } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm, VarietyFormMode } from './variety-form';
 import { 
   ConfirmModal, 
@@ -18,8 +18,7 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function VarietiesListPage() {
-  const { varietiesQuery, createVarietyMutation, updateVarietyMutation, deleteVarietyMutation } = useVarieties();
-  const { data: varieties, isLoading } = varietiesQuery;
+  const { varieties, isLoading: isVarietiesLoading, createVarietyMutation, updateVarietyMutation, deleteVarietyMutation } = useVarieties();
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
@@ -28,6 +27,7 @@ export function VarietiesListPage() {
   const [selectedVariety, setSelectedVariety] = useState<Variety | null>(null);
   const [varietyToDelete, setVarietyToDelete] = useState<Variety | null>(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateVarietyDto>>({});
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty);
   
@@ -74,6 +74,7 @@ export function VarietiesListPage() {
       createVarietyMutation.mutate(values, {
         onSuccess: () => {
           close();
+          setCreateFormDraft({});
         },
       });
     } else if (mode === 'edit' && selectedVariety) {
@@ -156,7 +157,7 @@ export function VarietiesListPage() {
       <DataTable 
         data={sortedVarieties}
         columns={columns}
-        isLoading={isLoading}
+        isLoading={isVarietiesLoading}
         onRowClick={handleView}
         noDataMessage="No varieties found."
         onSort={(accessor, direction) => setSortState({ accessor, direction })}
@@ -171,6 +172,7 @@ export function VarietiesListPage() {
         isLoading={createVarietyMutation.isPending || updateVarietyMutation.isPending}
       >
         <VarietyForm
+          key={opened ? 'opened' : 'closed'}
           mode={mode}
           initialValues={selectedVariety}
           onSubmit={handleSubmit}
@@ -178,6 +180,8 @@ export function VarietiesListPage() {
           onEdit={() => setMode('edit')}
           isLoading={createVarietyMutation.isPending || updateVarietyMutation.isPending}
           onDirtyChange={setIsFormDirty}
+          draftValues={createFormDraft}
+          onValuesChange={(values) => setCreateFormDraft(values as CreateVarietyDto)}
         />
       </FormDrawer>
 

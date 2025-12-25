@@ -151,6 +151,15 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
     handleChange(setSelectedPermissions, newPermissions, 'permissions');
   };
 
+  const handleClear = () => {
+    setName('');
+    setDescription('');
+    setVisibilityScope(VisibilityScope.Client);
+    setSelectedPermissions([]);
+    setIsDirty(false);
+    setErrors({});
+  };
+
   return (
     <FormLayout
       mode={mode}
@@ -182,6 +191,7 @@ export const RoleFormScreen = ({ navigation, route }: any) => {
       }}
       onSubmit={handleSubmit}
       onEdit={() => setIsEditMode(true)}
+      onClear={!isEditing ? handleClear : undefined}
       canEdit={canEdit}
       isLoading={isLoading || isSubmitting}
       isDirty={isDirty}

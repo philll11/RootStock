@@ -1,12 +1,14 @@
 import { TextInput, Button, Group, Switch, Stack, Text, Select, ActionIcon, NumberInput, Alert, Box } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { useDisclosure } from '@mantine/hooks';
 import { useEffect, useState } from 'react';
 import { Block, CreateBlockDto, UpdateBlockDto } from '@rootstock/blocks/blocks-data-access';
 import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useOrchards } from '@rootstock/orchards/orchards-data-access';
 import { IconTrash, IconPlus, IconAlertTriangle } from '@tabler/icons-react';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { FormLayout } from '@rootstock/ui/web';
+import { FormLayout, ConfirmModal } from '@rootstock/ui/web';
 
 export type BlockFormMode = 'create' | 'edit' | 'view';
 
@@ -20,6 +22,7 @@ interface BlockFormProps {
   onDirtyChange?: (isDirty: boolean) => void;
   draftValues?: Partial<CreateBlockDto>;
   onValuesChange?: (values: Partial<CreateBlockDto>) => void;
+  orchardId?: string;
 }
 
 export function BlockForm({ 
@@ -31,25 +34,34 @@ export function BlockForm({
   isLoading, 
   onDirtyChange,
   draftValues,
-  onValuesChange
+  onValuesChange,
+  orchardId
 }: BlockFormProps) {
-  const { varietiesQuery } = useVarieties();
-  const { data: varieties } = varietiesQuery;
+  // FIX: Consistent usage of Flat Pattern for both hooks
+  const { varieties, isLoading: isVarietiesLoading } = useVarieties();
+  const { orchards, isLoading: isOrchardsLoading } = useOrchards({ enabled: !orchardId && mode === 'create' });
+  
   const { can } = usePermission();
   const [showReplantingWarning, setShowReplantingWarning] = useState(false);
+  const [confirmReplantOpened, { open: openConfirmReplant, close: closeConfirmReplant }] = useDisclosure(false);
 
   const form = useForm({
     initialValues: {
       name: initialValues?.name || '',
+      // Safe id extraction with fallback to orchardId prop
+      orchardId: (initialValues?.orchardId 
+        ? (typeof initialValues.orchardId === 'object' ? initialValues.orchardId._id : initialValues.orchardId) 
+        : (orchardId || null)) as string | null,
       isActive: initialValues?.isActive ?? true,
       plantings: initialValues?.plantings?.map(p => ({
-        varietyId: p.varietyId,
+        varietyId: typeof p.varietyId === 'object' ? p.varietyId._id : p.varietyId,
         treeCount: p.treeCount
-      })) || [{ varietyId: '', treeCount: 0 }],
+      })) || [{ varietyId: null as string | null, treeCount: 0 }],
       ...draftValues,
     },
     validate: {
       name: (value) => (value.length < 2 ? 'Name must be at least 2 characters' : null),
+      orchardId: (value) => (!value && !orchardId ? 'Orchard is required' : null),
       plantings: {
         varietyId: (value) => (!value ? 'Variety is required' : null),
         treeCount: (value) => (value < 0 ? 'Tree count must be positive' : null),
@@ -59,7 +71,7 @@ export function BlockForm({
 
   useEffect(() => {
     if (mode === 'create' && onValuesChange) {
-      onValuesChange(form.values);
+      onValuesChange(form.values as any);
     }
   }, [form.values, mode, onValuesChange]);
 
@@ -67,55 +79,82 @@ export function BlockForm({
     if (initialValues) {
       form.setValues({
         name: initialValues.name,
+        orchardId: initialValues.orchardId 
+          ? (typeof initialValues.orchardId === 'object' ? initialValues.orchardId._id : initialValues.orchardId) 
+          : (orchardId || null),
         isActive: initialValues.isActive,
         plantings: initialValues.plantings?.map(p => ({
-          varietyId: p.varietyId,
+          varietyId: typeof p.varietyId === 'object' ? p.varietyId._id : p.varietyId,
           treeCount: p.treeCount
         })) || [],
       });
       form.resetDirty();
-    } else if (mode === 'create' && draftValues) {
+    } else if (mode === 'create') {
       form.setValues({
-        name: draftValues.name || '',
-        plantings: draftValues.plantings || [{ varietyId: '', treeCount: 0 }],
+        name: draftValues?.name || '',
+        orchardId: orchardId || null,
+        plantings: (draftValues?.plantings as any) || [{ varietyId: null, treeCount: 0 }],
       });
     }
-  }, [initialValues, mode, draftValues]);
+  }, [initialValues, mode, orchardId]);
 
   useEffect(() => {
-    onDirtyChange?.(form.isDirty());
+    if (mode === 'edit') {
+      onDirtyChange?.(form.isDirty());
+    }
     
     // Check for replanting warning
     if (mode === 'edit' && initialValues) {
       const hasVarietyChanged = form.values.plantings.some((p, index) => {
         const initialP = initialValues.plantings[index];
-        return initialP && p.varietyId !== initialP.varietyId;
+        const initialVarietyId = initialP ? (typeof initialP.varietyId === 'object' ? (initialP.varietyId as any)._id : initialP.varietyId) : null;
+        return initialP && p.varietyId !== initialVarietyId;
       });
       setShowReplantingWarning(hasVarietyChanged);
     }
   }, [form.values, mode, initialValues, onDirtyChange]);
 
-  const handleSubmit = (values: typeof form.values) => {
+  const proceedSubmit = (values: typeof form.values) => {
     if (mode === 'create') {
       const { isActive, ...createValues } = values;
-      onSubmit(createValues);
+      onSubmit(createValues as any);
     } else {
-      onSubmit(values);
+      onSubmit(values as any);
     }
   };
 
-  const varietyOptions = varieties?.map(v => ({ value: v._id, label: v.name })) || [];
+  const handleSubmit = (values: typeof form.values) => {
+    if (showReplantingWarning) {
+      openConfirmReplant();
+      return;
+    }
+    proceedSubmit(values);
+  };
+
+  const handleClear = () => {
+    form.setValues({
+      name: '',
+      orchardId: orchardId || null,
+      isActive: true,
+      plantings: [{ varietyId: null, treeCount: 0 }],
+    });
+  };
+
+  const varietyOptions = (varieties || []).map(v => ({ value: v._id, label: v.name }));
 
   const isView = mode === 'view';
+  
+  const isDataLoading = isLoading || isVarietiesLoading || isOrchardsLoading;
 
   return (
     <FormLayout
       mode={mode}
       isDirty={form.isDirty()}
-      isLoading={isLoading}
+      isLoading={isDataLoading}
       onCancel={onCancel}
       onSubmit={form.onSubmit(handleSubmit)}
       onEdit={onEdit}
+      onClear={mode === 'create' ? handleClear : undefined}
       canEdit={can(PERMISSIONS.BLOCK_EDIT)}
     >
       <TextInput
@@ -126,6 +165,18 @@ export function BlockForm({
         {...form.getInputProps('name')}
       />
 
+      {(!orchardId && mode === 'create') && (
+        <Select
+          label="Orchard"
+          placeholder="Select Orchard"
+          data={(orchards || []).map(o => ({ value: o._id, label: o.name }))}
+          required
+          searchable
+          mt="md"
+          {...form.getInputProps('orchardId')}
+        />
+      )}
+
       <Box mt="md">
         <Group justify="space-between" mb="xs">
           <Text fw={500} size="sm">Plantings</Text>
@@ -134,7 +185,7 @@ export function BlockForm({
               variant="subtle" 
               size="xs" 
               leftSection={<IconPlus size={14} />}
-              onClick={() => form.insertListItem('plantings', { varietyId: '', treeCount: 0 })}
+              onClick={() => form.insertListItem('plantings', { varietyId: null, treeCount: 0 })}
             >
               Add Planting
             </Button>
@@ -183,11 +234,24 @@ export function BlockForm({
         <Switch
           label="Active"
           readOnly={isView}
-          disabled={isView} // Switch needs disabled to prevent interaction usually, but readOnly might work in newer Mantine. Keeping disabled for Switch is usually acceptable as it's a toggle.
+          disabled={isView}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
           mt="md"
         />
       )}
+
+      <ConfirmModal
+        opened={confirmReplantOpened}
+        onClose={closeConfirmReplant}
+        onConfirm={() => {
+          closeConfirmReplant();
+          proceedSubmit(form.values);
+        }}
+        title="Confirm Replanting"
+        message="Changing the variety implies a replanting. Historical assessments will remain linked to the old variety context. Are you sure you want to proceed?"
+        confirmLabel="Confirm Change"
+        confirmColor="yellow"
+      />
     </FormLayout>
   );
 }

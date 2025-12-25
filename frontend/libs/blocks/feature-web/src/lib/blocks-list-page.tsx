@@ -1,3 +1,4 @@
+// frontend/libs/blocks/feature-web/src/lib/blocks-list-page.tsx
 import { useState } from 'react';
 import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -20,8 +21,7 @@ import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function BlocksListPage() {
   const { orchardId } = useParams<{ orchardId: string }>();
-  const { blocksQuery, createBlockMutation, updateBlockMutation, deleteBlockMutation } = useBlocks(orchardId);
-  const { data: blocks, isLoading } = blocksQuery;
+  const { blocks, isLoading, createBlock, updateBlock, deleteBlock, isCreating, isUpdating } = useBlocks(orchardId);
   const { can } = usePermission();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
@@ -63,28 +63,34 @@ export function BlocksListPage() {
     openDeleteModal();
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (blockToDelete) {
-      deleteBlockMutation.mutate(blockToDelete._id);
-      closeDeleteModal();
-      setBlockToDelete(null);
+      try {
+        await deleteBlock({ id: blockToDelete._id });
+        closeDeleteModal();
+        setBlockToDelete(null);
+      } catch (error) {
+        // Error handled by hook
+      }
     }
   };
 
-  const handleSubmit = (values: any) => {
-    if (formMode === 'create') {
-      createBlockMutation.mutate(values, {
-        onSuccess: () => {
-          closeDrawer();
-          setCreateFormDraft({});
-        },
-      });
-    } else if (formMode === 'edit' && selectedBlock) {
-      updateBlockMutation.mutate({ id: selectedBlock._id, data: values }, {
-        onSuccess: () => {
-          closeDrawer();
-        },
-      });
+  const handleSubmit = async (values: any) => {
+    try {
+      if (formMode === 'create') {
+        const { orchardId: formOrchardId, ...blockData } = values;
+        await createBlock({ 
+          data: blockData, 
+          orchardId: formOrchardId || orchardId 
+        });
+        closeDrawer();
+        setCreateFormDraft({});
+      } else if (formMode === 'edit' && selectedBlock) {
+        await updateBlock({ id: selectedBlock._id, data: values });
+        closeDrawer();
+      }
+    } catch (error) {
+      // Error handled by hook
     }
   };
 
@@ -104,6 +110,11 @@ export function BlocksListPage() {
   const columns: DataTableColumn<Block>[] = [
     { accessor: 'name', title: 'Name', sortable: true },
     { accessor: 'recordId', title: 'ID', sortable: true },
+    ...(!orchardId ? [{
+      accessor: 'orchardId',
+      title: 'Orchard',
+      render: (block: Block) => typeof block.orchardId === 'object' ? block.orchardId.name : 'Unknown'
+    }] : []),
     { 
       accessor: 'plantings', 
       title: 'Plantings',
@@ -111,7 +122,7 @@ export function BlocksListPage() {
         <>
           {block.plantings.map((p, i) => (
             <div key={i}>
-              {p.variety?.name || 'Unknown'} ({p.treeCount})
+              {(typeof p.varietyId === 'object' ? p.varietyId.name : 'Unknown')} ({p.treeCount})
             </div>
           ))}
         </>
@@ -147,8 +158,6 @@ export function BlocksListPage() {
     }
   ];
 
-  if (!orchardId) return <Text>Orchard ID is missing</Text>;
-
   const sortedBlocks = blocks ? [...blocks].sort((a, b) => {
     const { accessor, direction } = sortState;
     const aValue = (a as any)[accessor] || '';
@@ -167,7 +176,7 @@ export function BlocksListPage() {
     <>
       <PageHeader 
         title="Blocks"
-        actionLabel="Create Block"
+        actionLabel="Add Block"
         onActionClick={can(PERMISSIONS.BLOCK_CREATE) ? handleCreate : undefined}
       />
 
@@ -186,18 +195,20 @@ export function BlocksListPage() {
         onClose={handleClose}
         title={getDrawerTitle()}
         size={layout.drawers.form}
-        isLoading={createBlockMutation.isPending || updateBlockMutation.isPending}
+        isLoading={isCreating || isUpdating}
       >
         <BlockForm
+          key={drawerOpened ? 'opened' : 'closed'}
           mode={formMode}
           initialValues={selectedBlock}
           onSubmit={handleSubmit}
           onCancel={handleClose}
           onEdit={() => setFormMode('edit')}
-          isLoading={createBlockMutation.isPending || updateBlockMutation.isPending}
+          isLoading={isCreating || isUpdating}
           onDirtyChange={setIsFormDirty}
           draftValues={createFormDraft}
           onValuesChange={(values) => setCreateFormDraft(values as CreateBlockDto)}
+          orchardId={orchardId}
         />
       </FormDrawer>
 

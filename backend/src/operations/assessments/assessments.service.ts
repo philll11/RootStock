@@ -1,5 +1,5 @@
 // backend/src/operations/assessments/assessments.service.ts
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Types, Connection } from 'mongoose';
 
@@ -21,8 +21,8 @@ export class AssessmentsService {
   constructor(
     @InjectModel(Assessment.name) private assessmentModel: Model<AssessmentDocument>,
     @InjectConnection() private connection: Connection,
+    @Inject(forwardRef(() => BlocksService)) private readonly blocksService: BlocksService,
     private readonly calculator: AssessmentCalculatorService,
-    private readonly blocksService: BlocksService,
     private readonly countersService: CountersService,
     private readonly clientResolverService: ClientResolverService,
   ) {}
@@ -36,7 +36,7 @@ export class AssessmentsService {
     
     // 2. Permission Check (Layer 2)
     // Verify the user actually has access to this block
-    await this.blocksService.findOne(blockContext.orchardId.toString(), blockId, requestingUser);
+    await this.blocksService.findOne(blockId, requestingUser);
 
     // 3. Snapshot Pattern (Critical Business Rule)
     if (!blockContext.plantings || blockContext.plantings.length === 0) {
@@ -171,5 +171,13 @@ export class AssessmentsService {
     } finally {
         session.endSession();
     }
+  }
+
+  async checkActiveAssessmentsForBlock(blockId: string): Promise<boolean> {
+    const count = await this.assessmentModel.countDocuments({
+      blockId: new Types.ObjectId(blockId),
+      status: { $in: [AssessmentStatus.PENDING, AssessmentStatus.IN_PROGRESS] }
+    }).exec();
+    return count > 0;
   }
 }

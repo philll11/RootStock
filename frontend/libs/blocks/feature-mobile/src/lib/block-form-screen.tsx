@@ -13,10 +13,8 @@ export const BlockFormScreen = ({ navigation, route }: any) => {
   const { orchardId, blockId } = route.params || {};
   const isEditing = !!blockId;
 
-  const { blocksQuery, createBlockMutation, updateBlockMutation } = useBlocks(orchardId);
-  const { data: blocks } = blocksQuery;
-  const { varietiesQuery } = useVarieties();
-  const { data: varieties } = varietiesQuery;
+  const { blocks, createBlock, updateBlock, isCreating, isUpdating } = useBlocks(orchardId);
+  const { varieties, isLoading: isVarietiesLoading } = useVarieties();
   
   const { can } = usePermission();
   const canEdit = can(isEditing ? PERMISSIONS.BLOCK_EDIT : PERMISSIONS.BLOCK_CREATE);
@@ -44,13 +42,16 @@ export const BlockFormScreen = ({ navigation, route }: any) => {
         setName(block.name);
         setIsActive(block.isActive);
         setRecordId(block.recordId);
-        setPlantings(block.plantings.map(p => ({ varietyId: p.varietyId, treeCount: p.treeCount.toString() })));
+        setPlantings(block.plantings.map(p => ({ 
+          varietyId: typeof p.varietyId === 'object' ? (p.varietyId as any)._id : p.varietyId, 
+          treeCount: p.treeCount.toString() 
+        })));
         setTimeout(() => setIsDirty(false), 100);
       }
     }
   }, [isEditing, blockId, blocks]);
 
-  const isSubmitting = createBlockMutation.isPending || updateBlockMutation.isPending;
+  const isSubmitting = isCreating || isUpdating;
   useMobileDiscardWarning(isEditMode && isDirty && !isSubmitting);
 
   const validate = () => {
@@ -65,7 +66,7 @@ export const BlockFormScreen = ({ navigation, route }: any) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
 
     const payload = {
@@ -79,7 +80,8 @@ export const BlockFormScreen = ({ navigation, route }: any) => {
       const block = blocks?.find(b => b._id === blockId);
       const hasChanged = plantings.some((p, i) => {
         const initial = block?.plantings[i];
-        return initial && p.varietyId !== initial.varietyId;
+        const initialVarietyId = initial ? (typeof initial.varietyId === 'object' ? (initial.varietyId as any)._id : initial.varietyId) : null;
+        return initial && p.varietyId !== initialVarietyId;
       });
 
       if (hasChanged) {
@@ -90,13 +92,12 @@ export const BlockFormScreen = ({ navigation, route }: any) => {
             { text: 'Cancel', style: 'cancel' },
             { 
               text: 'Update', 
-              onPress: () => {
-                updateBlockMutation.mutate({ id: blockId, data: payload }, {
-                  onSuccess: () => {
-                    setIsDirty(false);
-                    setIsEditMode(false);
-                  }
-                });
+              onPress: async () => {
+                try {
+                  await updateBlock({ id: blockId, data: payload });
+                  setIsDirty(false);
+                  setIsEditMode(false);
+                } catch (e) {}
               }
             }
           ]
@@ -104,19 +105,17 @@ export const BlockFormScreen = ({ navigation, route }: any) => {
         return;
       }
 
-      updateBlockMutation.mutate({ id: blockId, data: payload }, {
-        onSuccess: () => {
-          setIsDirty(false);
-          setIsEditMode(false);
-        }
-      });
+      try {
+        await updateBlock({ id: blockId, data: payload });
+        setIsDirty(false);
+        setIsEditMode(false);
+      } catch (e) {}
     } else {
-      createBlockMutation.mutate(payload, {
-        onSuccess: () => {
-          setIsDirty(false);
-          navigation.goBack();
-        }
-      });
+      try {
+        await createBlock({ data: payload, orchardId });
+        setIsDirty(false);
+        navigation.goBack();
+      } catch (e) {}
     }
   };
 
@@ -156,6 +155,14 @@ export const BlockFormScreen = ({ navigation, route }: any) => {
     return varieties?.find(v => v._id === id)?.name || 'Select Variety';
   };
 
+  const handleClear = () => {
+    setName('');
+    setPlantings([{ varietyId: '', treeCount: '0' }]);
+    setIsActive(true);
+    setIsDirty(false);
+    setErrors({});
+  };
+
   return (
     <FormLayout
       mode={mode}
@@ -187,6 +194,7 @@ export const BlockFormScreen = ({ navigation, route }: any) => {
       }}
       onSubmit={handleSubmit}
       onEdit={() => setIsEditMode(true)}
+      onClear={!isEditing ? handleClear : undefined}
       canEdit={canEdit}
       isLoading={isSubmitting}
       isDirty={isDirty}

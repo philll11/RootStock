@@ -189,6 +189,7 @@ export function OrchardsListPage() {
         isLoading={isCreating || isUpdating}
       >
         <OrchardForm 
+          key={drawerOpened ? 'opened' : 'closed'}
           orchard={selectedOrchard} 
           mode={formMode} 
           onSubmit={handleSubmit}

@@ -173,6 +173,7 @@ export function ClientsListPage() {
         isLoading={isCreating || isUpdating}
       >
         <ClientForm
+          key={opened ? 'opened' : 'closed'}
           mode={mode}
           client={selectedClient}
           initialValues={createFormDraft}

@@ -121,6 +121,13 @@ export const ClientFormScreen = ({ navigation, route }: any) => {
     );
   };
 
+  const handleClear = () => {
+    setName('');
+    setIsActive(true);
+    setIsDirty(false);
+    setErrors({});
+  };
+
   const isSaving = isCreating || isUpdating;
 
   return (
@@ -153,6 +160,7 @@ export const ClientFormScreen = ({ navigation, route }: any) => {
       }}
       onSubmit={handleSave}
       onEdit={() => setIsEditMode(true)}
+      onClear={!isEditing ? handleClear : undefined}
       canEdit={canEdit}
       isLoading={isLoading || isSaving || isSubmitting}
       isDirty={isDirty}

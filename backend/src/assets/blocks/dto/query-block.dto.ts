@@ -4,6 +4,10 @@ import { Type } from 'class-transformer';
 
 export class QueryBlockDto {
 
+    @IsMongoId()
+    @IsOptional()
+    readonly orchardId?: string;
+
     @IsString()
     @IsOptional()
     readonly recordId?: string;

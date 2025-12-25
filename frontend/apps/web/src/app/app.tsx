@@ -119,6 +119,14 @@ export function App() {
               } 
             />
             <Route 
+              path="blocks" 
+              element={
+                <ProtectedRoute permission={PERMISSIONS.BLOCK_VIEW}>
+                  <BlocksListPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="roles" 
               element={
                 <ProtectedRoute permission={PERMISSIONS.ROLE_VIEW}>

@@ -88,6 +88,13 @@ export function ClientForm({
     notify.validation();
   };
 
+  const handleClear = () => {
+    form.setValues({
+      name: '',
+      isActive: true,
+    });
+  };
+
   const isView = mode === 'view';
 
   return (
@@ -97,6 +104,7 @@ export function ClientForm({
       isLoading={isLoading}
       onCancel={onCancel}
       onEdit={onEdit}
+      onClear={isCreating ? handleClear : undefined}
       canEdit={can(PERMISSIONS.CLIENT_EDIT)}
       submitLabel={isEditing ? 'Update Client' : 'Create Client'}
     >

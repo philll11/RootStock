@@ -129,6 +129,7 @@ export function RoleForm({
       onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       isLoading={isLoading}
       onCancel={onCancel}
+      onClear={isCreating ? handleClear : undefined}
       onEdit={onEdit}
       canEdit={can(SHARED_PERMISSIONS.ROLE_EDIT)}
       submitLabel={isEditing ? 'Update Role' : 'Create Role'}
@@ -193,12 +194,6 @@ export function RoleForm({
             </SimpleGrid>
           </Fieldset>
         ))}
-
-      {isCreating && (
-          <Button variant="subtle" color={palette.actions.delete} onClick={handleClear} style={{ alignSelf: 'flex-start' }}>
-            Clear Form
-          </Button>
-      )}
     </FormLayout>
   );
 }

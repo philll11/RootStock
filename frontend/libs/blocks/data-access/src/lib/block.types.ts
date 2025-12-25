@@ -1,18 +1,13 @@
 export interface Planting {
-  varietyId: string;
+  varietyId: string | { _id: string; name: string };
   treeCount: number;
-  // Populated fields for display
-  variety?: {
-    _id: string;
-    name: string;
-  };
 }
 
 export interface Block {
   _id: string;
   recordId: string;
   name: string;
-  orchardId: string;
+  orchardId: string | { _id: string; name: string };
   clientId: string;
   plantings: Planting[];
   isActive: boolean;

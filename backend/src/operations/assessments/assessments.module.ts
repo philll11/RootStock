@@ -1,5 +1,5 @@
 // backend/src/operations/assessments/assessments.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 
 import { AssessmentsService } from './assessments.service';
 import { AssessmentsController } from './assessments.controller';
@@ -11,7 +11,7 @@ import { ClientResolverModule } from '../../iam/client-resolver/client-resolver.
 
 @Module({
   imports: [
-    BlocksModule,
+    forwardRef(() => BlocksModule),
     CountersModule,
     ClientResolverModule
   ],

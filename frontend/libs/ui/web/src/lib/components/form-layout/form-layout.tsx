@@ -10,6 +10,7 @@ export interface FormLayoutProps extends Omit<StackProps, 'onSubmit'> {
   isLoading?: boolean;
   mode?: FormMode;
   onCancel?: () => void;
+  onClear?: () => void;
   onEdit?: () => void;
   canEdit?: boolean;
   isDirty?: boolean;
@@ -23,6 +24,7 @@ export function FormLayout({
   gap = 'md',
   mode,
   onCancel,
+  onClear,
   onEdit,
   canEdit = true,
   isDirty,
@@ -51,6 +53,7 @@ export function FormLayout({
           ) : (
             <FormActions 
               onCancel={onCancel} 
+              onClear={onClear}
               isSubmitting={isLoading} 
               submitLabel={submitLabel || (isCreate ? 'Create' : 'Save')}
               // Only disable save if explicitly not dirty in edit mode. 

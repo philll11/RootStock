@@ -17,6 +17,10 @@ export class BlockQueryBuilder extends BaseQueryBuilder {
     super.buildSearchFilters();
 
     // 2. Handle Block-specific filters
+    if (this.queryDto.orchardId) {
+      this.filter['orchardId'] = new Types.ObjectId(this.queryDto.orchardId);
+    }
+
     // Filtering by varietyId requires looking inside the embedded 'plantings' array
     if (this.queryDto.varietyId) {
       this.filter['plantings.varietyId'] = new Types.ObjectId(this.queryDto.varietyId);

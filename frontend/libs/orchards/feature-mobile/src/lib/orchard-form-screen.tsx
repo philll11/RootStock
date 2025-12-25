@@ -181,6 +181,16 @@ export function OrchardFormScreen({ navigation, route }: any) {
     `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
   
+  const handleClear = () => {
+    setName('');
+    setClientId('');
+    setUserIds([]);
+    setIsActive(true);
+    setIsDirty(false);
+    setErrors({});
+    createFormDraft = {};
+  };
+  
   return (
     <FormLayout
       mode={mode}
@@ -208,6 +218,7 @@ export function OrchardFormScreen({ navigation, route }: any) {
       }}
       onSubmit={handleSubmit}
       onEdit={() => setIsEditMode(true)}
+      onClear={!isEditing ? handleClear : undefined}
       canEdit={canEdit}
       isLoading={isLoading || isSubmitting}
       isDirty={isDirty}

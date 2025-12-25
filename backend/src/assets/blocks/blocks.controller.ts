@@ -13,7 +13,7 @@ import { PERMISSIONS } from '../../common/constants/permissions.constants';
 
 import type { UserDocument } from '../../iam/users/schemas/user.schema';
 
-@Controller('orchards/:orchardId/blocks')
+@Controller('blocks')
 @UseFilters(MongoExceptionFilter)
 export class BlocksController {
   constructor(private readonly blocksService: BlocksService) {}
@@ -21,52 +21,47 @@ export class BlocksController {
   @Post()
   @RequirePermission(PERMISSIONS.BLOCK_CREATE)
   create(
-    @Param('orchardId', ParseMongoIdPipe) orchardId: string,
     @Body() createBlockDto: CreateBlockDto,
     @CurrentUser() requestingUser: UserDocument,
   ) {
-    return this.blocksService.create(orchardId, createBlockDto, requestingUser);
+    return this.blocksService.create(createBlockDto, requestingUser);
   }
 
   @Get()
   @RequirePermission(PERMISSIONS.BLOCK_VIEW)
   findAll(
-    @Param('orchardId', ParseMongoIdPipe) orchardId: string,
     @Query() query: QueryBlockDto,
     @CurrentUser() requestingUser: UserDocument,
   ) {
-    return this.blocksService.findAll(orchardId, query, requestingUser);
+    return this.blocksService.findAll(query, requestingUser);
   }
 
   @Get(':blockId')
   @RequirePermission(PERMISSIONS.BLOCK_VIEW)
   findOne(
-    @Param('orchardId', ParseMongoIdPipe) orchardId: string,
     @Param('blockId', ParseMongoIdPipe) blockId: string,
     @Query() query: QueryBlockDto,
     @CurrentUser() requestingUser: UserDocument,
   ) {
-    return this.blocksService.findOne(orchardId, blockId, requestingUser, { includeInactive: query.includeInactives });
+    return this.blocksService.findOne(blockId, requestingUser, { includeInactive: query.includeInactives });
   }
 
   @Patch(':blockId')
   @RequirePermission(PERMISSIONS.BLOCK_EDIT)
   update(
-    @Param('orchardId', ParseMongoIdPipe) orchardId: string,
     @Param('blockId', ParseMongoIdPipe) blockId: string,
     @Body() updateBlockDto: UpdateBlockDto,
     @CurrentUser() requestingUser: UserDocument,
   ) {
-    return this.blocksService.update(orchardId, blockId, updateBlockDto, requestingUser);
+    return this.blocksService.update(blockId, updateBlockDto, requestingUser);
   }
 
   @Delete(':blockId')
   @RequirePermission(PERMISSIONS.BLOCK_DELETE)
   remove(
-    @Param('orchardId', ParseMongoIdPipe) orchardId: string,
     @Param('blockId', ParseMongoIdPipe) blockId: string,
     @CurrentUser() requestingUser: UserDocument,
   ) {
-    return this.blocksService.remove(orchardId, blockId, requestingUser);
+    return this.blocksService.remove(blockId, requestingUser);
   }
 }

@@ -1,3 +1,4 @@
+// frontend/libs/blocks/data-access/src/lib/use-blocks.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
 import { Block, CreateBlockDto, UpdateBlockDto } from './block.types';
@@ -9,27 +10,30 @@ export const BLOCKS_QUERY_KEY = ['blocks'];
 export function useBlocks(orchardId?: string, options?: { enabled?: boolean }) {
   const queryClient = useQueryClient();
   const { can } = usePermission();
-  const isEnabled = (options?.enabled ?? true) && !!orchardId && can(PERMISSIONS.BLOCK_VIEW);
-  const queryKey = [...BLOCKS_QUERY_KEY, orchardId];
+  const isEnabled = (options?.enabled ?? true) && can(PERMISSIONS.BLOCK_VIEW);
+  const queryKey = orchardId ? [...BLOCKS_QUERY_KEY, orchardId] : [...BLOCKS_QUERY_KEY, 'global'];
 
   const blocksQuery = useQuery({
     queryKey: queryKey,
     queryFn: async () => {
-      if (!orchardId) return [];
-      const response = await apiClient.get<Block[]>(`/orchards/${orchardId}/blocks`);
+      const params = orchardId ? { orchardId } : {};
+      const response = await apiClient.get<Block[]>('/blocks', { params });
       return response.data;
     },
     enabled: isEnabled,
   });
 
   const createBlockMutation = useMutation({
-    mutationFn: async (data: CreateBlockDto) => {
-      if (!orchardId) throw new Error('Orchard ID is required');
-      const response = await apiClient.post<Block>(`/orchards/${orchardId}/blocks`, data);
+    mutationFn: async ({ data, orchardId: targetOrchardId }: { data: CreateBlockDto; orchardId?: string }) => {
+      const oid = targetOrchardId || orchardId;
+      if (!oid) throw new Error('Orchard ID is required');
+      // Merge orchardId into the body
+      const payload = { ...data, orchardId: oid };
+      const response = await apiClient.post<Block>('/blocks', payload);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey });
+      queryClient.invalidateQueries({ queryKey: BLOCKS_QUERY_KEY });
       notify.success('The block has been successfully created.', 'Block Created');
     },
     onError: (error: any) => {
@@ -38,13 +42,12 @@ export function useBlocks(orchardId?: string, options?: { enabled?: boolean }) {
   });
 
   const updateBlockMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateBlockDto }) => {
-      if (!orchardId) throw new Error('Orchard ID is required');
-      const response = await apiClient.patch<Block>(`/orchards/${orchardId}/blocks/${id}`, data);
+    mutationFn: async ({ id, data }: { id: string; data: UpdateBlockDto; orchardId?: string }) => {
+      const response = await apiClient.patch<Block>(`/blocks/${id}`, data);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey });
+      queryClient.invalidateQueries({ queryKey: BLOCKS_QUERY_KEY });
       notify.success('The block details have been updated.', 'Block Updated');
     },
     onError: (error: any) => {
@@ -53,13 +56,12 @@ export function useBlocks(orchardId?: string, options?: { enabled?: boolean }) {
   });
 
   const deleteBlockMutation = useMutation({
-    mutationFn: async (id: string) => {
-      if (!orchardId) throw new Error('Orchard ID is required');
-      const response = await apiClient.delete<Block>(`/orchards/${orchardId}/blocks/${id}`);
+    mutationFn: async ({ id }: { id: string; orchardId?: string }) => {
+      const response = await apiClient.delete<Block>(`/blocks/${id}`);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey });
+      queryClient.invalidateQueries({ queryKey: BLOCKS_QUERY_KEY });
       notify.success('The block has been deleted.', 'Block Deleted');
     },
     onError: (error: any) => {
@@ -68,9 +70,14 @@ export function useBlocks(orchardId?: string, options?: { enabled?: boolean }) {
   });
 
   return {
-    blocksQuery,
-    createBlockMutation,
-    updateBlockMutation,
-    deleteBlockMutation,
+    blocks: blocksQuery.data ?? [],
+    isLoading: blocksQuery.isLoading,
+    isError: blocksQuery.isError,
+    createBlock: createBlockMutation.mutateAsync,
+    updateBlock: updateBlockMutation.mutateAsync,
+    deleteBlock: deleteBlockMutation.mutateAsync,
+    isCreating: createBlockMutation.isPending,
+    isUpdating: updateBlockMutation.isPending,
+    isDeleting: deleteBlockMutation.isPending,
   };
 }

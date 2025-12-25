@@ -15,6 +15,8 @@ import { OrchardsService } from '../orchards/orchards.service';
 import { CountersService } from '../../system/counters/counters.service';
 import { ClientResolverService } from '../../iam/client-resolver/client-resolver.service';
 import { UserDocument } from '../../iam/users/schemas/user.schema';
+import { AssessmentsService } from '../../operations/assessments/assessments.service';
+import { AssessmentStatus } from '../../operations/assessments/schemas/assessment.schema';
 
 @Injectable()
 export class BlocksService {
@@ -22,11 +24,15 @@ export class BlocksService {
     @InjectModel(Block.name) private blockModel: Model<BlockDocument>,
     @InjectConnection() private connection: Connection,
     @Inject(forwardRef(() => OrchardsService)) private readonly orchardsService: OrchardsService,
+    @Inject(forwardRef(() => AssessmentsService)) private readonly assessmentsService: AssessmentsService,
     private readonly countersService: CountersService,
     private readonly clientResolverService: ClientResolverService,
   ) { }
 
-  async create(orchardId: string, createBlockDto: CreateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {
+  async create(createBlockDto: CreateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {
+
+    const orchardId = createBlockDto.orchardId;
+
     // Layer 2 Check: Verify parent Orchard access
     const orchard = await this.orchardsService.findOne(orchardId, requestingUser);
 
@@ -53,47 +59,42 @@ export class BlocksService {
     }
   }
 
-  async findAll(orchardId: string, query: QueryBlockDto, requestingUser: UserDocument): Promise<BlockDocument[]> {
-    // Validate parent existence and access first
-    await this.orchardsService.findOne(orchardId, requestingUser);
-
+  async findAll(query: QueryBlockDto, requestingUser: UserDocument): Promise<BlockDocument[]> {
     const queryBuilder = new BlockQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
 
-    // Force context to the specific orchard
-    filter.orchardId = new Types.ObjectId(orchardId);
-
     return this.blockModel.find(filter)
+      .populate('orchardId', 'name')
       .populate('plantings.varietyId', 'name') // Populate embedded reference
       .exec();
   }
 
-  async findOne(orchardId: string, blockId: string, requestingUser: UserDocument, options: { includeInactive?: boolean } = {}): Promise<BlockDocument> {
+  async findOne(blockId: string, requestingUser: UserDocument, options: { includeInactive?: boolean } = {}): Promise<BlockDocument> {
     const queryDto = options.includeInactive ? { includeInactives: true } : {};
     const queryBuilder = new BlockQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
-    // Combine security scope + specific resource ID + parent context
+    // Combine security scope + specific resource ID
     const finalFilter = {
       $and: [
         securityFilter,
-        { _id: new Types.ObjectId(blockId) },
-        { orchardId: new Types.ObjectId(orchardId) }
+        { _id: new Types.ObjectId(blockId) }
       ]
     };
 
     const block = await this.blockModel.findOne(finalFilter)
+      .populate('orchardId', 'name')
       .populate('plantings.varietyId', 'name')
       .exec();
 
     if (!block) {
-      throw new NotFoundException(`Block with ID "${blockId}" not found in Orchard "${orchardId}" or you do not have permission.`);
+      throw new NotFoundException(`Block with ID "${blockId}" not found or you do not have permission.`);
     }
     return block;
   }
 
-  async update(orchardId: string, blockId: string, updateBlockDto: UpdateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {
-    await this.findOne(orchardId, blockId, requestingUser, { includeInactive: true });
+  async update(blockId: string, updateBlockDto: UpdateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {
+    await this.findOne(blockId, requestingUser, { includeInactive: true });
 
     const { __v, ...updateData } = updateBlockDto;
 
@@ -112,9 +113,15 @@ export class BlocksService {
     return updatedBlock;
   }
 
-  async remove(orchardId: string, blockId: string, requestingUser: UserDocument): Promise<BlockDocument> {
+  async remove(blockId: string, requestingUser: UserDocument): Promise<BlockDocument> {
     // Validate access first
-    await this.findOne(orchardId, blockId, requestingUser);
+    await this.findOne(blockId, requestingUser);
+
+    // Check for active assessments
+    const hasActiveAssessments = await this.assessmentsService.checkActiveAssessmentsForBlock(blockId);
+    if (hasActiveAssessments) {
+      throw new ConflictException('Cannot delete block with active assessments.');
+    }
 
     const session = await this.connection.startSession();
     session.startTransaction();

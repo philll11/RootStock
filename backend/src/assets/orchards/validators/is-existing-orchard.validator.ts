@@ -12,9 +12,11 @@ export class IsExistingOrchardConstraint implements ValidatorConstraintInterface
    * @param orchardIds - An array of orchard IDs to validate.
    * @returns `true` if all IDs are valid, `false` otherwise.
    */
-  async validate(orchardIds: string[], args: ValidationArguments): Promise<boolean> {
-    if (!orchardIds || orchardIds.length === 0) return true;
-    return this.orchardsService.validateOrchardIds(orchardIds);
+  async validate(orchardIds: string | string[], args: ValidationArguments): Promise<boolean> {
+    if (!orchardIds) return true;
+    const idsToCheck = Array.isArray(orchardIds) ? orchardIds : [orchardIds];
+    if (idsToCheck.length === 0) return true;
+    return this.orchardsService.validateOrchardIds(idsToCheck);
   }
 
   defaultMessage(args: ValidationArguments) {
