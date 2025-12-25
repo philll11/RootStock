@@ -57,6 +57,9 @@ export function useVarieties(varietyId?: string) {
         [...VARIETIES_QUERY_KEY, updatedVariety._id],
         updatedVariety
       );
+      queryClient.invalidateQueries({
+        queryKey: [...VARIETIES_QUERY_KEY, updatedVariety._id],
+      });
       notify.success('The variety details have been updated.', 'Variety Updated');
     },
     onError: (error: any) => {

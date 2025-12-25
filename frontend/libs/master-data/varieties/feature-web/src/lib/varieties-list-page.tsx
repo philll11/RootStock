@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import { useVarieties, Variety, CreateVarietyDto } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm, VarietyFormMode } from './variety-form';
 import { 
@@ -11,14 +12,16 @@ import {
   PageHeader,
   DataTable,
   FormDrawer,
-  DataTableColumn
+  DataTableColumn,
+  ActionSplitButton
 } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function VarietiesListPage() {
-  const { varieties, isLoading: isVarietiesLoading, createVarietyMutation, updateVarietyMutation, deleteVarietyMutation } = useVarieties();
+  const navigate = useNavigate();
+  const { varieties, isLoading: isVarietiesLoading, createVariety, updateVariety, deleteVariety, isCreating, isUpdating } = useVarieties();
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
@@ -29,7 +32,7 @@ export function VarietiesListPage() {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateVarietyDto>>({});
 
-  const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty);
+  const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty && mode === 'edit');
   
   const [sortState, setSortState] = useState<{ accessor: string; direction: 'asc' | 'desc' }>({ accessor: 'name', direction: 'asc' });
 
@@ -40,11 +43,20 @@ export function VarietiesListPage() {
     open();
   };
 
+  const handleCreatePage = () => {
+    navigate('/varieties/new');
+  };
+
   const handleView = (variety: Variety) => {
     setMode('view');
     setSelectedVariety(variety);
     setIsFormDirty(false);
     open();
+  };
+
+  const handleViewPage = (variety: Variety, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/varieties/${variety._id}`);
   };
 
   const handleEdit = (variety: Variety, e?: React.MouseEvent) => {
@@ -55,6 +67,11 @@ export function VarietiesListPage() {
     open();
   };
 
+  const handleEditPage = (variety: Variety, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/varieties/${variety._id}/edit`);
+  };
+
   const handleDeleteClick = (variety: Variety, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setVarietyToDelete(variety);
@@ -63,7 +80,7 @@ export function VarietiesListPage() {
 
   const handleConfirmDelete = () => {
     if (varietyToDelete) {
-      deleteVarietyMutation.mutate(varietyToDelete._id);
+      deleteVariety({ id: varietyToDelete._id });
       closeDeleteModal();
       setVarietyToDelete(null);
     }
@@ -71,14 +88,14 @@ export function VarietiesListPage() {
 
   const handleSubmit = (values: any) => {
     if (mode === 'create') {
-      createVarietyMutation.mutate(values, {
+      createVariety(values, {
         onSuccess: () => {
           close();
           setCreateFormDraft({});
         },
       });
     } else if (mode === 'edit' && selectedVariety) {
-      updateVarietyMutation.mutate({ id: selectedVariety._id, data: values }, {
+      updateVariety({ id: selectedVariety._id, data: values }, {
         onSuccess: () => {
           close();
         },
@@ -87,7 +104,10 @@ export function VarietiesListPage() {
   };
 
   const handleClose = () => {
-    handleCloseWithWarning(close);
+    handleCloseWithWarning(() => {
+      setIsFormDirty(false);
+      close();
+    });
   };
 
   const getDrawerTitle = () => {
@@ -117,10 +137,33 @@ export function VarietiesListPage() {
       align: 'right',
       render: (variety) => (
         <Group gap={0} justify="flex-end">
+          <ActionIcon
+            variant="subtle"
+            color={palette.actions.view}
+            onClick={(e) => handleViewPage(variety, e)}
+            title="View Page"
+          >
+            <IconEye size={iconSizes.md} />
+          </ActionIcon>
           {can(PERMISSIONS.VARIETY_EDIT) && (
-            <ActionIcon variant="subtle" color={palette.actions.edit} onClick={(e) => handleEdit(variety, e)}>
-              <IconEdit size={iconSizes.md} />
-            </ActionIcon>
+            <>
+              <ActionIcon
+                variant="subtle"
+                color={palette.actions.edit}
+                onClick={(e) => handleEditPage(variety, e)}
+                title="Edit Page"
+              >
+                <IconEdit size={iconSizes.md} />
+              </ActionIcon>
+              <ActionIcon
+                variant="subtle"
+                color={palette.actions.edit}
+                onClick={(e) => handleEdit(variety, e)}
+                title="Quick Edit"
+              >
+                <IconLayoutSidebarRight size={iconSizes.md} />
+              </ActionIcon>
+            </>
           )}
           {can(PERMISSIONS.VARIETY_DELETE) && (
             <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDeleteClick(variety, e)}>
@@ -150,8 +193,22 @@ export function VarietiesListPage() {
     <>
       <PageHeader 
         title="Varieties"
-        actionLabel="Add Variety"
-        onActionClick={can(PERMISSIONS.VARIETY_CREATE) ? handleCreate : undefined}
+        action={
+          can(PERMISSIONS.VARIETY_CREATE) ? (
+            <ActionSplitButton
+              mainLabel="Create"
+              onMainClick={handleCreate}
+              mainIcon={<IconPlus size={iconSizes.md} />}
+              options={[
+                {
+                  label: 'Create in New Page',
+                  onClick: handleCreatePage,
+                  icon: <IconFilePlus size={iconSizes.md} />,
+                },
+              ]}
+            />
+          ) : undefined
+        }
       />
 
       <DataTable 
@@ -169,7 +226,7 @@ export function VarietiesListPage() {
         onClose={handleClose}
         title={getDrawerTitle()}
         size={layout.drawers.form}
-        isLoading={createVarietyMutation.isPending || updateVarietyMutation.isPending}
+        isLoading={isCreating || isUpdating}
       >
         <VarietyForm
           key={opened ? 'opened' : 'closed'}
@@ -178,7 +235,7 @@ export function VarietiesListPage() {
           onSubmit={handleSubmit}
           onCancel={handleClose}
           onEdit={() => setMode('edit')}
-          isLoading={createVarietyMutation.isPending || updateVarietyMutation.isPending}
+          isLoading={isCreating || isUpdating}
           onDirtyChange={setIsFormDirty}
           draftValues={createFormDraft}
           onValuesChange={(values) => setCreateFormDraft(values as CreateVarietyDto)}

@@ -30,7 +30,12 @@ import {
   RoleEditPage,
   RoleViewPage
 } from '@rootstock/roles/roles-feature-web';
-import { VarietiesListPage } from '@rootstock/master-data/varieties/varieties-feature-web';
+import { 
+  VarietiesListPage,
+  VarietyCreatePage,
+  VarietyEditPage,
+  VarietyViewPage
+} from '@rootstock/master-data/varieties/varieties-feature-web';
 
 // Layout & Components
 import { MainLayout } from './layouts/main-layout';
@@ -228,14 +233,40 @@ export function App() {
                 } 
               />
             </Route>
-            <Route 
-              path="varieties" 
-              element={
-                <ProtectedRoute permission={PERMISSIONS.VARIETY_VIEW}>
-                  <VarietiesListPage />
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="varieties">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.VARIETY_VIEW}>
+                    <VarietiesListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="new" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.VARIETY_CREATE}>
+                    <VarietyCreatePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.VARIETY_VIEW}>
+                    <VarietyViewPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id/edit" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.VARIETY_EDIT}>
+                    <VarietyEditPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
             <Route path="profile" element={<UserProfilePage />} />
           </Route>
         </Routes>

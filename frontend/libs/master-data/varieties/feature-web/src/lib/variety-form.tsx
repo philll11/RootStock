@@ -18,6 +18,7 @@ interface VarietyFormProps {
   onDirtyChange?: (isDirty: boolean) => void;
   draftValues?: Partial<CreateVarietyDto>;
   onValuesChange?: (values: Partial<CreateVarietyDto>) => void;
+  fullHeight?: boolean;
 }
 
 export function VarietyForm({ 
@@ -29,7 +30,8 @@ export function VarietyForm({
   isLoading, 
   onDirtyChange,
   draftValues,
-  onValuesChange
+  onValuesChange,
+  fullHeight = true,
 }: VarietyFormProps) {
   const { can } = usePermission();
   const form = useForm({
@@ -45,30 +47,30 @@ export function VarietyForm({
 
   useEffect(() => {
     if (mode === 'create' && onValuesChange) {
-      onValuesChange(form.values);
+      const { isActive, ...rest } = form.values;
+      onValuesChange(rest);
     }
   }, [form.values, mode, onValuesChange]);
 
   useEffect(() => {
+    if (onDirtyChange) {
+      onDirtyChange(form.isDirty());
+    }
+  }, [form.values, onDirtyChange]);
+
+  useEffect(() => {
     if (initialValues) {
-      form.setValues({
+      form.initialize({
         name: initialValues.name,
         isActive: initialValues.isActive,
       });
-      form.resetDirty();
     } else if (mode === 'create') {
-      form.setValues({
+      form.initialize({
         name: draftValues?.name || '',
         isActive: true,
       });
     }
   }, [initialValues, mode]);
-
-  useEffect(() => {
-    if (mode === 'edit') {
-      onDirtyChange?.(form.isDirty());
-    }
-  }, [form.isDirty(), onDirtyChange, mode]);
 
   const handleSubmit = (values: typeof form.values) => {
     if (mode === 'create') {
@@ -96,6 +98,7 @@ export function VarietyForm({
       onEdit={onEdit}
       onClear={mode === 'create' ? handleClear : undefined}
       canEdit={can(PERMISSIONS.VARIETY_EDIT)}
+      fullHeight={fullHeight}
     >
       <TextInput
         label="Name"
