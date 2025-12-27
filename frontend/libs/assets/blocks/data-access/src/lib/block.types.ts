@@ -18,6 +18,7 @@ export interface Block {
 
 export interface CreateBlockDto {
   name: string;
+  orchardId: string;
   plantings: {
     varietyId: string;
     treeCount: number;

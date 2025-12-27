@@ -55,7 +55,6 @@ export function BlockForm({
   orchardId,
   fullHeight = true,
 }: BlockFormProps) {
-  // FIX: Consistent usage of Flat Pattern for both hooks
   const { varieties, isLoading: isVarietiesLoading } = useVarieties();
   const { orchards, isLoading: isOrchardsLoading } = useOrchards();
 
@@ -123,7 +122,7 @@ export function BlockForm({
     } else if (mode === 'create') {
       form.setValues({
         name: draftValues?.name || '',
-        orchardId: orchardId || null,
+        orchardId: draftValues?.orchardId || orchardId || null,
         plantings: (draftValues?.plantings as any) || [
           { varietyId: null, treeCount: 0 },
         ],
@@ -132,9 +131,7 @@ export function BlockForm({
   }, [initialValues, mode, orchardId]);
 
   useEffect(() => {
-    if (mode === 'edit') {
-      onDirtyChange?.(form.isDirty());
-    }
+    onDirtyChange?.(form.isDirty());
 
     // Check for replanting warning
     if (mode === 'edit' && initialValues) {

@@ -146,10 +146,7 @@ export function OrchardsListPage() {
       accessor: 'clientId',
       title: 'Client',
       sortable: true,
-      render: (orchard) =>
-        typeof orchard.clientId === 'object'
-          ? orchard.clientId.name
-          : 'Unknown Client',
+      render: (orchard) => typeof orchard.clientId === 'object' ? orchard.clientId.name : 'Unknown Client',
     },
     {
       accessor: 'isActive',

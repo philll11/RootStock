@@ -5,13 +5,14 @@ import {
   UpdateBlockDto,
 } from '@rootstock/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
-import { useDiscardWarning, PageHeader, ConfirmDiscardModal } from '@rootstock/ui/web';
+import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 
 export function BlockEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { goBack, transitionTo } = useContextualNavigation(`/blocks/${id}`);
   
   const { block, isLoading, updateBlock, isUpdating } = useBlocks({ blockId: id });
 
@@ -24,7 +25,7 @@ export function BlockEditPage() {
     try {
       await updateBlock({ id, data: values as UpdateBlockDto });
       setIsDirty(false);
-      setTimeout(() => navigate(`/blocks/${id}`), 0);
+      setTimeout(() => transitionTo(`/blocks/${id}`), 0);
     } catch (error) {
       console.error('Failed to update block', error);
     }
@@ -52,7 +53,7 @@ export function BlockEditPage() {
           mode="edit"
           initialValues={block}
           onSubmit={handleSubmit}
-          onCancel={() => navigate(`/blocks/${id}`)}
+          onCancel={() => transitionTo(`/blocks/${id}`)}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

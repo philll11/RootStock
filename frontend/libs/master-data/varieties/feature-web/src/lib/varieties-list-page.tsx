@@ -120,6 +120,7 @@ export function VarietiesListPage() {
   };
 
   const columns: DataTableColumn<Variety>[] = [
+    { accessor: 'recordId', title: 'ID', sortable: true },
     { accessor: 'name', title: 'Name', sortable: true },
     { accessor: 'recordId', title: 'Record ID', sortable: true },
     {

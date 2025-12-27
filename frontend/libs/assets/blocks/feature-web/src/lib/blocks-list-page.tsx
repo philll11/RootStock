@@ -151,7 +151,14 @@ export function BlocksListPage() {
   };
 
   const columns: DataTableColumn<Block>[] = [
+    { accessor: 'recordId', title: 'ID', sortable: true },
     { accessor: 'name', title: 'Name', sortable: true },
+    {
+      accessor: 'orchardId',
+      title: 'Orchard',
+      render: (block) => typeof block.orchardId === 'object' ? block.orchardId.name : 'Unknown Orchard',
+      sortable: true,
+    },
     {
       accessor: 'plantings',
       title: 'Plantings',
@@ -226,8 +233,16 @@ export function BlocksListPage() {
   const sortedBlocks = blocks
     ? [...blocks].sort((a, b) => {
       const { accessor, direction } = sortState;
-      const aValue = (a as any)[accessor] || '';
-      const bValue = (b as any)[accessor] || '';
+      let aValue = (a as any)[accessor];
+      let bValue = (b as any)[accessor];
+
+      if (accessor === 'orchardId') {
+        aValue = typeof a.orchardId === 'object' ? (a.orchardId as any).name : '';
+        bValue = typeof b.orchardId === 'object' ? (b.orchardId as any).name : '';
+      }
+
+      aValue = aValue || '';
+      bValue = bValue || '';
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         return direction === 'asc'

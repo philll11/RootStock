@@ -51,7 +51,8 @@ export function useBlocks(
       data: CreateBlockDto;
       orchardId?: string;
     }) => {
-      const oid = targetOrchardId || orchardId;
+      // Priority: 1. Explicit arg, 2. Hook param, 3. Inside DTO
+      const oid = targetOrchardId || orchardId || data.orchardId;
       if (!oid) throw new Error('Orchard ID is required');
       // Merge orchardId into the body
       const payload = { ...data, orchardId: oid };

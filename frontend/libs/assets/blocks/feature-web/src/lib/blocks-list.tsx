@@ -13,6 +13,7 @@ import {
   ConfirmModal,
   ConfirmDiscardModal,
   useDiscardWarning,
+  useContextualNavigation,
   PageHeader,
   DataTable,
   FormDrawer,
@@ -29,6 +30,7 @@ interface BlocksListProps {
 
 export function BlocksList({ orchardId }: BlocksListProps) {
   const navigate = useNavigate();
+  const { getLinkTo } = useContextualNavigation();
   const {
     blocks,
     isLoading,
@@ -70,7 +72,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
 
   const handleCreatePage = () => {
     const url = orchardId ? `/blocks/new?orchardId=${orchardId}` : '/blocks/new';
-    navigate(url);
+    navigate(getLinkTo(url));
   };
 
   const handleView = (block: Block) => {
@@ -82,7 +84,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
 
   const handleViewPage = (block: Block, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/blocks/${block._id}`);
+    navigate(getLinkTo(`/blocks/${block._id}`));
   };
 
   const handleEdit = (block: Block, e?: React.MouseEvent) => {
@@ -95,7 +97,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
 
   const handleEditPage = (block: Block, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/blocks/${block._id}/edit`);
+    navigate(getLinkTo(`/blocks/${block._id}/edit`));
   };
 
   const handleDeleteClick = (block: Block, e?: React.MouseEvent) => {
@@ -156,6 +158,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
   };
 
   const columns: DataTableColumn<Block>[] = [
+    { accessor: 'recordId', title: 'ID', sortable: true },
     { accessor: 'name', title: 'Name', sortable: true },
     {
       accessor: 'plantings',

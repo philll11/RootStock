@@ -3,7 +3,7 @@ import {
   useBlocks,
 } from '@rootstock/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
-import { PageHeader, ConfirmModal } from '@rootstock/ui/web';
+import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay, ActionIcon } from '@mantine/core';
 import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
@@ -14,19 +14,20 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 export function BlockViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { getLinkTo, goBack } = useContextualNavigation('/blocks');
   const { block, isLoading, deleteBlock } = useBlocks({ blockId: id });
 
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
 
   const handleEdit = () => {
-    navigate(`/blocks/${id}/edit`);
+    navigate(getLinkTo(`/blocks/${id}/edit`));
   };
 
   const handleDelete = async () => {
     if (id) {
       await deleteBlock({ id });
-      navigate('/blocks');
+      goBack();
     }
   };
 
@@ -65,7 +66,7 @@ export function BlockViewPage() {
           mode="view"
           initialValues={block}
           onSubmit={() => {}}
-          onCancel={() => navigate('/blocks')}
+          onCancel={() => goBack()}
           onEdit={can(PERMISSIONS.BLOCK_EDIT) ? handleEdit : undefined}
           isLoading={false}
           fullHeight={false}

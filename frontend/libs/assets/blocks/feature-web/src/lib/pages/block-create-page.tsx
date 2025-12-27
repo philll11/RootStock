@@ -6,35 +6,32 @@ import {
   UpdateBlockDto,
 } from '@rootstock/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
-import { useDiscardWarning, PageHeader, ConfirmDiscardModal } from '@rootstock/ui/web';
+import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';
 
 export function BlockCreatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orchardId = searchParams.get('orchardId') || undefined;
+  const { goBack, transitionTo } = useContextualNavigation(orchardId ? `/orchards/${orchardId}` : '/blocks');
   
   const { createBlock, isCreating } = useBlocks(orchardId);
   const [isDirty, setIsDirty] = useState(false);
 
-  const { modalProps } = useDiscardWarning(isDirty);
+  const { modalProps, handleAction } = useDiscardWarning(isDirty);
 
   const handleSubmit = async (values: CreateBlockDto | UpdateBlockDto) => {
     try {
       const newBlock = await createBlock({ data: values as CreateBlockDto, orchardId });
       setIsDirty(false);
-      setTimeout(() => navigate(`/blocks/${newBlock._id}`), 0);
+      setTimeout(() => transitionTo(`/blocks/${newBlock._id}`), 0);
     } catch (error) {
       console.error('Failed to create block', error);
     }
   };
 
   const handleCancel = () => {
-    if (orchardId) {
-      navigate(`/orchards/${orchardId}`);
-    } else {
-      navigate('/blocks');
-    }
+    goBack();
   };
 
   return (
