@@ -9,3 +9,4 @@ export * from './lib/components/form-drawer/form-drawer';
 export * from './lib/components/form-actions/form-actions';
 export * from './lib/components/form-layout/form-layout';
 export * from './lib/components/action-split-button/action-split-button';
+export * from './lib/components/sub-resource-tabs/sub-resource-tabs';

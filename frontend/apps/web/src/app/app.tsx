@@ -28,7 +28,12 @@ import {
   OrchardEditPage,
   OrchardViewPage
 } from '@rootstock/orchards/orchards-feature-web';
-import { BlocksListPage } from '@rootstock/blocks/blocks-feature-web';
+import { 
+  BlocksListPage,
+  BlockCreatePage,
+  BlockEditPage,
+  BlockViewPage
+} from '@rootstock/blocks/blocks-feature-web';
 import { 
   RolesListPage,
   RoleCreatePage,
@@ -222,14 +227,40 @@ export function App() {
                 } 
               />
             </Route>
-            <Route 
-              path="blocks" 
-              element={
-                <ProtectedRoute permission={PERMISSIONS.BLOCK_VIEW}>
-                  <BlocksListPage />
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="blocks">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.BLOCK_VIEW}>
+                    <BlocksListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="new" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.BLOCK_CREATE}>
+                    <BlockCreatePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.BLOCK_VIEW}>
+                    <BlockViewPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id/edit" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.BLOCK_EDIT}>
+                    <BlockEditPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
             <Route path="roles">
               <Route 
                 index 

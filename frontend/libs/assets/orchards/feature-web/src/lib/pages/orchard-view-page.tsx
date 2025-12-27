@@ -3,14 +3,15 @@ import {
   useOrchards,
 } from '@rootstock/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
-import { PageHeader, ConfirmModal } from '@rootstock/ui/web';
-import { Container, Paper, Alert, LoadingOverlay, ActionIcon } from '@mantine/core';
-import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
+import { BlocksList } from '@rootstock/blocks/blocks-feature-web';
+import { PageHeader, ConfirmModal, SubResourceTabs } from '@rootstock/ui/web';
+import { Container, Paper, Alert, LoadingOverlay, ActionIcon, Text } from '@mantine/core';
+import { IconAlertCircle, IconTrash, IconLayoutGrid, IconUsers, IconHistory } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-
+ 
 export function OrchardViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -70,6 +71,30 @@ export function OrchardViewPage() {
           fullHeight={false}
         />
       </Paper>
+
+      <SubResourceTabs
+        title="Orchard Details"
+        tabs={[
+          {
+            value: 'blocks',
+            label: 'Blocks',
+            icon: <IconLayoutGrid size={iconSizes.sm} />,
+            content: <BlocksList orchardId={id!} />,
+          },
+          {
+            value: 'users',
+            label: 'Assigned Users',
+            icon: <IconUsers size={iconSizes.sm} />,
+            content: <Text p="md" c="dimmed">User assignment coming soon...</Text>,
+          },
+          {
+            value: 'audit',
+            label: 'Audit Trail',
+            icon: <IconHistory size={iconSizes.sm} />,
+            content: <Text p="md" c="dimmed">Audit trail coming soon...</Text>,
+          },
+        ]}
+      />
 
       <ConfirmModal
         opened={deleteModalOpened}

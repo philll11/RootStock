@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Group, ActionIcon, Badge } from '@mantine/core';
+import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
@@ -17,13 +17,17 @@ import {
   DataTable,
   FormDrawer,
   DataTableColumn,
-  ActionSplitButton,
+  ActionSplitButton, 
 } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
-export function BlocksListPage() {
+interface BlocksListProps {
+  orchardId?: string;
+}
+
+export function BlocksList({ orchardId }: BlocksListProps) {
   const navigate = useNavigate();
   const {
     blocks,
@@ -33,7 +37,7 @@ export function BlocksListPage() {
     deleteBlock,
     isCreating,
     isUpdating,
-  } = useBlocks();
+  } = useBlocks(orchardId);
   const { can } = usePermission();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure(false);
@@ -65,7 +69,8 @@ export function BlocksListPage() {
   };
 
   const handleCreatePage = () => {
-    navigate('/blocks/new');
+    const url = orchardId ? `/blocks/new?orchardId=${orchardId}` : '/blocks/new';
+    navigate(url);
   };
 
   const handleView = (block: Block) => {
@@ -114,7 +119,7 @@ export function BlocksListPage() {
   const handleSubmit = async (values: any) => {
     try {
       if (formMode === 'create') {
-        await createBlock({ data: values });
+        await createBlock({ data: values, orchardId });
         setCreateFormDraft({});
       } else {
         if (selectedBlock) {
@@ -225,44 +230,39 @@ export function BlocksListPage() {
 
   const sortedBlocks = blocks
     ? [...blocks].sort((a, b) => {
-      const { accessor, direction } = sortState;
-      const aValue = (a as any)[accessor] || '';
-      const bValue = (b as any)[accessor] || '';
+        const { accessor, direction } = sortState;
+        const aValue = (a as any)[accessor] || '';
+        const bValue = (b as any)[accessor] || '';
 
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return direction === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return direction === 'asc'
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+        }
 
-      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
-      return 0;
-    })
+        if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+        return 0;
+      })
     : undefined;
 
-  return (
-    <>
-      <PageHeader
-        title="Blocks"
-        action={
-          can(PERMISSIONS.BLOCK_CREATE) ? (
-            <ActionSplitButton
-              mainLabel="Create"
-              onMainClick={handleCreate}
-              mainIcon={<IconPlus size={iconSizes.md} />}
-              options={[
-                {
-                  label: 'Create in New Page',
-                  onClick: handleCreatePage,
-                  icon: <IconFilePlus size={iconSizes.md} />,
-                },
-              ]}
-            />
-          ) : undefined
-        }
-      />
+  const actionButton = can(PERMISSIONS.BLOCK_CREATE) ? (
+    <ActionSplitButton
+      mainLabel="Create"
+      onMainClick={handleCreate}
+      mainIcon={<IconPlus size={iconSizes.md} />}
+      options={[
+        {
+          label: 'Create in New Page',
+          onClick: handleCreatePage,
+          icon: <IconFilePlus size={iconSizes.md} />,
+        },
+      ]}
+    />
+  ) : undefined;
 
+  const content = (
+    <>
       <DataTable
         data={sortedBlocks}
         columns={columns}
@@ -291,6 +291,7 @@ export function BlocksListPage() {
           onDirtyChange={setIsFormDirty}
           draftValues={createFormDraft}
           onValuesChange={(values) => setCreateFormDraft(values as CreateBlockDto)}
+          orchardId={orchardId}
         />
       </FormDrawer>
 
@@ -305,6 +306,13 @@ export function BlocksListPage() {
         confirmLabel="Delete"
         confirmColor={palette.actions.delete}
       />
+    </>
+  );
+
+  return (
+    <>
+      <PageHeader title="Blocks" action={actionButton} />
+      {content}
     </>
   );
 }

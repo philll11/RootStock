@@ -7,22 +7,40 @@ import { usePermission } from '@rootstock/auth/auth-data-access';
 
 export const BLOCKS_QUERY_KEY = ['blocks'];
 
-export function useBlocks(orchardId?: string, options?: { enabled?: boolean }) {
+export const getBlock = async (id: string): Promise<Block> => {
+  const response = await apiClient.get<Block>(`/blocks/${id}`);
+  return response.data;
+};
+
+export function useBlocks(
+  params?: { orchardId?: string; blockId?: string } | string,
+  options?: { enabled?: boolean }
+) {
   const queryClient = useQueryClient();
   const { can } = usePermission();
   const isEnabled = (options?.enabled ?? true) && can(PERMISSIONS.BLOCK_VIEW);
+
+  const orchardId = typeof params === 'string' ? params : params?.orchardId;
+  const blockId = typeof params === 'object' ? params?.blockId : undefined;
+
   const queryKey = orchardId
-    ? [...BLOCKS_QUERY_KEY, orchardId]
-    : [...BLOCKS_QUERY_KEY, 'global'];
+    ? [...BLOCKS_QUERY_KEY, 'list', orchardId]
+    : [...BLOCKS_QUERY_KEY, 'list', 'global'];
 
   const blocksQuery = useQuery({
     queryKey: queryKey,
     queryFn: async () => {
-      const params = orchardId ? { orchardId } : {};
-      const response = await apiClient.get<Block[]>('/blocks', { params });
+      const queryParams = orchardId ? { orchardId } : {};
+      const response = await apiClient.get<Block[]>('/blocks', { params: queryParams });
       return response.data;
     },
     enabled: isEnabled,
+  });
+
+  const blockQuery = useQuery({
+    queryKey: [...BLOCKS_QUERY_KEY, 'detail', blockId],
+    queryFn: () => getBlock(blockId!),
+    enabled: isEnabled && !!blockId,
   });
 
   const createBlockMutation = useMutation({
@@ -89,8 +107,9 @@ export function useBlocks(orchardId?: string, options?: { enabled?: boolean }) {
 
   return {
     blocks: blocksQuery.data ?? [],
-    isLoading: blocksQuery.isLoading,
-    isError: blocksQuery.isError,
+    block: blockQuery.data,
+    isLoading: blocksQuery.isLoading || blockQuery.isLoading,
+    isError: blocksQuery.isError || blockQuery.isError,
     createBlock: createBlockMutation.mutateAsync,
     updateBlock: updateBlockMutation.mutateAsync,
     deleteBlock: deleteBlockMutation.mutateAsync,

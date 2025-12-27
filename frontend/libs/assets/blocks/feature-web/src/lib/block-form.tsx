@@ -39,6 +39,7 @@ interface BlockFormProps {
   draftValues?: Partial<CreateBlockDto>;
   onValuesChange?: (values: Partial<CreateBlockDto>) => void;
   orchardId?: string;
+  fullHeight?: boolean;
 }
 
 export function BlockForm({
@@ -52,12 +53,11 @@ export function BlockForm({
   draftValues,
   onValuesChange,
   orchardId,
+  fullHeight = true,
 }: BlockFormProps) {
   // FIX: Consistent usage of Flat Pattern for both hooks
   const { varieties, isLoading: isVarietiesLoading } = useVarieties();
-  const { orchards, isLoading: isOrchardsLoading } = useOrchards({
-    enabled: !orchardId && mode === 'create',
-  });
+  const { orchards, isLoading: isOrchardsLoading } = useOrchards();
 
   const { can } = usePermission();
   const [showReplantingWarning, setShowReplantingWarning] = useState(false);
@@ -196,26 +196,29 @@ export function BlockForm({
       onEdit={onEdit}
       onClear={mode === 'create' ? handleClear : undefined}
       canEdit={can(PERMISSIONS.BLOCK_EDIT)}
+      fullHeight={fullHeight}
     >
-      <TextInput
-        label="Name"
-        placeholder="Block Name"
-        required={!isView}
-        readOnly={isView}
-        {...form.getInputProps('name')}
-      />
-
-      {!orchardId && mode === 'create' && (
-        <Select
-          label="Orchard"
-          placeholder="Select Orchard"
-          data={(orchards || []).map((o) => ({ value: o._id, label: o.name }))}
-          required
-          searchable
-          mt="md"
-          {...form.getInputProps('orchardId')}
+      <Group grow align="flex-start">
+        <TextInput
+          label="Name"
+          placeholder="Block Name"
+          required={!isView}
+          readOnly={isView}
+          {...form.getInputProps('name')}
         />
-      )}
+
+        {!orchardId && (
+          <Select
+            label="Orchard"
+            placeholder="Select Orchard"
+            data={(orchards || []).map((o) => ({ value: o._id, label: o.name }))}
+            required={!isView}
+            readOnly={isView}
+            searchable
+            {...form.getInputProps('orchardId')}
+          />
+        )}
+      </Group>
 
       <Box mt="md">
         <Group justify="space-between" mb="xs">
