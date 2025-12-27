@@ -82,6 +82,12 @@ export function RoleForm({
   }, [form.values, isCreating, onValuesChange]);
 
   useEffect(() => {
+    if (onDirtyChange) {
+      onDirtyChange(form.isDirty());
+    }
+  }, [form.values, onDirtyChange]);
+
+  useEffect(() => {
     if (role && (isEditing || isViewing)) {
       form.initialize({
         name: role.name,
@@ -100,12 +106,6 @@ export function RoleForm({
       });
     }
   }, [role, mode]);
-
-  useEffect(() => {
-    if (onDirtyChange) {
-      onDirtyChange(form.isDirty());
-    }
-  }, [form.values, onDirtyChange]);
 
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };

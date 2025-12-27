@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
+import { IconFilePlus, IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus } from '@tabler/icons-react';
+
 import {
   ConfirmModal,
   ConfirmDiscardModal,
@@ -21,13 +22,11 @@ import {
   CreateOrchardDto,
   UpdateOrchardDto,
 } from '@rootstock/orchards/orchards-data-access';
-import { OrchardForm } from './orchard-form';
+import { OrchardForm, OrchardFormMode } from './orchard-form';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function OrchardsListPage() {
-  const navigate = useNavigate();
-  const { getLinkTo } = useContextualNavigation();
   const {
     orchards,
     isLoading,
@@ -37,71 +36,68 @@ export function OrchardsListPage() {
     isCreating,
     isUpdating,
   } = useOrchards();
-
   const { can } = usePermission();
-  const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
-    useDisclosure(false);
+  const [opened, { open, close }] = useDisclosure(false);
   const [
     deleteModalOpened,
     { open: openDeleteModal, close: closeDeleteModal },
   ] = useDisclosure(false);
+  
+  const navigate = useNavigate();
+  const { getLinkTo } = useContextualNavigation();
+
+  const [mode, setMode] = useState<OrchardFormMode>('create');
+  const [selectedOrchard, setSelectedOrchard] = useState<Orchard | null>(null);
+
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateOrchardDto>>({});
+  const [isFormDirty, setIsFormDirty] = useState(false);
+
+  const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty && mode === 'edit');
+  
   const [sortState, setSortState] = useState<{
     accessor: string;
     direction: 'asc' | 'desc';
   }>({ accessor: 'name', direction: 'asc' });
 
-  const [selectedOrchard, setSelectedOrchard] = useState<Orchard | null>(null);
-  const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>(
-    'create'
-  );
-  const [isFormDirty, setIsFormDirty] = useState(false);
-  const [createFormDraft, setCreateFormDraft] = useState<
-    Partial<CreateOrchardDto>
-  >({});
-
-  const { handleAction: handleCloseWithWarning, modalProps } =
-    useDiscardWarning(isFormDirty && formMode === 'edit');
-
   const handleCreate = () => {
+    setMode('create');
     setSelectedOrchard(null);
-    setFormMode('create');
     setIsFormDirty(false);
-    openDrawer();
+    open();
   };
 
   const handleCreatePage = () => {
     navigate(getLinkTo('/orchards/new'));
   };
 
-  const handleEdit = (orchard: Orchard, e?: React.MouseEvent) => {
+  const handleViewPage = (orchard: Orchard, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setSelectedOrchard(orchard);
-    setFormMode('edit');
-    setIsFormDirty(false);
-    openDrawer();
+    navigate(getLinkTo(`/orchards/${orchard._id}`));
   };
-
+  
   const handleEditPage = (orchard: Orchard, e?: React.MouseEvent) => {
     e?.stopPropagation();
     navigate(getLinkTo(`/orchards/${orchard._id}/edit`));
   };
 
   const handleView = (orchard: Orchard) => {
+    setMode('view');
     setSelectedOrchard(orchard);
-    setFormMode('view');
     setIsFormDirty(false);
-    openDrawer();
+    open();
   };
-
-  const handleViewPage = (orchard: Orchard, e?: React.MouseEvent) => {
+  const handleEdit = (orchard: Orchard, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/orchards/${orchard._id}`);
+    setMode('edit');
+    setSelectedOrchard(orchard);
+    setIsFormDirty(false);
+    open();
   };
 
   const handleClose = () => {
     handleCloseWithWarning(() => {
       setIsFormDirty(false);
-      closeDrawer();
+      close();
     });
   };
 
@@ -124,7 +120,7 @@ export function OrchardsListPage() {
 
   const handleSubmit = async (values: CreateOrchardDto | UpdateOrchardDto) => {
     try {
-      if (formMode === 'create') {
+      if (mode === 'create') {
         await createOrchard(values as CreateOrchardDto);
         setCreateFormDraft({});
       } else {
@@ -135,9 +131,22 @@ export function OrchardsListPage() {
           });
         }
       }
-      closeDrawer();
+      close();
     } catch (error) {
       // Error handling is done in the hook via notify
+    }
+  };
+  
+  const getDrawerTitle = () => {
+    switch (mode) {
+      case 'create':
+        return 'Create Orchard';
+      case 'edit':
+        return 'Edit Orchard';
+      case 'view':
+        return 'Orchard Details';
+      default:
+        return '';
     }
   };
 
@@ -165,6 +174,7 @@ export function OrchardsListPage() {
       align: 'right',
       render: (orchard) => (
         <Group gap={0} justify="flex-end">
+          {can(PERMISSIONS.ORCHARD_VIEW) && (
           <ActionIcon
             variant="subtle"
             color={palette.actions.view}
@@ -173,6 +183,7 @@ export function OrchardsListPage() {
           >
             <IconEye size={iconSizes.md} />
           </ActionIcon>
+          )}
           {can(PERMISSIONS.ORCHARD_EDIT) && (
             <>
               <ActionIcon
@@ -266,29 +277,23 @@ export function OrchardsListPage() {
       />
 
       <FormDrawer
-        opened={drawerOpened}
+        opened={opened}
         onClose={handleClose}
-        title={
-          formMode === 'create'
-            ? 'Create Orchard'
-            : formMode === 'edit'
-            ? 'Edit Orchard'
-            : 'Orchard Details'
-        }
+        title={getDrawerTitle()}
         size={layout.drawers.form}
         isLoading={isCreating || isUpdating}
       >
         <OrchardForm
-          key={drawerOpened ? 'opened' : 'closed'}
+          key={opened ? 'opened' : 'closed'}
+          mode={mode}
           orchard={selectedOrchard}
-          mode={formMode}
-          onSubmit={handleSubmit}
-          onCancel={handleClose}
-          onEdit={() => setFormMode('edit')}
-          isLoading={isCreating || isUpdating}
-          onDirtyChange={setIsFormDirty}
           initialValues={createFormDraft}
+          onSubmit={handleSubmit}
+          isLoading={isCreating || isUpdating}
+          onCancel={handleClose}
+          onEdit={() => setMode('edit')}
           onValuesChange={setCreateFormDraft}
+          onDirtyChange={setIsFormDirty}
         />
       </FormDrawer>
 

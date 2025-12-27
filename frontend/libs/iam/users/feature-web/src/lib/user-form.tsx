@@ -69,7 +69,7 @@ export function UserForm({
       lastName: '',
       email: '',
       userType: UserType.Employee,
-      roleId: null as string | null,
+      roleId: null,
       password: '',
       isActive: true,
       clientIds: [] as string[],
@@ -114,14 +114,20 @@ export function UserForm({
       }
     };
     loadClients();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.clientIds, initialValues?.clientIds]);
 
   useEffect(() => {
     if (isCreating && onValuesChange) {
-      onValuesChange(form.values as any);
+      const { isActive, ...rest } = form.values;
+      onValuesChange(rest as any);
     }
   }, [form.values, isCreating, onValuesChange]);
+
+  useEffect(() => {
+    if (onDirtyChange) {
+      onDirtyChange(form.isDirty());
+    }
+  }, [form.values, onDirtyChange]);
 
   useEffect(() => {
     if (user && (isEditing || isViewing)) {
@@ -130,9 +136,7 @@ export function UserForm({
         lastName: user.lastName,
         email: user.email,
         userType: user.userType,
-        roleId:
-          (typeof user.roleId === 'object' ? user.roleId._id : user.roleId) ||
-          null,
+        roleId: (typeof user.roleId === 'object' ? user.roleId._id : user.roleId) || null,
         password: '',
         isActive: user.isActive,
         clientIds: user.clientIds || [],
@@ -145,17 +149,10 @@ export function UserForm({
         userType: initialValues.userType || UserType.Employee,
         roleId: initialValues.roleId || null,
         password: initialValues.password || '',
-        isActive: (initialValues as any).isActive ?? true,
         clientIds: initialValues.clientIds || [],
       });
     }
   }, [user, mode]);
-
-  useEffect(() => {
-    if (onDirtyChange) {
-      onDirtyChange(form.isDirty());
-    }
-  }, [form.values, onDirtyChange]);
 
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
@@ -168,7 +165,7 @@ export function UserForm({
     onSubmit(submissionData);
   };
 
-  const handleValidationErrors = (errors: typeof form.errors) => {
+  const handleValidationErrors = () => {
     notify.validation();
   };
 
@@ -180,7 +177,6 @@ export function UserForm({
       userType: UserType.Employee,
       roleId: null,
       password: '',
-      isActive: true,
       clientIds: [],
     });
   };
@@ -190,13 +186,14 @@ export function UserForm({
   return (
     <FormLayout
       mode={mode}
-      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       isLoading={isLoading}
       onCancel={onCancel}
-      onClear={isCreating ? handleClear : undefined}
+      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       onEdit={onEdit}
+      onClear={isCreating ? handleClear : undefined}
       canEdit={can(PERMISSIONS.USER_EDIT)}
       submitLabel={isEditing ? 'Update User' : 'Create User'}
+      isDirty={form.isDirty()}
       fullHeight={fullHeight}
     >
       <Group grow>

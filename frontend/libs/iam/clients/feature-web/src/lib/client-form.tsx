@@ -1,12 +1,12 @@
 // frontend/libs/clients/feature-web/src/lib/client-form.tsx
-import { TextInput, Checkbox, Text, Switch } from '@mantine/core';
+import { useEffect } from 'react';
+import { TextInput, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import {
   CreateClientDto,
   UpdateClientDto,
   Client,
 } from '@rootstock/clients/clients-data-access';
-import { useEffect } from 'react';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { FormLayout } from '@rootstock/ui/web';
@@ -57,7 +57,7 @@ export function ClientForm({
   useEffect(() => {
     if (isCreating && onValuesChange) {
       const { isActive, ...rest } = form.values;
-      onValuesChange(rest);
+      onValuesChange(rest as any);
     }
   }, [form.values, isCreating, onValuesChange]);
 
@@ -74,12 +74,11 @@ export function ClientForm({
         isActive: client.isActive,
       });
     } else if (isCreating && initialValues) {
-      form.initialize({
-        name: initialValues.name || '',
-        isActive: true,
+      form.setValues({
+        name: initialValues.name || ''
       });
     }
-  }, [client, mode]);
+  }, [client, mode, isEditing, isViewing, isCreating]);
 
   const handleSubmit = (values: typeof form.values) => {
     if (isCreating) {
@@ -97,7 +96,6 @@ export function ClientForm({
   const handleClear = () => {
     form.setValues({
       name: '',
-      isActive: true,
     });
   };
 
@@ -106,19 +104,20 @@ export function ClientForm({
   return (
     <FormLayout
       mode={mode}
-      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       isLoading={isLoading}
       onCancel={onCancel}
+      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       onEdit={onEdit}
       onClear={isCreating ? handleClear : undefined}
       canEdit={can(PERMISSIONS.CLIENT_EDIT)}
       submitLabel={isEditing ? 'Update Client' : 'Create Client'}
+      isDirty={form.isDirty()}
       fullHeight={fullHeight}
     >
       <TextInput
-        withAsterisk={!isView}
         label="Name"
         placeholder="Client Name"
+        withAsterisk={!isView}
         readOnly={isView}
         {...form.getInputProps('name')}
       />

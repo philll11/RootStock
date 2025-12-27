@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { ClientForm } from '../client-form';
 import { useClients } from '@rootstock/clients/clients-data-access';
-import { PageHeader, ConfirmDiscardModal, useDiscardWarning } from '@rootstock/ui/web';
+import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';
 import { useState } from 'react';
 
 export function ClientCreatePage() {
   const navigate = useNavigate();
+  const { goBack, transitionTo } = useContextualNavigation('/clients');
   const { createClient, isCreating } = useClients();
   const [isDirty, setIsDirty] = useState(false);
 
@@ -15,7 +16,7 @@ export function ClientCreatePage() {
   const handleSubmit = async (values: any) => {
     const newClient = await createClient(values);
     setIsDirty(false);
-    setTimeout(() => navigate(`/clients/${newClient._id}`), 0);
+    setTimeout(() => transitionTo(`/clients/${newClient._id}`), 0);
   };
 
   return (
@@ -26,7 +27,7 @@ export function ClientCreatePage() {
           mode="create"
           onSubmit={handleSubmit}
           isLoading={isCreating}
-          onCancel={() => navigate('/clients')}
+          onCancel={() => goBack()}
           onDirtyChange={setIsDirty}
           fullHeight={false}
         />

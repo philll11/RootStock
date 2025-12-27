@@ -1,5 +1,5 @@
+// frontend/libs/assets/orchards/feature-web/src/lib/orchard-form.tsx
 import { useEffect } from 'react';
-import { useForm } from '@mantine/form';
 import {
   TextInput,
   Checkbox,
@@ -10,6 +10,7 @@ import {
   Box,
   Group,
 } from '@mantine/core';
+import { useForm } from '@mantine/form';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { useClients } from '@rootstock/clients/clients-data-access';
 import { useUsers } from '@rootstock/users/users-data-access';
@@ -23,38 +24,40 @@ import { usePermission } from '@rootstock/auth/auth-data-access';
 import { iconSizes } from '@rootstock/ui/theme';
 import { FormLayout } from '@rootstock/ui/web';
 
+export type OrchardFormMode = 'create' | 'edit' | 'view';
+
 interface OrchardFormProps {
+  mode: OrchardFormMode;
   orchard?: Orchard | null;
-  mode: 'create' | 'edit' | 'view';
+  initialValues?: Partial<CreateOrchardDto>;
   onSubmit: (values: CreateOrchardDto | UpdateOrchardDto) => void;
+  isLoading: boolean;
   onCancel: () => void;
   onEdit?: () => void;
-  isLoading: boolean;
   onDirtyChange?: (isDirty: boolean) => void;
-  initialValues?: Partial<CreateOrchardDto>;
   onValuesChange?: (values: Partial<CreateOrchardDto>) => void;
   fullHeight?: boolean;
 }
 
 export function OrchardForm({
-  orchard,
   mode,
+  orchard,
+  initialValues,
   onSubmit,
+  isLoading,
   onCancel,
   onEdit,
-  isLoading,
-  onDirtyChange,
-  initialValues,
   onValuesChange,
+  onDirtyChange,
   fullHeight = true,
 }: OrchardFormProps) {
+  const isEditing = mode === 'edit';
+  const isCreating = mode === 'create';
+  const isViewing = mode === 'view';
   const { clients, isLoading: isLoadingClients } = useClients();
   const { users, isLoading: isLoadingUsers } = useUsers();
   const { can } = usePermission();
 
-  const isEditing = mode === 'edit';
-  const isCreating = mode === 'create';
-  const isViewing = mode === 'view';
 
   const form = useForm({
     initialValues: {
@@ -87,29 +90,23 @@ export function OrchardForm({
     if (orchard && (isEditing || isViewing)) {
       form.initialize({
         name: orchard.name,
-        clientId:
-          typeof orchard.clientId === 'object'
-            ? orchard.clientId._id
-            : orchard.clientId,
-        userIds:
-          orchard.userIds?.map((u) => (typeof u === 'object' ? u._id : u)) ||
-          [],
+        clientId: typeof orchard.clientId === 'object' ? orchard.clientId._id : orchard.clientId,
+        userIds: orchard.userIds?.map((u) => (typeof u === 'object' ? u._id : u)) || [],
         isActive: orchard.isActive,
       });
     } else if (isCreating && initialValues) {
       form.setValues({
         name: initialValues.name || '',
         clientId: initialValues.clientId || null,
-        userIds: initialValues.userIds || [],
-        isActive: true,
+        userIds: initialValues.userIds || []
       });
     }
   }, [orchard, mode, isEditing, isViewing, isCreating]);
 
   const handleSubmit = (values: typeof form.values) => {
     if (isCreating) {
-      const { isActive, ...rest } = values;
-      onSubmit(rest as any);
+      const { isActive, ...createValues } = values;
+      onSubmit(createValues);
     } else {
       onSubmit(values as any);
     }
@@ -124,20 +121,20 @@ export function OrchardForm({
       name: '',
       clientId: null,
       userIds: [],
-      isActive: true,
     });
   };
 
   return (
     <FormLayout
       mode={mode}
-      isDirty={form.isDirty()}
       isLoading={isLoading || isLoadingClients || isLoadingUsers}
       onCancel={onCancel}
       onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       onEdit={onEdit}
       onClear={isCreating ? handleClear : undefined}
       canEdit={can(PERMISSIONS.ORCHARD_EDIT)}
+      submitLabel={isEditing ? 'Update Orchard' : 'Create Orchard'}
+      isDirty={form.isDirty()}
       fullHeight={fullHeight}
     >
       <Group grow align="flex-start">

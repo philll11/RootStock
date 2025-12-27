@@ -20,6 +20,7 @@ import {
   FormDrawer,
   DataTableColumn,
   ActionSplitButton,
+  useContextualNavigation,
 } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -43,6 +44,7 @@ export function UsersListPage() {
   ] = useDisclosure(false);
 
   const navigate = useNavigate();
+  const { getLinkTo } = useContextualNavigation();
 
   const [mode, setMode] = useState<UserFormMode>('create');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -53,8 +55,7 @@ export function UsersListPage() {
   >({});
   const [isFormDirty, setIsFormDirty] = useState(false);
 
-  const { handleAction: handleCloseWithWarning, modalProps } =
-    useDiscardWarning(isFormDirty && mode === 'edit');
+  const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty && mode === 'edit');
 
   const [sortState, setSortState] = useState<{
     accessor: string;
@@ -69,17 +70,17 @@ export function UsersListPage() {
   };
 
   const handleCreatePage = () => {
-    navigate('/users/new');
+    navigate(getLinkTo('/users/new'));
   };
 
   const handleViewPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/users/${id}`);
+    navigate(getLinkTo(`/users/${id}`));
   };
 
   const handleEditPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/users/${id}/edit`);
+    navigate(getLinkTo(`/users/${id}/edit`));
   };
 
   const handleView = (user: User) => {
@@ -120,14 +121,16 @@ export function UsersListPage() {
 
   const handleSubmit = async (values: CreateUserDto | UpdateUserDto) => {
     try {
-      if (mode === 'edit' && selectedUser) {
-        await updateUser({
-          id: selectedUser._id,
-          data: values as UpdateUserDto,
-        });
-      } else if (mode === 'create') {
+      if (mode === 'create') {
         await createUser(values as CreateUserDto);
-        setCreateFormDraft({}); // Clear draft after successful creation
+        setCreateFormDraft({});
+      } else {
+        if (selectedUser) {
+          await updateUser({
+            id: selectedUser._id,
+            data: values as UpdateUserDto,
+          });
+        }
       }
       close();
     } catch (error) {
@@ -222,8 +225,7 @@ export function UsersListPage() {
     },
   ];
 
-  const sortedUsers = users
-    ? [...users].sort((a, b) => {
+  const sortedUsers = users ? [...users].sort((a, b) => {
         const { accessor, direction } = sortState;
         const aValue = (a as any)[accessor] || '';
         const bValue = (b as any)[accessor] || '';
@@ -300,7 +302,7 @@ export function UsersListPage() {
         onClose={closeDeleteModal}
         onConfirm={handleConfirmDelete}
         title="Delete User"
-        message="Are you sure you want to delete this user? This action cannot be undone."
+        message={`Are you sure you want to delete "${selectedUser?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
         confirmColor={palette.actions.delete}
       />

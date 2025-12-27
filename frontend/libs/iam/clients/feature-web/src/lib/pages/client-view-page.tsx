@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { ClientForm } from '../client-form';
 import { useClients, useClient } from '@rootstock/clients/clients-data-access';
-import { PageHeader, ConfirmModal } from '@rootstock/ui/web';
+import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, LoadingOverlay, ActionIcon } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconTrash } from '@tabler/icons-react';
@@ -12,6 +12,7 @@ import { palette, iconSizes } from '@rootstock/ui/theme';
 export function ClientViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { getLinkTo, goBack } = useContextualNavigation('/clients');
   const { deleteClient } = useClients();
   const { data: client, isLoading: isClientLoading } = useClient(id);
   const { can } = usePermission();
@@ -25,7 +26,7 @@ export function ClientViewPage() {
     if (id) {
       await deleteClient(id);
       closeDeleteModal();
-      navigate('/clients');
+      goBack();
     }
   };
 
@@ -56,8 +57,8 @@ export function ClientViewPage() {
           client={client}
           onSubmit={() => {}}
           isLoading={false}
-          onCancel={() => navigate('/clients')}
-          onEdit={() => navigate(`/clients/${id}/edit`)}
+          onCancel={() => goBack()}
+          onEdit={() => navigate(getLinkTo(`/clients/${id}/edit`, { strategy: 'stack' }))}
           fullHeight={false}
         />
       </Paper>
@@ -66,7 +67,7 @@ export function ClientViewPage() {
         onClose={closeDeleteModal}
         onConfirm={handleConfirmDelete}
         title="Delete Client"
-        message={`Are you sure you want to delete client ${client?.name}? This action cannot be undone.`}
+        message={`Are you sure you want to delete client "${client?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
         confirmColor="red"
       />

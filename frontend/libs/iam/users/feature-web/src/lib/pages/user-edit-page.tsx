@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { UserForm } from '../user-form';
 import { useUsers, useUser } from '@rootstock/users/users-data-access';
-import { PageHeader, ConfirmDiscardModal } from '@rootstock/ui/web';
+import { PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, LoadingOverlay } from '@mantine/core';
 import { useDiscardWarning } from '@rootstock/ui/web';
 import { useState } from 'react';
@@ -9,6 +9,7 @@ import { useState } from 'react';
 export function UserEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { goBack, transitionTo } = useContextualNavigation('/users');
   const { updateUser, isUpdating } = useUsers();
   const { data: user, isLoading: isUserLoading } = useUser(id);
   const [isDirty, setIsDirty] = useState(false);
@@ -21,7 +22,7 @@ export function UserEditPage() {
     setIsDirty(false);
     // Use setTimeout to allow the state update to process before navigation
     // This prevents the discard warning from triggering
-    setTimeout(() => navigate(`/users/${id}`), 0);
+    setTimeout(() => transitionTo(`/users/${id}`), 0);
   };
 
   if (isUserLoading) {
@@ -37,7 +38,7 @@ export function UserEditPage() {
           user={user}
           onSubmit={handleSubmit}
           isLoading={isUpdating}
-          onCancel={() => navigate(`/users/${id}`)}
+          onCancel={() => goBack()}
           onDirtyChange={setIsDirty}
           fullHeight={false}
         />

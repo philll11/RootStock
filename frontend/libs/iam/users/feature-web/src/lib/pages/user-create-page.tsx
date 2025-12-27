@@ -1,13 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import { UserForm } from '../user-form';
 import { useUsers } from '@rootstock/users/users-data-access';
-import { PageHeader, ConfirmDiscardModal } from '@rootstock/ui/web';
+import { PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';
 import { useDiscardWarning } from '@rootstock/ui/web';
 import { useState } from 'react';
 
 export function UserCreatePage() {
   const navigate = useNavigate();
+  const { goBack, transitionTo } = useContextualNavigation('/users');
   const { createUser, isCreating } = useUsers();
   const [isDirty, setIsDirty] = useState(false);
 
@@ -16,7 +17,7 @@ export function UserCreatePage() {
   const handleSubmit = async (values: any) => {
     const newUser = await createUser(values);
     setIsDirty(false);
-    setTimeout(() => navigate(`/users/${newUser._id}`), 0);
+    setTimeout(() => transitionTo(`/users/${newUser._id}`), 0);
   };
 
   return (
@@ -27,7 +28,7 @@ export function UserCreatePage() {
           mode="create"
           onSubmit={handleSubmit}
           isLoading={isCreating}
-          onCancel={() => navigate('/users')}
+          onCancel={() => goBack()}
           onDirtyChange={setIsDirty}
           fullHeight={false}
         />

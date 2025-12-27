@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { UserForm } from '../user-form';
 import { useUsers, useUser } from '@rootstock/users/users-data-access';
-import { PageHeader, ConfirmModal } from '@rootstock/ui/web';
+import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, LoadingOverlay, ActionIcon } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconTrash } from '@tabler/icons-react';
@@ -12,6 +12,7 @@ import { palette, iconSizes } from '@rootstock/ui/theme';
 export function UserViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { getLinkTo, goBack } = useContextualNavigation('/users');
   const { deleteUser } = useUsers();
   const { data: user, isLoading: isUserLoading } = useUser(id);
   const { can } = usePermission();
@@ -25,7 +26,7 @@ export function UserViewPage() {
     if (id) {
       await deleteUser(id);
       closeDeleteModal();
-      navigate('/users');
+      goBack();
     }
   };
 
@@ -56,8 +57,8 @@ export function UserViewPage() {
           user={user}
           onSubmit={() => {}}
           isLoading={false}
-          onCancel={() => navigate('/users')}
-          onEdit={() => navigate(`/users/${id}/edit`)}
+          onCancel={() => goBack()}
+          onEdit={() => navigate(getLinkTo(`/users/${id}/edit`, { strategy: 'stack' }))}
           fullHeight={false}
         />
       </Paper>
