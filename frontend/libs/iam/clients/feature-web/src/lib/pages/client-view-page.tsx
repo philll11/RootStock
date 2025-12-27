@@ -1,49 +1,65 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import {
+  useClients,
+  useClient
+} from '@rootstock/clients/clients-data-access';
 import { ClientForm } from '../client-form';
-import { useClients, useClient } from '@rootstock/clients/clients-data-access';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
-import { Container, Paper, LoadingOverlay, ActionIcon } from '@mantine/core';
+import { Container, Paper, Alert, ActionIcon, LoadingOverlay } from '@mantine/core';
+import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
-import { IconTrash } from '@tabler/icons-react';
+import { palette, iconSizes } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { palette, iconSizes } from '@rootstock/ui/theme';
 
 export function ClientViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getLinkTo, goBack } = useContextualNavigation('/clients');
   const { deleteClient } = useClients();
-  const { data: client, isLoading: isClientLoading } = useClient(id);
+  const { data: client, isLoading } = useClient(id);
+  const { getLinkTo, goBack } = useContextualNavigation('/clients');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
 
-  const handleDelete = () => {
-    openDeleteModal();
+  const handleEdit = () => {
+    navigate(getLinkTo('edit', { strategy: 'stack' }));
   };
 
-  const handleConfirmDelete = async () => {
+  const handleDelete = async () => {
     if (id) {
-      await deleteClient(id);
-      closeDeleteModal();
-      goBack();
+      try {
+        await deleteClient(id);
+        goBack();
+      } catch (error) {
+        console.error('Failed to delete client', error);
+      }
     }
   };
 
-  if (isClientLoading) {
+  if (isLoading) {
     return <LoadingOverlay visible />;
   }
 
+  if (!client) {
+    return (
+      <Container size="xl">
+        <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red">
+          Client not found
+        </Alert>
+      </Container>
+    );
+  }
+
   return (
-    <Container size="lg">
-      <PageHeader 
-        title={`Client: ${client?.name}`} 
+    <Container size="xl">
+      <PageHeader
+        title={client.name}
         action={
           can(PERMISSIONS.CLIENT_DELETE) && (
             <ActionIcon
               variant="subtle"
               color={palette.actions.delete}
-              onClick={handleDelete}
+              onClick={openDeleteModal}
               title="Delete Client"
             >
               <IconTrash size={iconSizes.md} />
@@ -51,25 +67,25 @@ export function ClientViewPage() {
           )
         }
       />
-      <Paper p="md" withBorder pos="relative">
+      <Paper p="md" withBorder>
         <ClientForm
           mode="view"
           client={client}
-          onSubmit={() => {}}
+          onSubmit={() => { }}
           isLoading={false}
-          onCancel={() => goBack()}
-          onEdit={() => navigate(getLinkTo(`/clients/${id}/edit`, { strategy: 'stack' }))}
+            onCancel={() => goBack()}
+            onEdit={can(PERMISSIONS.CLIENT_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />
       </Paper>
       <ConfirmModal
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
-        onConfirm={handleConfirmDelete}
+        onConfirm={handleDelete}
         title="Delete Client"
         message={`Are you sure you want to delete client "${client?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor="red"
+        confirmColor={palette.actions.delete}
       />
     </Container>
   );

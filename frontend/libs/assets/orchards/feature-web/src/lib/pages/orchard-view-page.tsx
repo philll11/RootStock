@@ -11,7 +11,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
- 
+
 export function OrchardViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -26,8 +26,12 @@ export function OrchardViewPage() {
 
   const handleDelete = async () => {
     if (id) {
-      await deleteOrchard(id);
-      goBack();
+      try {
+        await deleteOrchard(id);
+        goBack();
+      } catch (error) {
+        console.error('Failed to delete orchard', error);
+      }
     }
   };
 
@@ -47,13 +51,13 @@ export function OrchardViewPage() {
 
   return (
     <Container size="xl">
-      <PageHeader 
+      <PageHeader
         title={orchard.name}
         action={
           can(PERMISSIONS.ORCHARD_DELETE) && (
-            <ActionIcon 
-              variant="subtle" 
-              color={palette.actions.delete} 
+            <ActionIcon
+              variant="subtle"
+              color={palette.actions.delete}
               onClick={openDeleteModal}
             >
               <IconTrash size={iconSizes.md} />
@@ -65,7 +69,7 @@ export function OrchardViewPage() {
         <OrchardForm
           mode="view"
           orchard={orchard}
-          onSubmit={() => {}}
+          onSubmit={() => { }}
           onCancel={() => goBack()}
           onEdit={can(PERMISSIONS.ORCHARD_EDIT) ? handleEdit : undefined}
           isLoading={false}

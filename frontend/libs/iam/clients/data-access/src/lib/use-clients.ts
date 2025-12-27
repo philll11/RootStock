@@ -96,6 +96,7 @@ export function useClients(options?: { enabled?: boolean }) {
 
   return {
     clients: clientsQuery.data ?? [],
+    client: clientsQuery.data,
     isLoading: clientsQuery.isLoading,
     isError: clientsQuery.isError,
     searchClients,

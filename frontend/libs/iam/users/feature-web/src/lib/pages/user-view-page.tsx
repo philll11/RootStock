@@ -1,49 +1,65 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import {
+  useUsers,
+  useUser
+} from '@rootstock/users/users-data-access';
 import { UserForm } from '../user-form';
-import { useUsers, useUser } from '@rootstock/users/users-data-access';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
-import { Container, Paper, LoadingOverlay, ActionIcon } from '@mantine/core';
+import { Container, Paper, Alert, ActionIcon, LoadingOverlay } from '@mantine/core';
+import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
-import { IconTrash } from '@tabler/icons-react';
+import { palette, iconSizes } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { palette, iconSizes } from '@rootstock/ui/theme';
 
 export function UserViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getLinkTo, goBack } = useContextualNavigation('/users');
   const { deleteUser } = useUsers();
-  const { data: user, isLoading: isUserLoading } = useUser(id);
+  const { data: user, isLoading } = useUser(id);
+  const { getLinkTo, goBack } = useContextualNavigation('/users');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
-
-  const handleDelete = () => {
-    openDeleteModal();
+  
+  const handleEdit = () => {
+    navigate(getLinkTo('edit', { strategy: 'stack' }));
   };
 
-  const handleConfirmDelete = async () => {
+  const handleDelete = async () => {
     if (id) {
-      await deleteUser(id);
-      closeDeleteModal();
-      goBack();
+      try {
+        await deleteUser(id);
+        goBack();
+      } catch (error) {
+        console.error('Failed to delete user', error);
+      }
     }
   };
 
-  if (isUserLoading) {
+  if (isLoading) {
     return <LoadingOverlay visible />;
+  }
+  
+  if (!user) {
+    return (
+      <Container size="xl">
+        <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red">
+          User not found
+        </Alert>
+      </Container>
+    );
   }
 
   return (
-    <Container size="lg">
-      <PageHeader 
-        title={`User: ${user?.name}`} 
+    <Container size="xl">
+      <PageHeader
+        title={user.name}
         action={
           can(PERMISSIONS.USER_DELETE) && (
             <ActionIcon
               variant="subtle"
               color={palette.actions.delete}
-              onClick={handleDelete}
+              onClick={openDeleteModal}
               title="Delete User"
             >
               <IconTrash size={iconSizes.md} />
@@ -51,25 +67,25 @@ export function UserViewPage() {
           )
         }
       />
-      <Paper p="md" withBorder pos="relative">
+      <Paper p="md" withBorder>
         <UserForm
           mode="view"
           user={user}
-          onSubmit={() => {}}
+          onSubmit={() => { }}
           isLoading={false}
           onCancel={() => goBack()}
-          onEdit={() => navigate(getLinkTo(`/users/${id}/edit`, { strategy: 'stack' }))}
+            onEdit={can(PERMISSIONS.USER_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />
       </Paper>
       <ConfirmModal
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
-        onConfirm={handleConfirmDelete}
+        onConfirm={handleDelete}
         title="Delete User"
         message={`Are you sure you want to delete user ${user?.name}? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor="red"
+        confirmColor={palette.actions.delete}
       />
     </Container>
   );

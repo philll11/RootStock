@@ -13,7 +13,8 @@ import {
   DataTable,
   FormDrawer,
   DataTableColumn,
-  ActionSplitButton
+  ActionSplitButton,
+  useContextualNavigation,
 } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -21,6 +22,7 @@ import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function VarietiesListPage() {
   const navigate = useNavigate();
+  const { getLinkTo } = useContextualNavigation();
   const { varieties, isLoading: isVarietiesLoading, createVariety, updateVariety, deleteVariety, isCreating, isUpdating } = useVarieties();
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
@@ -44,7 +46,7 @@ export function VarietiesListPage() {
   };
 
   const handleCreatePage = () => {
-    navigate('/varieties/new');
+    navigate(getLinkTo('/varieties/new'));
   };
 
   const handleView = (variety: Variety) => {
@@ -56,7 +58,7 @@ export function VarietiesListPage() {
 
   const handleViewPage = (variety: Variety, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/varieties/${variety._id}`);
+    navigate(getLinkTo(`/varieties/${variety._id}`));
   };
 
   const handleEdit = (variety: Variety, e?: React.MouseEvent) => {
@@ -69,7 +71,7 @@ export function VarietiesListPage() {
 
   const handleEditPage = (variety: Variety, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/varieties/${variety._id}/edit`);
+    navigate(getLinkTo(`/varieties/${variety._id}/edit`));
   };
 
   const handleDeleteClick = (variety: Variety, e?: React.MouseEvent) => {

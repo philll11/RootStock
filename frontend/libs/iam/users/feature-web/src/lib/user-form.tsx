@@ -99,7 +99,7 @@ export function UserForm({
       // because initialValues changes on every keystroke.
       const currentIds = initialClientOptions.map(o => o.value).sort().join(',');
       const newIds = (idsToFetch || []).sort().join(',');
-      
+
       if (idsToFetch && idsToFetch.length > 0 && currentIds !== newIds) {
         try {
           const clients = await Promise.all(
@@ -287,6 +287,7 @@ export function UserForm({
           disabled={isView}
           checked={form.values.isActive}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
+          mt={26} // Align with input
         />
       )}
     </FormLayout>

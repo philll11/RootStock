@@ -1,44 +1,60 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { UserForm } from '../user-form';
-import { useUsers, useUser } from '@rootstock/users/users-data-access';
-import { PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
-import { Container, Paper, LoadingOverlay } from '@mantine/core';
-import { useDiscardWarning } from '@rootstock/ui/web';
+import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
+import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { useState } from 'react';
+import {
+  useUsers,
+  useUser,
+  UpdateUserDto
+} from '@rootstock/users/users-data-access';
+import { IconAlertCircle } from '@tabler/icons-react';
 
 export function UserEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { goBack, transitionTo } = useContextualNavigation('/users');
+  const { goBack, transitionTo } = useContextualNavigation(`/users/${id}`);
   const { updateUser, isUpdating } = useUsers();
-  const { data: user, isLoading: isUserLoading } = useUser(id);
+  const { data: user, isLoading } = useUser(id);
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: UpdateUserDto) => {
     if (!id) return;
-    await updateUser({ id, data: values });
-    setIsDirty(false);
-    // Use setTimeout to allow the state update to process before navigation
-    // This prevents the discard warning from triggering
-    setTimeout(() => transitionTo(`/users/${id}`), 0);
+    try {
+      await updateUser({ id, data: values });
+      setIsDirty(false);
+      setTimeout(() => transitionTo(`/users/${id}`), 0);
+    } catch (error) {
+      console.error('Failed to update user', error);
+    }
   };
 
-  if (isUserLoading) {
+  if (isLoading) {
     return <LoadingOverlay visible />;
+  }
+  
+  if (!user) {
+    return (
+      <Container size="xl">
+        <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red">
+          User not found
+        </Alert>
+      </Container>
+    );
   }
 
   return (
-    <Container size="lg">
+    <Container size="xl">
       <PageHeader title={`Edit User: ${user?.name}`} />
-      <Paper p="md" withBorder pos="relative">
+      <Paper p="md" withBorder>
         <UserForm
           mode="edit"
           user={user}
           onSubmit={handleSubmit}
-          isLoading={isUpdating}
           onCancel={() => goBack()}
+          isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}
         />

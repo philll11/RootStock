@@ -128,6 +128,7 @@ export function ClientForm({
           disabled={isView}
           checked={form.values.isActive}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
+            mt={26} // Align with input
         />
       )}
     </FormLayout>

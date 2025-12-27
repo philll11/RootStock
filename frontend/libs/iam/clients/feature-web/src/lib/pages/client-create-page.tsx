@@ -1,9 +1,13 @@
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { 
+  useClients, 
+  CreateClientDto,
+  UpdateClientDto,
+} from '@rootstock/clients/clients-data-access';
 import { ClientForm } from '../client-form';
-import { useClients } from '@rootstock/clients/clients-data-access';
 import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';
-import { useState } from 'react';
 
 export function ClientCreatePage() {
   const navigate = useNavigate();
@@ -13,14 +17,18 @@ export function ClientCreatePage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: any) => {
-    const newClient = await createClient(values);
-    setIsDirty(false);
-    setTimeout(() => transitionTo(`/clients/${newClient._id}`), 0);
+  const handleSubmit = async (values: CreateClientDto | UpdateClientDto) => {
+    try {
+    const newClient = await createClient(values as CreateClientDto);
+      setIsDirty(false);
+      setTimeout(() => transitionTo(`/clients/${newClient._id}`), 0);
+    } catch (error) {
+      console.error('Failed to create variety', error);
+    }
   };
 
   return (
-    <Container size="lg">
+    <Container size="xl">
       <PageHeader title="Create Client" />
       <Paper p="md" withBorder>
         <ClientForm

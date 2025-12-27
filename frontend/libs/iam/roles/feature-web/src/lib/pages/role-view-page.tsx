@@ -1,48 +1,65 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import {
+  useRoles,
+  useRole
+} from '@rootstock/roles/roles-data-access';
 import { RoleForm } from '../role-form';
-import { useRoles, useRole } from '@rootstock/roles/roles-data-access';
-import { PageHeader, ConfirmModal } from '@rootstock/ui/web';
-import { Container, Paper, LoadingOverlay, ActionIcon } from '@mantine/core';
+import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
+import { Container, Paper, Alert, ActionIcon, LoadingOverlay } from '@mantine/core';
+import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
-import { IconTrash } from '@tabler/icons-react';
+import { palette, iconSizes } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { palette, iconSizes } from '@rootstock/ui/theme';
 
 export function RoleViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { deleteRole } = useRoles();
-  const { data: role, isLoading: isRoleLoading } = useRole(id);
+  const { data: role, isLoading } = useRole(id);
+  const { getLinkTo, goBack } = useContextualNavigation('/roles');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
 
-  const handleDelete = () => {
-    openDeleteModal();
+  const handleEdit = () => {
+    navigate(getLinkTo('edit', { strategy: 'stack' }));
   };
 
-  const handleConfirmDelete = async () => {
+  const handleDelete = async () => {
     if (id) {
-      await deleteRole(id);
-      closeDeleteModal();
-      navigate('/roles');
+      try {
+        await deleteRole(id);
+        goBack();
+      } catch (error) {
+        console.error('Failed to delete role', error);
+      }
     }
   };
 
-  if (isRoleLoading) {
+  if (isLoading) {
     return <LoadingOverlay visible />;
   }
 
+  if (!role) {
+    return (
+      <Container size="xl">
+        <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red">
+          Role not found
+        </Alert>
+      </Container>
+    );
+  }
+
   return (
-    <Container size="lg">
-      <PageHeader 
-        title={`Role: ${role?.name}`} 
+    <Container size="xl">
+      <PageHeader
+        title={role.name}
         action={
           can(PERMISSIONS.ROLE_DELETE) && (
             <ActionIcon
               variant="subtle"
               color={palette.actions.delete}
-              onClick={handleDelete}
+              onClick={openDeleteModal}
               title="Delete Role"
             >
               <IconTrash size={iconSizes.md} />
@@ -50,25 +67,25 @@ export function RoleViewPage() {
           )
         }
       />
-      <Paper p="md" withBorder pos="relative">
+      <Paper p="md" withBorder>
         <RoleForm
           mode="view"
           role={role}
-          onSubmit={() => {}}
+          onSubmit={() => { }}
           isLoading={false}
-          onCancel={() => navigate('/roles')}
-          onEdit={() => navigate(`/roles/${id}/edit`)}
+          onCancel={() => goBack()}
+            onEdit={can(PERMISSIONS.ROLE_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />
       </Paper>
       <ConfirmModal
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
-        onConfirm={handleConfirmDelete}
+        onConfirm={handleDelete}
         title="Delete Role"
-        message={`Are you sure you want to delete role ${role?.name}? This action cannot be undone.`}
+        message={`Are you sure you want to delete role "${role?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor="red"
+        confirmColor={palette.actions.delete}
       />
     </Container>
   );

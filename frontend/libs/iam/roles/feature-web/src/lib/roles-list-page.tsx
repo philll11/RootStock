@@ -20,6 +20,7 @@ import {
   FormDrawer,
   DataTableColumn,
   ActionSplitButton,
+  useContextualNavigation,
 } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -44,6 +45,7 @@ export function RolesListPage() {
   ] = useDisclosure(false);
 
   const navigate = useNavigate();
+  const { getLinkTo } = useContextualNavigation();
 
   const [mode, setMode] = useState<RoleFormMode>('create');
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
@@ -70,17 +72,17 @@ export function RolesListPage() {
   };
 
   const handleCreatePage = () => {
-    navigate('/roles/new');
+    navigate(getLinkTo('/roles/new'));
   };
 
   const handleViewPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/roles/${id}`);
+    navigate(getLinkTo(`/roles/${id}`));
   };
 
   const handleEditPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/roles/${id}/edit`);
+    navigate(getLinkTo(`/roles/${id}/edit`));
   };
 
   const handleView = (role: Role) => {

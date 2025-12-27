@@ -1,41 +1,60 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { ClientForm } from '../client-form';
-import { useClients, useClient } from '@rootstock/clients/clients-data-access';
 import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
-import { Container, Paper, LoadingOverlay } from '@mantine/core';
+import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { useState } from 'react';
+import {
+  useClients,
+  useClient,
+  UpdateClientDto
+} from '@rootstock/clients/clients-data-access';
+import { IconAlertCircle } from '@tabler/icons-react';
 
 export function ClientEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { goBack, transitionTo } = useContextualNavigation('/clients');
+  const { goBack, transitionTo } = useContextualNavigation(`/clients/${id}`);
   const { updateClient, isUpdating } = useClients();
-  const { data: client, isLoading: isClientLoading } = useClient(id);
+  const { data: client, isLoading } = useClient(id);
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: UpdateClientDto) => {
     if (!id) return;
-    await updateClient({ id, data: values });
-    setIsDirty(false);
-    setTimeout(() => transitionTo(`/clients/${id}`), 0);
+    try {
+      await updateClient({ id, data: values });
+      setIsDirty(false);
+      setTimeout(() => transitionTo(`/clients/${id}`), 0);
+    } catch (error) {
+      console.error('Failed to update client', error);
+    }
   };
 
-  if (isClientLoading) {
+  if (isLoading) {
     return <LoadingOverlay visible />;
   }
 
+  if (!client) {
+    return (
+      <Container size="xl">
+        <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red">
+          Client not found
+        </Alert>
+      </Container>
+    );
+  }
+
   return (
-    <Container size="lg">
+    <Container size="xl">
       <PageHeader title={`Edit Client: ${client?.name}`} />
-      <Paper p="md" withBorder pos="relative">
+      <Paper p="md" withBorder>
         <ClientForm
           mode="edit"
           client={client}
           onSubmit={handleSubmit}
-          isLoading={isUpdating}
           onCancel={() => goBack()}
+          isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}
         />

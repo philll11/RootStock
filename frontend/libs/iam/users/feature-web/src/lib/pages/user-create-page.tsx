@@ -1,10 +1,13 @@
 import { useNavigate } from 'react-router-dom';
-import { UserForm } from '../user-form';
-import { useUsers } from '@rootstock/users/users-data-access';
-import { PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
-import { Container, Paper } from '@mantine/core';
-import { useDiscardWarning } from '@rootstock/ui/web';
 import { useState } from 'react';
+import {
+  useUsers,
+  CreateUserDto,
+  UpdateUserDto
+} from '@rootstock/users/users-data-access';
+import { UserForm } from '../user-form';
+import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
+import { Container, Paper } from '@mantine/core';
 
 export function UserCreatePage() {
   const navigate = useNavigate();
@@ -14,14 +17,18 @@ export function UserCreatePage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: any) => {
-    const newUser = await createUser(values);
-    setIsDirty(false);
-    setTimeout(() => transitionTo(`/users/${newUser._id}`), 0);
+  const handleSubmit = async (values: CreateUserDto | UpdateUserDto) => {
+    try {
+      const newUser = await createUser(values as CreateUserDto);
+      setIsDirty(false);
+      setTimeout(() => transitionTo(`/users/${newUser._id}`), 0);
+    } catch (error) {
+      console.error('Failed to create user', error);
+    }
   };
 
   return (
-    <Container size="lg">
+    <Container size="xl">
       <PageHeader title="Create User" />
       <Paper p="md" withBorder>
         <UserForm

@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import {
   TextInput,
-  Checkbox,
+  Switch,
   Select,
   MultiSelect,
   Text,
@@ -194,12 +194,12 @@ export function OrchardForm({
       </Box>
 
       {!isCreating && (
-        <Checkbox
+        <Switch
           label="Active"
-          mt="md"
           readOnly={isViewing}
           disabled={isViewing}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
+          mt="md"
         />
       )}
     </FormLayout>

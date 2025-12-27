@@ -1,4 +1,5 @@
 // frontend/libs/roles/feature-web/src/lib/role-form.tsx
+import { useEffect, useMemo } from 'react';
 import {
   TextInput,
   Select,
@@ -18,11 +19,7 @@ import {
   VisibilityScope,
   PERMISSIONS,
 } from '@rootstock/roles/roles-data-access';
-import { useEffect, useMemo } from 'react';
-import {
-  notify,
-  PERMISSIONS as SHARED_PERMISSIONS,
-} from '@rootstock/shared/util';
+import { notify, PERMISSIONS as SHARED_PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { palette } from '@rootstock/ui/theme';
 import { FormLayout } from '@rootstock/ui/web';
@@ -70,14 +67,14 @@ export function RoleForm({
     },
     validate: {
       name: (value) => (value.trim().length < 1 ? 'Name is required' : null),
-      visibilityScope: (value) =>
-        value ? null : 'Visibility Scope is required',
+      visibilityScope: (value) => value ? null : 'Visibility Scope is required',
     },
   });
 
   useEffect(() => {
     if (isCreating && onValuesChange) {
-      onValuesChange(form.values);
+      const { isActive, ...rest } = form.values;
+      onValuesChange(rest as any);
     }
   }, [form.values, isCreating, onValuesChange]);
 
@@ -100,12 +97,11 @@ export function RoleForm({
       form.setValues({
         name: initialValues.name || '',
         description: initialValues.description || '',
-        visibilityScope:
-          initialValues.visibilityScope || VisibilityScope.Client,
+        visibilityScope: initialValues.visibilityScope || VisibilityScope.Client,
         permissions: initialValues.permissions || [],
       });
     }
-  }, [role, mode]);
+  }, [role, mode, isEditing, isViewing, isCreating]);
 
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
@@ -149,20 +145,21 @@ export function RoleForm({
   return (
     <FormLayout
       mode={mode}
-      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       isLoading={isLoading}
       onCancel={onCancel}
-      onClear={isCreating ? handleClear : undefined}
+      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       onEdit={onEdit}
+      onClear={isCreating ? handleClear : undefined}
       canEdit={can(SHARED_PERMISSIONS.ROLE_EDIT)}
       submitLabel={isEditing ? 'Update Role' : 'Create Role'}
+      isDirty={form.isDirty()}
       fullHeight={fullHeight}
     >
       <Group grow>
         <TextInput
-          withAsterisk={!isView}
           label="Name"
           placeholder="Role Name"
+          withAsterisk={!isView}
           readOnly={isView}
           {...form.getInputProps('name')}
         />
@@ -186,7 +183,7 @@ export function RoleForm({
           readOnly={isView}
           {...form.getInputProps('visibilityScope')}
         />
-        {mode !== 'create' ? (
+        {mode !== 'create' && (
           <Switch
             label="Active"
             disabled={isView}
@@ -194,8 +191,6 @@ export function RoleForm({
             {...form.getInputProps('isActive', { type: 'checkbox' })}
             mt={26} // Align with input
           />
-        ) : (
-          <div />
         )}
       </Group>
 

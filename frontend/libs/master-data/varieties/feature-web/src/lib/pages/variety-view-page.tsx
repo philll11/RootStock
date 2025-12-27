@@ -1,11 +1,11 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   useVarieties,
 } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm } from '../variety-form';
-import { PageHeader, ConfirmModal } from '@rootstock/ui/web';
-import { Container, Paper, Alert, ActionIcon, LoadingOverlay } from '@mantine/core';
-import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
+import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
+import { Container, Paper, Alert, ActionIcon, LoadingOverlay, Button, Group } from '@mantine/core';
+import { IconAlertCircle, IconTrash, IconEdit } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/auth/auth-data-access';
@@ -15,18 +15,19 @@ export function VarietyViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { variety, isLoading, deleteVariety } = useVarieties(id);
+  const { getLinkTo, goBack } = useContextualNavigation('/varieties');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
 
   const handleEdit = () => {
-    navigate(`/varieties/${id}/edit`);
+    navigate(getLinkTo('edit', { strategy: 'stack' }));
   };
 
   const handleDelete = async () => {
     if (id) {
       try {
         await deleteVariety({ id });
-        navigate('/varieties');
+        goBack();
       } catch (error) {
         console.error('Failed to delete variety', error);
       }
@@ -52,23 +53,25 @@ export function VarietyViewPage() {
       <PageHeader
         title={variety.name}
         action={
-          can(PERMISSIONS.VARIETY_DELETE) ? (
+          can(PERMISSIONS.VARIETY_DELETE) && (
             <ActionIcon
               variant="subtle"
               color={palette.actions.delete}
               onClick={openDeleteModal}
+              title="Delete Variety"
             >
-              <IconTrash size={iconSizes.lg} />
+              <IconTrash size={iconSizes.md} />
             </ActionIcon>
-          ) : undefined
+          )
         }
       />
       <Paper p="md" withBorder>
         <VarietyForm
           mode="view"
           initialValues={variety}
-          onSubmit={() => {}}
-          onCancel={() => navigate('/varieties')}
+          onSubmit={() => { }}
+          isLoading={false}
+          onCancel={() => goBack()}
           onEdit={can(PERMISSIONS.VARIETY_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />
@@ -79,7 +82,7 @@ export function VarietyViewPage() {
         onClose={closeDeleteModal}
         onConfirm={handleDelete}
         title="Delete Variety"
-        message="Are you sure you want to delete this variety? This action cannot be undone."
+        message={`Are you sure you want to delete variety "${variety.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
         confirmColor={palette.actions.delete}
       />
