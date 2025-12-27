@@ -6,11 +6,12 @@ import {
   UpdateOrchardDto,
 } from '@rootstock/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
-import { useDiscardWarning, PageHeader, ConfirmDiscardModal } from '@rootstock/ui/web';
+import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';
 
 export function OrchardCreatePage() {
   const navigate = useNavigate();
+  const { goBack, transitionTo } = useContextualNavigation('/orchards');
   const { createOrchard, isCreating } = useOrchards();
   const [isDirty, setIsDirty] = useState(false);
 
@@ -20,7 +21,7 @@ export function OrchardCreatePage() {
     try {
       const newOrchard = await createOrchard(values as CreateOrchardDto);
       setIsDirty(false);
-      setTimeout(() => navigate(`/orchards/${newOrchard._id}`), 0);
+      setTimeout(() => transitionTo(`/orchards/${newOrchard._id}`), 0);
     } catch (error) {
       console.error('Failed to create orchard', error);
     }
@@ -33,7 +34,7 @@ export function OrchardCreatePage() {
         <OrchardForm
           mode="create"
           onSubmit={handleSubmit}
-          onCancel={() => navigate('/orchards')}
+          onCancel={() => goBack()}
           isLoading={isCreating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

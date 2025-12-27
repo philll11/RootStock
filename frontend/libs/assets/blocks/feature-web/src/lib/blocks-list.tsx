@@ -286,14 +286,14 @@ export function BlocksList({ orchardId }: BlocksListProps) {
         <BlockForm
           key={drawerOpened ? 'opened' : 'closed'}
           mode={formMode}
-          initialValues={selectedBlock}
+          block={selectedBlock}
           onSubmit={handleSubmit}
           onCancel={handleClose}
           onEdit={() => setFormMode('edit')}
           isLoading={isCreating || isUpdating}
           onDirtyChange={setIsFormDirty}
-          draftValues={createFormDraft}
-          onValuesChange={(values) => setCreateFormDraft(values as CreateBlockDto)}
+          initialValues={createFormDraft}
+          onValuesChange={setCreateFormDraft}
           orchardId={orchardId}
         />
       </FormDrawer>

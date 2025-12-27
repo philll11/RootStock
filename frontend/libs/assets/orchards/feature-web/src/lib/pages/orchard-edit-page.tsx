@@ -5,13 +5,14 @@ import {
   UpdateOrchardDto,
 } from '@rootstock/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
-import { useDiscardWarning, PageHeader, ConfirmDiscardModal } from '@rootstock/ui/web';
+import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 
 export function OrchardEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { goBack, transitionTo } = useContextualNavigation('/orchards');
   const { orchard, isLoading, updateOrchard, isUpdating } = useOrchards(id);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -22,7 +23,7 @@ export function OrchardEditPage() {
     try {
       await updateOrchard({ id, data: values as UpdateOrchardDto });
       setIsDirty(false);
-      setTimeout(() => navigate(`/orchards/${id}`), 0);
+      setTimeout(() => transitionTo(`/orchards/${id}`), 0);
     } catch (error) {
       console.error('Failed to update orchard', error);
     }
@@ -50,7 +51,7 @@ export function OrchardEditPage() {
           mode="edit"
           orchard={orchard}
           onSubmit={handleSubmit}
-          onCancel={() => navigate(`/orchards/${id}`)}
+          onCancel={() => goBack()}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

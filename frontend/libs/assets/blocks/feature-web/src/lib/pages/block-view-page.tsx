@@ -66,7 +66,7 @@ export function BlockViewPage() {
       <Paper p="md" withBorder>
         <BlockForm
           mode="view"
-          initialValues={block}
+          block={block}
           onSubmit={() => {}}
           onCancel={() => goBack()}
           onEdit={can(PERMISSIONS.BLOCK_EDIT) ? handleEdit : undefined}

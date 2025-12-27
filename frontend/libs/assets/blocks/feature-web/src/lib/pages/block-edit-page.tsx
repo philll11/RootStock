@@ -51,7 +51,7 @@ export function BlockEditPage() {
       <Paper p="md" withBorder>
         <BlockForm
           mode="edit"
-          initialValues={block}
+          block={block}
           onSubmit={handleSubmit}
           onCancel={() => goBack()}
           isLoading={isUpdating}

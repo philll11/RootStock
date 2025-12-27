@@ -72,15 +72,16 @@ export function OrchardForm({
 
   useEffect(() => {
     if (isCreating && onValuesChange) {
-      onValuesChange(form.values as any);
+      const { isActive, ...rest } = form.values;
+      onValuesChange(rest as any);
     }
   }, [form.values, isCreating, onValuesChange]);
 
   useEffect(() => {
-    if (isEditing && onDirtyChange) {
+    if (onDirtyChange) {
       onDirtyChange(form.isDirty());
     }
-  }, [form.values, isEditing, onDirtyChange]);
+  }, [form.values, onDirtyChange]);
 
   useEffect(() => {
     if (orchard && (isEditing || isViewing)) {
@@ -100,25 +101,17 @@ export function OrchardForm({
         name: initialValues.name || '',
         clientId: initialValues.clientId || null,
         userIds: initialValues.userIds || [],
+        isActive: true,
       });
     }
   }, [orchard, mode, isEditing, isViewing, isCreating]);
 
   const handleSubmit = (values: typeof form.values) => {
     if (isCreating) {
-      const dto: CreateOrchardDto = {
-        name: values.name,
-        clientId: values.clientId as string,
-        userIds: values.userIds,
-      };
-      onSubmit(dto);
-    } else if (isEditing) {
-      const dto: UpdateOrchardDto = {
-        name: values.name,
-        userIds: values.userIds,
-        isActive: values.isActive,
-      };
-      onSubmit(dto);
+      const { isActive, ...rest } = values;
+      onSubmit(rest as any);
+    } else {
+      onSubmit(values as any);
     }
   };
 

@@ -29,28 +29,28 @@ import { FormLayout, ConfirmModal } from '@rootstock/ui/web';
 export type BlockFormMode = 'create' | 'edit' | 'view';
 
 interface BlockFormProps {
+  block?: Block | null;
   mode: BlockFormMode;
-  initialValues?: Block | null;
   onSubmit: (values: CreateBlockDto | UpdateBlockDto) => void;
   onCancel: () => void;
   onEdit?: () => void;
   isLoading?: boolean;
   onDirtyChange?: (isDirty: boolean) => void;
-  draftValues?: Partial<CreateBlockDto>;
+  initialValues?: Partial<CreateBlockDto>;
   onValuesChange?: (values: Partial<CreateBlockDto>) => void;
   orchardId?: string;
   fullHeight?: boolean;
 }
 
 export function BlockForm({
+  block,
   mode,
-  initialValues,
   onSubmit,
   onCancel,
   onEdit,
   isLoading,
   onDirtyChange,
-  draftValues,
+  initialValues,
   onValuesChange,
   orchardId,
   fullHeight = true,
@@ -65,22 +65,18 @@ export function BlockForm({
     { open: openConfirmReplant, close: closeConfirmReplant },
   ] = useDisclosure(false);
 
+  const isEditing = mode === 'edit';
+  const isCreating = mode === 'create';
+  const isViewing = mode === 'view';
+
   const form = useForm({
     initialValues: {
-      name: initialValues?.name || '',
+      name: '',
       // Safe id extraction with fallback to orchardId prop
-      orchardId: (initialValues?.orchardId
-        ? typeof initialValues.orchardId === 'object'
-          ? initialValues.orchardId._id
-          : initialValues.orchardId
-        : orchardId || null) as string | null,
-      isActive: initialValues?.isActive ?? true,
-      plantings: initialValues?.plantings?.map((p) => ({
-        varietyId:
-          typeof p.varietyId === 'object' ? p.varietyId._id : p.varietyId,
-        treeCount: p.treeCount,
-      })) || [{ varietyId: null as string | null, treeCount: 0 }],
-      ...draftValues,
+      orchardId: (orchardId || null) as string | null,
+      isActive: true,
+      plantings: [{ varietyId: null as string | null, treeCount: 0 }],
+      ...initialValues,
     },
     validate: {
       name: (value) =>
@@ -96,47 +92,23 @@ export function BlockForm({
   });
 
   useEffect(() => {
-    if (mode === 'create' && onValuesChange) {
-      onValuesChange(form.values as any);
+    if (isCreating && onValuesChange) {
+      const { isActive, ...rest } = form.values;
+      onValuesChange(rest as any);
     }
-  }, [form.values, mode, onValuesChange]);
+  }, [form.values, isCreating, onValuesChange]);
 
   useEffect(() => {
-    if (initialValues) {
-      form.setValues({
-        name: initialValues.name,
-        orchardId: initialValues.orchardId
-          ? typeof initialValues.orchardId === 'object'
-            ? initialValues.orchardId._id
-            : initialValues.orchardId
-          : orchardId || null,
-        isActive: initialValues.isActive,
-        plantings:
-          initialValues.plantings?.map((p) => ({
-            varietyId:
-              typeof p.varietyId === 'object' ? p.varietyId._id : p.varietyId,
-            treeCount: p.treeCount,
-          })) || [],
-      });
-      form.resetDirty();
-    } else if (mode === 'create') {
-      form.setValues({
-        name: draftValues?.name || '',
-        orchardId: draftValues?.orchardId || orchardId || null,
-        plantings: (draftValues?.plantings as any) || [
-          { varietyId: null, treeCount: 0 },
-        ],
-      });
+    if (onDirtyChange) {
+      onDirtyChange(form.isDirty());
     }
-  }, [initialValues, mode, orchardId]);
+  }, [form.values, onDirtyChange]);
 
   useEffect(() => {
-    onDirtyChange?.(form.isDirty());
-
     // Check for replanting warning
-    if (mode === 'edit' && initialValues) {
+    if (isEditing && block) {
       const hasVarietyChanged = form.values.plantings.some((p, index) => {
-        const initialP = initialValues.plantings[index];
+        const initialP = block.plantings[index];
         const initialVarietyId = initialP
           ? typeof initialP.varietyId === 'object'
             ? (initialP.varietyId as any)._id
@@ -146,10 +118,39 @@ export function BlockForm({
       });
       setShowReplantingWarning(hasVarietyChanged);
     }
-  }, [form.values, mode, initialValues, onDirtyChange]);
+  }, [form.values, isEditing, block]);
+
+  useEffect(() => {
+    if (block && (isEditing || isViewing)) {
+      form.initialize({
+        name: block.name,
+        orchardId: block.orchardId
+          ? typeof block.orchardId === 'object'
+            ? block.orchardId._id
+            : block.orchardId
+          : orchardId || null,
+        isActive: block.isActive,
+        plantings:
+          block.plantings?.map((p) => ({
+            varietyId:
+              typeof p.varietyId === 'object' ? p.varietyId._id : p.varietyId,
+            treeCount: p.treeCount,
+          })) || [],
+      });
+    } else if (isCreating && initialValues) {
+      form.setValues({
+        name: initialValues.name || '',
+        orchardId: initialValues.orchardId || orchardId || null,
+        plantings: (initialValues.plantings as any) || [
+          { varietyId: null, treeCount: 0 },
+        ],
+        isActive: true,
+      });
+    }
+  }, [block, mode, orchardId, isEditing, isViewing, isCreating]);
 
   const proceedSubmit = (values: typeof form.values) => {
-    if (mode === 'create') {
+    if (isCreating) {
       const { isActive, ...createValues } = values;
       onSubmit(createValues as any);
     } else {

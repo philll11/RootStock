@@ -4,7 +4,7 @@ import {
 } from '@rootstock/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
 import { BlocksList } from '@rootstock/blocks/blocks-feature-web';
-import { PageHeader, ConfirmModal, SubResourceTabs } from '@rootstock/ui/web';
+import { PageHeader, ConfirmModal, SubResourceTabs, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay, ActionIcon, Text } from '@mantine/core';
 import { IconAlertCircle, IconTrash, IconLayoutGrid, IconUsers, IconHistory } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
@@ -15,18 +15,19 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 export function OrchardViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { getLinkTo, goBack } = useContextualNavigation('/orchards');
   const { orchard, isLoading, deleteOrchard } = useOrchards(id);
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
 
   const handleEdit = () => {
-    navigate(`/orchards/${id}/edit`);
+    navigate(getLinkTo(`/orchards/${id}/edit`, { strategy: 'stack' }));
   };
 
   const handleDelete = async () => {
     if (id) {
       await deleteOrchard(id);
-      navigate('/orchards');
+      goBack();
     }
   };
 
@@ -65,7 +66,7 @@ export function OrchardViewPage() {
           mode="view"
           orchard={orchard}
           onSubmit={() => {}}
-          onCancel={() => navigate('/orchards')}
+          onCancel={() => goBack()}
           onEdit={can(PERMISSIONS.ORCHARD_EDIT) ? handleEdit : undefined}
           isLoading={false}
           fullHeight={false}

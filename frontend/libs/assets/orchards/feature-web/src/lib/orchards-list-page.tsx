@@ -12,6 +12,7 @@ import {
   FormDrawer,
   DataTableColumn,
   ActionSplitButton,
+  useContextualNavigation,
 } from '@rootstock/ui/web';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 import {
@@ -26,6 +27,7 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function OrchardsListPage() {
   const navigate = useNavigate();
+  const { getLinkTo } = useContextualNavigation();
   const {
     orchards,
     isLoading,
@@ -68,7 +70,7 @@ export function OrchardsListPage() {
   };
 
   const handleCreatePage = () => {
-    navigate('/orchards/new');
+    navigate(getLinkTo('/orchards/new'));
   };
 
   const handleEdit = (orchard: Orchard, e?: React.MouseEvent) => {
@@ -81,7 +83,7 @@ export function OrchardsListPage() {
 
   const handleEditPage = (orchard: Orchard, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/orchards/${orchard._id}/edit`);
+    navigate(getLinkTo(`/orchards/${orchard._id}/edit`));
   };
 
   const handleView = (orchard: Orchard) => {
@@ -286,9 +288,7 @@ export function OrchardsListPage() {
           isLoading={isCreating || isUpdating}
           onDirtyChange={setIsFormDirty}
           initialValues={createFormDraft}
-          onValuesChange={(values) =>
-            setCreateFormDraft(values as CreateOrchardDto)
-          }
+          onValuesChange={setCreateFormDraft}
         />
       </FormDrawer>
 
