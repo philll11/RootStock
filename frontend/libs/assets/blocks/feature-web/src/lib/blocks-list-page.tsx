@@ -18,6 +18,7 @@ import {
   FormDrawer,
   DataTableColumn,
   ActionSplitButton,
+  useContextualNavigation,
 } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -25,6 +26,7 @@ import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function BlocksListPage() {
   const navigate = useNavigate();
+  const { getLinkTo } = useContextualNavigation();
   const {
     blocks,
     isLoading,
@@ -65,7 +67,7 @@ export function BlocksListPage() {
   };
 
   const handleCreatePage = () => {
-    navigate('/blocks/new');
+    navigate(getLinkTo('/blocks/new'));
   };
 
   const handleView = (block: Block) => {
@@ -90,7 +92,7 @@ export function BlocksListPage() {
 
   const handleEditPage = (block: Block, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/blocks/${block._id}/edit`);
+    navigate(getLinkTo(`/blocks/${block._id}/edit`));
   };
 
   const handleDeleteClick = (block: Block, e?: React.MouseEvent) => {

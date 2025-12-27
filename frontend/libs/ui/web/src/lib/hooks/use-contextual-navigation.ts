@@ -6,11 +6,11 @@ export interface ContextualNavigation {
   returnTo: string | null;
 
   /**
-   * Generates a URL string for links (e.g., "Edit" buttons),
-   * automatically appending the current 'returnTo' param.
-   * If no returnTo exists, it appends the current location as the returnTo.
+   * Generates a URL string for links (e.g., "Edit" buttons).
+   * By default ('passthrough'), it forwards the existing 'returnTo' if present.
+   * If 'stack' is used, it appends the CURRENT location (including its returnTo) as the new returnTo.
    */
-  getLinkTo: (path: string) => string;
+  getLinkTo: (path: string, options?: { strategy?: 'passthrough' | 'stack' }) => string;
 
   /**
    * Handles the termination of the flow.
@@ -35,15 +35,21 @@ export function useContextualNavigation(basePath?: string): ContextualNavigation
   const returnTo = searchParams.get('returnTo');
 
   const getLinkTo = useCallback(
-    (path: string) => {
-      // If we already have a returnTo, pass it along.
-      // If not, we ARE the returnTo context (e.g. Orchard View -> Block Create)
-      const currentReturnTo =
-        returnTo ||
-        encodeURIComponent(`${location.pathname}${location.search}`);
+    (path: string, options: { strategy?: 'passthrough' | 'stack' } = {}) => {
+      const { strategy = 'passthrough' } = options;
+      
+      let nextReturnTo = '';
+
+      if (strategy === 'stack') {
+        // Stack: Current page becomes the return point (preserving its own returnTo context)
+        nextReturnTo = encodeURIComponent(`${location.pathname}${location.search}`);
+      } else {
+        // Passthrough: Forward existing returnTo, or fallback to current page if none exists
+        nextReturnTo = returnTo || encodeURIComponent(`${location.pathname}${location.search}`);
+      }
 
       const separator = path.includes('?') ? '&' : '?';
-      return `${path}${separator}returnTo=${currentReturnTo}`;
+      return `${path}${separator}returnTo=${nextReturnTo}`;
     },
     [location.pathname, location.search, returnTo]
   );
@@ -66,6 +72,32 @@ export function useContextualNavigation(basePath?: string): ContextualNavigation
 
   const transitionTo = useCallback(
     (path: string) => {
+      // If the target path matches the returnTo path, we need to "pop" the stack
+      // This prevents loops and restores the previous context
+      const targetPath = path.split('?')[0];
+      
+      if (returnTo) {
+        const decodedReturnTo = decodeURIComponent(returnTo);
+        const returnPath = decodedReturnTo.split('?')[0];
+
+        if (targetPath === returnPath) {
+          // Loop detected!
+          // Check if there is a nested returnTo inside the decoded URL
+          // e.g. /blocks/1?returnTo=/orchards/1
+          const innerMatch = decodedReturnTo.match(/[?&]returnTo=([^&]+)/);
+          if (innerMatch) {
+            // Found nested returnTo, use it
+            const innerReturnTo = innerMatch[1];
+            const separator = path.includes('?') ? '&' : '?';
+            navigate(`${path}${separator}returnTo=${innerReturnTo}`, { replace: true });
+          } else {
+            // No nested returnTo, just go to target (clearing returnTo)
+            navigate(path, { replace: true });
+          }
+          return;
+        }
+      }
+
       const separator = path.includes('?') ? '&' : '?';
       const nextUrl = returnTo
         ? `${path}${separator}returnTo=${returnTo}`

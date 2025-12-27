@@ -21,7 +21,9 @@ export function BlockViewPage() {
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
 
   const handleEdit = () => {
-    navigate(getLinkTo(`/blocks/${id}/edit`));
+    // Use 'stack' strategy so that if we cancel editing, we return HERE (View Page),
+    // but if we save, we return HERE (View Page) and then 'Close' takes us back to Orchard.
+    navigate(getLinkTo(`/blocks/${id}/edit`, { strategy: 'stack' }));
   };
 
   const handleDelete = async () => {

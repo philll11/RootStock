@@ -12,7 +12,7 @@ import { IconAlertCircle } from '@tabler/icons-react';
 export function BlockEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { goBack, transitionTo } = useContextualNavigation(`/blocks/${id}`);
+  const { goBack, transitionTo } = useContextualNavigation('/blocks');
   
   const { block, isLoading, updateBlock, isUpdating } = useBlocks({ blockId: id });
 
@@ -53,7 +53,7 @@ export function BlockEditPage() {
           mode="edit"
           initialValues={block}
           onSubmit={handleSubmit}
-          onCancel={() => transitionTo(`/blocks/${id}`)}
+          onCancel={() => goBack()}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}
