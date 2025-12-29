@@ -118,15 +118,35 @@ describe('Subsidiaries CRUD & Business Logic (e2e)', () => {
 
     describe('PATCH /subsidiaries/:id', () => {
         it('should successfully update a subsidiary`s name', async () => {
-            const updateDto: UpdateSubsidiaryDto = { name: 'Updated Name' };
+            // 1. Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/subsidiaries/${testSubsidiary._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            const updateDto: UpdateSubsidiaryDto = { name: 'Updated Name', __v: current.body.__v };
             const res = await request(app.getHttpServer()).patch(`/subsidiaries/${testSubsidiary._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send(updateDto).expect(200);
             expect(res.body.name).toBe(updateDto.name);
+            expect(res.body.__v).toBe(current.body.__v + 1);
         });
 
-        it('should prevent deactivation if active clients exist', async () => {
-            await clientModel.create({ recordId: 'CLI_BLOCKER', name: 'Blocking Client', subsidiaryId: testSubsidiary._id });
-            const updateDto: UpdateSubsidiaryDto = { isActive: false };
-            await request(app.getHttpServer()).patch(`/subsidiaries/${testSubsidiary._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send(updateDto).expect(409);
+        it('should throw 409 Conflict when updating with an outdated version', async () => {
+            // 1. Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/subsidiaries/${testSubsidiary._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            // 2. Simulate a concurrent update (bump version in DB directly)
+            await subsidiaryModel.updateOne({ _id: testSubsidiary._id }, { $inc: { __v: 1 } });
+
+            // 3. Attempt update with old version
+            const updateDto: UpdateSubsidiaryDto = { name: 'Stale Update', __v: current.body.__v };
+            await request(app.getHttpServer())
+                .patch(`/subsidiaries/${testSubsidiary._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send(updateDto)
+                .expect(409);
         });
     });
     

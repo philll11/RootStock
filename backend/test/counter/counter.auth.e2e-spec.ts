@@ -88,7 +88,7 @@ describe('Counters Auth (e2e)', () => {
     });
 
     describe('PATCH /counters/:id', () => {
-        const updateDto: UpdateCounterDto = { prefix: 'TEST' };
+        const updateDto: UpdateCounterDto = { prefix: 'TEST', __v: 0 };
 
         it('should fail with 401 for unauthenticated requests', async () => {
             await request(app.getHttpServer()).patch(`/counters/${subsidiaryCounter._id}`).send(updateDto).expect(401);

@@ -127,15 +127,42 @@ describe('Users CRUD & Business Logic (e2e)', () => {
         });
 
         it('should successfully update a user`s name, role, and clients (Happy Path)', async () => {
-            const updateDto: UpdateUserDto = { firstName: 'Patched', lastName: 'User', roleId: contactRole._id.toString(), clientIds: [testClientB._id.toString()] };
+            // 1. Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            const updateDto: UpdateUserDto = { firstName: 'Patched', lastName: 'User', roleId: contactRole._id.toString(), clientIds: [testClientB._id.toString()], __v: current.body.__v };
             const res = await request(app.getHttpServer()).patch(`/users/${testUser._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send(updateDto).expect(200);
             expect(res.body.name).toBe('Patched User');
             expect(res.body.roleId).toBe(contactRole._id.toString());
             expect(res.body.clientIds).toContain(testClientB._id.toString());
+            expect(res.body.__v).toBe(current.body.__v + 1);
+        });
+
+        it('should throw 409 Conflict when updating with an outdated version', async () => {
+            // 1. Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            // 2. Simulate a concurrent update (bump version in DB directly)
+            await userModel.updateOne({ _id: testUser._id }, { $inc: { __v: 1 } });
+
+            // 3. Attempt update with old version
+            const updateDto: UpdateUserDto = { firstName: 'Stale Update', __v: current.body.__v };
+            await request(app.getHttpServer())
+                .patch(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send(updateDto)
+                .expect(409);
         });
 
         it('should allow a CONTACT user with USER_EDIT to update their OWN personal info', async () => {
-            const updateDto: UpdateUserDto = { firstName: 'Self', lastName: 'Updated' };
+            const current = await request(app.getHttpServer()).get(`/users/${selfUpdatingContactUser._id}`).set('Authorization', `Bearer ${selfUpdatingContactToken}`).expect(200);
+            const updateDto: UpdateUserDto = { firstName: 'Self', lastName: 'Updated', __v: current.body.__v };
             const res = await request(app.getHttpServer()).patch(`/users/${selfUpdatingContactUser._id}`).set('Authorization', `Bearer ${selfUpdatingContactToken}`).send(updateDto).expect(200);
             expect(res.body.name).toBe('Self Updated');
         });
@@ -146,7 +173,7 @@ describe('Users CRUD & Business Logic (e2e)', () => {
             const restrictedContact = await userModel.create({ recordId: 'RESTRICTED_PATCH', name: 'Restricted', firstName: 'Restricted', lastName: 'User', email: 'restricted@patch.com', userType: UserType.CONTACT, roleId: restrictedRole._id, clientIds: [testClientA._id] });
             const restrictedToken = jwtService.sign({ sub: restrictedContact.recordId, tokenVersion: 0 });
 
-            const updateDto: UpdateUserDto = { roleId: employeeRole._id.toString() };
+            const updateDto: UpdateUserDto = { roleId: employeeRole._id.toString(), __v: 0 };
             await request(app.getHttpServer()).patch(`/users/${restrictedContact._id}`).set('Authorization', `Bearer ${restrictedToken}`).send(updateDto).expect(403);
         });
 
@@ -156,7 +183,7 @@ describe('Users CRUD & Business Logic (e2e)', () => {
             const restrictedContact = await userModel.create({ recordId: 'RESTRICTED_PATCH_2', name: 'Restricted 2', firstName: 'Restricted', lastName: 'User 2', email: 'restricted2@patch.com', userType: UserType.CONTACT, roleId: restrictedRole._id, clientIds: [testClientA._id] });
             const restrictedToken = jwtService.sign({ sub: restrictedContact.recordId, tokenVersion: 0 });
 
-            const updateDto: UpdateUserDto = { firstName: 'Should Fail' };
+            const updateDto: UpdateUserDto = { firstName: 'Should Fail', __v: 0 };
             await request(app.getHttpServer()).patch(`/users/${testUser._id}`).set('Authorization', `Bearer ${restrictedToken}`).send(updateDto).expect(403);
         });
     });

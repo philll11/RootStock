@@ -107,7 +107,7 @@ export class ClientsService {
       }
     }
 
-    const { isActive, ...restOfDto } = updateClientDto;
+    const { isActive, __v, ...restOfDto } = updateClientDto;
     const updatePayload: Partial<Client> = { ...restOfDto };
 
     if (isActive !== undefined) {
@@ -118,9 +118,14 @@ export class ClientsService {
       updatePayload.isActive = isActive;
     }
 
-    const updatedClient = await this.clientModel.findByIdAndUpdate(clientId, { $set: updatePayload }, { new: true }).exec();
+    const updatedClient = await this.clientModel.findOneAndUpdate(
+      { _id: clientId, __v: updateClientDto.__v },
+      { $set: updatePayload, $inc: { __v: 1 } },
+      { new: true }
+    ).exec();
+
     if (!updatedClient) {
-      throw new NotFoundException(`Client with ID "${clientId}" could not be updated.`);
+      throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
     }
     return updatedClient;
   }
@@ -271,7 +276,7 @@ export class ClientsService {
  */
   async countActiveBySubsidiaryId(subsidiaryId: string): Promise<number> {
     return this.clientModel.countDocuments({
-      subsidiaryId: subsidiaryId,
+      subsidiaryId: new Types.ObjectId(subsidiaryId),
       isActive: true,
       isDeleted: false,
     }).exec();

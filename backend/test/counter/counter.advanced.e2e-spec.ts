@@ -82,7 +82,8 @@ describe('Counters Advanced (e2e)', () => {
     describe('Counter and Resource Interaction', () => {
         it('should use the new prefix for a newly created resource after a counter update', async () => {
             // 1. Update the prefix for the 'subsidiary' counter
-            const updateCounterDto: UpdateCounterDto = { prefix: 'FIRM' };
+            const counter = await counterModel.findById('subsidiary');
+            const updateCounterDto: UpdateCounterDto = { prefix: 'FIRM', __v: counter!.__v };
             await request(app.getHttpServer())
                 .patch('/counters/subsidiary')
                 .set('Authorization', `Bearer ${globalAdminToken}`)
@@ -105,7 +106,8 @@ describe('Counters Advanced (e2e)', () => {
             const originalRecordId = existingSubsidiary.recordId;
 
             // 1. Update the counter prefix
-            const updateCounterDto: UpdateCounterDto = { prefix: 'CORP' };
+            const counter = await counterModel.findById('subsidiary');
+            const updateCounterDto: UpdateCounterDto = { prefix: 'CORP', __v: counter!.__v };
             await request(app.getHttpServer())
                 .patch('/counters/subsidiary')
                 .set('Authorization', `Bearer ${globalAdminToken}`)

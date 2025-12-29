@@ -1,5 +1,5 @@
 // backend/src/assets/blocks/blocks.service.ts
-import { ConflictException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 
@@ -17,6 +17,9 @@ import { ClientResolverService } from '../../iam/client-resolver/client-resolver
 import { UserDocument } from '../../iam/users/schemas/user.schema';
 import { AssessmentsService } from '../../operations/assessments/assessments.service';
 import { AssessmentStatus } from '../../operations/assessments/schemas/assessment.schema';
+
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
+import { log } from 'console';
 
 @Injectable()
 export class BlocksService {
@@ -39,13 +42,11 @@ export class BlocksService {
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('block', 'BLK');
     const recordId = `${prefix}${sequence_value.toString().padStart(4, '0')}`;
 
-    const clientId = (orchard.clientId as any)._id;
-
     const newBlock = new this.blockModel({
       ...createBlockDto,
       recordId,
       orchardId: new Types.ObjectId(orchardId),
-      clientId: clientId,
+      clientId: orchard.clientId,
     });
 
     // Simple atomic save since Block has no children yet
@@ -96,15 +97,24 @@ export class BlocksService {
   async update(blockId: string, updateBlockDto: UpdateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {
     await this.findOne(blockId, requestingUser, { includeInactive: true });
 
-    const { __v, ...updateData } = updateBlockDto;
+    const { isActive, __v, ...restOfDto } = updateBlockDto;
+    const updatePayload: any = { ...restOfDto };
+
+
+    // System Constraint: Only roles with BLOCK_MANAGE_INACTIVE permissions can change Block status.
+    if (updateBlockDto.isActive !== undefined) {
+      const userPermissions = (requestingUser.roleId as any)?.permissions || [];
+      if (!userPermissions.includes(PERMISSIONS.BLOCK_MANAGE_INACTIVE)) {
+        throw new ForbiddenException('You do not have permission to change the isActive status of a block.');
+      }
+      updatePayload.isActive = updateBlockDto.isActive;
+    }
 
     const updatedBlock = await this.blockModel.findOneAndUpdate(
-      { _id: blockId, __v: __v },
-      { $set: updateData, $inc: { __v: 1 } },
+      { _id: blockId, __v: updateBlockDto.__v },
+      { $set: updatePayload, $inc: { __v: 1 } },
       { new: true } // Return the updated doc
-    )
-      .populate('plantings.varietyId', 'name')
-      .exec();
+    ).populate('plantings.varietyId', 'name').exec();
 
     if (!updatedBlock) {
       throw new ConflictException('The record has been modified by another user. Please refresh and try again.');

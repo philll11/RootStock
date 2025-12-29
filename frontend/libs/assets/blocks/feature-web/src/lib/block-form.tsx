@@ -124,11 +124,7 @@ export function BlockForm({
     if (block && (isEditing || isViewing)) {
       form.initialize({
         name: block.name,
-        orchardId: block.orchardId
-          ? typeof block.orchardId === 'object'
-            ? block.orchardId._id
-            : block.orchardId
-          : orchardId || null,
+        orchardId: block.orchardId ? typeof block.orchardId === 'object' ? block.orchardId._id : block.orchardId : orchardId || null,
         isActive: block.isActive,
         plantings:
           block.plantings?.map((p) => ({

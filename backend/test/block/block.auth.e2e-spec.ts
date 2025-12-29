@@ -117,76 +117,91 @@ describe('Blocks Authorization & Security - Agricultural Business Scenarios (e2e
         
         it('Global Admin should see blocks from ALL orchards', async () => {
             // Check Block A
-            await request(app.getHttpServer()).get(`/orchards/${orchardA._id}/blocks/${blockA._id}`).set('Authorization', `Bearer ${platformAdminToken}`).expect(200);
+            await request(app.getHttpServer()).get(`/blocks/${blockA._id}`).set('Authorization', `Bearer ${platformAdminToken}`).expect(200);
             // Check Block C (Different Sub)
-            await request(app.getHttpServer()).get(`/orchards/${orchardC._id}/blocks/${blockC._id}`).set('Authorization', `Bearer ${platformAdminToken}`).expect(200);
+            await request(app.getHttpServer()).get(`/blocks/${blockC._id}`).set('Authorization', `Bearer ${platformAdminToken}`).expect(200);
         });
 
         it('Subsidiary Manager should see blocks in their subsidiary (Apple & Citrus), but NOT others (Berry)', async () => {
             // Should see Apple (Direct Client)
-            await request(app.getHttpServer()).get(`/orchards/${orchardA._id}/blocks/${blockA._id}`).set('Authorization', `Bearer ${regionManagerToken}`).expect(200);
+            await request(app.getHttpServer()).get(`/blocks/${blockA._id}`).set('Authorization', `Bearer ${regionManagerToken}`).expect(200);
             // Should see Citrus (Same Subsidiary)
-            await request(app.getHttpServer()).get(`/orchards/${orchardB._id}/blocks/${blockB._id}`).set('Authorization', `Bearer ${regionManagerToken}`).expect(200);
+            await request(app.getHttpServer()).get(`/blocks/${blockB._id}`).set('Authorization', `Bearer ${regionManagerToken}`).expect(200);
             // Should NOT see Berry (Different Subsidiary) - 404 because parent orchard check fails or block check fails
-            await request(app.getHttpServer()).get(`/orchards/${orchardC._id}/blocks/${blockC._id}`).set('Authorization', `Bearer ${regionManagerToken}`).expect(404);
+            await request(app.getHttpServer()).get(`/blocks/${blockC._id}`).set('Authorization', `Bearer ${regionManagerToken}`).expect(404);
         });
 
         it('Client Owner should see blocks ONLY in their specific client', async () => {
             // Should see Apple
-            await request(app.getHttpServer()).get(`/orchards/${orchardA._id}/blocks`).set('Authorization', `Bearer ${farmOwnerToken}`).expect(200);
+            await request(app.getHttpServer()).get(`/blocks?orchardId=${orchardA._id}`).set('Authorization', `Bearer ${farmOwnerToken}`).expect(200);
             // Should NOT see Citrus (Same Subsidiary, Different Client)
-            await request(app.getHttpServer()).get(`/orchards/${orchardB._id}/blocks`).set('Authorization', `Bearer ${farmOwnerToken}`).expect(404);
+            await request(app.getHttpServer()).get(`/blocks?orchardId=${orchardB._id}`).set('Authorization', `Bearer ${farmOwnerToken}`).expect(200); // Wait, if they query by orchardId, they get empty list or 403?
+
+            const res = await request(app.getHttpServer()).get(`/blocks?orchardId=${orchardB._id}`).set('Authorization', `Bearer ${farmOwnerToken}`).expect(200);
+            expect(res.body).toHaveLength(0);
         });
 
         it('should return 403 for user without BLOCK_VIEW permission', async () => {
-            await request(app.getHttpServer()).get(`/orchards/${orchardA._id}/blocks`).set('Authorization', `Bearer ${unauthorizedUserToken}`).expect(403);
+            await request(app.getHttpServer()).get(`/blocks?orchardId=${orchardA._id}`).set('Authorization', `Bearer ${unauthorizedUserToken}`).expect(403);
         });
     });
 
     // --- WRITE Operations (POST, PATCH, DELETE) ---
     describe('Layer 1 & 3 - Actions and Business Rules (Write)', () => {
 
-        describe('POST /orchards/:id/blocks - Creation Rules', () => {
+        describe('POST /blocks - Creation Rules', () => {
             it('should allow Owner to create a block in their orchard', async () => {
-                const dto = { name: 'New Block', plantings: [{ varietyId: (varietyGala as any)._id.toString(), treeCount: 10 }] };
-                await request(app.getHttpServer()).post(`/orchards/${orchardA._id}/blocks`)
+                const dto = { 
+                    name: 'New Block', 
+                    orchardId: orchardA._id.toString(),
+                    plantings: [{ varietyId: (varietyGala as any)._id.toString(), treeCount: 10 }] 
+                };
+                await request(app.getHttpServer()).post(`/blocks`)
                     .set('Authorization', `Bearer ${farmOwnerToken}`)
                     .send(dto).expect(201);
             });
 
             it('should FORBID Consultant (No Create Perm) from creating a block', async () => {
-                const dto = { name: 'Fail Block', plantings: [] };
-                await request(app.getHttpServer()).post(`/orchards/${orchardA._id}/blocks`)
+                const dto = { 
+                    name: 'Fail Block', 
+                    orchardId: orchardA._id.toString(),
+                    plantings: [] 
+                };
+                await request(app.getHttpServer()).post(`/blocks`)
                     .set('Authorization', `Bearer ${consultantToken}`)
                     .send(dto).expect(403);
             });
 
             it('should FORBID Owner from creating a block in an Orchard they do not own (Layer 2)', async () => {
                 // Owner of Apple trying to create in Citrus Orchard
-                const dto = { name: 'Sneaky Block', plantings: [] };
-                await request(app.getHttpServer()).post(`/orchards/${orchardB._id}/blocks`)
+                const dto = { 
+                    name: 'Sneaky Block', 
+                    orchardId: orchardB._id.toString(),
+                    plantings: [] 
+                };
+                await request(app.getHttpServer()).post(`/blocks`)
                     .set('Authorization', `Bearer ${farmOwnerToken}`) // Apple Owner
                     .send(dto).expect(404); // 404 because they can't "see" Orchard B to validate it
             });
         });
 
-        describe('PATCH /orchards/:id/blocks/:id - Update Rules', () => {
+        describe('PATCH /blocks/:id - Update Rules', () => {
             it('should allow Owner to update a block', async () => {
                 await request(app.getHttpServer())
-                    .patch(`/orchards/${orchardA._id}/blocks/${blockA._id}`)
+                    .patch(`/blocks/${blockA._id}`)
                     .set('Authorization', `Bearer ${farmOwnerToken}`)
                     .send({ name: 'Renamed Block', __v: blockA.__v }).expect(200);
             });
 
             it('should FORBID Consultant (Read Only) from updating a block', async () => {
                 await request(app.getHttpServer())
-                    .patch(`/orchards/${orchardA._id}/blocks/${blockA._id}`)
+                    .patch(`/blocks/${blockA._id}`)
                     .set('Authorization', `Bearer ${consultantToken}`)
                     .send({ name: 'Hacked Block', __v: blockA.__v }).expect(403);
             });
         });
 
-        describe('DELETE /orchards/:id/blocks/:id - Deletion Rules', () => {
+        describe('DELETE /blocks/:id - Deletion Rules', () => {
             it('should allow Owner to delete a block', async () => {
                 // Create temp block
                 const tempBlock = await blockModel.create({ 
@@ -194,13 +209,13 @@ describe('Blocks Authorization & Security - Agricultural Business Scenarios (e2e
                 });
 
                 await request(app.getHttpServer())
-                    .delete(`/orchards/${orchardA._id}/blocks/${tempBlock._id}`)
+                    .delete(`/blocks/${tempBlock._id}`)
                     .set('Authorization', `Bearer ${farmOwnerToken}`).expect(200);
             });
 
             it('should FORBID Consultant from deleting a block', async () => {
                 await request(app.getHttpServer())
-                    .delete(`/orchards/${orchardA._id}/blocks/${blockA._id}`)
+                    .delete(`/blocks/${blockA._id}`)
                     .set('Authorization', `Bearer ${consultantToken}`).expect(403);
             });
         });

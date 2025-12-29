@@ -91,7 +91,7 @@ describe('Subsidiaries Authorization - Security Model (e2e)', () => {
         });
 
         it('should DENY editing for a user without SUBSIDIARY_EDIT', async () => {
-            const updateDto: UpdateSubsidiaryDto = { name: 'Unauthorized Edit' };
+            const updateDto: UpdateSubsidiaryDto = { name: 'Unauthorized Edit', __v: 0 };
             await request(app.getHttpServer()).patch(`/subsidiaries/${activeSubsidiary._id}`).set('Authorization', `Bearer ${readOnlyToken}`).send(updateDto).expect(403);
         });
 
@@ -106,12 +106,13 @@ describe('Subsidiaries Authorization - Security Model (e2e)', () => {
 
     describe('Field-Level & Inactive Record Permission Enforcement', () => {
         it('should DENY status updates for a user without SUBSIDIARY_MANAGE_INACTIVE', async () => {
-            const updateDto: UpdateSubsidiaryDto = { isActive: false };
+            const updateDto: UpdateSubsidiaryDto = { isActive: false, __v: 0 };
             await request(app.getHttpServer()).patch(`/subsidiaries/${activeSubsidiary._id}`).set('Authorization', `Bearer ${subsidiaryManagerToken}`).send(updateDto).expect(403);
         });
 
         it('should ALLOW status updates for a user with SUBSIDIARY_MANAGE_INACTIVE', async () => {
-            const updateDto: UpdateSubsidiaryDto = { isActive: false };
+            const current = await request(app.getHttpServer()).get(`/subsidiaries/${activeSubsidiary._id}`).set('Authorization', `Bearer ${platformAdminToken}`).expect(200);
+            const updateDto: UpdateSubsidiaryDto = { isActive: false, __v: current.body.__v };
             await request(app.getHttpServer()).patch(`/subsidiaries/${activeSubsidiary._id}`).set('Authorization', `Bearer ${platformAdminToken}`).send(updateDto).expect(200);
         });
 

@@ -98,10 +98,9 @@ export class AssessmentsService {
   async update(assessmentId: string, updateDto: UpdateAssessmentDto, requestingUser: UserDocument): Promise<AssessmentDocument> {
     const existing = await this.findOne(assessmentId, requestingUser);
 
-    // 1. Optimistic Concurrency Control (OCC)
-    if (updateDto.__v !== undefined && existing['__v'] !== updateDto.__v) {
-        throw new ConflictException('The record has been modified by another user. Please refresh.');
-    }
+    // 1. Determine Expected Version
+    const updateOps: any = { $set: {}, $push: {}, $inc: {} };
+    let hasChanges = false;
 
     // 2. Audit & Locking Logic
     if (existing.status === AssessmentStatus.COMPLETED) {
@@ -109,45 +108,71 @@ export class AssessmentsService {
             throw new BadRequestException('A changeReason is mandatory when modifying a Completed assessment.');
         }
 
-        existing.revisionHistory.push({
+        updateOps.$push.revisionHistory = {
             userId: requestingUser._id,
             action: 'UPDATE', 
             reason: updateDto.changeReason,
             previousSummary: { ...existing.summary }, 
             date: new Date(),
-        });
+        };
+        hasChanges = true;
     }
 
-    // 3. Apply Updates & Re-Calculate
-    if (updateDto.status) {
-        if (updateDto.status === AssessmentStatus.COMPLETED) {
-            const currentSampleCount = updateDto.samples ? updateDto.samples.length : existing.samples.length;
-            if (currentSampleCount === 0) {
-                throw new BadRequestException('Cannot mark assessment as Completed with no samples.');
-            }
+    // 3. Calculate New State
+    let newStatus = updateDto.status || existing.status;
+
+    if (updateDto.samples) {
+        const newSummary = this.calculator.calculateStats(updateDto.samples);
+        updateOps.$set.samples = updateDto.samples;
+        updateOps.$set.summary = newSummary;
+        
+        // Auto-Transition
+        if (existing.status === AssessmentStatus.PENDING && updateDto.samples.length > 0) {
+             newStatus = AssessmentStatus.IN_PROGRESS;
         }
-        existing.status = updateDto.status;
+        hasChanges = true;
+    }
+
+    // Validate Completion
+    if (newStatus === AssessmentStatus.COMPLETED) {
+        const currentSampleCount = updateDto.samples ? updateDto.samples.length : existing.samples.length;
+        if (currentSampleCount === 0) {
+            throw new BadRequestException('Cannot mark assessment as Completed with no samples.');
+        }
+    }
+
+    // Apply Status Change
+    if (newStatus !== existing.status) {
+        updateOps.$set.status = newStatus;
+        hasChanges = true;
     }
 
     if (updateDto.date) {
-        existing.date = updateDto.date;
+        updateOps.$set.date = updateDto.date;
+        hasChanges = true;
     }
 
-    if (updateDto.samples) {
-        existing.samples = updateDto.samples;
-        
-        // Re-calculate Source of Truth
-        existing.summary = this.calculator.calculateStats(updateDto.samples);
-        
-        // Auto-Transition
-        if (existing.status === AssessmentStatus.PENDING && existing.samples.length > 0) {
-             existing.status = AssessmentStatus.IN_PROGRESS;
-        }
+    if (updateDto.isActive !== undefined) {
+        updateOps.$set.isActive = updateDto.isActive;
+        hasChanges = true;
     }
 
-    if (updateDto.isActive !== undefined) existing.isActive = updateDto.isActive;
+    // 4. Execute Atomic Update
+    if (!hasChanges) return existing;
 
-    return existing.save();
+    updateOps.$inc.__v = 1;
+
+    const updatedAssessment = await this.assessmentModel.findOneAndUpdate(
+        { _id: assessmentId, __v: updateDto.__v },
+        updateOps,
+        { new: true, runValidators: true }
+    ).exec();
+
+    if (!updatedAssessment) {
+        throw new ConflictException('The record has been modified by another user. Please refresh.');
+    }
+
+    return updatedAssessment;
   }
 
   async remove(assessmentId: string, requestingUser: UserDocument): Promise<AssessmentDocument> {

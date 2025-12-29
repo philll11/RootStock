@@ -71,7 +71,7 @@ export class RolesService {
     // Layer 2 check to ensure requestingUser has permission to see the role they are trying to update.
     const existingRole = await this.findOne(roleId, requestingUser, { includeInactive: true });
 
-    // Prevent deactivation of Roles that are assigned to users
+    // Business Rule: Prevent deactivation of Roles that are assigned to users
     if (updateRoleDto.isActive === false) {
       const activeUserCount = await this.usersService.countActiveByRoleId(roleId);
       if (activeUserCount > 0) {
@@ -79,7 +79,7 @@ export class RolesService {
       }
     }
 
-    const { __v, ...restOfDto } = updateRoleDto;
+    const { isActive, __v, ...restOfDto } = updateRoleDto;
     const updatePayload: Partial<Role> = { ...restOfDto };
 
     // System Constraint: Only roles with ROLE_MANAGE_INACTIVE permissions can change Role status.

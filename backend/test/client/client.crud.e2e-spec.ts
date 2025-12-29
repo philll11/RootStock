@@ -116,24 +116,59 @@ describe('Clients CRUD & Business Logic (e2e)', () => {
 
     describe('PATCH /clients/:id - Updates & Business Logic', () => {
         it('should successfully update a client`s name', async () => {
-            const res = await request(app.getHttpServer()).patch(`/clients/${testClientA._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send({ name: 'Updated Name' }).expect(200);
+            // 1. Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/clients/${testClientA._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            const updateDto: UpdateClientDto = { name: 'Updated Name', __v: current.body.__v };
+            const res = await request(app.getHttpServer()).patch(`/clients/${testClientA._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send(updateDto).expect(200);
             expect(res.body.name).toBe('Updated Name');
+            expect(res.body.__v).toBe(current.body.__v + 1);
+        });
+
+        it('should throw 409 Conflict when updating with an outdated version', async () => {
+            // 1. Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/clients/${testClientA._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            // 2. Simulate a concurrent update (bump version in DB directly)
+            await clientModel.updateOne({ _id: testClientA._id }, { $inc: { __v: 1 } });
+
+            // 3. Attempt update with old version
+            const updateDto: UpdateClientDto = { name: 'Stale Update', __v: current.body.__v };
+            await request(app.getHttpServer())
+                .patch(`/clients/${testClientA._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send(updateDto)
+                .expect(409);
         });
 
         it('should FORBID changing the subsidiaryId (Immutability Rule)', async () => {
+            // Note: This fails at validation level (DTO strips subsidiaryId), so __v is not strictly required if validation fails first,
+            // but good practice to include it if we expect it to reach the service.
+            // However, since UpdateClientDto uses OmitType, subsidiaryId is stripped.
+            // If we send it, it's ignored or rejected by whitelist.
+            // The test expects 400, implying validation failure.
             await request(app.getHttpServer()).patch(`/clients/${testClientA._id}`).set('Authorization', `Bearer ${globalAdminToken}`)
-                .send({ subsidiaryId: new Types.ObjectId().toHexString() })
+                .send({ subsidiaryId: new Types.ObjectId().toHexString(), __v: 0 })
                 .expect(400);
         });
 
         it('should prevent deactivation if active users or orchards exist', async () => {
             // Test with active user
-            await request(app.getHttpServer()).patch(`/clients/${testClientA._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send({ isActive: false }).expect(409);
+            const currentA = await request(app.getHttpServer()).get(`/clients/${testClientA._id}`).set('Authorization', `Bearer ${globalAdminToken}`).expect(200);
+            await request(app.getHttpServer()).patch(`/clients/${testClientA._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send({ isActive: false, __v: currentA.body.__v }).expect(409);
             
             // Test with active orchard
             const tempClient = await clientModel.create({ recordId: 'CLI_TEMP', name: 'Temp Client' });
             await orchardModel.create({ recordId: 'ORCH_TEMP', name: 'Temp Orchard', clientId: tempClient._id });
-            await request(app.getHttpServer()).patch(`/clients/${tempClient._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send({ isActive: false }).expect(409);
+            
+            // Since we just created tempClient, __v is 0
+            await request(app.getHttpServer()).patch(`/clients/${tempClient._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send({ isActive: false, __v: 0 }).expect(409);
         });
     });
 

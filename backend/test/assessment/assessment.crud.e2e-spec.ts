@@ -220,7 +220,7 @@ describe('Assessments CRUD & Data Logic (e2e)', () => {
 
         it('should fail update on Version Mismatch (OCC)', async () => {
             const updateDto = {
-                status: AssessmentStatus.COMPLETED,
+                status: AssessmentStatus.IN_PROGRESS, // Changed from COMPLETED to avoid "no samples" error
                 __v: assessment.__v + 99 // Wrong version
             };
 

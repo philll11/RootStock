@@ -143,23 +143,48 @@ describe('Orchards CRUD & Business Logic (e2e)', () => {
 
         it('should successfully update an orchard`s name and user list', async () => {
             const res = await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${clientOwnerToken}`)
-                .send({ name: 'Updated Orchard Name', userIds: [validContactUserA._id.toString(), employeeUser._id.toString()] }).expect(200);
+                .send({ 
+                    name: 'Updated Orchard Name', 
+                    userIds: [validContactUserA._id.toString(), employeeUser._id.toString()],
+                    __v: testOrchard.__v 
+                }).expect(200);
             expect(res.body.name).toBe('Updated Orchard Name');
             expect(res.body.userIds).toEqual(
                 expect.arrayContaining([validContactUserA._id.toString(), employeeUser._id.toString()])
             );
+            expect(res.body.__v).toBe(testOrchard.__v + 1);
         });
 
         it('should clear user assignments when an empty array is passed', async () => {
             const res = await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${clientOwnerToken}`)
-                .send({ userIds: [] }).expect(200);
+                .send({ 
+                    userIds: [],
+                    __v: testOrchard.__v
+                }).expect(200);
             expect(res.body.userIds).toHaveLength(0);
         });
 
         it('should reject an update with invalid (non-existent) user IDs', async () => {
             const nonExistentId = new Types.ObjectId().toHexString();
             await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${clientOwnerToken}`)
-                .send({ userIds: [nonExistentId] }).expect(400);
+                .send({ 
+                    userIds: [nonExistentId],
+                    __v: testOrchard.__v
+                }).expect(400);
+        });
+
+        it('should fail with 409 Conflict when version mismatch occurs', async () => {
+            // Simulate a concurrent update
+            await orchardModel.updateOne({ _id: testOrchard._id }, { $inc: { __v: 1 } });
+
+            await request(app.getHttpServer())
+                .patch(`/orchards/${testOrchard._id}`)
+                .set('Authorization', `Bearer ${clientOwnerToken}`)
+                .send({ 
+                    name: 'Conflict Update',
+                    __v: testOrchard.__v // Old version
+                })
+                .expect(409);
         });
     });
 

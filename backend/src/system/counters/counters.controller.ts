@@ -17,9 +17,9 @@ export class CountersController {
     return this.countersService.findAll();
   }
 
-  @Patch(':id')
+  @Patch(':counterId')
   @RequirePermission(PERMISSIONS.COUNTERS_EDIT)
-  update(@Param('id') id: string, @Body() updateCounterDto: UpdateCounterDto) {
-    return this.countersService.update(id, updateCounterDto);
+  update(@Param('counterId') counterId: string, @Body() updateCounterDto: UpdateCounterDto) {
+    return this.countersService.update(counterId, updateCounterDto);
   }
 }

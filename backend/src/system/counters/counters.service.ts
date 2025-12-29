@@ -1,5 +1,5 @@
 // backend/src/counters/counters.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Counter, CounterDocument } from './schemas/counter.schema';
@@ -21,19 +21,24 @@ export class CountersService {
 
   /**
    * Updates the prefix for a specific counter.
-   * @param id The ID of the counter to update (e.g., 'subsidiary').
+   * @param counterId The internal ID of the counter to update (e.g., 'subsidiary').
    * @param updateCounterDto The DTO containing the new prefix.
    * @returns A promise that resolves to the updated counter document.
    */
-  async update(id: string, updateCounterDto: UpdateCounterDto): Promise<Counter> {
-    const updatedCounter = await this.counterModel.findByIdAndUpdate(
-      id,
-      { $set: { prefix: updateCounterDto.prefix } },
+  async update(counterId: string, updateCounterDto: UpdateCounterDto): Promise<Counter> {
+    const updatedCounter = await this.counterModel.findOneAndUpdate(
+      { _id: counterId, __v: updateCounterDto.__v },
+      { $set: { prefix: updateCounterDto.prefix }, $inc: { __v: 1 } },
       { new: true },
     ).exec();
 
     if (!updatedCounter) {
-      throw new NotFoundException(`Counter with ID "${id}" not found.`);
+      const exists = await this.counterModel.exists({ _id: counterId });
+      if (exists) {
+          throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+      } else {
+          throw new NotFoundException(`Counter with ID "${counterId}" not found.`);
+      }
     }
 
     return updatedCounter;

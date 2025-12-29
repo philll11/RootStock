@@ -1,5 +1,5 @@
 // backend/src/orchards/orchards.service.ts
-import { Injectable, NotFoundException, Inject, forwardRef, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { ClientSession, Connection, Model, Types } from 'mongoose';
 
@@ -19,6 +19,8 @@ import { UsersService } from '../../iam/users/users.service';
 import { CountersService } from '../../system/counters/counters.service';
 
 import { BlocksService } from '../blocks/blocks.service';
+
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
 
 
 @Injectable()
@@ -107,38 +109,49 @@ export class OrchardsService {
 
     async update(orchardId: string, updateOrchardDto: UpdateOrchardDto, requestingUser: UserDocument): Promise<OrchardDocument> {
         const targetOrchard = await this.findOne(orchardId, requestingUser, { includeInactive: true }); // Layer 2 Orchard Check and fetch target orchard
-
-        //  Optimistic Concurrency Control Check
-        if (targetOrchard.__v !== updateOrchardDto.__v) {
-            throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
-        }
-
         const targetClientIdString = (targetOrchard.clientId as any)._id.toString();
 
-        const { userIds, __v, ...restOfDto } = updateOrchardDto;
+        const { userIds, isActive, __v, ...restOfDto } = updateOrchardDto;
+        const updatePayload: any = { ...restOfDto };
+
+        // System Constraint: Only roles with ORCHARD_MANAGE_INACTIVE permissions can change Orchard status.
+        if (updateOrchardDto.isActive !== undefined) {
+            const userPermissions = (requestingUser.roleId as any)?.permissions || [];
+            if (!userPermissions.includes(PERMISSIONS.ORCHARD_MANAGE_INACTIVE)) {
+                throw new ForbiddenException('You do not have permission to change the isActive status of an orchard.');
+            }
+            updatePayload.isActive = updateOrchardDto.isActive;
+        }
 
         if (userIds) {
-            await Promise.all(userIds.map(uid => this.usersService.findOne(uid, requestingUser))); // Layer 2 User Check
+            // Layer 2 User Check - ensure all incoming userIds are visible to requestingUser
+            await Promise.all(userIds.map(uid => this.usersService.findOne(uid, requestingUser)));
         }
 
         const session = await this.connection.startSession();
         session.startTransaction();
         try {
-            // Update the base orchard fields first.
-            const updatedOrchard = await this.orchardModel.findByIdAndUpdate(
-                orchardId,
-                { $set: restOfDto },
-                { new: true, session },
-            ).exec();
-
-            if (!updatedOrchard) {
-                throw new NotFoundException(`Orchard with ID "${orchardId}" could not be updated.`);
+            if (userIds) {
+                await this._performUserAssignmentsInTransaction(targetClientIdString, userIds, session); // Smart Assignment: assign parent Client to incoming Users
             }
 
             if (userIds) {
-                await this._performUserAssignmentsInTransaction(targetClientIdString, userIds, session); // Smart Assignment: assign parent Client to incoming Users
-                updatedOrchard.userIds = userIds.map(id => new Types.ObjectId(id));
-                await updatedOrchard.save({ session });
+                updatePayload.userIds = userIds.map(id => new Types.ObjectId(id));
+            }
+
+            const updatedOrchard = await this.orchardModel.findOneAndUpdate(
+                { _id: orchardId, __v: updateOrchardDto.__v },
+                { $set: updatePayload, $inc: { __v: 1 } },
+                { new: true, session }
+            ).exec();
+
+            if (!updatedOrchard) {
+                const exists = await this.orchardModel.exists({ _id: orchardId });
+                if (exists) {
+                    throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+                } else {
+                    throw new NotFoundException(`Orchard with ID "${orchardId}" could not be updated.`);
+                }
             }
 
             await session.commitTransaction();

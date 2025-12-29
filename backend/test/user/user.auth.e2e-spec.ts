@@ -190,13 +190,14 @@ describe('Users Authorization & Security (e2e)', () => {
         // --- Layer 3 Subsidiary Containment Tests ---
         describe('PATCH /users/:id - Subsidiary Containment Rules', () => {
             it('should allow assigning a CONTACT to another client WITHIN the same subsidiary', async () => {
+                const current = await request(app.getHttpServer()).get(`/users/${caliContactUser.id}`).set('Authorization', `Bearer ${platformAdminToken}`).expect(200);
                 await request(app.getHttpServer()).patch(`/users/${caliContactUser.id}`).set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ clientIds: [appleOrchardClient._id.toString(), berryFarmClient._id.toString()] })
+                    .send({ clientIds: [appleOrchardClient._id.toString(), berryFarmClient._id.toString()], __v: current.body.__v })
                     .expect(200);
             });
             it('should FORBID assigning a CONTACT to a client in a DIFFERENT subsidiary (Layer 3)', async () => {
                 await request(app.getHttpServer()).patch(`/users/${caliContactUser.id}`).set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ clientIds: [appleOrchardClient._id.toString(), crossSubsidiaryClient._id.toString()] })
+                    .send({ clientIds: [appleOrchardClient._id.toString(), crossSubsidiaryClient._id.toString()], __v: 0 })
                     .expect(400);
             });
             it('should FORBID re-assigning a subsidiary-based CONTACT to a standalone client (Layer 3)', async () => {
@@ -204,7 +205,7 @@ describe('Users Authorization & Security (e2e)', () => {
                 await request(app.getHttpServer())
                     .patch(`/users/${caliContactUser.id}`)
                     .set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ clientIds: [independentClient._id.toString()] })
+                    .send({ clientIds: [independentClient._id.toString()], __v: 0 })
                     .expect(400); // Bad Request, violates the data silo rule
             });
 
@@ -213,7 +214,7 @@ describe('Users Authorization & Security (e2e)', () => {
                 await request(app.getHttpServer())
                     .patch(`/users/${standaloneContactUser.id}`)
                     .set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ clientIds: [appleOrchardClient._id.toString()] })
+                    .send({ clientIds: [appleOrchardClient._id.toString()], __v: 0 })
                     .expect(400); // Bad Request, violates the data silo rule
             });
         });
@@ -221,8 +222,9 @@ describe('Users Authorization & Security (e2e)', () => {
         // --- General UPDATE Operation Tests ---
         describe('PATCH /users/:id - General Permissions', () => {
             it('should allow a user with USER_EDIT to update a user within their scope', async () => {
+                const current = await request(app.getHttpServer()).get(`/users/${caliEmployeeUser.id}`).set('Authorization', `Bearer ${farmOwnerToken}`).expect(200);
                 await request(app.getHttpServer()).patch(`/users/${caliEmployeeUser.id}`).set('Authorization', `Bearer ${farmOwnerToken}`)
-                    .send({ firstName: "Updated" })
+                    .send({ firstName: "Updated", __v: current.body.__v })
                     .expect(200);
             });
             it('should FORBID a user without USER_EDIT from updating a user (Layer 1)', async () => {
@@ -232,7 +234,7 @@ describe('Users Authorization & Security (e2e)', () => {
                 const viewOnlyToken = jwtService.sign({ sub: viewOnlyUser.recordId, tokenVersion: 0 });
 
                 await request(app.getHttpServer()).patch(`/users/${caliEmployeeUser.id}`).set('Authorization', `Bearer ${viewOnlyToken}`)
-                    .send({ firstName: "ShouldFail" })
+                    .send({ firstName: "ShouldFail", __v: 0 })
                     .expect(403);
             });
         });

@@ -162,14 +162,19 @@ export class UsersService {
 
     const updatePayload = await this._prepareUpdatePayload(updateUserDto, existingUser, requestingUser);
     
-    const updateOp: any = { $set: updatePayload };
+    const updateOp: any = { $set: updatePayload, $inc: { __v: 1 } };
     if (updatePayload.password) {
-      updateOp.$inc = { tokenVersion: 1 };
+      updateOp.$inc.tokenVersion = 1;
     }
 
-    const updatedUser = await this.userModel.findByIdAndUpdate(userId, updateOp, { new: true }).exec();
+    const updatedUser = await this.userModel.findOneAndUpdate(
+      { _id: userId, __v: updateUserDto.__v },
+      updateOp,
+      { new: true }
+    ).exec();
+
     if (!updatedUser) {
-      throw new NotFoundException(`User with ID "${userId}" not found.`);
+      throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
     }
     return updatedUser;
   }
@@ -308,7 +313,7 @@ export class UsersService {
  */
   async countActiveByClientId(clientId: string): Promise<number> {
     return this.userModel.countDocuments({
-      clientIds: clientId,
+      clientIds: new Types.ObjectId(clientId),
       isActive: true,
       isDeleted: false,
     }).exec();
@@ -322,7 +327,7 @@ export class UsersService {
  */
   async countActiveByRoleId(roleId: string): Promise<number> {
     return this.userModel.countDocuments({
-      roleId: roleId,
+      roleId: new Types.ObjectId(roleId),
       isActive: true,
       isDeleted: false,
     }).exec();
@@ -336,7 +341,7 @@ export class UsersService {
   async validateUserId(userId: string): Promise<boolean> {
     if (!userId) return false;
     const existingUser = await this.userModel.exists({
-      _id: userId,
+      _id: new Types.ObjectId(userId),
       isActive: true,
       isDeleted: false,
     }).exec();
@@ -435,7 +440,7 @@ async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null>
  * @private
  */
   private async _prepareUpdatePayload(dto: UpdateUserDto, existingUser: UserDocument, loggedInUser: UserDocument): Promise<Partial<UserDocument>> {
-    const { roleId, clientIds, isActive, password, preferences, ...restOfDto } = dto;
+    const { roleId, clientIds, isActive, password, preferences, __v, ...restOfDto } = dto;
     const payload: Partial<UserDocument> = { ...restOfDto };
 
     if (payload.firstName || payload.lastName) {
@@ -453,7 +458,6 @@ async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null>
         theme: preferences.theme || 'auto'
       };
     }
-
 
     // System Constraint: Only roles with CLIENT_MANAGE_INACTIVE permissions can change Client status.
     // This prevents non-admin users from turning off key master data records

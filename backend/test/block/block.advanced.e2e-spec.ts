@@ -77,13 +77,11 @@ describe('Blocks Advanced Logic - Integrity & Constraints (e2e)', () => {
 
     describe('Integrity Rule: Immutability (Layer 3)', () => {
         it('should NOT allow moving a block to a different orchard (orchardId is immutable)', async () => {
-            // Attempt to move Block A to Orchard B
-            // Because forbidNonWhitelisted: true is set globally, this should fail with 400 Bad Request
             await request(app.getHttpServer())
-                .patch(`/orchards/${orchardA._id}/blocks/${blockA._id}`)
+                .patch(`/blocks/${blockA._id}`)
                 .set('Authorization', `Bearer ${adminToken}`)
                 .send({ orchardId: orchardB._id.toString(), __v: blockA.__v })
-                .expect(400); 
+                .expect(400);
 
             // Assert: Verify it did NOT change in DB
             const refreshed = await blockModel.findById(blockA._id);
@@ -94,7 +92,7 @@ describe('Blocks Advanced Logic - Integrity & Constraints (e2e)', () => {
             // Attempt to change Block A's clientId to a different client
             // Because forbidNonWhitelisted: true is set globally, this should fail with 400 Bad Request
              await request(app.getHttpServer())
-                .patch(`/orchards/${orchardA._id}/blocks/${blockA._id}`)
+                .patch(`/blocks/${blockA._id}`)
                 .set('Authorization', `Bearer ${adminToken}`)
                 .send({ clientId: new Types.ObjectId().toString(), __v: blockA.__v })
                 .expect(400);
@@ -108,18 +106,26 @@ describe('Blocks Advanced Logic - Integrity & Constraints (e2e)', () => {
         it('should allow same block name in DIFFERENT orchards', async () => {
             // Block A exists in Orchard A.
             // Create "Block A" in Orchard B.
-            const dto = { name: 'Block A', plantings: [{ varietyId: (varietyGala as any)._id.toString(), treeCount: 50 }] };
+            const dto = { 
+                name: 'Block A', 
+                orchardId: orchardB._id.toString(),
+                plantings: [{ varietyId: (varietyGala as any)._id.toString(), treeCount: 50 }] 
+            };
             
             await request(app.getHttpServer())
-                .post(`/orchards/${orchardB._id}/blocks`)
+                .post(`/blocks`)
                 .set('Authorization', `Bearer ${adminToken}`)
                 .send(dto).expect(201);
         });
 
         it('should REJECT same block name in SAME orchard', async () => {
-            const dto = { name: 'Block A', plantings: [] };
+            const dto = { 
+                name: 'Block A', 
+                orchardId: orchardA._id.toString(),
+                plantings: [] 
+            };
             await request(app.getHttpServer())
-                .post(`/orchards/${orchardA._id}/blocks`)
+                .post(`/blocks`)
                 .set('Authorization', `Bearer ${adminToken}`)
                 .send(dto).expect(409);
         });

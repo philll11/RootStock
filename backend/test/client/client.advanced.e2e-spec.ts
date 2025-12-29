@@ -112,7 +112,7 @@ describe('Clients Advanced Business Logic (e2e)', () => {
             await request(app.getHttpServer())
                 .patch(`/clients/${testClient._id}`)
                 .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send({ isActive: false })
+                .send({ isActive: false, __v: 0 })
                 .expect(409);
         });
 
@@ -123,7 +123,7 @@ describe('Clients Advanced Business Logic (e2e)', () => {
             await request(app.getHttpServer())
                 .patch(`/clients/${testClient._id}`)
                 .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send({ isActive: false })
+                .send({ isActive: false, __v: 0 })
                 .expect(409);
         });
 
@@ -150,7 +150,7 @@ describe('Clients Advanced Business Logic (e2e)', () => {
             await request(app.getHttpServer())
                 .patch(`/clients/${testClient._id}`)
                 .set('Authorization', `Bearer ${globalAdminToken}`)
-                .send({ isActive: false })
+                .send({ isActive: false, __v: 0 })
                 .expect(200);
         });
     });

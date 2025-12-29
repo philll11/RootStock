@@ -60,6 +60,7 @@ export class User {
   @Prop({ required: true, default: false })
   isDeleted: boolean;
 
+  // Access token versioning for logout and token invalidation
   @Prop({ default: 0 })
   tokenVersion: number;
 }

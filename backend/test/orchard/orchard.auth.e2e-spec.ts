@@ -149,15 +149,24 @@ describe('Orchards Authorization & Security - Agricultural Business Scenarios (e
 
             it('should allow a user with ORCHARD_EDIT to update an orchard in their scope', async () => {
                 await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${farmOwnerToken}`)
-                    .send({ name: 'Updated Name' }).expect(200);
+                    .send({ 
+                        name: 'Updated Name',
+                        __v: testOrchard.__v
+                    }).expect(200);
             });
             it('should FORBID a user without ORCHARD_EDIT permission (Layer 1)', async () => {
                 await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${consultantToken}`)
-                    .send({ name: 'Should Fail' }).expect(403);
+                    .send({ 
+                        name: 'Should Fail',
+                        __v: testOrchard.__v
+                    }).expect(403);
             });
             it('should FORBID updating the clientId (Layer 3 - Immutability)', async () => {
                 await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ clientId: berryFarmClient._id.toString() })
+                    .send({ 
+                        clientId: berryFarmClient._id.toString(),
+                        __v: testOrchard.__v
+                    })
                     .expect(400); // Bad Request because clientId is not in DTO whitelist
             });
         });
@@ -192,7 +201,10 @@ describe('Orchards Authorization & Security - Agricultural Business Scenarios (e
                 expect(manager!.clientIds.map(id => id.toString())).not.toContain(appleOrchardClient._id.toString());
 
                 await request(app.getHttpServer()).patch(`/orchards/${orchardToTest._id}`).set('Authorization', `Bearer ${regionManagerToken}`)
-                    .send({ userIds: [caliManager._id.toString()] }).expect(200);
+                    .send({ 
+                        userIds: [caliManager._id.toString()],
+                        __v: orchardToTest.__v
+                    }).expect(200);
 
                 manager = await userModel.findById(caliManager._id);
                 expect(manager!.clientIds.map(id => id.toString())).toContain(appleOrchardClient._id.toString());
@@ -202,7 +214,10 @@ describe('Orchards Authorization & Security - Agricultural Business Scenarios (e
                 // regionManager (Sub A) tries to assign a contact from Sub B. This must fail.
                 // The findOne check in _manageUserAssignmentsInTransaction should throw 404 because the manager can't see the oregonContact.
                 await request(app.getHttpServer()).patch(`/orchards/${orchardToTest._id}`).set('Authorization', `Bearer ${regionManagerToken}`)
-                    .send({ userIds: [oregonContact._id.toString()] }).expect(404);
+                    .send({ 
+                        userIds: [oregonContact._id.toString()],
+                        __v: orchardToTest.__v
+                    }).expect(404);
             });
 
             it('should successfully assign a contact from the SAME subsidiary', async () => {
@@ -212,7 +227,10 @@ describe('Orchards Authorization & Security - Agricultural Business Scenarios (e
                 expect(contact!.clientIds.map(id => id.toString())).not.toContain(appleOrchardClient._id.toString());
 
                 await request(app.getHttpServer()).patch(`/orchards/${orchardToTest._id}`).set('Authorization', `Bearer ${regionManagerToken}`)
-                    .send({ userIds: [caliContact._id.toString()] }).expect(200);
+                    .send({ 
+                        userIds: [caliContact._id.toString()],
+                        __v: orchardToTest.__v
+                    }).expect(200);
 
                 contact = await userModel.findById(caliContact._id);
                 expect(contact!.clientIds.map(id => id.toString())).toContain(appleOrchardClient._id.toString());

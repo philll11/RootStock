@@ -76,10 +76,11 @@ describe('Blocks CRUD & Business Logic (e2e)', () => {
     afterAll(async () => await teardownTestApp({ app, mongod }));
     beforeEach(async () => await blockModel.deleteMany({}));
 
-    describe('POST /orchards/:orchardId/blocks - Creation', () => {
+    describe('POST /blocks - Creation', () => {
         it('should successfully create a valid block with plantings', async () => {
             const createDto: CreateBlockDto = {
                 name: 'North Block A',
+                orchardId: testOrchard._id.toString(),
                 plantings: [
                     { varietyId: (varietyGala as any)._id.toString(), treeCount: 100 },
                     { varietyId: (varietyFuji as any)._id.toString(), treeCount: 50 }
@@ -87,7 +88,7 @@ describe('Blocks CRUD & Business Logic (e2e)', () => {
             };
 
             const res = await request(app.getHttpServer())
-                .post(`/orchards/${testOrchard._id}/blocks`)
+                .post(`/blocks`)
                 .set('Authorization', `Bearer ${clientOwnerToken}`)
                 .send(createDto)
                 .expect(201);
@@ -95,29 +96,34 @@ describe('Blocks CRUD & Business Logic (e2e)', () => {
             expect(res.body.name).toBe(createDto.name);
             expect(res.body.recordId).toMatch(/^BLK\d{3,4}$/); // Matches BLK + sequence
             expect(res.body.plantings).toHaveLength(2);
-            expect(res.body.clientId).toBe(testClient._id.toString()); // Verify Denormalization
+            expect(res.body.clientId._id).toBe(testClient._id.toString()); // Verify Denormalization
         });
 
         it('should reject creation with duplicate name in same orchard (Uniqueness)', async () => {
-            const createDto = { name: 'Duplicate Block', plantings: [] };
+            const createDto = { 
+                name: 'Duplicate Block', 
+                orchardId: testOrchard._id.toString(),
+                plantings: [] 
+            };
             
             // First Create
-            await request(app.getHttpServer()).post(`/orchards/${testOrchard._id}/blocks`).set('Authorization', `Bearer ${globalAdminToken}`).send(createDto).expect(201);
+            await request(app.getHttpServer()).post(`/blocks`).set('Authorization', `Bearer ${globalAdminToken}`).send(createDto).expect(201);
             
             // Second Create (Should Fail)
-            await request(app.getHttpServer()).post(`/orchards/${testOrchard._id}/blocks`).set('Authorization', `Bearer ${globalAdminToken}`).send(createDto).expect(409);
+            await request(app.getHttpServer()).post(`/blocks`).set('Authorization', `Bearer ${globalAdminToken}`).send(createDto).expect(409);
         });
 
         it('should validate invalid planting data (negative trees)', async () => {
             const invalidDto = {
                 name: 'Bad Trees',
+                orchardId: testOrchard._id.toString(),
                 plantings: [{ varietyId: (varietyGala as any)._id.toString(), treeCount: -5 }]
             };
-            await request(app.getHttpServer()).post(`/orchards/${testOrchard._id}/blocks`).set('Authorization', `Bearer ${globalAdminToken}`).send(invalidDto).expect(400);
+            await request(app.getHttpServer()).post(`/blocks`).set('Authorization', `Bearer ${globalAdminToken}`).send(invalidDto).expect(400);
         });
     });
 
-    describe('GET /orchards/:orchardId/blocks - Retrieval', () => {
+    describe('GET /blocks - Retrieval', () => {
         let blockA: BlockDocument;
         beforeEach(async () => {
             blockA = await blockModel.create({
@@ -138,7 +144,7 @@ describe('Blocks CRUD & Business Logic (e2e)', () => {
 
         it('should list all blocks for the orchard', async () => {
             const res = await request(app.getHttpServer())
-                .get(`/orchards/${testOrchard._id}/blocks`)
+                .get(`/blocks?orchardId=${testOrchard._id}`)
                 .set('Authorization', `Bearer ${clientOwnerToken}`)
                 .expect(200);
             
@@ -147,7 +153,7 @@ describe('Blocks CRUD & Business Logic (e2e)', () => {
 
         it('should retrieve a single block with populated variety details', async () => {
             const res = await request(app.getHttpServer())
-                .get(`/orchards/${testOrchard._id}/blocks/${blockA._id}`)
+                .get(`/blocks/${blockA._id}`)
                 .set('Authorization', `Bearer ${clientOwnerToken}`)
                 .expect(200);
 
@@ -156,7 +162,7 @@ describe('Blocks CRUD & Business Logic (e2e)', () => {
         });
     });
 
-    describe('PATCH /orchards/:orchardId/blocks/:blockId - Updates (OCC)', () => {
+    describe('PATCH /blocks/:blockId - Updates (OCC)', () => {
         let blockToUpdate: BlockDocument;
 
         beforeEach(async () => {
@@ -176,7 +182,7 @@ describe('Blocks CRUD & Business Logic (e2e)', () => {
             };
 
             const res = await request(app.getHttpServer())
-                .patch(`/orchards/${testOrchard._id}/blocks/${blockToUpdate._id}`)
+                .patch(`/blocks/${blockToUpdate._id}`)
                 .set('Authorization', `Bearer ${clientOwnerToken}`)
                 .send(updateDto)
                 .expect(200);
@@ -193,14 +199,14 @@ describe('Blocks CRUD & Business Logic (e2e)', () => {
             };
 
             await request(app.getHttpServer())
-                .patch(`/orchards/${testOrchard._id}/blocks/${blockToUpdate._id}`)
+                .patch(`/blocks/${blockToUpdate._id}`)
                 .set('Authorization', `Bearer ${clientOwnerToken}`)
                 .send(updateDto)
                 .expect(409);
         });
     });
 
-    describe('DELETE /orchards/:orchardId/blocks/:blockId', () => {
+    describe('DELETE /blocks/:blockId', () => {
         let blockToDelete: BlockDocument;
         beforeEach(async () => {
             blockToDelete = await blockModel.create({
@@ -213,7 +219,7 @@ describe('Blocks CRUD & Business Logic (e2e)', () => {
 
         it('should soft-delete the block', async () => {
             await request(app.getHttpServer())
-                .delete(`/orchards/${testOrchard._id}/blocks/${blockToDelete._id}`)
+                .delete(`/blocks/${blockToDelete._id}`)
                 .set('Authorization', `Bearer ${clientOwnerToken}`)
                 .expect(200);
 

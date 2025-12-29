@@ -1,10 +1,10 @@
 // backend/src/assets/blocks/dto/update-block.dto.ts
-import { PartialType } from '@nestjs/swagger';
+import { OmitType, PartialType } from '@nestjs/swagger';
 import { CreateBlockDto } from './create-block.dto';
 import { IsBoolean, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class UpdateBlockDto extends PartialType(CreateBlockDto) {
+export class UpdateBlockDto extends OmitType(PartialType(CreateBlockDto), ['orchardId'] as const) {
     @IsBoolean()
     @IsOptional()
     @Type(() => Boolean)

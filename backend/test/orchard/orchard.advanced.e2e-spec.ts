@@ -77,7 +77,10 @@ describe('Orchards Advanced Logic - Integrity & Constraints (e2e)', () => {
             await request(app.getHttpServer())
                 .patch(`/orchards/${testOrchard._id}`)
                 .set('Authorization', `Bearer ${adminToken}`)
-                .send({ clientId: new Types.ObjectId().toString(), __v: testOrchard.__v })
+                .send({ 
+                    clientId: new Types.ObjectId().toString(),
+                    __v: testOrchard.__v
+                })
                 .expect(400);
 
             const refreshed = await orchardModel.findById(testOrchard._id);
@@ -95,7 +98,10 @@ describe('Orchards Advanced Logic - Integrity & Constraints (e2e)', () => {
             await request(app.getHttpServer())
                 .patch(`/orchards/${testOrchard._id}`)
                 .set('Authorization', `Bearer ${adminToken}`)
-                .send({ userIds: [targetUser._id.toString()], __v: testOrchard.__v })
+                .send({ 
+                    userIds: [targetUser._id.toString()],
+                    __v: testOrchard.__v
+                })
                 .expect(200);
 
             // Post-condition: User should now have the Client ID
@@ -146,7 +152,10 @@ describe('Constraint: Parent/Child Dependencies', () => {
             const res = await request(app.getHttpServer())
                 .patch(`/clients/${depClient._id}`)
                 .set('Authorization', `Bearer ${adminToken}`)
-                .send({ isActive: false })
+                .send({ 
+                    isActive: false,
+                    __v: depClient.__v
+                })
                 .expect(409);
             
             // Now this matches because we guaranteed no Users are on this fresh client
@@ -181,7 +190,10 @@ describe('Constraint: Parent/Child Dependencies', () => {
             await request(app.getHttpServer())
                 .patch(`/clients/${depClient._id}`)
                 .set('Authorization', `Bearer ${adminToken}`)
-                .send({ isActive: false })
+                .send({ 
+                    isActive: false,
+                    __v: depClient.__v
+                })
                 .expect(200);
             
             const inactiveClient = await clientModel.findById(depClient._id);

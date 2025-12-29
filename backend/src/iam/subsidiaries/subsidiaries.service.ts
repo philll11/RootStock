@@ -69,23 +69,37 @@ export class SubsidiariesService {
   }
 
   async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, requestingUser: UserDocument): Promise<Subsidiary> {
+    // Layer 2 check to ensure requestingUser has permission to see the role they are trying to update.
     await this.findOne(subsidiaryId, requestingUser, { includeInactive: true });
 
+    // Business Rule: Prevent deactivation of subsidiaries that have active clients assigned.
     if (updateSubsidiaryDto.isActive === false) {
       const activeClientCount = await this.clientsService.countActiveBySubsidiaryId(subsidiaryId);
       if (activeClientCount > 0) {
         throw new ConflictException(`This subsidiary cannot be deactivated because it has ${activeClientCount} active client(s) assigned to it. Please reassign or deactivate the clients first.`);
       }
     }
+    
+    const { isActive, __v, ...restOfDto } = updateSubsidiaryDto;
+    const updatePayload: Partial<Subsidiary> = { ...restOfDto };
+    
+    // System Constraint: Only roles with SUBSIDIARY_MANAGE_INACTIVE permissions can change Subsidiary status.
+    if (updateSubsidiaryDto.isActive !== undefined) {
+      const userPermissions = (requestingUser.roleId as any)?.permissions || [];
+      if (!userPermissions.includes(PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE)) {
+        throw new ForbiddenException('You do not have permission to change the isActive status.');
+      }
+      updatePayload.isActive = isActive;
+    }
 
-    const updatePayload = this._prepareUpdatePayload(updateSubsidiaryDto, requestingUser);
-
-    const updatedSubsidiary = await this.subsidiaryModel
-      .findByIdAndUpdate(subsidiaryId, { $set: updatePayload }, { new: true })
-      .exec();
+    const updatedSubsidiary = await this.subsidiaryModel.findOneAndUpdate(
+      { _id: subsidiaryId, __v: updateSubsidiaryDto.__v },
+      { $set: updatePayload, $inc: { __v: 1 } },
+      { new: true }
+    ).exec();
 
     if (!updatedSubsidiary) {
-      throw new NotFoundException(`Subsidiary with ID "${subsidiaryId}" could not be updated.`);
+      throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
     }
     return updatedSubsidiary;
   }
@@ -120,26 +134,6 @@ export class SubsidiariesService {
     }
   }
 
-  /**
-   * Prepares the final, type-safe payload for a subsidiary update operation.
-   * Handles role-based field permissions.
-   * @private
-   */
-  private _prepareUpdatePayload(updateSubsidiaryDto: UpdateSubsidiaryDto, requestingUser: UserDocument): Partial<Subsidiary> {
-    const { isActive, ...restOfDto } = updateSubsidiaryDto;
-    const updatePayload: Partial<Subsidiary> = { ...restOfDto };
-    const userPermissions = (requestingUser.roleId as any)?.permissions || [];
-
-    // System Constraint: Only roles with SUBSIDIARY_MANAGE_INACTIVE permissions can change Subsidiary status.
-    // This prevents non-admin users from turning off key master data records
-    if (updateSubsidiaryDto.isActive !== undefined) {
-      if (!userPermissions.includes(PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE)) {
-        throw new ForbiddenException('You do not have permission to change the isActive status.');
-      }
-      updatePayload.isActive = isActive;
-    }
-    return updatePayload;
-  }
 
   /**
  * Checks if a subsidiary exists, is active, and is not deleted.

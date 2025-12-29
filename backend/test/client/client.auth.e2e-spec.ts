@@ -128,20 +128,21 @@ describe('Clients Authorization & Security (e2e)', () => {
         // --- UPDATE Tests ---
         describe('PATCH /clients/:id', () => {
             it('should allow a user with CLIENT_EDIT to update a client in their scope', async () => {
+                const current = await request(app.getHttpServer()).get(`/clients/${clientA_subA._id}`).set('Authorization', `Bearer ${subsidiaryManagerToken}`).expect(200);
                 await request(app.getHttpServer()).patch(`/clients/${clientA_subA._id}`).set('Authorization', `Bearer ${subsidiaryManagerToken}`)
-                    .send({ name: "Updated Name" }).expect(200);
+                    .send({ name: "Updated Name", __v: current.body.__v }).expect(200);
             });
             it('should FORBID a user without CLIENT_EDIT permission', async () => {
                 await request(app.getHttpServer()).patch(`/clients/${clientA_subA._id}`).set('Authorization', `Bearer ${clientOwnerToken}`)
-                    .send({ name: "Updated Name" }).expect(403);
+                    .send({ name: "Updated Name", __v: 0 }).expect(403);
             });
             it('should FORBID a user from updating a client outside their scope (returns 404)', async () => {
                 await request(app.getHttpServer()).patch(`/clients/${clientC_subB._id}`).set('Authorization', `Bearer ${subsidiaryManagerToken}`)
-                    .send({ name: "Updated Name" }).expect(404);
+                    .send({ name: "Updated Name", __v: 0 }).expect(404);
             });
             it('should FORBID changing the subsidiaryId (Layer 3 - Immutability)', async () => {
                 await request(app.getHttpServer()).patch(`/clients/${clientA_subA._id}`).set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ subsidiaryId: subB._id.toString() })
+                    .send({ subsidiaryId: subB._id.toString(), __v: 0 })
                     .expect(400); // Bad Request because subsidiaryId is not in the DTO whitelist
             });
         });
