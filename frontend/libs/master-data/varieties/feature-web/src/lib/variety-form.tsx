@@ -80,7 +80,12 @@ export function VarietyForm({
       const { isActive, __v, ...createValues } = values;
       onSubmit(createValues);
     } else {
-      onSubmit(values);
+      const submissionData: any = { ...values };
+      // Only send isActive if it has actually changed
+      if (initialValues && initialValues.isActive === values.isActive) {
+        delete submissionData.isActive;
+      }
+      onSubmit(submissionData);
     }
   };
 
@@ -111,7 +116,7 @@ export function VarietyForm({
         {...form.getInputProps('name')}
       />
 
-      {mode !== 'create' && (
+      {mode !== 'create' && can(PERMISSIONS.VARIETY_MANAGE_INACTIVE) && (
         <Switch
           label="Active"
           readOnly={mode === 'view'}

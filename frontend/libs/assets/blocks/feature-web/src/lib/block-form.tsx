@@ -150,9 +150,14 @@ export function BlockForm({
   const proceedSubmit = (values: typeof form.values) => {
     if (isCreating) {
       const { isActive, __v, ...createValues } = values;
-      onSubmit(createValues as any);
+      onSubmit(createValues as CreateBlockDto);
     } else {
-      onSubmit(values as any);
+      const submissionData: any = { ...values };
+      // Only send isActive if it has actually changed
+      if (block && block.isActive === values.isActive) {
+        delete submissionData.isActive;
+      }
+      onSubmit(submissionData);
     }
   };
 
@@ -281,7 +286,7 @@ export function BlockForm({
         </Stack>
       </Box>
 
-      {mode !== 'create' && (
+      {mode !== 'create' && can(PERMISSIONS.BLOCK_MANAGE_INACTIVE) && (
         <Switch
           label="Active"
           readOnly={isView}

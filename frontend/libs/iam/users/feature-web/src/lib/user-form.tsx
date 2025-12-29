@@ -161,6 +161,10 @@ export function UserForm({
     const submissionData: any = { ...values };
     if (isEditing) {
       delete submissionData.password;
+      // Only send isActive if it has actually changed
+      if (user && user.isActive === values.isActive) {
+        delete submissionData.isActive;
+      }
     }
     if (isCreating) {
       delete submissionData.isActive;
@@ -285,7 +289,7 @@ export function UserForm({
         />
       )}
 
-      {mode !== 'create' && (
+      {mode !== 'create' && can(PERMISSIONS.USER_MANAGE_INACTIVE) && (
         <Switch
           label="Active"
           disabled={isView}

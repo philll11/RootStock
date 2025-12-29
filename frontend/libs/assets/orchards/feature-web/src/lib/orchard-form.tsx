@@ -77,7 +77,7 @@ export function OrchardForm({
   useEffect(() => {
     if (isCreating && onValuesChange) {
       const { isActive, ...rest } = form.values;
-      onValuesChange(rest as any);
+      onValuesChange(rest as CreateOrchardDto);
     }
   }, [form.values, isCreating, onValuesChange]);
 
@@ -108,9 +108,14 @@ export function OrchardForm({
   const handleSubmit = (values: typeof form.values) => {
     if (isCreating) {
       const { isActive, __v, ...createValues } = values;
-      onSubmit(createValues);
+      onSubmit(createValues as CreateOrchardDto);
     } else {
-      onSubmit(values as any);
+      const submissionData: UpdateOrchardDto = { ...values };
+      // Only send isActive if it has actually changed
+      if (orchard && orchard.isActive === values.isActive) {
+        delete submissionData.isActive;
+      }
+      onSubmit(submissionData);
     }
   };
 
@@ -195,7 +200,7 @@ export function OrchardForm({
         )}
       </Box>
 
-      {!isCreating && (
+      {!isCreating && can(PERMISSIONS.ORCHARD_MANAGE_INACTIVE) && (
         <Switch
           label="Active"
           readOnly={isViewing}

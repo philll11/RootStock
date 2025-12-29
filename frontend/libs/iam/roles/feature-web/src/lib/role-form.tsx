@@ -110,6 +110,11 @@ export function RoleForm({
     if (isCreating) {
       delete submissionData.isActive;
       delete submissionData.__v;
+    } else {
+      // Only send isActive if it has actually changed
+      if (role && role.isActive === values.isActive) {
+        delete submissionData.isActive;
+      }
     }
     onSubmit(submissionData);
   };
@@ -183,7 +188,7 @@ export function RoleForm({
           readOnly={isView}
           {...form.getInputProps('visibilityScope')}
         />
-        {mode !== 'create' && (
+        {mode !== 'create' && can(SHARED_PERMISSIONS.ROLE_MANAGE_INACTIVE) && (
           <Switch
             label="Active"
             disabled={isView}

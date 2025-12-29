@@ -87,7 +87,12 @@ export function ClientForm({
       const { isActive, __v, ...createValues } = values;
       onSubmit(createValues);
     } else {
-      onSubmit(values);
+      const submissionData: any = { ...values };
+      // Only send isActive if it has actually changed
+      if (client && client.isActive === values.isActive) {
+        delete submissionData.isActive;
+      }
+      onSubmit(submissionData);
     }
   };
 
@@ -124,7 +129,7 @@ export function ClientForm({
         {...form.getInputProps('name')}
       />
 
-      {mode !== 'create' && (
+      {mode !== 'create' && can(PERMISSIONS.CLIENT_MANAGE_INACTIVE) && (
         <Switch
           label="Active"
           disabled={isView}
