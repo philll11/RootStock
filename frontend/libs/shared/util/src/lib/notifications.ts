@@ -1,43 +1,57 @@
-// frontend/libs/shared/util/src/lib/notifications.ts
-import { notifications } from '@mantine/notifications';
-import { getErrorMessage } from './error-utils';
+export interface NotificationAdapter {
+  success(message: string, title?: string): void;
+  error(error: any, title?: string): void;
+  errorWithAction(error: any, actionLabel: string, onAction: () => void, title?: string): void;
+  validation(message?: string): void;
+  info(message: string, title?: string): void;
+}
 
-export const notify = {
-  success: (message: string, title = 'Success') => {
-    notifications.show({
-      title,
-      message,
-      color: 'green',
-      autoClose: 3000,
-    });
-  },
+class NotificationService implements NotificationAdapter {
+  private adapter: NotificationAdapter | null = null;
 
-  error: (error: any, title = 'Error') => {
-    const message = getErrorMessage(error);
-
-    notifications.show({
-      title,
-      message,
-      color: 'red',
-      autoClose: 7000,
-    });
-  },
-
-  validation: (message = 'Please check the highlighted fields for errors.') => {
-    notifications.show({
-      title: 'Validation Error',
-      message,
-      color: 'red',
-      autoClose: 7000,
-    });
-  },
-
-  info: (message: string, title = 'Information') => {
-    notifications.show({
-      title,
-      message,
-      color: 'blue',
-      autoClose: 5000,
-    });
+  setAdapter(adapter: NotificationAdapter) {
+    this.adapter = adapter;
   }
-};
+
+  success(message: string, title?: string) {
+    if (this.adapter) {
+      this.adapter.success(message, title);
+    } else {
+      console.log('Notification (Success):', message);
+    }
+  }
+
+  error(error: any, title?: string) {
+    if (this.adapter) {
+      this.adapter.error(error, title);
+    } else {
+      console.error('Notification (Error):', error);
+    }
+  }
+
+  errorWithAction(error: any, actionLabel: string, onAction: () => void, title?: string) {
+    if (this.adapter) {
+      this.adapter.errorWithAction(error, actionLabel, onAction, title);
+    } else {
+      console.error('Notification (Error with Action):', error);
+    }
+  }
+
+  validation(message?: string) {
+    if (this.adapter) {
+      this.adapter.validation(message);
+    } else {
+      console.warn('Notification (Validation):', message);
+    }
+  }
+
+  info(message: string, title?: string) {
+    if (this.adapter) {
+      this.adapter.info(message, title);
+    } else {
+      console.info('Notification (Info):', message);
+    }
+  }
+}
+
+export const notify = new NotificationService();

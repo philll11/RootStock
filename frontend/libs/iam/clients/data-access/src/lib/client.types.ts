@@ -1,12 +1,8 @@
-export interface Client {
-  _id: string;
-  recordId: string;
+import { BaseEntity } from '@rootstock/shared/util';
+
+export interface Client extends BaseEntity {
   name: string;
   subsidiaryId?: string;
-  isActive: boolean;
-  isDeleted: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface CreateClientDto {
@@ -17,6 +13,7 @@ export interface CreateClientDto {
 export interface UpdateClientDto {
   name?: string;
   isActive?: boolean;
+  __v: number;
 }
 
 export interface ClientQuery {

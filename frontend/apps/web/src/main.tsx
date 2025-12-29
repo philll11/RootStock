@@ -4,7 +4,11 @@ import { createBrowserRouter, RouterProvider, Route, createRoutesFromElements } 
 import * as ReactDOM from 'react-dom/client';
 import App from './app/app';
 import { configureAuth } from '@rootstock/auth/auth-data-access';
+import { notify, appControl } from '@rootstock/shared/util';
+import { webNotificationAdapter, webAppControl } from '@rootstock/ui/web';
 
+notify.setAdapter(webNotificationAdapter);
+appControl.setAdapter(webAppControl);
 configureAuth(localStorage, 'web');
 
 const root = ReactDOM.createRoot(

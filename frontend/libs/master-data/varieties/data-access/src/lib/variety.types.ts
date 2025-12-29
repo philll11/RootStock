@@ -1,11 +1,7 @@
-export interface Variety {
-  _id: string;
-  recordId: string;
+import { BaseEntity } from '@rootstock/shared/util';
+
+export interface Variety extends BaseEntity {
   name: string;
-  isActive: boolean;
-  isDeleted: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface CreateVarietyDto {
@@ -15,6 +11,7 @@ export interface CreateVarietyDto {
 export interface UpdateVarietyDto {
   name?: string;
   isActive?: boolean;
+  __v: number;
 }
 
 export interface VarietyQuery {

@@ -65,6 +65,7 @@ export function OrchardForm({
       clientId: null as string | null,
       userIds: [] as string[],
       isActive: true,
+      __v: 0,
       ...initialValues,
     },
     validate: {
@@ -93,6 +94,7 @@ export function OrchardForm({
         clientId: typeof orchard.clientId === 'object' ? orchard.clientId._id : orchard.clientId,
         userIds: orchard.userIds?.map((u) => (typeof u === 'object' ? u._id : u)) || [],
         isActive: orchard.isActive,
+        __v: orchard.__v,
       });
     } else if (isCreating && initialValues) {
       form.setValues({
@@ -105,7 +107,7 @@ export function OrchardForm({
 
   const handleSubmit = (values: typeof form.values) => {
     if (isCreating) {
-      const { isActive, ...createValues } = values;
+      const { isActive, __v, ...createValues } = values;
       onSubmit(createValues);
     } else {
       onSubmit(values as any);

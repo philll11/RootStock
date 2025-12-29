@@ -55,7 +55,9 @@ export function useUsers() {
       notify.success('The user details have been updated.', 'User Updated');
     },
     onError: (error: any) => {
-      notify.error(error, 'Error Updating User');
+      if (error.response?.status !== 409) {
+        notify.error(error, 'Error Updating User');
+      }
     },
   });
 

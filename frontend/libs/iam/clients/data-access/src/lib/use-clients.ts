@@ -77,7 +77,9 @@ export function useClients(options?: { enabled?: boolean }) {
       notify.success('The client details have been updated.', 'Client Updated');
     },
     onError: (error: any) => {
-      notify.error(error, 'Error Updating Client');
+      if (error.response?.status !== 409) {
+        notify.error(error, 'Error Updating Client');
+      }
     },
   });
 

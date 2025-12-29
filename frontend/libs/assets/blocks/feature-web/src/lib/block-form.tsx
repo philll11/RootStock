@@ -76,6 +76,7 @@ export function BlockForm({
       orchardId: (orchardId || null) as string | null,
       isActive: true,
       plantings: [{ varietyId: null as string | null, treeCount: 0 }],
+      __v: 0,
       ...initialValues,
     },
     validate: {
@@ -132,6 +133,7 @@ export function BlockForm({
               typeof p.varietyId === 'object' ? p.varietyId._id : p.varietyId,
             treeCount: p.treeCount,
           })) || [],
+        __v: block.__v,
       });
     } else if (isCreating && initialValues) {
       form.setValues({
@@ -147,7 +149,7 @@ export function BlockForm({
 
   const proceedSubmit = (values: typeof form.values) => {
     if (isCreating) {
-      const { isActive, ...createValues } = values;
+      const { isActive, __v, ...createValues } = values;
       onSubmit(createValues as any);
     } else {
       onSubmit(values as any);

@@ -102,7 +102,9 @@ export function useOrchards(orchardId?: string) {
       );
     },
     onError: (error: any) => {
-      notify.error(error, 'Error Updating Orchard');
+      if (error.response?.status !== 409) {
+        notify.error(error, 'Error Updating Orchard');
+      }
     },
   });
 

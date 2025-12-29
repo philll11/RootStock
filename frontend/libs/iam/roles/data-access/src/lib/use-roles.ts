@@ -60,12 +60,7 @@ export function useRoles(options?: { enabled?: boolean }) {
       notify.success('The role details have been updated.', 'Role Updated');
     },
     onError: (error: any) => {
-      if (axios.isAxiosError(error) && error.response?.status === 409) {
-        notify.error(
-          'This record has been modified by another user. Please reload and try again.',
-          'Version Conflict'
-        );
-      } else {
+      if (error.response?.status !== 409) {
         notify.error(error, 'Error Updating Role');
       }
     },

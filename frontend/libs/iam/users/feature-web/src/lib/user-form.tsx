@@ -73,6 +73,7 @@ export function UserForm({
       password: '',
       isActive: true,
       clientIds: [] as string[],
+      __v: user?.__v ?? 0,
       ...initialValues,
     },
     validate: {
@@ -140,6 +141,7 @@ export function UserForm({
         password: '',
         isActive: user.isActive,
         clientIds: user.clientIds || [],
+        __v: user.__v,
       });
     } else if (isCreating && initialValues) {
       form.setValues({
@@ -150,6 +152,7 @@ export function UserForm({
         roleId: initialValues.roleId || null,
         password: initialValues.password || '',
         clientIds: initialValues.clientIds || [],
+        __v: 0,
       });
     }
   }, [user, mode]);
@@ -161,6 +164,7 @@ export function UserForm({
     }
     if (isCreating) {
       delete submissionData.isActive;
+      delete submissionData.__v;
     }
     onSubmit(submissionData);
   };
@@ -177,7 +181,7 @@ export function UserForm({
       userType: UserType.Employee,
       roleId: null,
       password: '',
-      clientIds: [],
+      clientIds: []
     });
   };
 

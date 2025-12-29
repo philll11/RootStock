@@ -88,7 +88,9 @@ export function useBlocks(
       notify.success('The block details have been updated.', 'Block Updated');
     },
     onError: (error: any) => {
-      notify.error(error, 'Error Updating Block');
+      if (error.response?.status !== 409) {
+        notify.error(error, 'Error Updating Block');
+      }
     },
   });
 

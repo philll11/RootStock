@@ -63,7 +63,10 @@ export function useVarieties(varietyId?: string) {
       notify.success('The variety details have been updated.', 'Variety Updated');
     },
     onError: (error: any) => {
-      notify.error(error, 'Error Updating Variety');
+      // 409 errors are handled globally with a refresh action
+      if (error.response?.status !== 409) {
+        notify.error(error, 'Error Updating Variety');
+      }
     },
   });
 

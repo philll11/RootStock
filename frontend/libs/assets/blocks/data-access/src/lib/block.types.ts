@@ -1,19 +1,15 @@
+import { BaseEntity } from '@rootstock/shared/util';
+
 export interface Planting {
   varietyId: string | { _id: string; name: string };
   treeCount: number;
 }
 
-export interface Block {
-  _id: string;
-  recordId: string;
+export interface Block extends BaseEntity {
   name: string;
   orchardId: string | { _id: string; name: string };
   clientId: string;
   plantings: Planting[];
-  isActive: boolean;
-  isDeleted: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface CreateBlockDto {
@@ -32,4 +28,5 @@ export interface UpdateBlockDto {
     treeCount: number;
   }[];
   isActive?: boolean;
+  __v: number;
 }

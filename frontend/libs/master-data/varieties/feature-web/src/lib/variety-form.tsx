@@ -38,6 +38,7 @@ export function VarietyForm({
     initialValues: {
       name: initialValues?.name || '',
       isActive: initialValues?.isActive ?? true,
+      __v: initialValues?.__v ?? 0,
       ...draftValues,
     },
     validate: {
@@ -47,7 +48,7 @@ export function VarietyForm({
 
   useEffect(() => {
     if (mode === 'create' && onValuesChange) {
-      const { isActive, ...rest } = form.values;
+      const { isActive, __v, ...rest } = form.values;
       onValuesChange(rest);
     }
   }, [form.values, mode, onValuesChange]);
@@ -63,18 +64,20 @@ export function VarietyForm({
       form.initialize({
         name: initialValues.name,
         isActive: initialValues.isActive,
+        __v: initialValues.__v,
       });
     } else if (mode === 'create') {
       form.initialize({
         name: draftValues?.name || '',
         isActive: true,
+        __v: 0,
       });
     }
   }, [initialValues, mode]);
 
   const handleSubmit = (values: typeof form.values) => {
     if (mode === 'create') {
-      const { isActive, ...createValues } = values;
+      const { isActive, __v, ...createValues } = values;
       onSubmit(createValues);
     } else {
       onSubmit(values);
@@ -84,7 +87,7 @@ export function VarietyForm({
   const handleClear = () => {
     form.setValues({
       name: '',
-      isActive: true,
+      isActive: true
     });
   };
 

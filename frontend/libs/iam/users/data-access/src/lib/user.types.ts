@@ -1,3 +1,5 @@
+import { BaseEntity } from '@rootstock/shared/util';
+
 export enum UserType {
   Employee = 'employee',
   Contact = 'contact',
@@ -14,9 +16,7 @@ export interface Role {
   visibilityScope: string;
 }
 
-export interface User {
-  _id: string;
-  recordId: string;
+export interface User extends BaseEntity {
   firstName: string;
   lastName: string;
   name: string;
@@ -24,10 +24,6 @@ export interface User {
   userType: UserType;
   roleId?: string | Role;
   clientIds?: string[];
-  isActive: boolean;
-  isDeleted: boolean;
-  createdAt?: string;
-  updatedAt?: string;
   preferences?: UserPreferences;
 }
 
@@ -48,6 +44,7 @@ export interface UpdateUserDto {
   email?: string;
   password?: string;
   userType?: UserType;
+  __v: number;
   roleId?: string;
   clientIds?: string[];
   isActive?: boolean;

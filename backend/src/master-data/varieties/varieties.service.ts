@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Variety, VarietyDocument } from './schemas/variety.schema';
+import { BlocksService } from '../../assets/blocks/blocks.service';
 import { CreateVarietyDto } from './dto/create-variety.dto';
 import { UpdateVarietyDto } from './dto/update-variety.dto';
 import { VarietyQueryDto } from './dto/variety-query.dto';
@@ -9,14 +10,16 @@ import { CountersService } from '../../system/counters/counters.service';
 import { ClientResolverService } from '../../iam/client-resolver/client-resolver.service';
 import { UserDocument } from '../../iam/users/schemas/user.schema';
 import { VarietyQueryBuilder } from './builders/variety-query.builder';
+import { PERMISSIONS } from '../../common/constants/permissions.constants';
 
 @Injectable()
 export class VarietiesService {
   constructor(
     @InjectModel(Variety.name) private varietyModel: Model<VarietyDocument>,
+    @Inject(forwardRef(() => BlocksService)) private readonly blocksService: BlocksService,
     private readonly countersService: CountersService,
     private readonly clientResolverService: ClientResolverService,
-  ) {}
+  ) { }
 
   async create(createVarietyDto: CreateVarietyDto, requestingUser: UserDocument): Promise<Variety> {
     // Check for case-insensitive uniqueness
@@ -59,7 +62,7 @@ export class VarietiesService {
 
   async update(id: string, updateVarietyDto: UpdateVarietyDto, requestingUser: UserDocument): Promise<Variety> {
     if (updateVarietyDto.name) {
-       const existingVariety = await this.varietyModel.findOne({
+      const existingVariety = await this.varietyModel.findOne({
         name: { $regex: new RegExp(`^${updateVarietyDto.name}$`, 'i') },
         _id: { $ne: id }
       }).exec();
@@ -69,14 +72,24 @@ export class VarietiesService {
       }
     }
 
-    // Optimistic Concurrency Control
-    const query: any = { _id: id };
-    if (updateVarietyDto.__v !== undefined) {
-      query.__v = updateVarietyDto.__v;
+    const { isActive, __v, ...restOfDto } = updateVarietyDto;
+    const updatePayload: Partial<Variety> = { ...restOfDto };
+
+    // System Constraint: Only roles with VARIETY_MANAGE_INACTIVE permissions can change Variety status.
+    if (updateVarietyDto.isActive !== undefined) {
+      const userPermissions = (requestingUser.roleId as any)?.permissions || [];
+      if (!userPermissions.includes(PERMISSIONS.VARIETY_MANAGE_INACTIVE)) {
+        throw new ForbiddenException('You do not have permission to change the isActive status of a variety.');
+      }
+      updatePayload.isActive = updateVarietyDto.isActive;
     }
 
     const updatedVariety = await this.varietyModel
-      .findOneAndUpdate(query, updateVarietyDto, { new: true })
+      .findOneAndUpdate(
+        { _id: id, __v: updateVarietyDto.__v },
+        { $set: updatePayload, $inc: { __v: 1 } },
+        { new: true }
+      )
       .exec();
 
     if (!updatedVariety) {
@@ -91,8 +104,11 @@ export class VarietiesService {
   }
 
   async remove(id: string, requestingUser: UserDocument): Promise<Variety> {
-    // TODO: Check if variety is used in any active Blocks before deleting
-    // NOTE: Block entity is not yet implemented. This check must be added when Blocks are implemented.
+    // Check if variety is used in any active Blocks before deleting
+    const activeBlockCount = await this.blocksService.countActiveByVarietyId(id);
+    if (activeBlockCount > 0) {
+      throw new ConflictException('Cannot delete Variety because it is referenced by one or more active Blocks.');
+    }
 
     const deletedVariety = await this.varietyModel
       .findByIdAndUpdate(id, { isDeleted: true, isActive: false }, { new: true })

@@ -63,6 +63,7 @@ export function RoleForm({
       visibilityScope: VisibilityScope.Client,
       permissions: [] as string[],
       isActive: true,
+      __v: 0,
       ...initialValues,
     },
     validate: {
@@ -92,6 +93,7 @@ export function RoleForm({
         visibilityScope: role.visibilityScope,
         permissions: role.permissions,
         isActive: role.isActive,
+        __v: role.__v,
       });
     } else if (isCreating && initialValues) {
       form.setValues({
@@ -105,11 +107,9 @@ export function RoleForm({
 
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
-    if (isEditing && role) {
-      submissionData.__v = role.__v;
-    }
     if (isCreating) {
       delete submissionData.isActive;
+      delete submissionData.__v;
     }
     onSubmit(submissionData);
   };
@@ -124,7 +124,7 @@ export function RoleForm({
       description: '',
       visibilityScope: VisibilityScope.Client,
       permissions: [],
-      isActive: true,
+      isActive: true
     });
   };
 

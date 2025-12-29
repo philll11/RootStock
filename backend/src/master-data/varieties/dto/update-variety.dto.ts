@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateVarietyDto } from './create-variety.dto';
-import { IsBoolean, IsOptional, IsNumber } from 'class-validator';
+import { IsBoolean, IsOptional, IsNumber, IsNotEmpty } from 'class-validator';
 
 export class UpdateVarietyDto extends PartialType(CreateVarietyDto) {
   @IsBoolean()
@@ -8,6 +8,6 @@ export class UpdateVarietyDto extends PartialType(CreateVarietyDto) {
   declare readonly isActive?: boolean;
 
   @IsNumber()
-  @IsOptional()
-  readonly __v?: number;
+  @IsNotEmpty()
+  readonly __v: number;
 }

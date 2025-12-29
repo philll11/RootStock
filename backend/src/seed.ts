@@ -11,6 +11,8 @@ import * as bcrypt from 'bcrypt';
 import { Subsidiary } from './iam/subsidiaries/schemas/subsidiary.schema';
 import { Client } from './iam/clients/schemas/client.schema';
 import { Orchard } from './assets/orchards/schemas/orchard.schema';
+import { Variety } from './master-data/varieties/schemas/variety.schema';
+import { Block } from './assets/blocks/schemas/block.schema';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -25,6 +27,8 @@ async function bootstrap() {
     const subsidiaryModel = app.get(getModelToken(Subsidiary.name));
     const clientModel = app.get(getModelToken(Client.name));
     const orchardModel = app.get(getModelToken(Orchard.name));
+    const varietyModel = app.get(getModelToken(Variety.name));
+    const blockModel = app.get(getModelToken(Block.name));
 
     // ---------------------------------------------------------
     // 1. ESSENTIAL SYSTEM DATA (Runs in ALL Environments)
@@ -39,6 +43,7 @@ async function bootstrap() {
       { _id: 'orchard', prefix: 'ORC', sequence_value: 0 },
       { _id: 'block', prefix: 'BLK', sequence_value: 0 },
       { _id: 'assessment', prefix: 'ASM', sequence_value: 0 },
+      { _id: 'variety', prefix: 'VAR', sequence_value: 10 },
     ];
 
     for (const counterData of seedCounters) {
@@ -100,6 +105,29 @@ async function bootstrap() {
     }
     console.log('Verified System Roles.');
 
+    // --- Varieties ---
+    const seedVarieties = [
+      { recordId: 'VAR001', name: 'Gala' },
+      { recordId: 'VAR002', name: 'Fuji' },
+      { recordId: 'VAR003', name: 'Jazz' },
+      { recordId: 'VAR004', name: 'Granny Smith' },
+      { recordId: 'VAR005', name: 'Red Delicious' },
+      { recordId: 'VAR006', name: 'Golden Delicious' },
+      { recordId: 'VAR007', name: 'Pink Lady' },
+      { recordId: 'VAR008', name: 'Braeburn' },
+      { recordId: 'VAR009', name: 'Envy' },
+      { recordId: 'VAR010', name: 'Honeycrisp' },
+    ];
+
+    for (const variety of seedVarieties) {
+      await varietyModel.findOneAndUpdate(
+        { recordId: variety.recordId },
+        { $setOnInsert: { ...variety, isActive: true, isDeleted: false } },
+        { upsert: true, new: true }
+      );
+    }
+    console.log('Verified System Varieties.');
+
     // --- Admin User ---
     const adminRole = await roleModel.findOne({ recordId: 'ROLE_ADMINISTRATOR' });
     const adminEmail = configService.get<string>('ADMIN_EMAIL');
@@ -136,6 +164,12 @@ async function bootstrap() {
       const consultantRole = await roleModel.findOne({ recordId: 'ROLE_CONSULTANT' });
       const growerRole = await roleModel.findOne({ recordId: 'ROLE_GROWER' });
       const commonPassword = await bcrypt.hash('password123', 10);
+
+      // Fetch Varieties for Plantings
+      const vGala = await varietyModel.findOne({ recordId: 'VAR001' });
+      const vFuji = await varietyModel.findOne({ recordId: 'VAR002' });
+      const vHoney = await varietyModel.findOne({ recordId: 'VAR003' });
+      const vGranny = await varietyModel.findOne({ recordId: 'VAR004' });
 
       // --- A. Create Subsidiary ---
       const devSub = await subsidiaryModel.findOneAndUpdate(
@@ -221,7 +255,7 @@ async function bootstrap() {
 
       // --- E. Helper: Create Orchards (Updated for user assignment) ---
       const seedDevOrchard = async (name: string, recordId: string, clientId: any, assignedUserIds: any[] = []) => {
-          await orchardModel.findOneAndUpdate(
+          return orchardModel.findOneAndUpdate(
               { recordId },
               {
                   $setOnInsert: {
@@ -239,11 +273,51 @@ async function bootstrap() {
       };
 
       // Create Orchards with the Foreman assigned
-      await seedDevOrchard('Orchard A-1', 'ORC-DEV-001', clientA._id, [foremanA._id]);
-      await seedDevOrchard('Orchard B-1', 'ORC-DEV-002', clientB._id, [foremanB._id]);
-      await seedDevOrchard('Orchard SA-1', 'ORC-DEV-003', clientStandalone._id, [foremanSA._id]);
+      const orchardA = await seedDevOrchard('Orchard A-1', 'ORC-DEV-001', clientA._id, [foremanA._id]);
+      const orchardB = await seedDevOrchard('Orchard B-1', 'ORC-DEV-002', clientB._id, [foremanB._id]);
+      const orchardSA = await seedDevOrchard('Orchard SA-1', 'ORC-DEV-003', clientStandalone._id, [foremanSA._id]);
 
-      console.log('Development data (Subsidiaries, Clients, Users [Contact], Orchards) seeded successfully.');
+      // --- F. Helper: Create Blocks ---
+      const seedDevBlock = async (orchard: any, name: string, recordId: string, varieties: any[]) => {
+
+        // Distribute a random tree count among the varieties for plantings
+        const totalTrees = 1000;
+        const plantings = varieties.map(v => ({
+          varietyId: v._id,
+          treeCount: Math.floor(Math.random() * (totalTrees / varieties.length)),
+          plantedDate: new Date()
+        }));
+
+        await blockModel.findOneAndUpdate(
+          { recordId },
+          {
+            $setOnInsert: {
+              name,
+              recordId,
+              orchardId: orchard._id,
+              clientId: orchard.clientId,
+              isActive: true,
+              isDeleted: false,
+              plantings: plantings
+            }
+          },
+          { upsert: true, new: true }
+        );
+      };
+
+      // Create Blocks for Orchard A
+      await seedDevBlock(orchardA, 'Block A-1', 'BLK-DEV-A1', [vGala, vFuji]);
+      await seedDevBlock(orchardA, 'Block A-2', 'BLK-DEV-A2', [vHoney, vGranny]);
+
+      // Create Blocks for Orchard B
+      await seedDevBlock(orchardB, 'Block B-1', 'BLK-DEV-B1', [vGala, vHoney]);
+      await seedDevBlock(orchardB, 'Block B-2', 'BLK-DEV-B2', [vFuji, vGranny]);
+
+      // Create Blocks for Orchard SA
+      await seedDevBlock(orchardSA, 'Block SA-1', 'BLK-DEV-SA1', [vGala, vGranny]);
+      await seedDevBlock(orchardSA, 'Block SA-2', 'BLK-DEV-SA2', [vFuji, vHoney]);
+
+      console.log('Development data (Subsidiaries, Clients, Users [Contact], Orchards, Blocks) seeded successfully.');
     }
 
     console.log('Database seeding process finished.');

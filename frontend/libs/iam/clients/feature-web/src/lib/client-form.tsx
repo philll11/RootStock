@@ -47,6 +47,7 @@ export function ClientForm({
     initialValues: {
       name: '',
       isActive: true,
+      __v: 0,
       ...initialValues,
     },
     validate: {
@@ -72,6 +73,7 @@ export function ClientForm({
       form.initialize({
         name: client.name,
         isActive: client.isActive,
+        __v: client.__v,
       });
     } else if (isCreating && initialValues) {
       form.setValues({
@@ -82,7 +84,7 @@ export function ClientForm({
 
   const handleSubmit = (values: typeof form.values) => {
     if (isCreating) {
-      const { isActive, ...createValues } = values;
+      const { isActive, __v, ...createValues } = values;
       onSubmit(createValues);
     } else {
       onSubmit(values);

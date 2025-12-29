@@ -174,4 +174,17 @@ export class BlocksService {
       isDeleted: false
     }).exec();
   }
+
+  /**
+   * Counts active blocks for a specific variety.
+   * Used by VarietiesService to prevent deleting varieties that are in use.
+   */
+  async countActiveByVarietyId(varietyId: string): Promise<number> {
+    return this.blockModel.countDocuments({
+      'plantings.varietyId': new Types.ObjectId(varietyId),
+      isActive: true,
+      isDeleted: false
+    }).exec();
+  }
 }
+

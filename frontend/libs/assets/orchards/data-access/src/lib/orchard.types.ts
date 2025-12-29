@@ -1,13 +1,9 @@
-export interface Orchard {
-  _id: string;
-  recordId: string;
+import { BaseEntity } from '@rootstock/shared/util';
+
+export interface Orchard extends BaseEntity {
   name: string;
   clientId: string | { _id: string; name: string; recordId: string };
   userIds: string[] | { _id: string; name: string; recordId: string }[];
-  isActive: boolean;
-  isDeleted: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface CreateOrchardDto {
@@ -20,6 +16,7 @@ export interface UpdateOrchardDto {
   name?: string;
   userIds?: string[];
   isActive?: boolean;
+  __v: number;
 }
 
 export interface OrchardQuery {
