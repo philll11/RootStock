@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button, Appbar, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { useAuth, setSuppressSessionExpiry } from '@rootstock/auth/auth-data-access';
-import { useUsers, UpdateUserDto } from '@rootstock/users/users-data-access';
+import { useAuth, setSuppressSessionExpiry } from '@rootstock/iam/auth/auth-data-access';
+import { useUsers, UpdateUserDto } from '@rootstock/iam/users/users-data-access';
 import { spacing } from '@rootstock/ui/theme';
 
 export default function ProfileScreen() {

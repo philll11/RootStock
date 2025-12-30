@@ -4,7 +4,7 @@ import {
   useRoles,
   CreateRoleDto,
   UpdateRoleDto
-} from '@rootstock/roles/roles-data-access';
+} from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm } from '../role-form';
 import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';

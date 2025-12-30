@@ -1,2 +1,2 @@
-import { BlockViewScreen } from '@rootstock/assets/blocks/feature-mobile';
+import { BlockViewScreen } from '@rootstock/assets/blocks/blocks-feature-mobile';
 export default BlockViewScreen;

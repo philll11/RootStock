@@ -7,7 +7,7 @@ import {
   useClients,
   useClient,
   UpdateClientDto
-} from '@rootstock/clients/clients-data-access';
+} from '@rootstock/iam/clients/clients-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
 export function ClientEditPage() {

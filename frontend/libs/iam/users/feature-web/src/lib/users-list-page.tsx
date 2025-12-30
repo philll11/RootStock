@@ -9,7 +9,7 @@ import {
   User,
   CreateUserDto,
   UpdateUserDto,
-} from '@rootstock/users/users-data-access';
+} from '@rootstock/iam/users/users-data-access';
 import { UserForm, UserFormMode } from './user-form';
 import {
   ConfirmDiscardModal,
@@ -22,7 +22,7 @@ import {
   ActionSplitButton,
   useContextualNavigation,
 } from '@rootstock/ui/web';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 

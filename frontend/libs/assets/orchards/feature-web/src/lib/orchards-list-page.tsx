@@ -21,9 +21,9 @@ import {
   Orchard,
   CreateOrchardDto,
   UpdateOrchardDto,
-} from '@rootstock/orchards/orchards-data-access';
+} from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm, OrchardFormMode } from './orchard-form';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function OrchardsListPage() {

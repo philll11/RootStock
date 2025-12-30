@@ -7,7 +7,7 @@ import {
   UpdateClientDto,
 } from './client.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
 export const CLIENTS_QUERY_KEY = ['clients'];
 

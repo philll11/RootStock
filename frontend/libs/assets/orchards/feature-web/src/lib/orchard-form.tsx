@@ -12,15 +12,15 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { useClients } from '@rootstock/clients/clients-data-access';
-import { useUsers } from '@rootstock/users/users-data-access';
+import { useClients } from '@rootstock/iam/clients/clients-data-access';
+import { useUsers } from '@rootstock/iam/users/users-data-access';
 import {
   Orchard,
   CreateOrchardDto,
   UpdateOrchardDto,
-} from '@rootstock/orchards/orchards-data-access';
+} from '@rootstock/assets/orchards/orchards-data-access';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { iconSizes } from '@rootstock/ui/theme';
 import { FormLayout } from '@rootstock/ui/web';
 

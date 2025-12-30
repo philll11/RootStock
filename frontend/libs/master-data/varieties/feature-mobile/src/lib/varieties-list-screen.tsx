@@ -4,7 +4,7 @@ import { List, useTheme, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 

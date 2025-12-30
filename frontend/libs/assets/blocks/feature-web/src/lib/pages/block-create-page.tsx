@@ -4,7 +4,7 @@ import {
   useBlocks,
   CreateBlockDto,
   UpdateBlockDto,
-} from '@rootstock/blocks/blocks-data-access';
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';

@@ -1,4 +1,4 @@
-import { ClientCreateScreen } from '@rootstock/clients/clients-feature-mobile';
+import { ClientCreateScreen } from '@rootstock/iam/clients/clients-feature-mobile';
 
 export default function Screen() {
   return <ClientCreateScreen />;

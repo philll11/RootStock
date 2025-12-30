@@ -18,9 +18,9 @@ import {
   UpdateRoleDto,
   VisibilityScope,
   PERMISSIONS,
-} from '@rootstock/roles/roles-data-access';
+} from '@rootstock/iam/roles/roles-data-access';
 import { notify, PERMISSIONS as SHARED_PERMISSIONS } from '@rootstock/shared/util';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { palette } from '@rootstock/ui/theme';
 import { FormLayout } from '@rootstock/ui/web';
 

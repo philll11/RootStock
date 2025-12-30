@@ -1,5 +1,5 @@
 {
-  "name": "@rootstock/roles/roles-data-access",
+  "name": "@rootstock/iam/roles/roles-data-access",
   "version": "0.0.1",
   "main": "./index.js",
   "types": "./index.d.ts",

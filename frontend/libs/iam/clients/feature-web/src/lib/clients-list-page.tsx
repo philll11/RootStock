@@ -22,9 +22,9 @@ import {
   Client,
   CreateClientDto,
   UpdateClientDto,
-} from '@rootstock/clients/clients-data-access';
+} from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm, ClientFormMode } from './client-form';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function ClientsListPage() {

@@ -4,7 +4,7 @@ import {
   useClients, 
   CreateClientDto,
   UpdateClientDto,
-} from '@rootstock/clients/clients-data-access';
+} from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm } from '../client-form';
 import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';

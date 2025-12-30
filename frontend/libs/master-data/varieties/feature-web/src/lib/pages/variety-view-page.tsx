@@ -8,7 +8,7 @@ import { Container, Paper, Alert, ActionIcon, LoadingOverlay, Button, Group } fr
 import { IconAlertCircle, IconTrash, IconEdit } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function VarietyViewPage() {

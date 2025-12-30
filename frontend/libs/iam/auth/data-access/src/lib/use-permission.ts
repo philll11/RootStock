@@ -1,5 +1,5 @@
 import { useAuth } from './use-auth';
-import { Role } from '@rootstock/users/users-data-access';
+import { Role } from '@rootstock/iam/users/users-data-access';
 
 export const usePermission = () => {
   const { user } = useAuth();

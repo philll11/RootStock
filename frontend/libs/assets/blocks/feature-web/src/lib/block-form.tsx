@@ -18,11 +18,11 @@ import {
   Block,
   CreateBlockDto,
   UpdateBlockDto,
-} from '@rootstock/blocks/blocks-data-access';
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
-import { useOrchards } from '@rootstock/orchards/orchards-data-access';
+import { useOrchards } from '@rootstock/assets/orchards/orchards-data-access';
 import { IconTrash, IconPlus, IconAlertTriangle } from '@tabler/icons-react';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { FormLayout, ConfirmModal } from '@rootstock/ui/web';
 

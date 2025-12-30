@@ -2,14 +2,14 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   useClients,
   useClient
-} from '@rootstock/clients/clients-data-access';
+} from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm } from '../client-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, ActionIcon, LoadingOverlay } from '@mantine/core';
 import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function ClientViewPage() {

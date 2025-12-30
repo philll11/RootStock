@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
   useBlocks,
   UpdateBlockDto,
-} from '@rootstock/blocks/blocks-data-access';
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';

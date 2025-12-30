@@ -1,6 +1,6 @@
 import { notify, appControl } from '@rootstock/shared/util';
 import { mobileNotificationAdapter, mobileAppControl } from '@rootstock/ui/mobile';
-import { configureAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
+import { configureAuth, setupAuthInterceptor } from '@rootstock/iam/auth/auth-data-access';
 import * as SecureStore from 'expo-secure-store';
 import 'expo-router/entry';
 

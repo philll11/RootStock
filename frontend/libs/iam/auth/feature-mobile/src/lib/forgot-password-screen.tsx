@@ -16,7 +16,7 @@ import {
   useTheme,
   Appbar,
 } from 'react-native-paper';
-import { AuthService } from '@rootstock/auth/auth-data-access';
+import { AuthService } from '@rootstock/iam/auth/auth-data-access';
 import { spacing } from '@rootstock/ui/theme'; // NEW IMPORT
 
 export const ForgotPasswordScreen = ({ navigation }: any) => {

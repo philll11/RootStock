@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useBlocks } from '@rootstock/blocks/blocks-data-access';
+import { useBlocks } from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from './block-form';
 
 export function BlockCreateScreen() {

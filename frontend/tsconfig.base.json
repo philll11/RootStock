@@ -30,52 +30,52 @@
       "@rootstock/ui/mobile": [
         "libs/ui/mobile/src/index.ts"
       ],
-      "@rootstock/auth/auth-data-access": [
+      "@rootstock/iam/auth/auth-data-access": [
         "libs/iam/auth/data-access/src/index.ts"
       ],
-      "@rootstock/auth/auth-feature-web": [
+      "@rootstock/iam/auth/auth-feature-web": [
         "libs/iam/auth/feature-web/src/index.ts"
       ],
-      "@rootstock/auth/auth-feature-mobile": [
+      "@rootstock/iam/auth/auth-feature-mobile": [
         "libs/iam/auth/feature-mobile/src/index.ts"
       ],
-      "@rootstock/users/users-data-access": [
+      "@rootstock/iam/users/users-data-access": [
         "libs/iam/users/data-access/src/index.ts"
       ],
-      "@rootstock/users/users-feature-web": [
+      "@rootstock/iam/users/users-feature-web": [
         "libs/iam/users/feature-web/src/index.ts"
       ],
-      "@rootstock/users/users-feature-mobile": [
+      "@rootstock/iam/users/users-feature-mobile": [
         "libs/iam/users/feature-mobile/src/index.ts"
       ],
-      "@rootstock/clients/clients-data-access": [
+      "@rootstock/iam/clients/clients-data-access": [
         "libs/iam/clients/data-access/src/index.ts"
       ],
-      "@rootstock/clients/clients-feature-web": [
+      "@rootstock/iam/clients/clients-feature-web": [
         "libs/iam/clients/feature-web/src/index.ts"
       ],
-      "@rootstock/clients/clients-feature-mobile": [
+      "@rootstock/iam/clients/clients-feature-mobile": [
         "libs/iam/clients/feature-mobile/src/index.ts"
       ],
       "@rootstock/ui/theme": [
         "libs/ui/theme/src/index.ts"
       ],
-      "@rootstock/roles/roles-data-access": [
+      "@rootstock/iam/roles/roles-data-access": [
         "libs/iam/roles/data-access/src/index.ts"
       ],
-      "@rootstock/roles/roles-feature-web": [
+      "@rootstock/iam/roles/roles-feature-web": [
         "libs/iam/roles/feature-web/src/index.ts"
       ],
-      "@rootstock/roles/roles-feature-mobile": [
+      "@rootstock/iam/roles/roles-feature-mobile": [
         "libs/iam/roles/feature-mobile/src/index.ts"
       ],
-      "@rootstock/orchards/orchards-data-access": [
+      "@rootstock/assets/orchards/orchards-data-access": [
         "libs/assets/orchards/data-access/src/index.ts"
       ],
-      "@rootstock/orchards/orchards-feature-web": [
+      "@rootstock/assets/orchards/orchards-feature-web": [
         "libs/assets/orchards/feature-web/src/index.ts"
       ],
-      "@rootstock/orchards/orchards-feature-mobile": [
+      "@rootstock/assets/orchards/orchards-feature-mobile": [
         "libs/assets/orchards/feature-mobile/src/index.ts"
       ],
       "@rootstock/master-data/varieties/varieties-data-access": [
@@ -87,13 +87,13 @@
       "@rootstock/master-data/varieties/varieties-feature-mobile": [
         "libs/master-data/varieties/feature-mobile/src/index.ts"
       ],
-      "@rootstock/blocks/blocks-data-access": [
+      "@rootstock/assets/blocks/blocks-data-access": [
         "libs/assets/blocks/data-access/src/index.ts"
       ],
-      "@rootstock/blocks/blocks-feature-web": [
+      "@rootstock/assets/blocks/blocks-feature-web": [
         "libs/assets/blocks/feature-web/src/index.ts"
       ],
-      "@rootstock/blocks/blocks-feature-mobile": [
+      "@rootstock/assets/blocks/blocks-feature-mobile": [
         "libs/assets/blocks/feature-mobile/src/index.ts"
       ]
     }

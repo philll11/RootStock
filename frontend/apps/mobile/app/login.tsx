@@ -1,2 +1,2 @@
-import { LoginScreen } from '@rootstock/auth/auth-feature-mobile';
+import { LoginScreen } from '@rootstock/iam/auth/auth-feature-mobile';
 export default LoginScreen;

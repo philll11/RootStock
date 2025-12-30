@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 

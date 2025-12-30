@@ -2,8 +2,8 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Text, FAB } from 'react-native-paper';
-import { useOrchard } from '@rootstock/orchards/orchards-data-access';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { useOrchard } from '@rootstock/assets/orchards/orchards-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { OrchardForm } from './orchard-form';
 

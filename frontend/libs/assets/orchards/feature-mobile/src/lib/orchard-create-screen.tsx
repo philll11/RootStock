@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useOrchards } from '@rootstock/orchards/orchards-data-access';
+import { useOrchards } from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from './orchard-form';
 
 export function OrchardCreateScreen() {

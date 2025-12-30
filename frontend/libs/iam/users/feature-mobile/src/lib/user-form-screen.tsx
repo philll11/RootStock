@@ -23,19 +23,19 @@ import {
   List,
   Searchbar,
 } from 'react-native-paper';
-import { useUsers, UserType } from '@rootstock/users/users-data-access';
+import { useUsers, UserType } from '@rootstock/iam/users/users-data-access';
 import {
   useClients,
   searchClients,
-} from '@rootstock/clients/clients-data-access';
-import { useRoles } from '@rootstock/roles/roles-data-access';
+} from '@rootstock/iam/clients/clients-data-access';
+import { useRoles } from '@rootstock/iam/roles/roles-data-access';
 import {
   useMobileDiscardWarning,
   FormLayout,
   FormMode,
   confirmDiscard,
 } from '@rootstock/ui/mobile';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 

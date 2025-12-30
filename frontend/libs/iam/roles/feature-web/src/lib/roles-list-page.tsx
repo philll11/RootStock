@@ -9,7 +9,7 @@ import {
   Role,
   CreateRoleDto,
   UpdateRoleDto,
-} from '@rootstock/roles/roles-data-access';
+} from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm, RoleFormMode } from './role-form';
 import {
   ConfirmDiscardModal,
@@ -22,7 +22,7 @@ import {
   ActionSplitButton,
   useContextualNavigation,
 } from '@rootstock/ui/web';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 

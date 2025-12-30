@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { useRoles } from '@rootstock/roles/roles-data-access';
+import { useRoles } from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm, RoleFormData } from './role-form';
 
 export const RoleCreateScreen = () => {

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Text } from 'react-native-paper';
-import { useOrchard } from '@rootstock/orchards/orchards-data-access';
+import { useOrchard } from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from './orchard-form';
 
 export function OrchardEditScreen() {

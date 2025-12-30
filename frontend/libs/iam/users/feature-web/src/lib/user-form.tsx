@@ -15,16 +15,16 @@ import {
   CreateUserDto,
   UpdateUserDto,
   User,
-} from '@rootstock/users/users-data-access';
-import { useRoles } from '@rootstock/roles/roles-data-access';
+} from '@rootstock/iam/users/users-data-access';
+import { useRoles } from '@rootstock/iam/roles/roles-data-access';
 import { useEffect, useState } from 'react';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { SearchableMultiSelect, FormLayout } from '@rootstock/ui/web';
 import {
   searchClients,
   getClient,
-} from '@rootstock/clients/clients-data-access';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+} from '@rootstock/iam/clients/clients-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { palette } from '@rootstock/ui/theme';
 
 export type UserFormMode = 'create' | 'edit' | 'view';

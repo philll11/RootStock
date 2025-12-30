@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
   useOrchards,
   UpdateOrchardDto,
-} from '@rootstock/orchards/orchards-data-access';
+} from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';

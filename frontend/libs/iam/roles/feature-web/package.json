@@ -1,5 +1,5 @@
 {
-  "name": "@rootstock/roles/roles-feature-web",
+  "name": "@rootstock/iam/roles/roles-feature-web",
   "version": "0.0.1",
   "main": "./index.js",
   "types": "./index.d.ts",

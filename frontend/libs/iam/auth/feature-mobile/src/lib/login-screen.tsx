@@ -7,7 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { TextInput, Button, Text, useTheme } from 'react-native-paper';
-import { useLogin } from '@rootstock/auth/auth-data-access';
+import { useLogin } from '@rootstock/iam/auth/auth-data-access';
 import { spacing } from '@rootstock/ui/theme';
 
 export const LoginScreen = ({ navigation }: any) => {

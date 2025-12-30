@@ -2,11 +2,11 @@ import React from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { TextInput, Button, HelperText, SegmentedButtons, Text, List, Checkbox, useTheme, Switch } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
-import { VisibilityScope } from '@rootstock/roles/roles-data-access';
+import { VisibilityScope } from '@rootstock/iam/roles/roles-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
 export interface RoleFormData {
   name: string;

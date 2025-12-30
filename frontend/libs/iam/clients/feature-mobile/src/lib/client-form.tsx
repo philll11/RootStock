@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
 export interface ClientFormData {
   name: string;

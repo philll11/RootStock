@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
 import { Block, CreateBlockDto, UpdateBlockDto } from './block.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
 export const BLOCKS_QUERY_KEY = ['blocks'];
 

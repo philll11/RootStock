@@ -1,3 +1,3 @@
-import { ClientsListScreen } from '@rootstock/clients/clients-feature-mobile';
+import { ClientsListScreen } from '@rootstock/iam/clients/clients-feature-mobile';
 
 export default ClientsListScreen;

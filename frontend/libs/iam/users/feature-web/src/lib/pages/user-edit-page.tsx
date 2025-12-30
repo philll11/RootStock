@@ -7,7 +7,7 @@ import {
   useUsers,
   useUser,
   UpdateUserDto
-} from '@rootstock/users/users-data-access';
+} from '@rootstock/iam/users/users-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
 export function UserEditPage() {

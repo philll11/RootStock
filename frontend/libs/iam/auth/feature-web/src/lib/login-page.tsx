@@ -12,7 +12,7 @@ import {
   Button,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useLogin } from '@rootstock/auth/auth-data-access';
+import { useLogin } from '@rootstock/iam/auth/auth-data-access';
 import { useNavigate } from 'react-router-dom';
 import { notify } from '@rootstock/shared/util';
 import { shadows } from '@rootstock/ui/theme';

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useMantineColorScheme } from '@mantine/core';
-import { useAuth } from '@rootstock/auth/auth-data-access';
+import { useAuth } from '@rootstock/iam/auth/auth-data-access';
 
 export function ThemeController() {
   const { user } = useAuth();

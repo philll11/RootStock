@@ -1,14 +1,14 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   useBlocks,
-} from '@rootstock/blocks/blocks-data-access';
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay, ActionIcon } from '@mantine/core';
 import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function BlockViewPage() {

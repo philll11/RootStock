@@ -3,7 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, DrawerProvider } from '@rootstock/ui/mobile';
 import { AppDrawer } from './components/AppDrawer';
-import { useAuth } from '@rootstock/auth/auth-data-access';
+import { useAuth } from '@rootstock/iam/auth/auth-data-access';
 import { View, ActivityIndicator } from 'react-native';
 
 const queryClient = new QueryClient();

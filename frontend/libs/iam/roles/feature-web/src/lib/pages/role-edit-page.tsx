@@ -7,7 +7,7 @@ import {
   useRoles,
   useRole,
   UpdateRoleDto
-} from '@rootstock/roles/roles-data-access';
+} from '@rootstock/iam/roles/roles-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
 export function RoleEditPage() {

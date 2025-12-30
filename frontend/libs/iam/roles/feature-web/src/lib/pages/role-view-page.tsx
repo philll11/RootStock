@@ -2,14 +2,14 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   useRoles,
   useRole
-} from '@rootstock/roles/roles-data-access';
+} from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm } from '../role-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, ActionIcon, LoadingOverlay } from '@mantine/core';
 import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function RoleViewPage() {

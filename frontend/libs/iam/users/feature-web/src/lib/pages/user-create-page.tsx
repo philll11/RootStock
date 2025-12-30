@@ -4,7 +4,7 @@ import {
   useUsers,
   CreateUserDto,
   UpdateUserDto
-} from '@rootstock/users/users-data-access';
+} from '@rootstock/iam/users/users-data-access';
 import { UserForm } from '../user-form';
 import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';

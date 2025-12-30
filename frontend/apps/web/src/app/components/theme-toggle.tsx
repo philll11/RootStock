@@ -1,8 +1,8 @@
 // frontend/apps/web/src/app/components/theme-toggle.tsx
 import { ActionIcon, useMantineColorScheme, useComputedColorScheme, Menu } from '@mantine/core';
 import { IconSun, IconMoon, IconDeviceDesktop } from '@tabler/icons-react';
-import { useAuth } from '@rootstock/auth/auth-data-access';
-import { useUsers } from '@rootstock/users/users-data-access';
+import { useAuth } from '@rootstock/iam/auth/auth-data-access';
+import { useUsers } from '@rootstock/iam/users/users-data-access';
 import { shadows, iconSizes } from '@rootstock/ui/theme';
 
 export function ThemeToggle() {

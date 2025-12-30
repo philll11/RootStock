@@ -16,10 +16,10 @@ import {
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useOrchards } from '@rootstock/orchards/orchards-data-access';
+import { useOrchards } from '@rootstock/assets/orchards/orchards-data-access';
 import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 const plantingSchema = z.object({

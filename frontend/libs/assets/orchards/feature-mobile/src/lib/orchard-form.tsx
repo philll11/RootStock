@@ -16,11 +16,11 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Orchard } from '@rootstock/orchards/orchards-data-access';
-import { useClients } from '@rootstock/clients/clients-data-access';
-import { useUsers } from '@rootstock/users/users-data-access';
+import { Orchard } from '@rootstock/assets/orchards/orchards-data-access';
+import { useClients } from '@rootstock/iam/clients/clients-data-access';
+import { useUsers } from '@rootstock/iam/users/users-data-access';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 const orchardSchema = z.object({

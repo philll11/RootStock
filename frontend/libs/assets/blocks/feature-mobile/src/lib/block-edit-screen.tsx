@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Text } from 'react-native-paper';
-import { useBlock } from '@rootstock/blocks/blocks-data-access';
+import { useBlock } from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from './block-form';
 
 export function BlockEditScreen() {

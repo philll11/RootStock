@@ -1,7 +1,7 @@
 // frontend/apps/web/src/app/layouts/main-layout.tsx
 import { AppShell, Burger, Group, Title, Button, NavLink, Text, ActionIcon, ScrollArea, Tooltip, rem } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useAuth, usePermission } from '@rootstock/auth/auth-data-access';
+import { useAuth, usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { IconUser, IconChevronRight, IconChevronLeft } from '@tabler/icons-react';
 import { ThemeToggle } from '../components/theme-toggle';

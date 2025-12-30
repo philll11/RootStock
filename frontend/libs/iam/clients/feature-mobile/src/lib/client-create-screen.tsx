@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { useClients } from '@rootstock/clients/clients-data-access';
+import { useClients } from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm, ClientFormData } from './client-form';
 
 export const ClientCreateScreen = () => {

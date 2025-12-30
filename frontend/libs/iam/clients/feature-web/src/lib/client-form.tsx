@@ -6,9 +6,9 @@ import {
   CreateClientDto,
   UpdateClientDto,
   Client,
-} from '@rootstock/clients/clients-data-access';
+} from '@rootstock/iam/clients/clients-data-access';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { FormLayout } from '@rootstock/ui/web';
 
 export type ClientFormMode = 'create' | 'edit' | 'view';

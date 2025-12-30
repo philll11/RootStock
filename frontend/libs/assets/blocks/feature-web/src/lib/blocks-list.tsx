@@ -7,7 +7,7 @@ import {
   useBlocks,
   Block,
   CreateBlockDto,
-} from '@rootstock/blocks/blocks-data-access';
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm, BlockFormMode } from './block-form';
 import {
   ConfirmModal,
@@ -20,7 +20,7 @@ import {
   DataTableColumn,
   ActionSplitButton, 
 } from '@rootstock/ui/web';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 

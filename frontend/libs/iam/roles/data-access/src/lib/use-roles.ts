@@ -3,7 +3,7 @@ import { apiClient } from '@rootstock/shared/api-client';
 import { Role, CreateRoleDto, UpdateRoleDto } from './roles.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import axios, { AxiosError } from 'axios';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
 export const ROLES_QUERY_KEY = ['roles'];
 

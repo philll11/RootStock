@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Appbar, Text, Card, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@rootstock/auth/auth-data-access';
+import { useAuth } from '@rootstock/iam/auth/auth-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 

@@ -8,7 +8,7 @@ import {
 } from './auth.store';
 import { apiClient } from '@rootstock/shared/api-client';
 import { AuthService } from './auth.service';
-import { User } from '@rootstock/users/users-data-access';
+import { User } from '@rootstock/iam/users/users-data-access';
 
 export const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);

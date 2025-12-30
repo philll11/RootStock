@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { useColorScheme, StatusBar } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
-import { useAuth } from '@rootstock/auth/auth-data-access';
+import { useAuth } from '@rootstock/iam/auth/auth-data-access';
 import { mobileLightTheme, mobileDarkTheme } from './mobile-theme';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

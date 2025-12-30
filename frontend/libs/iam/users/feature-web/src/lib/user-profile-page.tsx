@@ -11,8 +11,8 @@ import {
   Divider,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useAuth } from '@rootstock/auth/auth-data-access';
-import { useUsers, UpdateUserDto } from '@rootstock/users/users-data-access';
+import { useAuth } from '@rootstock/iam/auth/auth-data-access';
+import { useUsers, UpdateUserDto } from '@rootstock/iam/users/users-data-access';
 import { useEffect, useState } from 'react';
 import { ConfirmModal } from '@rootstock/ui/web';
 import { layout, shadows } from '@rootstock/ui/theme';

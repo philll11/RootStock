@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text, Avatar, Chip } from 'react-native-paper';
-import { useUsers } from '@rootstock/users/users-data-access';
+import { useUsers } from '@rootstock/iam/users/users-data-access';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 

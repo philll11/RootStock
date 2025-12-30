@@ -1,2 +1,2 @@
-import { RoleViewScreen } from '@rootstock/roles/roles-feature-mobile';
+import { RoleViewScreen } from '@rootstock/iam/roles/roles-feature-mobile';
 export default RoleViewScreen;

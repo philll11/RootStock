@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
 import { Drawer, useTheme, Text, Avatar, Divider, List } from 'react-native-paper';
 import { useDrawer } from '@rootstock/ui/mobile';
-import { useAuth, usePermission } from '@rootstock/auth/auth-data-access';
+import { useAuth, usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, usePathname } from 'expo-router';
 import { NAVIGATION_ITEMS } from '../config/navigation';

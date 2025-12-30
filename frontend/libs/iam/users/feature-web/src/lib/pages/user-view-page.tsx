@@ -2,14 +2,14 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   useUsers,
   useUser
-} from '@rootstock/users/users-data-access';
+} from '@rootstock/iam/users/users-data-access';
 import { UserForm } from '../user-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, ActionIcon, LoadingOverlay } from '@mantine/core';
 import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function UserViewPage() {

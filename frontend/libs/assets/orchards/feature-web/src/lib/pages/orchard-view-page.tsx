@@ -1,15 +1,15 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   useOrchards,
-} from '@rootstock/orchards/orchards-data-access';
+} from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
-import { BlocksList } from '@rootstock/blocks/blocks-feature-web';
+import { BlocksList } from '@rootstock/assets/blocks/blocks-feature-web';
 import { PageHeader, ConfirmModal, SubResourceTabs, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay, ActionIcon, Text } from '@mantine/core';
 import { IconAlertCircle, IconTrash, IconLayoutGrid, IconUsers, IconHistory } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function OrchardViewPage() {

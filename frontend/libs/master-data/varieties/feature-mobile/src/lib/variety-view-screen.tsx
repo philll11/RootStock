@@ -5,7 +5,7 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useVarieties, useVariety } from '@rootstock/master-data/varieties/varieties-data-access';
 import { DetailRow } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export const VarietyViewScreen = () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useRoles, useRole } from '@rootstock/roles/roles-data-access';
+import { useRoles, useRole } from '@rootstock/iam/roles/roles-data-access';
 import { ActivityIndicator } from 'react-native-paper';
 import { View } from 'react-native';
 import { RoleForm, RoleFormData } from './role-form';
