@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCreateOrchard } from '@rootstock/assets/orchards/orchards-data-access';
+import { ResourceCreateLayout } from '@rootstock/ui/mobile';
 import { OrchardForm } from './orchard-form';
 
 export function OrchardCreateScreen() {
@@ -16,20 +16,13 @@ export function OrchardCreateScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ResourceCreateLayout title="Create Orchard">
       <OrchardForm
         mode="create"
         onSubmit={handleSubmit}
         onCancel={() => router.back()}
         isSubmitting={isCreating}
       />
-    </View>
+    </ResourceCreateLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-});

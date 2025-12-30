@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { useCreateClient } from '@rootstock/iam/clients/clients-data-access';
+import { ResourceCreateLayout } from '@rootstock/ui/mobile';
 import { ClientForm, ClientFormData } from './client-form';
 
 export const ClientCreateScreen = () => {
@@ -18,10 +19,12 @@ export const ClientCreateScreen = () => {
   };
 
   return (
-    <ClientForm
-      onSubmit={handleSubmit}
-      isSubmitting={isCreating}
-      isEditMode={false}
-    />
+    <ResourceCreateLayout title="Create Client">
+      <ClientForm
+        onSubmit={handleSubmit}
+        isSubmitting={isCreating}
+        isEditMode={false}
+      />
+    </ResourceCreateLayout>
   );
 };

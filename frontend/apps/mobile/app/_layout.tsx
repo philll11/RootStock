@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider, DrawerProvider } from '@rootstock/ui/mobile';
+import { ThemeProvider, DrawerProvider, NotificationProvider } from '@rootstock/ui/mobile';
 import { AppDrawer } from './components/AppDrawer';
 import { useAuthSession } from '@rootstock/iam/auth/auth-data-access';
 import { View, ActivityIndicator } from 'react-native';
@@ -35,11 +35,13 @@ function RootLayoutNav() {
 
   return (
     <DrawerProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(root)" />
-        <Stack.Screen name="login" />
-      </Stack>
-      {isAuthenticated && <AppDrawer />}
+      <NotificationProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(root)" />
+          <Stack.Screen name="login" />
+        </Stack>
+        {isAuthenticated && <AppDrawer />}
+      </NotificationProvider>
     </DrawerProvider>
   );
 }

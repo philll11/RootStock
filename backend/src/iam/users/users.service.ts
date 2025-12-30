@@ -112,7 +112,7 @@ export class UsersService {
 
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(userId) }] };
 
-    const targetUser = await this.userModel.findOne(finalFilter).populate('roleId').exec();
+    const targetUser = await this.userModel.findOne(finalFilter).populate('roleId clientIds').exec();
 
     if (!targetUser) {
       throw new NotFoundException(`User with ID "${userId}" not found or you do not have permission to view it.`);

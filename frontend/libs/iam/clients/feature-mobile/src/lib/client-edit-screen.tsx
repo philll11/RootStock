@@ -1,8 +1,7 @@
 import React from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useUpdateClient, useGetClient } from '@rootstock/iam/clients/clients-data-access';
-import { ActivityIndicator } from 'react-native-paper';
-import { View } from 'react-native';
+import { ResourceEditLayout } from '@rootstock/ui/mobile';
 import { ClientForm, ClientFormData } from './client-form';
 
 export const ClientEditScreen = () => {
@@ -27,21 +26,22 @@ export const ClientEditScreen = () => {
     }
   };
 
-  if (isLoading) {
-    return <View style={{flex:1, justifyContent:'center'}}><ActivityIndicator /></View>;
-  }
-
-  if (!client) return null;
-
   return (
-    <ClientForm
-      defaultValues={{
-        name: client.name,
-        isActive: client.isActive
-      }}
-      onSubmit={handleSubmit}
-      isSubmitting={isUpdating}
-      isEditMode={true}
-    />
+    <ResourceEditLayout
+      isLoading={isLoading}
+      error={!client}
+    >
+      {client && (
+        <ClientForm
+          defaultValues={{
+            name: client.name,
+            isActive: client.isActive
+          }}
+          onSubmit={handleSubmit}
+          isSubmitting={isUpdating}
+          isEditMode={true}
+        />
+      )}
+    </ResourceEditLayout>
   );
 };

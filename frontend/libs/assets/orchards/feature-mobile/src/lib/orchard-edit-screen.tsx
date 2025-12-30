@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Text } from 'react-native-paper';
 import { useGetOrchard, useUpdateOrchard } from '@rootstock/assets/orchards/orchards-data-access';
+import { ResourceEditLayout } from '@rootstock/ui/mobile';
 import { OrchardForm } from './orchard-form';
 
 export function OrchardEditScreen() {
@@ -11,23 +10,7 @@ export function OrchardEditScreen() {
   const { data: orchard, isLoading, isError } = useGetOrchard(id!);
   const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (isError || !orchard) {
-    return (
-      <View style={styles.center}>
-        <Text>Error loading orchard details</Text>
-      </View>
-    );
-  }
-
-  const defaultValues = {
+  const defaultValues = orchard ? {
     name: orchard.name,
     clientId:
       typeof orchard.clientId === 'string'
@@ -36,7 +19,7 @@ export function OrchardEditScreen() {
     userIds:
       orchard.userIds?.map((u) => (typeof u === 'string' ? u : u._id)) || [],
     isActive: orchard.isActive,
-  };
+  } : undefined;
 
   const handleSubmit = async (data: any) => {
     await updateOrchard({ id: id!, data });
@@ -44,26 +27,20 @@ export function OrchardEditScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <OrchardForm
-        mode="edit"
-        defaultValues={defaultValues}
-        onSubmit={handleSubmit}
-        onCancel={() => router.back()}
-        isSubmitting={isUpdating}
-      />
-    </View>
+    <ResourceEditLayout
+      isLoading={isLoading}
+      error={isError || !orchard}
+      title="Edit Orchard"
+    >
+      {orchard && (
+        <OrchardForm
+          mode="edit"
+          defaultValues={defaultValues}
+          onSubmit={handleSubmit}
+          onCancel={() => router.back()}
+          isSubmitting={isUpdating}
+        />
+      )}
+    </ResourceEditLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

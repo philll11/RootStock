@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Text } from 'react-native-paper';
 import { useGetBlock, useUpdateBlock } from '@rootstock/assets/blocks/blocks-data-access';
+import { ResourceEditLayout } from '@rootstock/ui/mobile';
 import { BlockForm } from './block-form';
 
 export function BlockEditScreen() {
@@ -11,23 +10,7 @@ export function BlockEditScreen() {
   const { data: block, isLoading, isError } = useGetBlock(id!);
   const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (isError || !block) {
-    return (
-      <View style={styles.center}>
-        <Text>Error loading block details</Text>
-      </View>
-    );
-  }
-
-  const defaultValues = {
+  const defaultValues = block ? {
     name: block.name,
     orchardId:
       typeof block.orchardId === 'string'
@@ -40,7 +23,7 @@ export function BlockEditScreen() {
         treeCount: p.treeCount,
       })) || [],
     isActive: block.isActive,
-  };
+  } : undefined;
 
   const handleSubmit = async (data: any) => {
     await updateBlock({ id: id!, data });
@@ -48,26 +31,20 @@ export function BlockEditScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <BlockForm
-        mode="edit"
-        defaultValues={defaultValues}
-        onSubmit={handleSubmit}
-        onCancel={() => router.back()}
-        isSubmitting={isUpdating}
-      />
-    </View>
+    <ResourceEditLayout
+      isLoading={isLoading}
+      error={isError || !block}
+      title="Edit Block"
+    >
+      {block && (
+        <BlockForm
+          mode="edit"
+          defaultValues={defaultValues}
+          onSubmit={handleSubmit}
+          onCancel={() => router.back()}
+          isSubmitting={isUpdating}
+        />
+      )}
+    </ResourceEditLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

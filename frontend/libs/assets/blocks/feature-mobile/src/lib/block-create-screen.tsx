@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCreateBlock } from '@rootstock/assets/blocks/blocks-data-access';
+import { ResourceCreateLayout } from '@rootstock/ui/mobile';
 import { BlockForm } from './block-form';
 
 export function BlockCreateScreen() {
@@ -15,20 +15,13 @@ export function BlockCreateScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ResourceCreateLayout title="Create Block">
       <BlockForm
         mode="create"
         onSubmit={handleSubmit}
         onCancel={() => router.back()}
         isSubmitting={isCreating}
       />
-    </View>
+    </ResourceCreateLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-});
