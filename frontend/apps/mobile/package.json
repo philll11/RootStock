@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@expo/metro-config": "*",
+    "@hookform/resolvers": "*",
     "@testing-library/react-native": "*",
     "expo": "*",
     "expo-secure-store": "*",

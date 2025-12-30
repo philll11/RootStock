@@ -12,6 +12,21 @@ export default function AppLayout() {
       <Stack.Screen name="iam/clients/create" options={{ title: 'Create Client', headerShown: true }} />
       <Stack.Screen name="iam/clients/[id]" options={{ title: 'Client Details', headerShown: true }} />
       <Stack.Screen name="iam/clients/edit" options={{ title: 'Edit Client', headerShown: true }} />
+
+      <Stack.Screen name="master-data/varieties/index" options={{ title: 'Varieties', headerShown: false }} />
+      <Stack.Screen name="master-data/varieties/create" options={{ title: 'Create Variety', headerShown: true }} />
+      <Stack.Screen name="master-data/varieties/[id]" options={{ title: 'Variety Details', headerShown: true }} />
+      <Stack.Screen name="master-data/varieties/edit" options={{ title: 'Edit Variety', headerShown: true }} />
+
+      <Stack.Screen name="assets/orchards/index" options={{ title: 'Orchards', headerShown: false }} />
+      <Stack.Screen name="assets/orchards/create" options={{ title: 'Create Orchard', headerShown: true }} />
+      <Stack.Screen name="assets/orchards/[id]" options={{ title: 'Orchard Details', headerShown: true }} />
+      <Stack.Screen name="assets/orchards/edit" options={{ title: 'Edit Orchard', headerShown: true }} />
+
+      <Stack.Screen name="assets/blocks/index" options={{ title: 'Blocks', headerShown: false }} />
+      <Stack.Screen name="assets/blocks/create" options={{ title: 'Create Block', headerShown: true }} />
+      <Stack.Screen name="assets/blocks/[id]" options={{ title: 'Block Details', headerShown: true }} />
+      <Stack.Screen name="assets/blocks/edit" options={{ title: 'Edit Block', headerShown: true }} />
     </Stack>
   );
 }

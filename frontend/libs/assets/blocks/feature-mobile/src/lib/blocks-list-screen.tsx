@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
-import { useBlocks } from '@rootstock/blocks/blocks-data-access';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useBlocks } from '@rootstock/assets/blocks/data-access';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 
-export const BlocksListScreen = ({ navigation, route }: any) => {
+export const BlocksListScreen = () => {
   const theme = useTheme() as AppTheme;
-  const { orchardId } = route.params || {};
+  const router = useRouter();
+  const { orchardId } = useLocalSearchParams<{ orchardId: string }>();
   const { blocks, isLoading } = useBlocks(orchardId);
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.BLOCK_CREATE);
@@ -32,10 +34,15 @@ export const BlocksListScreen = ({ navigation, route }: any) => {
       isEmpty={!isLoading && filteredBlocks.length === 0}
       onAdd={
         canCreate
-          ? () => navigation.navigate('BlockForm', { orchardId })
+          ? () =>
+              router.push(
+                orchardId
+                  ? `/assets/blocks/create?orchardId=${orchardId}`
+                  : '/assets/blocks/create'
+              )
           : undefined
       }
-      onBack={() => navigation.goBack()}
+      onBack={orchardId ? () => router.back() : undefined}
     >
       <FlatList
         data={filteredBlocks}
@@ -61,9 +68,7 @@ export const BlocksListScreen = ({ navigation, route }: any) => {
                 <List.Icon {...props} icon="chevron-right" />
               </View>
             )}
-            onPress={() =>
-              navigation.navigate('BlockForm', { orchardId, blockId: item._id })
-            }
+            onPress={() => router.push(`/assets/blocks/${item._id}`)}
             style={styles.listItem}
           />
         )}

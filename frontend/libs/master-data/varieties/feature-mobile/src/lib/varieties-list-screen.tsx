@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 
-export const VarietiesListScreen = ({ navigation }: any) => {
+export const VarietiesListScreen = () => {
+  const router = useRouter();
   const theme = useTheme() as AppTheme;
-  const { varieties, isLoading: isVarietiesLoading } = useVarieties();
+  const { varieties, isLoading } = useVarieties();
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.VARIETY_CREATE);
 
@@ -22,13 +24,13 @@ export const VarietiesListScreen = ({ navigation }: any) => {
   return (
     <ListLayout
       title="Varieties"
-      isLoading={isVarietiesLoading}
+      isLoading={isLoading}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder="Search varieties"
       emptyText="No varieties found"
-      isEmpty={!isVarietiesLoading && filteredVarieties.length === 0}
-      onAdd={canCreate ? () => navigation.navigate('VarietyForm') : undefined}
+      isEmpty={!isLoading && filteredVarieties.length === 0}
+      onAdd={canCreate ? () => router.push('/master-data/varieties/create') : undefined}
     >
       <FlatList
         data={filteredVarieties}
@@ -45,7 +47,7 @@ export const VarietiesListScreen = ({ navigation }: any) => {
                 <List.Icon {...props} icon="chevron-right" />
               </View>
             )}
-            onPress={() => navigation.navigate('VarietyForm', { varietyId: item._id })}
+            onPress={() => router.push(`/master-data/varieties/${item._id}`)}
             style={styles.listItem}
           />
         )}

@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
-import { useOrchards, Orchard } from '@rootstock/orchards/orchards-data-access';
+import { useRouter } from 'expo-router';
+import { useOrchards, Orchard } from '@rootstock/assets/orchards/data-access';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 
-export function OrchardsListScreen({ navigation }: any) {
+export function OrchardsListScreen() {
   const theme = useTheme() as AppTheme;
+  const router = useRouter();
   const { orchards, isLoading } = useOrchards();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,7 +25,7 @@ export function OrchardsListScreen({ navigation }: any) {
   });
 
   const handlePress = (orchard: Orchard) => {
-    navigation.navigate('OrchardForm', { orchardId: orchard._id });
+    router.push(`/assets/orchards/${orchard._id}`);
   };
 
   return (
@@ -37,7 +39,7 @@ export function OrchardsListScreen({ navigation }: any) {
       isEmpty={!isLoading && filteredOrchards.length === 0}
       onAdd={
         can(PERMISSIONS.ORCHARD_CREATE)
-          ? () => navigation.navigate('OrchardForm')
+          ? () => router.push('/assets/orchards/create')
           : undefined
       }
     >

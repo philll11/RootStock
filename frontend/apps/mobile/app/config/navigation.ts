@@ -72,7 +72,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     children: [
       {
         label: 'Varieties',
-        screen: '/varieties',
+        screen: '/master-data/varieties',
         icon: 'leaf',
         permission: PERMISSIONS.VARIETY_VIEW,
       },

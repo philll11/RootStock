@@ -53,6 +53,7 @@
   "dependencies": {
     "@expo/metro-config": "~0.20.14",
     "@expo/metro-runtime": "~5.0.4",
+    "@hookform/resolvers": "5.2.2",
     "@mantine/core": "8.3.9",
     "@mantine/form": "8.3.9",
     "@mantine/hooks": "8.3.9",

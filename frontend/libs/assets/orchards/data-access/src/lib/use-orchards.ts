@@ -27,7 +27,7 @@ export const getOrchard = async (id: string): Promise<Orchard> => {
   return response.data;
 };
 
-export function useOrchards(orchardId?: string) {
+export function useOrchards() {
   const queryClient = useQueryClient();
   const { can } = usePermission();
   const isEnabled = can(PERMISSIONS.ORCHARD_VIEW);
@@ -40,15 +40,6 @@ export function useOrchards(orchardId?: string) {
     },
     enabled: isEnabled,
     staleTime: Infinity,
-  });
-
-  const orchardQuery = useQuery({
-    queryKey: [...ORCHARDS_QUERY_KEY, orchardId],
-    queryFn: async () => {
-      const response = await apiClient.get<Orchard>(`/orchards/${orchardId}`);
-      return response.data;
-    },
-    enabled: !!orchardId && isEnabled,
   });
 
   const createOrchardMutation = useMutation({
@@ -68,6 +59,47 @@ export function useOrchards(orchardId?: string) {
     onError: (error: any) => {
       notify.error(error, 'Error Creating Orchard');
     },
+  });
+
+  const deleteOrchardMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/orchards/${id}`);
+    },
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<Orchard[]>(ORCHARDS_QUERY_KEY, (old) =>
+        old ? old.filter((item) => item._id !== id) : []
+      );
+      notify.success('The orchard has been removed.', 'Orchard Deleted');
+    },
+    onError: (error: any) => {
+      notify.error(error, 'Error Deleting Orchard');
+    },
+  });
+
+  return {
+    orchards: orchardsQuery.data ?? [],
+    isLoading: orchardsQuery.isLoading,
+    isError: orchardsQuery.isError,
+    searchOrchards,
+    createOrchard: createOrchardMutation.mutateAsync,
+    deleteOrchard: deleteOrchardMutation.mutateAsync,
+    isCreating: createOrchardMutation.isPending,
+    isDeleting: deleteOrchardMutation.isPending,
+  };
+}
+
+export function useOrchard(orchardId: string) {
+  const queryClient = useQueryClient();
+  const { can } = usePermission();
+  const isEnabled = can(PERMISSIONS.ORCHARD_VIEW) && !!orchardId;
+
+  const orchardQuery = useQuery({
+    queryKey: [...ORCHARDS_QUERY_KEY, orchardId],
+    queryFn: async () => {
+      const response = await apiClient.get<Orchard>(`/orchards/${orchardId}`);
+      return response.data;
+    },
+    enabled: isEnabled,
   });
 
   const updateOrchardMutation = useMutation({
@@ -108,33 +140,11 @@ export function useOrchards(orchardId?: string) {
     },
   });
 
-  const deleteOrchardMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiClient.delete(`/orchards/${id}`);
-    },
-    onSuccess: (_, id) => {
-      queryClient.setQueryData<Orchard[]>(ORCHARDS_QUERY_KEY, (old) =>
-        old ? old.filter((item) => item._id !== id) : []
-      );
-      notify.success('The orchard has been removed.', 'Orchard Deleted');
-    },
-    onError: (error: any) => {
-      notify.error(error, 'Error Deleting Orchard');
-    },
-  });
-
   return {
-    orchards: orchardsQuery.data ?? [],
     orchard: orchardQuery.data,
-    isLoading: orchardsQuery.isLoading || orchardQuery.isLoading,
-    isError: orchardsQuery.isError || orchardQuery.isError,
-    searchOrchards,
-    getOrchard,
-    createOrchard: createOrchardMutation.mutateAsync,
+    isLoading: orchardQuery.isLoading,
+    isError: orchardQuery.isError,
     updateOrchard: updateOrchardMutation.mutateAsync,
-    deleteOrchard: deleteOrchardMutation.mutateAsync,
-    isCreating: createOrchardMutation.isPending,
     isUpdating: updateOrchardMutation.isPending,
-    isDeleting: deleteOrchardMutation.isPending,
   };
 }
