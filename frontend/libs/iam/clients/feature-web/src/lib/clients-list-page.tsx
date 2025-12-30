@@ -18,7 +18,10 @@ import {
 } from '@rootstock/ui/web';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 import {
-  useClients,
+  useGetClients,
+  useCreateClient,
+  useUpdateClient,
+  useDeleteClient,
   Client,
   CreateClientDto,
   UpdateClientDto,
@@ -28,15 +31,11 @@ import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function ClientsListPage() {
-  const {
-    clients,
-    isLoading,
-    createClient,
-    updateClient,
-    deleteClient,
-    isCreating,
-    isUpdating,
-  } = useClients();
+  const { data: clients = [], isLoading } = useGetClients();
+  const { mutateAsync: createClient, isPending: isCreating } = useCreateClient();
+  const { mutateAsync: updateClient, isPending: isUpdating } = useUpdateClient();
+  const { mutateAsync: deleteClient } = useDeleteClient();
+  
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [

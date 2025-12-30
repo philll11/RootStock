@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useBlocks } from '@rootstock/assets/blocks/blocks-data-access';
+import { useCreateBlock } from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from './block-form';
 
 export function BlockCreateScreen() {
   const router = useRouter();
-  const { createBlock, isCreating } = useBlocks();
+  const { mutateAsync: createBlock, isPending: isCreating } = useCreateBlock();
 
   const handleSubmit = async (data: any) => {
     const { isActive, ...createData } = data;

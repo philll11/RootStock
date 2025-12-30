@@ -5,24 +5,25 @@ import { Block, CreateBlockDto, UpdateBlockDto } from './block.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
-export const BLOCKS_QUERY_KEY = ['blocks'];
+export const BLOCKS_KEYS = {
+  all: ['blocks'] as const,
+  lists: () => [...BLOCKS_KEYS.all, 'list'] as const,
+  list: (orchardId?: string) => [...BLOCKS_KEYS.lists(), { orchardId }] as const,
+  details: () => [...BLOCKS_KEYS.all, 'detail'] as const,
+  detail: (id: string) => [...BLOCKS_KEYS.details(), id] as const,
+};
 
 export const getBlock = async (id: string): Promise<Block> => {
   const response = await apiClient.get<Block>(`/blocks/${id}`);
   return response.data;
 };
 
-export function useBlocks(orchardId?: string) {
-  const queryClient = useQueryClient();
+export function useGetBlocks(orchardId?: string) {
   const { can } = usePermission();
   const isEnabled = can(PERMISSIONS.BLOCK_VIEW);
 
-  const queryKey = orchardId
-    ? [...BLOCKS_QUERY_KEY, 'list', orchardId]
-    : [...BLOCKS_QUERY_KEY, 'list', 'global'];
-
-  const blocksQuery = useQuery({
-    queryKey: queryKey,
+  return useQuery({
+    queryKey: BLOCKS_KEYS.list(orchardId),
     queryFn: async () => {
       const queryParams = orchardId ? { orchardId } : {};
       const response = await apiClient.get<Block[]>('/blocks', {
@@ -32,14 +33,29 @@ export function useBlocks(orchardId?: string) {
     },
     enabled: isEnabled,
   });
+}
 
-  const createBlockMutation = useMutation({
+export function useGetBlock(id: string) {
+  const { can } = usePermission();
+  const isEnabled = can(PERMISSIONS.BLOCK_VIEW) && !!id;
+
+  return useQuery({
+    queryKey: BLOCKS_KEYS.detail(id),
+    queryFn: () => getBlock(id),
+    enabled: isEnabled,
+  });
+}
+
+export function useCreateBlock() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationFn: async (data: CreateBlockDto) => {
       const response = await apiClient.post<Block>('/blocks', data);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: BLOCKS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.lists() });
       notify.success(
         'The block has been successfully created.',
         'Block Created'
@@ -49,43 +65,12 @@ export function useBlocks(orchardId?: string) {
       notify.error(error, 'Error Creating Block');
     },
   });
-
-  const deleteBlockMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiClient.delete(`/blocks/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: BLOCKS_QUERY_KEY });
-      notify.success('The block has been deleted.', 'Block Deleted');
-    },
-    onError: (error: any) => {
-      notify.error(error, 'Error Deleting Block');
-    },
-  });
-
-  return {
-    blocks: blocksQuery.data ?? [],
-    isLoading: blocksQuery.isLoading,
-    isError: blocksQuery.isError,
-    createBlock: createBlockMutation.mutateAsync,
-    deleteBlock: deleteBlockMutation.mutateAsync,
-    isCreating: createBlockMutation.isPending,
-    isDeleting: deleteBlockMutation.isPending,
-  };
 }
 
-export function useBlock(blockId: string) {
+export function useUpdateBlock() {
   const queryClient = useQueryClient();
-  const { can } = usePermission();
-  const isEnabled = can(PERMISSIONS.BLOCK_VIEW) && !!blockId;
 
-  const blockQuery = useQuery({
-    queryKey: [...BLOCKS_QUERY_KEY, 'detail', blockId],
-    queryFn: () => getBlock(blockId),
-    enabled: isEnabled,
-  });
-
-  const updateBlockMutation = useMutation({
+  return useMutation({
     mutationFn: async ({
       id,
       data,
@@ -96,22 +81,31 @@ export function useBlock(blockId: string) {
       const response = await apiClient.patch<Block>(`/blocks/${id}`, data);
       return response.data;
     },
-    onSuccess: (updatedBlock) => {
-      queryClient.invalidateQueries({ queryKey: BLOCKS_QUERY_KEY });
+    onSuccess: (updatedBlock, variables) => {
+      queryClient.setQueryData(BLOCKS_KEYS.detail(variables.id), updatedBlock);
+      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.lists() });
+      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.detail(variables.id) });
       notify.success('The block details have been updated.', 'Block Updated');
     },
     onError: (error: any) => {
-      if (error.response?.status !== 409) {
-        notify.error(error, 'Error Updating Block');
-      }
+      notify.error(error, 'Error Updating Block');
     },
   });
+}
 
-  return {
-    block: blockQuery.data,
-    isLoading: blockQuery.isLoading,
-    isError: blockQuery.isError,
-    updateBlock: updateBlockMutation.mutateAsync,
-    isUpdating: updateBlockMutation.isPending,
-  };
+export function useDeleteBlock() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/blocks/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.lists() });
+      notify.success('The block has been deleted.', 'Block Deleted');
+    },
+    onError: (error: any) => {
+      notify.error(error, 'Error Deleting Block');
+    },
+  });
 }

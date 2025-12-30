@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  useOrchards,
+  useGetOrchard,
+  useDeleteOrchard,
 } from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
 import { BlocksList } from '@rootstock/assets/blocks/blocks-feature-web';
@@ -16,7 +17,8 @@ export function OrchardViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getLinkTo, goBack } = useContextualNavigation('/orchards');
-  const { orchard, isLoading, deleteOrchard } = useOrchards(id);
+  const { data: orchard, isLoading } = useGetOrchard(id!);
+  const { mutateAsync: deleteOrchard } = useDeleteOrchard();
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
 

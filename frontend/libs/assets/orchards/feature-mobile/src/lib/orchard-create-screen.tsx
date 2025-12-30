@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useOrchards } from '@rootstock/assets/orchards/orchards-data-access';
+import { useCreateOrchard } from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from './orchard-form';
 
 export function OrchardCreateScreen() {
   const router = useRouter();
-  const { createOrchard, isCreating } = useOrchards();
+  const { mutateAsync: createOrchard, isPending: isCreating } = useCreateOrchard();
 
   const handleSubmit = async (data: any) => {
     // Exclude isActive from creation payload

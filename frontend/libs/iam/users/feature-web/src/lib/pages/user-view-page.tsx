@@ -1,7 +1,7 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  useUsers,
-  useUser
+  useDeleteUser,
+  useGetUser
 } from '@rootstock/iam/users/users-data-access';
 import { UserForm } from '../user-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -15,8 +15,8 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 export function UserViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { deleteUser } = useUsers();
-  const { data: user, isLoading } = useUser(id);
+  const { mutateAsync: deleteUser } = useDeleteUser();
+  const { data: user, isLoading } = useGetUser(id!);
   const { getLinkTo, goBack } = useContextualNavigation('/users');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);

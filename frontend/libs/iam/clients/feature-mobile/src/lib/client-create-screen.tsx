@@ -1,11 +1,11 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { useClients } from '@rootstock/iam/clients/clients-data-access';
+import { useCreateClient } from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm, ClientFormData } from './client-form';
 
 export const ClientCreateScreen = () => {
   const router = useRouter();
-  const { createClient, isCreating } = useClients();
+  const { mutateAsync: createClient, isPending: isCreating } = useCreateClient();
 
   const handleSubmit = async (data: ClientFormData) => {
     try {

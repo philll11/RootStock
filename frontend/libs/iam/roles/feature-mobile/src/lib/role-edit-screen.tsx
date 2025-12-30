@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useRoles, useRole } from '@rootstock/iam/roles/roles-data-access';
+import { useUpdateRole, useGetRole } from '@rootstock/iam/roles/roles-data-access';
 import { ActivityIndicator } from 'react-native-paper';
 import { View } from 'react-native';
 import { RoleForm, RoleFormData } from './role-form';
@@ -8,8 +8,8 @@ import { RoleForm, RoleFormData } from './role-form';
 export const RoleEditScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { updateRole, isUpdating } = useRoles();
-  const { data: role, isLoading } = useRole(id);
+  const { mutateAsync: updateRole, isPending: isUpdating } = useUpdateRole();
+  const { data: role, isLoading } = useGetRole(id);
 
   const handleSubmit = async (data: RoleFormData) => {
     if (!id || !role) return;

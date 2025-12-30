@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Text, FAB } from 'react-native-paper';
-import { useOrchard } from '@rootstock/assets/orchards/orchards-data-access';
+import { useGetOrchard } from '@rootstock/assets/orchards/orchards-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { OrchardForm } from './orchard-form';
@@ -10,7 +10,7 @@ import { OrchardForm } from './orchard-form';
 export function OrchardViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { orchard, isLoading, isError } = useOrchard(id!);
+  const { data: orchard, isLoading, isError } = useGetOrchard(id!);
   const { can } = usePermission();
 
   if (isLoading) {

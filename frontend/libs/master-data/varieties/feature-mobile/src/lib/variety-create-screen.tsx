@@ -1,11 +1,11 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useCreateVariety } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm, VarietyFormData } from './variety-form';
 
 export const VarietyCreateScreen = () => {
   const router = useRouter();
-  const { createVariety, isCreating } = useVarieties();
+  const { mutateAsync: createVariety, isPending: isCreating } = useCreateVariety();
 
   const handleSubmit = async (data: VarietyFormData) => {
     try {

@@ -2,15 +2,14 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Text } from 'react-native-paper';
-import { useOrchard } from '@rootstock/assets/orchards/orchards-data-access';
+import { useGetOrchard, useUpdateOrchard } from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from './orchard-form';
 
 export function OrchardEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { orchard, updateOrchard, isUpdating, isLoading, isError } = useOrchard(
-    id!
-  );
+  const { data: orchard, isLoading, isError } = useGetOrchard(id!);
+  const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
 
   if (isLoading) {
     return (

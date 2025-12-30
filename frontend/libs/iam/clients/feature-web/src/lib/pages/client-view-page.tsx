@@ -1,7 +1,7 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  useClients,
-  useClient
+  useDeleteClient,
+  useGetClient
 } from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm } from '../client-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -15,8 +15,8 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 export function ClientViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { deleteClient } = useClients();
-  const { data: client, isLoading } = useClient(id);
+  const { mutateAsync: deleteClient } = useDeleteClient();
+  const { data: client, isLoading } = useGetClient(id);
   const { getLinkTo, goBack } = useContextualNavigation('/clients');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);

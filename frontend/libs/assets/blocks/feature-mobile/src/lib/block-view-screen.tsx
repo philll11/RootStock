@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Text, FAB } from 'react-native-paper';
-import { useBlock } from '@rootstock/assets/blocks/blocks-data-access';
+import { useGetBlock } from '@rootstock/assets/blocks/blocks-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { BlockForm } from './block-form';
@@ -10,7 +10,7 @@ import { BlockForm } from './block-form';
 export function BlockViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { block, isLoading, isError } = useBlock(id!);
+  const { data: block, isLoading, isError } = useGetBlock(id!);
   const { can } = usePermission();
 
   if (isLoading) {

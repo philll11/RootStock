@@ -1,9 +1,10 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
-  useBlocks,
+  useGetBlock,
+  useUpdateBlock,
   UpdateBlockDto,
-} from '@rootstock/assets/blocks/blocks-data-access';
+} from '@rootstock/assets/blocks/data-access';
 import { BlockForm } from '../block-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
@@ -14,7 +15,8 @@ export function BlockEditPage() {
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/blocks');
   
-  const { block, isLoading, updateBlock, isUpdating } = useBlocks({ blockId: id });
+  const { data: block, isLoading } = useGetBlock(id!);
+  const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
 
   const [isDirty, setIsDirty] = useState(false);
 

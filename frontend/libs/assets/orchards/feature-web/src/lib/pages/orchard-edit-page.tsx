@@ -1,7 +1,8 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
-  useOrchards,
+  useGetOrchard,
+  useUpdateOrchard,
   UpdateOrchardDto,
 } from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
@@ -13,7 +14,8 @@ export function OrchardEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/orchards');
-  const { orchard, isLoading, updateOrchard, isUpdating } = useOrchards(id);
+  const { data: orchard, isLoading } = useGetOrchard(id!);
+  const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);

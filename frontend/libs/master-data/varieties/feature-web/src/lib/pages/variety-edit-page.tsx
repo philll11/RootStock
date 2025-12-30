@@ -4,7 +4,8 @@ import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNaviga
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { useState } from 'react';
 import {
-  useVarieties,
+  useGetVariety,
+  useUpdateVariety,
   UpdateVarietyDto,
 } from '@rootstock/master-data/varieties/varieties-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
@@ -13,7 +14,8 @@ export function VarietyEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation(`/varieties/${id}`);
-  const { variety, isLoading, updateVariety, isUpdating } = useVarieties(id);
+  const { data: variety, isLoading } = useGetVariety(id!);
+  const { mutateAsync: updateVariety, isPending: isUpdating } = useUpdateVariety();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);

@@ -1,11 +1,11 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { useRoles } from '@rootstock/iam/roles/roles-data-access';
+import { useCreateRole } from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm, RoleFormData } from './role-form';
 
 export const RoleCreateScreen = () => {
   const router = useRouter();
-  const { createRole, isCreating } = useRoles();
+  const { mutateAsync: createRole, isPending: isCreating } = useCreateRole();
 
   const handleSubmit = async (data: RoleFormData) => {
     try {

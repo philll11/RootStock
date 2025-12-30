@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text, Avatar, Chip } from 'react-native-paper';
-import { useUsers } from '@rootstock/iam/users/users-data-access';
+import { useRouter } from 'expo-router';
+import { useGetUsers } from '@rootstock/iam/users/users-data-access';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 
-export const UsersListScreen = ({ navigation }: any) => {
+export const UsersListScreen = () => {
   const theme = useTheme() as AppTheme;
-  const { users, isLoading } = useUsers();
+  const router = useRouter();
+  const { data: users = [], isLoading } = useGetUsers();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -39,7 +41,7 @@ export const UsersListScreen = ({ navigation }: any) => {
       isEmpty={!isLoading && filteredUsers.length === 0}
       onAdd={
         can(PERMISSIONS.USER_CREATE)
-          ? () => navigation.navigate('UserForm')
+          ? () => router.push('/iam/users/create')
           : undefined
       }
     >
@@ -93,9 +95,7 @@ export const UsersListScreen = ({ navigation }: any) => {
               />
             )}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() =>
-              navigation.navigate('UserForm', { userId: item._id })
-            }
+            onPress={() => router.push(`/iam/users/${item._id}`)}
             style={styles.listItem}
           />
         )}

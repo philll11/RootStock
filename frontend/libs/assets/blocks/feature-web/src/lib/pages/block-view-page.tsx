@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  useBlocks,
+  useGetBlock,
+  useDeleteBlock,
 } from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -15,7 +16,8 @@ export function BlockViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getLinkTo, goBack } = useContextualNavigation('/blocks');
-  const { block, isLoading, deleteBlock } = useBlocks({ blockId: id });
+  const { data: block, isLoading } = useGetBlock(id!);
+  const { mutateAsync: deleteBlock } = useDeleteBlock();
 
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);

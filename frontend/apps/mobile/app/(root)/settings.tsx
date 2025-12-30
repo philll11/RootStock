@@ -2,13 +2,13 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { List, RadioButton, Appbar, useTheme } from 'react-native-paper';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@rootstock/iam/auth/auth-data-access';
-import { useUsers } from '@rootstock/iam/users/users-data-access';
+import { useGetProfile } from '@rootstock/iam/auth/auth-data-access';
+import { useUpdateUser } from '@rootstock/iam/users/users-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
 
 export default function SettingsScreen() {
-  const { user } = useAuth();
-  const { updateUser } = useUsers();
+  const { data: user } = useGetProfile();
+  const { mutateAsync: updateUser } = useUpdateUser();
   const { toggleDrawer } = useDrawer();
   const paperTheme = useTheme();
   const queryClient = useQueryClient();

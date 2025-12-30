@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useVarieties, useVariety } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useGetVariety, useUpdateVariety } from '@rootstock/master-data/varieties/varieties-data-access';
 import { ActivityIndicator } from 'react-native-paper';
 import { View } from 'react-native';
 import { VarietyForm, VarietyFormData } from './variety-form';
@@ -8,8 +8,8 @@ import { VarietyForm, VarietyFormData } from './variety-form';
 export const VarietyEditScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { updateVariety, isUpdating } = useVarieties();
-  const { data: variety, isLoading } = useVariety(id);
+  const { mutateAsync: updateVariety, isPending: isUpdating } = useUpdateVariety();
+  const { data: variety, isLoading } = useGetVariety(id!);
 
   const handleSubmit = async (data: VarietyFormData) => {
     if (!id || !variety) return;

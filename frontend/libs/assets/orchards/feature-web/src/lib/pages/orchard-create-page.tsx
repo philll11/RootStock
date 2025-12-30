@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import {
-  useOrchards,
+  useCreateOrchard,
   CreateOrchardDto,
   UpdateOrchardDto,
 } from '@rootstock/assets/orchards/orchards-data-access';
@@ -12,7 +12,7 @@ import { Container, Paper } from '@mantine/core';
 export function OrchardCreatePage() {
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/orchards');
-  const { createOrchard, isCreating } = useOrchards();
+  const { mutateAsync: createOrchard, isPending: isCreating } = useCreateOrchard();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);

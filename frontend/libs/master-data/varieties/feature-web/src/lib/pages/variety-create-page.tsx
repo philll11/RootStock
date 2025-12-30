@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import {
-  useVarieties,
+  useCreateVariety,
   CreateVarietyDto,
   UpdateVarietyDto,
 } from '@rootstock/master-data/varieties/varieties-data-access';
@@ -12,7 +12,7 @@ import { Container, Paper } from '@mantine/core';
 export function VarietyCreatePage() {
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/varieties');
-  const { createVariety, isCreating } = useVarieties();
+  const { mutateAsync: createVariety, isPending: isCreating } = useCreateVariety();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);

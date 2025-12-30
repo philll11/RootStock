@@ -19,8 +19,8 @@ import {
   CreateBlockDto,
   UpdateBlockDto,
 } from '@rootstock/assets/blocks/blocks-data-access';
-import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
-import { useOrchards } from '@rootstock/assets/orchards/orchards-data-access';
+import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useGetOrchards } from '@rootstock/assets/orchards/orchards-data-access';
 import { IconTrash, IconPlus, IconAlertTriangle } from '@tabler/icons-react';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -55,8 +55,8 @@ export function BlockForm({
   orchardId,
   fullHeight = true,
 }: BlockFormProps) {
-  const { varieties, isLoading: isVarietiesLoading } = useVarieties();
-  const { orchards, isLoading: isOrchardsLoading } = useOrchards();
+  const { data: varieties = [], isLoading: isVarietiesLoading } = useGetVarieties();
+  const { data: orchards = [], isLoading: isOrchardsLoading } = useGetOrchards();
 
   const { can } = usePermission();
   const [showReplantingWarning, setShowReplantingWarning] = useState(false);

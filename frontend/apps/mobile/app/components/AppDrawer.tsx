@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
 import { Drawer, useTheme, Text, Avatar, Divider, List } from 'react-native-paper';
 import { useDrawer } from '@rootstock/ui/mobile';
-import { useAuth, usePermission } from '@rootstock/iam/auth/auth-data-access';
+import { useLogout, useGetProfile, usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, usePathname } from 'expo-router';
 import { NAVIGATION_ITEMS } from '../config/navigation';
@@ -11,7 +11,8 @@ const DRAWER_WIDTH = 280;
 
 export const AppDrawer = () => {
   const { isOpen, closeDrawer } = useDrawer();
-  const { logout, user } = useAuth();
+  const { mutate: logout } = useLogout();
+  const { data: user } = useGetProfile();
   const { hasPermission } = usePermission();
   const theme = useTheme();
   const router = useRouter();

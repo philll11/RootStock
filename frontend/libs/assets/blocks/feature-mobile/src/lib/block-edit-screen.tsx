@@ -2,13 +2,14 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Text } from 'react-native-paper';
-import { useBlock } from '@rootstock/assets/blocks/blocks-data-access';
+import { useGetBlock, useUpdateBlock } from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from './block-form';
 
 export function BlockEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { block, updateBlock, isUpdating, isLoading, isError } = useBlock(id!);
+  const { data: block, isLoading, isError } = useGetBlock(id!);
+  const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
 
   if (isLoading) {
     return (

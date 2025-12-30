@@ -1,7 +1,7 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  useRoles,
-  useRole
+  useDeleteRole,
+  useGetRole
 } from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm } from '../role-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -15,8 +15,8 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 export function RoleViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { deleteRole } = useRoles();
-  const { data: role, isLoading } = useRole(id);
+  const { mutateAsync: deleteRole } = useDeleteRole();
+  const { data: role, isLoading } = useGetRole(id);
   const { getLinkTo, goBack } = useContextualNavigation('/roles');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);

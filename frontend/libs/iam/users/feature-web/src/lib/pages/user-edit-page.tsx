@@ -4,8 +4,8 @@ import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNaviga
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { useState } from 'react';
 import {
-  useUsers,
-  useUser,
+  useUpdateUser,
+  useGetUser,
   UpdateUserDto
 } from '@rootstock/iam/users/users-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
@@ -14,8 +14,8 @@ export function UserEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation(`/users/${id}`);
-  const { updateUser, isUpdating } = useUsers();
-  const { data: user, isLoading } = useUser(id);
+  const { mutateAsync: updateUser, isPending: isUpdating } = useUpdateUser();
+  const { data: user, isLoading } = useGetUser(id!);
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { useOrchards, Orchard } from '@rootstock/assets/orchards/data-access';
+import { useGetOrchards, Orchard } from '@rootstock/assets/orchards/orchards-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
@@ -11,7 +11,7 @@ import { spacing } from '@rootstock/ui/theme';
 export function OrchardsListScreen() {
   const theme = useTheme() as AppTheme;
   const router = useRouter();
-  const { orchards, isLoading } = useOrchards();
+  const { data: orchards = [], isLoading } = useGetOrchards();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
 

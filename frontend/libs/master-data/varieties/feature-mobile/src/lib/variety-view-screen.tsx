@@ -2,7 +2,7 @@ import React from 'react';
 import { View, ScrollView, Alert } from 'react-native';
 import { Text, Button, ActivityIndicator, useTheme } from 'react-native-paper';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { useVarieties, useVariety } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useGetVariety, useDeleteVariety } from '@rootstock/master-data/varieties/varieties-data-access';
 import { DetailRow } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
@@ -11,8 +11,8 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 export const VarietyViewScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { deleteVariety } = useVarieties();
-  const { data: variety, isLoading } = useVariety(id);
+  const { mutateAsync: deleteVariety } = useDeleteVariety();
+  const { data: variety, isLoading } = useGetVariety(id!);
   const { can } = usePermission();
   const theme = useTheme();
 

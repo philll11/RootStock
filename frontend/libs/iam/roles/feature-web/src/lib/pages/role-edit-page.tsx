@@ -4,8 +4,8 @@ import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNaviga
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { useState } from 'react';
 import {
-  useRoles,
-  useRole,
+  useUpdateRole,
+  useGetRole,
   UpdateRoleDto
 } from '@rootstock/iam/roles/roles-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
@@ -14,8 +14,8 @@ export function RoleEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation(`/roles/${id}`);
-  const { updateRole, isUpdating } = useRoles();
-  const { data: role, isLoading } = useRole(id);
+  const { mutateAsync: updateRole, isPending: isUpdating } = useUpdateRole();
+  const { data: role, isLoading } = useGetRole(id);
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);

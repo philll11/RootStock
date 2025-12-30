@@ -16,8 +16,8 @@ import {
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useOrchards } from '@rootstock/assets/orchards/orchards-data-access';
-import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useGetOrchards } from '@rootstock/assets/orchards/orchards-data-access';
+import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -56,8 +56,8 @@ export function BlockForm({
   const isView = mode === 'view';
   const isEdit = mode === 'edit';
 
-  const { orchards } = useOrchards();
-  const { varieties } = useVarieties();
+  const { data: orchards = [] } = useGetOrchards();
+  const { data: varieties = [] } = useGetVarieties();
 
   const {
     control,

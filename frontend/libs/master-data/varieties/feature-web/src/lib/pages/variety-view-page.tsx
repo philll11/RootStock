@@ -1,6 +1,7 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  useVarieties,
+  useGetVariety,
+  useDeleteVariety,
 } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm } from '../variety-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -14,7 +15,8 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 export function VarietyViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { variety, isLoading, deleteVariety } = useVarieties(id);
+  const { data: variety, isLoading } = useGetVariety(id!);
+  const { mutateAsync: deleteVariety } = useDeleteVariety();
   const { getLinkTo, goBack } = useContextualNavigation('/varieties');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import {
   TextInput,
@@ -11,49 +11,55 @@ import {
   Modal,
   Portal,
   Searchbar,
+  SegmentedButtons,
   Chip,
 } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Orchard } from '@rootstock/assets/orchards/orchards-data-access';
+import { UserType } from '@rootstock/iam/users/users-data-access';
 import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
-import { useGetUsers } from '@rootstock/iam/users/users-data-access';
+import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
-const orchardSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  clientId: z.string().min(1, 'Client is required'),
-  userIds: z.array(z.string()).optional(),
+const userSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email'),
+  password: z.string().optional(),
+  userType: z.nativeEnum(UserType),
+  roleId: z.string().optional(),
+  clientIds: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),
 });
 
-type OrchardFormData = z.infer<typeof orchardSchema>;
+type UserFormData = z.infer<typeof userSchema>;
 
-interface OrchardFormProps {
-  defaultValues?: Partial<OrchardFormData>;
-  onSubmit: (data: OrchardFormData) => Promise<void>;
+interface UserFormProps {
+  defaultValues?: Partial<UserFormData>;
+  onSubmit: (data: UserFormData) => Promise<void>;
   isSubmitting?: boolean;
   mode: 'create' | 'edit' | 'view';
   onCancel: () => void;
 }
 
-export function OrchardForm({
+export function UserForm({
   defaultValues,
   onSubmit,
   isSubmitting,
   mode,
   onCancel,
-}: OrchardFormProps) {
+}: UserFormProps) {
   const theme = useTheme();
   const { can } = usePermission();
   const isView = mode === 'view';
   const isEdit = mode === 'edit';
+  const isCreate = mode === 'create';
 
   const { data: clients = [] } = useGetClients();
-  const { data: users = [] } = useGetUsers();
+  const { data: roles = [] } = useGetRoles();
 
   const {
     control,
@@ -61,12 +67,16 @@ export function OrchardForm({
     formState: { errors, isDirty },
     setValue,
     watch,
-  } = useForm<OrchardFormData>({
-    resolver: zodResolver(orchardSchema),
+  } = useForm<UserFormData>({
+    resolver: zodResolver(userSchema),
     defaultValues: {
-      name: '',
-      clientId: '',
-      userIds: [],
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      userType: UserType.Employee,
+      roleId: '',
+      clientIds: [],
       isActive: true,
       ...defaultValues,
     },
@@ -75,102 +85,192 @@ export function OrchardForm({
   useMobileDiscardWarning(isDirty && !isSubmitting);
 
   const [clientModalVisible, setClientModalVisible] = React.useState(false);
-  const [userModalVisible, setUserModalVisible] = React.useState(false);
+  const [roleModalVisible, setRoleModalVisible] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
 
-  const selectedClientId = watch('clientId');
-  const selectedUserIds = watch('userIds') || [];
+  const selectedRoleId = watch('roleId');
+  const selectedClientIds = watch('clientIds') || [];
+  const userType = watch('userType');
 
-  const selectedClient = clients.find((c) => c._id === selectedClientId);
-  const selectedUsers = users.filter((u) => selectedUserIds.includes(u._id));
+  const selectedRole = roles.find((r) => r._id === selectedRoleId);
+  const selectedClients = clients.filter((c) =>
+    selectedClientIds.includes(c._id)
+  );
 
   const filteredClients = clients.filter((c) =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredRoles = roles.filter((r) =>
+    r.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const canToggleActive = isEdit && can(PERMISSIONS.ORCHARD_EDIT);
+  const canToggleActive = isEdit && can(PERMISSIONS.USER_EDIT);
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Controller
           control={control}
-          name="name"
+          name="firstName"
           render={({ field: { onChange, onBlur, value } }) => (
             <View style={styles.inputContainer}>
               <TextInput
-                label="Name"
+                label="First Name"
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
                 mode="outlined"
                 disabled={isView}
-                error={!!errors.name}
+                error={!!errors.firstName}
               />
-              {errors.name && (
-                <HelperText type="error" visible={!!errors.name}>
-                  {errors.name.message}
+              {errors.firstName && (
+                <HelperText type="error" visible={!!errors.firstName}>
+                  {errors.firstName.message}
                 </HelperText>
               )}
             </View>
           )}
         />
 
+        <Controller
+          control={control}
+          name="lastName"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Last Name"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                mode="outlined"
+                disabled={isView}
+                error={!!errors.lastName}
+              />
+              {errors.lastName && (
+                <HelperText type="error" visible={!!errors.lastName}>
+                  {errors.lastName.message}
+                </HelperText>
+              )}
+            </View>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="email"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Email"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                mode="outlined"
+                disabled={isView}
+                error={!!errors.email}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+              {errors.email && (
+                <HelperText type="error" visible={!!errors.email}>
+                  {errors.email.message}
+                </HelperText>
+              )}
+            </View>
+          )}
+        />
+
+        {!isView && (
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <View style={styles.inputContainer}>
+                <TextInput
+                  label={isCreate ? 'Password' : 'New Password (Optional)'}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  mode="outlined"
+                  secureTextEntry
+                  error={!!errors.password}
+                />
+                {errors.password && (
+                  <HelperText type="error" visible={!!errors.password}>
+                    {errors.password.message}
+                  </HelperText>
+                )}
+              </View>
+            )}
+          />
+        )}
+
         <View style={styles.inputContainer}>
           <Text variant="bodyMedium" style={{ marginBottom: 8 }}>
-            Client
+            User Type
+          </Text>
+          <Controller
+            control={control}
+            name="userType"
+            render={({ field: { value, onChange } }) => (
+              <SegmentedButtons
+                value={value}
+                onValueChange={onChange}
+                buttons={[
+                  { value: UserType.Employee, label: 'Employee' },
+                  { value: UserType.Contact, label: 'Contact' },
+                ]}
+                disabled={isView}
+              />
+            )}
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text variant="bodyMedium" style={{ marginBottom: 8 }}>
+            Role
           </Text>
           {isView ? (
-            <Text variant="bodyLarge">{selectedClient?.name || 'None'}</Text>
+            <Text variant="bodyLarge">{selectedRole?.name || 'None'}</Text>
           ) : (
             <>
               <Button
                 mode="outlined"
                 onPress={() => {
                   setSearchQuery('');
-                  setClientModalVisible(true);
+                  setRoleModalVisible(true);
                 }}
                 style={styles.selectorButton}
               >
-                {selectedClient?.name || 'Select Client'}
+                {selectedRole?.name || 'Select Role'}
               </Button>
-              {errors.clientId && (
-                <HelperText type="error" visible={!!errors.clientId}>
-                  {errors.clientId.message}
-                </HelperText>
-              )}
             </>
           )}
         </View>
 
         <View style={styles.inputContainer}>
           <Text variant="bodyMedium" style={{ marginBottom: 8 }}>
-            Assigned Users
+            Assigned Clients
           </Text>
           <View style={styles.chipContainer}>
-            {selectedUsers.map((user) => (
+            {selectedClients.map((client) => (
               <Chip
-                key={user._id}
+                key={client._id}
                 style={styles.chip}
                 onClose={
                   isView
                     ? undefined
                     : () => {
                         setValue(
-                          'userIds',
-                          selectedUserIds.filter((id) => id !== user._id),
+                          'clientIds',
+                          selectedClientIds.filter((id) => id !== client._id),
                           { shouldDirty: true }
                         );
                       }
                 }
               >
-                {user.firstName} {user.lastName}
+                {client.name}
               </Chip>
             ))}
             {!isView && (
@@ -178,11 +278,11 @@ export function OrchardForm({
                 icon="plus"
                 onPress={() => {
                   setSearchQuery('');
-                  setUserModalVisible(true);
+                  setClientModalVisible(true);
                 }}
                 style={styles.chip}
               >
-                Add User
+                Add Client
               </Chip>
             )}
           </View>
@@ -226,6 +326,39 @@ export function OrchardForm({
 
       <Portal>
         <Modal
+          visible={roleModalVisible}
+          onDismiss={() => setRoleModalVisible(false)}
+          contentContainerStyle={[
+            styles.modalContent,
+            { backgroundColor: theme.colors.surface },
+          ]}
+        >
+          <Searchbar
+            placeholder="Search Roles"
+            onChangeText={setSearchQuery}
+            value={searchQuery}
+            style={styles.searchBar}
+          />
+          <ScrollView>
+            {filteredRoles.map((role) => (
+              <List.Item
+                key={role._id}
+                title={role.name}
+                onPress={() => {
+                  setValue('roleId', role._id, { shouldDirty: true });
+                  setRoleModalVisible(false);
+                }}
+                right={(props) =>
+                  selectedRoleId === role._id ? (
+                    <List.Icon {...props} icon="check" />
+                  ) : null
+                }
+              />
+            ))}
+          </ScrollView>
+        </Modal>
+
+        <Modal
           visible={clientModalVisible}
           onDismiss={() => setClientModalVisible(false)}
           contentContainerStyle={[
@@ -240,50 +373,17 @@ export function OrchardForm({
             style={styles.searchBar}
           />
           <ScrollView>
-            {filteredClients.map((client) => (
-              <List.Item
-                key={client._id}
-                title={client.name}
-                onPress={() => {
-                  setValue('clientId', client._id, { shouldDirty: true });
-                  setClientModalVisible(false);
-                }}
-                right={(props) =>
-                  selectedClientId === client._id ? (
-                    <List.Icon {...props} icon="check" />
-                  ) : null
-                }
-              />
-            ))}
-          </ScrollView>
-        </Modal>
-
-        <Modal
-          visible={userModalVisible}
-          onDismiss={() => setUserModalVisible(false)}
-          contentContainerStyle={[
-            styles.modalContent,
-            { backgroundColor: theme.colors.surface },
-          ]}
-        >
-          <Searchbar
-            placeholder="Search Users"
-            onChangeText={setSearchQuery}
-            value={searchQuery}
-            style={styles.searchBar}
-          />
-          <ScrollView>
-            {filteredUsers.map((user) => {
-              const isSelected = selectedUserIds.includes(user._id);
+            {filteredClients.map((client) => {
+              const isSelected = selectedClientIds.includes(client._id);
               return (
                 <List.Item
-                  key={user._id}
-                  title={`${user.firstName} ${user.lastName}`}
+                  key={client._id}
+                  title={client.name}
                   onPress={() => {
                     const newIds = isSelected
-                      ? selectedUserIds.filter((id) => id !== user._id)
-                      : [...selectedUserIds, user._id];
-                    setValue('userIds', newIds, { shouldDirty: true });
+                      ? selectedClientIds.filter((id) => id !== client._id)
+                      : [...selectedClientIds, client._id];
+                    setValue('clientIds', newIds, { shouldDirty: true });
                   }}
                   right={(props) =>
                     isSelected ? <List.Icon {...props} icon="check" /> : null

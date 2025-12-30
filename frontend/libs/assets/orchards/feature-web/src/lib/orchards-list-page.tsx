@@ -17,7 +17,10 @@ import {
 } from '@rootstock/ui/web';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 import {
-  useOrchards,
+  useGetOrchards,
+  useCreateOrchard,
+  useUpdateOrchard,
+  useDeleteOrchard,
   Orchard,
   CreateOrchardDto,
   UpdateOrchardDto,
@@ -27,15 +30,10 @@ import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function OrchardsListPage() {
-  const {
-    orchards,
-    isLoading,
-    deleteOrchard,
-    createOrchard,
-    updateOrchard,
-    isCreating,
-    isUpdating,
-  } = useOrchards();
+  const { data: orchards = [], isLoading } = useGetOrchards();
+  const { mutateAsync: createOrchard, isPending: isCreating } = useCreateOrchard();
+  const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
+  const { mutateAsync: deleteOrchard } = useDeleteOrchard();
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [

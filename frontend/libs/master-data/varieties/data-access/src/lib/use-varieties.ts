@@ -1,55 +1,92 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
 import { Variety, CreateVarietyDto, UpdateVarietyDto } from './variety.types';
-import { notify } from '@rootstock/shared/util';
+import { notify, PERMISSIONS } from '@rootstock/shared/util';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
-export const VARIETIES_QUERY_KEY = ['varieties'];
+export const VARIETIES_KEYS = {
+  all: ['varieties'] as const,
+  lists: () => [...VARIETIES_KEYS.all, 'list'] as const,
+  list: (filters: string) => [...VARIETIES_KEYS.lists(), { filters }] as const,
+  details: () => [...VARIETIES_KEYS.all, 'detail'] as const,
+  detail: (id: string) => [...VARIETIES_KEYS.details(), id] as const,
+};
 
-export function useVariety(id: string | undefined) {
+export const getVariety = async (id: string): Promise<Variety> => {
+  const response = await apiClient.get<Variety>(`/varieties/${id}`);
+  return response.data;
+};
+
+export function useGetVarieties() {
+  const { can } = usePermission();
+  const isEnabled = can(PERMISSIONS.VARIETY_VIEW);
+
   return useQuery({
-    queryKey: [...VARIETIES_QUERY_KEY, id],
-    queryFn: async () => {
-      const response = await apiClient.get<Variety>(`/varieties/${id}`);
-      return response.data;
-    },
-    enabled: !!id,
-  });
-}
-
-export function useVarieties() {
-  const queryClient = useQueryClient();
-
-  const varietiesQuery = useQuery({
-    queryKey: VARIETIES_QUERY_KEY,
+    queryKey: VARIETIES_KEYS.lists(),
     queryFn: async () => {
       const response = await apiClient.get<Variety[]>('/varieties');
       return response.data;
     },
+    enabled: isEnabled,
     staleTime: Infinity,
   });
+}
 
-  const createVarietyMutation = useMutation({
+export function useGetVariety(id: string) {
+  const { can } = usePermission();
+  const isEnabled = can(PERMISSIONS.VARIETY_VIEW) && !!id;
+
+  return useQuery({
+    queryKey: VARIETIES_KEYS.detail(id),
+    queryFn: () => getVariety(id),
+    enabled: isEnabled,
+  });
+}
+
+export function useCreateVariety() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationFn: async (data: CreateVarietyDto) => {
       const response = await apiClient.post<Variety>('/varieties', data);
       return response.data;
     },
-    onSuccess: (newVariety) => {
-      queryClient.invalidateQueries({ queryKey: VARIETIES_QUERY_KEY });
-      notify.success('The variety has been successfully created.', 'Variety Created');
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: VARIETIES_KEYS.lists() });
+      notify.success(
+        'The variety has been successfully created.',
+        'Variety Created'
+      );
     },
     onError: (error: any) => {
       notify.error(error, 'Error Creating Variety');
     },
   });
+}
 
-  const updateVarietyMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateVarietyDto }) => {
+export function useUpdateVariety() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateVarietyDto;
+    }) => {
       const response = await apiClient.patch<Variety>(`/varieties/${id}`, data);
       return response.data;
     },
-    onSuccess: (updatedVariety) => {
-      queryClient.invalidateQueries({ queryKey: VARIETIES_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: [...VARIETIES_QUERY_KEY, updatedVariety._id] });
+    onSuccess: (updatedVariety, variables) => {
+      queryClient.setQueryData(
+        VARIETIES_KEYS.detail(variables.id),
+        updatedVariety
+      );
+      queryClient.invalidateQueries({ queryKey: VARIETIES_KEYS.lists() });
+      queryClient.invalidateQueries({
+        queryKey: VARIETIES_KEYS.detail(variables.id),
+      });
       notify.success('The variety details have been updated.', 'Variety Updated');
     },
     onError: (error: any) => {
@@ -58,29 +95,21 @@ export function useVarieties() {
       }
     },
   });
+}
 
-  const deleteVarietyMutation = useMutation({
+export function useDeleteVariety() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationFn: async (id: string) => {
-      await apiClient.delete<Variety>(`/varieties/${id}`);
+      await apiClient.delete(`/varieties/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: VARIETIES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: VARIETIES_KEYS.lists() });
       notify.success('The variety has been successfully deleted.', 'Variety Deleted');
     },
     onError: (error: any) => {
       notify.error(error, 'Error Deleting Variety');
     },
   });
-
-  return {
-    varieties: varietiesQuery.data ?? [],
-    isLoading: varietiesQuery.isLoading,
-    isError: varietiesQuery.isError,
-    createVariety: createVarietyMutation.mutateAsync,
-    updateVariety: updateVarietyMutation.mutateAsync,
-    deleteVariety: deleteVarietyMutation.mutateAsync,
-    isCreating: createVarietyMutation.isPending,
-    isUpdating: updateVarietyMutation.isPending,
-    isDeleting: deleteVarietyMutation.isPending,
-  };
 }

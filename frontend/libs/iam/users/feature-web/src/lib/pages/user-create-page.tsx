@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import {
-  useUsers,
+  useCreateUser,
   CreateUserDto,
   UpdateUserDto
 } from '@rootstock/iam/users/users-data-access';
@@ -12,7 +12,7 @@ import { Container, Paper } from '@mantine/core';
 export function UserCreatePage() {
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/users');
-  const { createUser, isCreating } = useUsers();
+  const { mutateAsync: createUser, isPending: isCreating } = useCreateUser();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);

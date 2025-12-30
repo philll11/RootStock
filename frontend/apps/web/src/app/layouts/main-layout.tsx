@@ -1,7 +1,7 @@
 // frontend/apps/web/src/app/layouts/main-layout.tsx
 import { AppShell, Burger, Group, Title, Button, NavLink, Text, ActionIcon, ScrollArea, Tooltip, rem } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useAuth, usePermission } from '@rootstock/iam/auth/auth-data-access';
+import { useLogout, usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { IconUser, IconChevronRight, IconChevronLeft } from '@tabler/icons-react';
 import { ThemeToggle } from '../components/theme-toggle';
@@ -11,7 +11,7 @@ import { layout, iconSizes } from '@rootstock/ui/theme';
 export function MainLayout() {
   const [opened, { toggle }] = useDisclosure();
   const [expanded, { toggle: toggleExpanded, open: expand }] = useDisclosure(true);
-  const { logout } = useAuth();
+  const { mutate: logout } = useLogout();
   const { hasPermission } = usePermission();
   const navigate = useNavigate();
   const location = useLocation();

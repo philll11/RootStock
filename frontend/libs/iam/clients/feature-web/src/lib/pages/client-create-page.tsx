@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { 
-  useClients, 
+  useCreateClient, 
   CreateClientDto,
   UpdateClientDto,
 } from '@rootstock/iam/clients/clients-data-access';
@@ -12,7 +12,7 @@ import { Container, Paper } from '@mantine/core';
 export function ClientCreatePage() {
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/clients');
-  const { createClient, isCreating } = useClients();
+  const { mutateAsync: createClient, isPending: isCreating } = useCreateClient();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);

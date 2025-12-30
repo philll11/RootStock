@@ -11,15 +11,15 @@ import {
   Divider,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useAuth } from '@rootstock/iam/auth/auth-data-access';
-import { useUsers, UpdateUserDto } from '@rootstock/iam/users/users-data-access';
+import { useGetProfile } from '@rootstock/iam/auth/auth-data-access';
+import { useUpdateUser, UpdateUserDto } from '@rootstock/iam/users/users-data-access';
 import { useEffect, useState } from 'react';
 import { ConfirmModal } from '@rootstock/ui/web';
 import { layout, shadows } from '@rootstock/ui/theme';
 
 export function UserProfilePage() {
-  const { user } = useAuth();
-  const { updateUser, isUpdating } = useUsers();
+  const { data: user } = useGetProfile();
+  const { mutateAsync: updateUser, isPending: isUpdating } = useUpdateUser();
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 
   // Strongly typed pending state

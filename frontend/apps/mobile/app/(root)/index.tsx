@@ -2,12 +2,12 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Appbar, Text, Card, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@rootstock/iam/auth/auth-data-access';
+import { useGetProfile } from '@rootstock/iam/auth/auth-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 
 export default function DashboardScreen() {
-  const { user } = useAuth();
+  const { data: user } = useGetProfile();
   const { toggleDrawer } = useDrawer();
   const theme = useTheme();
   const router = useRouter();

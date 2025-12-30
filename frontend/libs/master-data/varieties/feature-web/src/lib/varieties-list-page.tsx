@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
-import { useVarieties, Variety, CreateVarietyDto } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useGetVarieties, useCreateVariety, useUpdateVariety, useDeleteVariety, Variety, CreateVarietyDto } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm, VarietyFormMode } from './variety-form';
 import { 
   ConfirmModal, 
@@ -23,7 +23,11 @@ import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 export function VarietiesListPage() {
   const navigate = useNavigate();
   const { getLinkTo } = useContextualNavigation();
-  const { varieties, isLoading: isVarietiesLoading, createVariety, updateVariety, deleteVariety, isCreating, isUpdating } = useVarieties();
+  const { data: varieties, isLoading: isVarietiesLoading } = useGetVarieties();
+  const { mutateAsync: createVariety, isPending: isCreating } = useCreateVariety();
+  const { mutateAsync: updateVariety, isPending: isUpdating } = useUpdateVariety();
+  const { mutateAsync: deleteVariety } = useDeleteVariety();
+
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);

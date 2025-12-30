@@ -54,7 +54,7 @@ import { PermissionDeniedPage } from './pages/permission-denied-page';
 import { ThemeController } from './theme-controller';
 
 // Infrastructure
-import { useAuth, setupAuthInterceptor } from '@rootstock/iam/auth/auth-data-access';
+import { useAuthSession, setupAuthInterceptor } from '@rootstock/iam/auth/auth-data-access';
 import { webTheme } from '@rootstock/ui/web';
 import { PERMISSIONS, notify } from '@rootstock/shared/util';
 import { zIndex } from '@rootstock/ui/theme';
@@ -67,7 +67,7 @@ setupAuthInterceptor(() => {
 const queryClient = new QueryClient();
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuthSession();
 
   if (isLoading) {
     return (

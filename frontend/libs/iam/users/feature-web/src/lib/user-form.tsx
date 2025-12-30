@@ -16,7 +16,7 @@ import {
   UpdateUserDto,
   User,
 } from '@rootstock/iam/users/users-data-access';
-import { useRoles } from '@rootstock/iam/roles/roles-data-access';
+import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
 import { useEffect, useState } from 'react';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { SearchableMultiSelect, FormLayout } from '@rootstock/ui/web';
@@ -60,7 +60,7 @@ export function UserForm({
   const [initialClientOptions, setInitialClientOptions] = useState<
     { value: string; label: string }[]
   >([]);
-  const { roles } = useRoles();
+  const { data: roles = [] } = useGetRoles();
   const { can } = usePermission();
 
   const form = useForm({

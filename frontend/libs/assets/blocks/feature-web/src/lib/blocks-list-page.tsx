@@ -4,10 +4,13 @@ import { Group, ActionIcon, Badge } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
-  useBlocks,
+  useGetBlocks,
+  useCreateBlock,
+  useUpdateBlock,
+  useDeleteBlock,
   Block,
   CreateBlockDto,
-} from '@rootstock/assets/blocks/blocks-data-access';
+} from '@rootstock/assets/blocks/data-access';
 import { BlockForm, BlockFormMode } from './block-form';
 import {
   ConfirmModal,
@@ -27,15 +30,11 @@ import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 export function BlocksListPage() {
   const navigate = useNavigate();
   const { getLinkTo } = useContextualNavigation();
-  const {
-    blocks,
-    isLoading,
-    createBlock,
-    updateBlock,
-    deleteBlock,
-    isCreating,
-    isUpdating,
-  } = useBlocks();
+  const { data: blocks, isLoading } = useGetBlocks();
+  const { mutateAsync: createBlock, isPending: isCreating } = useCreateBlock();
+  const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
+  const { mutateAsync: deleteBlock } = useDeleteBlock();
+
   const { can } = usePermission();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure(false);

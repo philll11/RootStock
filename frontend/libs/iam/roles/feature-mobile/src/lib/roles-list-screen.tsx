@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import { List, FAB } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { useRoles } from '@rootstock/iam/roles/roles-data-access';
+import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
 import { ListLayout } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -10,7 +10,7 @@ import { spacing } from '@rootstock/ui/theme';
 
 export const RolesListScreen = () => {
   const router = useRouter();
-  const { roles, isLoading } = useRoles();
+  const { data: roles = [], isLoading } = useGetRoles();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
 

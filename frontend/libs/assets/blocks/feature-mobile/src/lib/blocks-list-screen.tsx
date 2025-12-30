@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useBlocks } from '@rootstock/assets/blocks/data-access';
+import { useGetBlocks } from '@rootstock/assets/blocks/blocks-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
@@ -12,7 +12,7 @@ export const BlocksListScreen = () => {
   const theme = useTheme() as AppTheme;
   const router = useRouter();
   const { orchardId } = useLocalSearchParams<{ orchardId: string }>();
-  const { blocks, isLoading } = useBlocks(orchardId);
+  const { data: blocks, isLoading } = useGetBlocks(orchardId);
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.BLOCK_CREATE);
 

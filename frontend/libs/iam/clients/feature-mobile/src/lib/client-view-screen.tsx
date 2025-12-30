@@ -2,7 +2,7 @@ import React from 'react';
 import { View, ScrollView, Alert } from 'react-native';
 import { Text, Button, ActivityIndicator, useTheme } from 'react-native-paper';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { useClients, useClient } from '@rootstock/iam/clients/clients-data-access';
+import { useDeleteClient, useGetClient } from '@rootstock/iam/clients/clients-data-access';
 import { DetailRow } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
@@ -11,8 +11,8 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 export const ClientViewScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { deleteClient } = useClients();
-  const { data: client, isLoading } = useClient(id);
+  const { mutateAsync: deleteClient } = useDeleteClient();
+  const { data: client, isLoading } = useGetClient(id);
   const { can } = usePermission();
   const theme = useTheme();
 

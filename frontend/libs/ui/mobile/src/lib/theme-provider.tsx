@@ -2,12 +2,12 @@
 import React, { useMemo } from 'react';
 import { useColorScheme, StatusBar } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
-import { useAuth } from '@rootstock/iam/auth/auth-data-access';
+import { useGetProfile } from '@rootstock/iam/auth/auth-data-access';
 import { mobileLightTheme, mobileDarkTheme } from './mobile-theme';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const colorScheme = useColorScheme();
-  const { user } = useAuth();
+  const { data: user } = useGetProfile();
 
   const isDark = useMemo(() => {
     const userPref = user?.preferences?.theme || 'auto';

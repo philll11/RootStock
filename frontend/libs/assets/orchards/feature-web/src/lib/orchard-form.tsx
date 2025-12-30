@@ -12,8 +12,8 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { useClients } from '@rootstock/iam/clients/clients-data-access';
-import { useUsers } from '@rootstock/iam/users/users-data-access';
+import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
+import { useGetUsers } from '@rootstock/iam/users/users-data-access';
 import {
   Orchard,
   CreateOrchardDto,
@@ -54,8 +54,8 @@ export function OrchardForm({
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
-  const { clients, isLoading: isLoadingClients } = useClients();
-  const { users, isLoading: isLoadingUsers } = useUsers();
+  const { data: clients = [], isLoading: isLoadingClients } = useGetClients();
+  const { data: users = [], isLoading: isLoadingUsers } = useGetUsers();
   const { can } = usePermission();
 
 

@@ -5,7 +5,10 @@ import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
-  useUsers,
+  useGetUsers,
+  useCreateUser,
+  useUpdateUser,
+  useDeleteUser,
   User,
   CreateUserDto,
   UpdateUserDto,
@@ -27,15 +30,10 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function UsersListPage() {
-  const {
-    users,
-    isLoading,
-    createUser,
-    updateUser,
-    deleteUser,
-    isCreating,
-    isUpdating,
-  } = useUsers();
+  const { data: users = [], isLoading, isError } = useGetUsers();
+  const { mutateAsync: createUser, isPending: isCreating } = useCreateUser();
+  const { mutateAsync: updateUser, isPending: isUpdating } = useUpdateUser();
+  const { mutateAsync: deleteUser } = useDeleteUser();
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [

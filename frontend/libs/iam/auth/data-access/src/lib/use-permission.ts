@@ -1,8 +1,8 @@
-import { useAuth } from './use-auth';
+import { useGetProfile } from './use-auth';
 import { Role } from '@rootstock/iam/users/users-data-access';
 
 export const usePermission = () => {
-  const { user } = useAuth();
+  const { data: user } = useGetProfile();
 
   const hasPermission = (permission: string): boolean => {
     if (!user || !user.roleId) return false;

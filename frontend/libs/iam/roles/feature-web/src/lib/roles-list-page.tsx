@@ -5,7 +5,10 @@ import { Group, ActionIcon, Badge, Text, Alert } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconAlertCircle, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
-  useRoles,
+  useGetRoles,
+  useCreateRole,
+  useUpdateRole,
+  useDeleteRole,
   Role,
   CreateRoleDto,
   UpdateRoleDto,
@@ -27,16 +30,10 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function RolesListPage() {
-  const {
-    roles,
-    isLoading,
-    isError,
-    createRole,
-    updateRole,
-    deleteRole,
-    isCreating,
-    isUpdating,
-  } = useRoles();
+  const { data: roles = [], isLoading, isError } = useGetRoles();
+  const { mutateAsync: createRole, isPending: isCreating } = useCreateRole();
+  const { mutateAsync: updateRole, isPending: isUpdating } = useUpdateRole();
+  const { mutateAsync: deleteRole } = useDeleteRole();
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [

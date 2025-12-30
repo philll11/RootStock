@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { useClients } from '@rootstock/iam/clients/clients-data-access';
+import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -11,7 +11,7 @@ import { spacing } from '@rootstock/ui/theme';
 export const ClientsListScreen = () => {
   const router = useRouter();
   const theme = useTheme() as AppTheme;
-  const { clients, isLoading } = useClients();
+  const { data: clients = [], isLoading } = useGetClients();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
 

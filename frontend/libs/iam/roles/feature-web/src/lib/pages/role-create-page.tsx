@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { 
-  useRoles,
+  useCreateRole,
   CreateRoleDto,
   UpdateRoleDto
 } from '@rootstock/iam/roles/roles-data-access';
@@ -12,7 +12,7 @@ import { Container, Paper } from '@mantine/core';
 export function RoleCreatePage() {
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/roles');
-  const { createRole, isCreating } = useRoles();
+  const { mutateAsync: createRole, isPending: isCreating } = useCreateRole();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);

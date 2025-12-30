@@ -4,9 +4,10 @@ import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNaviga
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { useState } from 'react';
 import {
-  useClients,
-  useClient,
-  UpdateClientDto
+  useUpdateClient,
+  useGetClient,
+  UpdateClientDto,
+  CreateClientDto
 } from '@rootstock/iam/clients/clients-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
@@ -14,16 +15,16 @@ export function ClientEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation(`/clients/${id}`);
-  const { updateClient, isUpdating } = useClients();
-  const { data: client, isLoading } = useClient(id);
+  const { mutateAsync: updateClient, isPending: isUpdating } = useUpdateClient();
+  const { data: client, isLoading } = useGetClient(id);
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: UpdateClientDto) => {
+  const handleSubmit = async (values: UpdateClientDto | CreateClientDto) => {
     if (!id) return;
     try {
-      await updateClient({ id, data: values });
+      await updateClient({ id, data: values as UpdateClientDto });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/clients/${id}`), 0);
     } catch (error) {
