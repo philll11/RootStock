@@ -1,13 +1,12 @@
-// frontend/apps/mobile/src/app/screens/PermissionDeniedScreen.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button, useTheme } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { spacing } from '@rootstock/ui/theme';
 
-export const PermissionDeniedScreen = () => {
+export default function PermissionDeniedScreen() {
   const theme = useTheme();
-  const navigation = useNavigation<any>();
+  const router = useRouter();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -19,14 +18,14 @@ export const PermissionDeniedScreen = () => {
       </Text>
       <Button 
         mode="contained" 
-        onPress={() => navigation.navigate('Dashboard')}
+        onPress={() => router.replace('/')}
         style={styles.button}
       >
         Go to Dashboard
       </Button>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {

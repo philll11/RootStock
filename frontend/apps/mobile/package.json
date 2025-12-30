@@ -17,6 +17,9 @@
     "expo-status-bar": "*",
     "expo-system-ui": "*",
     "expo-updates": "*",
+    "expo-constants": "*",
+    "expo-linking": "*",
+    "expo-router": "*",
     "jest-expo": "*",
     "metro-config": "*",
     "metro-resolver": "*",
@@ -27,7 +30,8 @@
     "react-native-screens": "*",
     "react-native-svg": "*",
     "react-native-svg-transformer": "*",
-    "react-native-web": "*"
+    "react-native-web": "*",
+    "react-hook-form": "*"
   },
   "devDependencies": {}
 }

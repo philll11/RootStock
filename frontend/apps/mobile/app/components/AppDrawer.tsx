@@ -1,23 +1,21 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { View, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
 import { Drawer, useTheme, Text, Avatar, Divider, List } from 'react-native-paper';
 import { useDrawer } from '@rootstock/ui/mobile';
 import { useAuth, usePermission } from '@rootstock/auth/auth-data-access';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, usePathname } from 'expo-router';
 import { NAVIGATION_ITEMS } from '../config/navigation';
 
 const DRAWER_WIDTH = 280;
 
-interface AppDrawerProps {
-  navigationRef: any;
-  currentRoute?: string;
-}
-
-export const AppDrawer = ({ navigationRef, currentRoute }: AppDrawerProps) => {
+export const AppDrawer = () => {
   const { isOpen, closeDrawer } = useDrawer();
   const { logout, user } = useAuth();
   const { hasPermission } = usePermission();
   const theme = useTheme();
+  const router = useRouter();
+  const pathname = usePathname();
   
   // Animation value: 0 = closed, 1 = open
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -54,9 +52,18 @@ export const AppDrawer = ({ navigationRef, currentRoute }: AppDrawerProps) => {
   }, [isOpen, slideAnim, fadeAnim]);
 
   const handleNavigate = (screen: string) => {
-    if (navigationRef?.isReady()) {
-      navigationRef.navigate(screen);
-    }
+    // Map legacy screen names to routes if necessary, or assume screen is a route
+    // For now, we assume NAVIGATION_ITEMS will be updated to use routes
+    // But if they are still screen names like 'Dashboard', we need a map.
+    // Let's assume we will update NAVIGATION_ITEMS or map here.
+    
+    let route = screen;
+    if (screen === 'Dashboard') route = '/';
+    else if (screen === 'Profile') route = '/profile';
+    else if (screen === 'Settings') route = '/settings';
+    else if (!screen.startsWith('/')) route = `/${screen.toLowerCase()}`;
+
+    router.push(route as any);
     closeDrawer();
   };
 
@@ -70,10 +77,6 @@ export const AppDrawer = ({ navigationRef, currentRoute }: AppDrawerProps) => {
     inputRange: [0, 1],
     outputRange: [-DRAWER_WIDTH, 0],
   });
-
-  // If drawer is closed and animation finished, don't render to allow clicks through
-  // But we need to keep it mounted for animation. 
-  // We'll use pointerEvents on the container.
 
   return (
     <View 
@@ -142,7 +145,7 @@ export const AppDrawer = ({ navigationRef, currentRoute }: AppDrawerProps) => {
                       key={idx}
                       title={navItem.label}
                       left={props => <List.Icon {...props} icon={navItem.icon} />}
-                      expanded={true} // Default expanded as requested
+                      expanded={true}
                       style={{ paddingVertical: 0, backgroundColor: 'transparent' }}
                       titleStyle={{ color: theme.colors.onSurfaceVariant }}
                     >
@@ -151,12 +154,20 @@ export const AppDrawer = ({ navigationRef, currentRoute }: AppDrawerProps) => {
                   );
                 }
 
+                // Determine if active based on pathname
+                // Simple check: if pathname starts with the route derived from screen
+                let route = navItem.screen;
+                if (route === 'Dashboard') route = '/';
+                else if (!route.startsWith('/')) route = `/${route.toLowerCase()}`;
+                
+                const isActive = pathname === route || (route !== '/' && pathname.startsWith(route));
+
                 return (
                   <Drawer.Item
                     key={idx}
                     label={navItem.label}
                     icon={navItem.icon}
-                    active={currentRoute === navItem.screen}
+                    active={isActive}
                     onPress={() => handleNavigate(navItem.screen)}
                   />
                 );
@@ -187,8 +198,6 @@ const styles = StyleSheet.create({
     elevation: 1000,
   },
   containerClosed: {
-    // When closed, we want to make sure it doesn't block touches, 
-    // but we handle that with pointerEvents='none' on the root View.
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

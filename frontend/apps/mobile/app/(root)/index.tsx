@@ -1,22 +1,23 @@
-// frontend/apps/mobile/src/app/screens/DashboardScreen.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Appbar, Text, Card, useTheme } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@rootstock/auth/auth-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 
-export const DashboardScreen = ({ navigation }: any) => {
+export default function DashboardScreen() {
   const { user } = useAuth();
   const { toggleDrawer } = useDrawer();
   const theme = useTheme();
+  const router = useRouter();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header>
         <Appbar.Action icon="menu" onPress={toggleDrawer} />
         <Appbar.Content title="RootStock" />
-        <Appbar.Action icon="account-circle" onPress={() => navigation.navigate('Profile')} />
+        <Appbar.Action icon="account-circle" onPress={() => router.push('/profile')} />
       </Appbar.Header>
       <View style={styles.content}>
         <Card style={styles.card}>
@@ -30,7 +31,7 @@ export const DashboardScreen = ({ navigation }: any) => {
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {

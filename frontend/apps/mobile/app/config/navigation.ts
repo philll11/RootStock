@@ -2,7 +2,7 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 
 export interface NavigationItem {
   label: string;
-  screen?: string;
+  screen: string;
   icon: string;
   permission?: string | null;
   children?: NavigationItem[];
@@ -11,29 +11,30 @@ export interface NavigationItem {
 export const NAVIGATION_ITEMS: NavigationItem[] = [
   {
     label: 'Dashboard',
-    screen: 'Dashboard',
+    screen: '/',
     icon: 'view-dashboard',
     permission: null,
   },
   {
     label: 'Horticulture Management',
+    screen: '',
     icon: 'tree',
     children: [
       {
         label: 'Clients',
-        screen: 'ClientsList',
+        screen: '/iam/clients',
         icon: 'domain',
         permission: PERMISSIONS.CLIENT_VIEW,
       },
       {
         label: 'Orchards',
-        screen: 'OrchardsList',
+        screen: '/assets/orchards',
         icon: 'tree',
         permission: PERMISSIONS.ORCHARD_VIEW,
       },
       {
         label: 'Blocks',
-        screen: 'BlocksList',
+        screen: '/assets/blocks',
         icon: 'sprout',
         permission: PERMISSIONS.BLOCK_VIEW,
       },
@@ -41,23 +42,24 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
   },
   {
     label: 'System Management',
+    screen: '',
     icon: 'cog',
     children: [
       {
         label: 'Users',
-        screen: 'UsersList',
+        screen: '/iam/users',
         icon: 'account-group',
         permission: PERMISSIONS.USER_VIEW,
       },
       {
         label: 'Roles',
-        screen: 'RolesList',
+        screen: '/iam/roles',
         icon: 'shield-account',
         permission: PERMISSIONS.ROLE_VIEW,
       },
       {
         label: 'Settings',
-        screen: 'Settings',
+        screen: '/settings',
         icon: 'cog',
         permission: null,
       },
@@ -65,11 +67,12 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
   },
   {
     label: 'Lists',
+    screen: '',
     icon: 'format-list-bulleted',
     children: [
       {
         label: 'Varieties',
-        screen: 'VarietiesList',
+        screen: '/varieties',
         icon: 'leaf',
         permission: PERMISSIONS.VARIETY_VIEW,
       },

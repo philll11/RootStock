@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 import { useClients } from '@rootstock/clients/clients-data-access';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 
-export const ClientsListScreen = ({ navigation }: any) => {
+export const ClientsListScreen = () => {
+  const router = useRouter();
   const theme = useTheme() as AppTheme;
   const { clients, isLoading } = useClients();
   const { can } = usePermission();
@@ -28,7 +30,7 @@ export const ClientsListScreen = ({ navigation }: any) => {
       isEmpty={!isLoading && filteredClients.length === 0}
       onAdd={
         can(PERMISSIONS.CLIENT_CREATE)
-          ? () => navigation.navigate('ClientForm')
+          ? () => router.push('/iam/clients/create')
           : undefined
       }
     >
@@ -42,7 +44,7 @@ export const ClientsListScreen = ({ navigation }: any) => {
             left={(props) => <List.Icon {...props} icon="domain" />}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() =>
-              navigation.navigate('ClientForm', { clientId: item._id })
+              router.push(`/iam/clients/${item._id}`)
             }
             style={styles.listItem}
           />

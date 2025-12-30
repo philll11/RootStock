@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
-import { List } from 'react-native-paper';
+import { List, FAB } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 import { useRoles } from '@rootstock/roles/roles-data-access';
 import { ListLayout } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 
-export const RolesListScreen = ({ navigation }: any) => {
+export const RolesListScreen = () => {
+  const router = useRouter();
   const { roles, isLoading } = useRoles();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,11 +27,6 @@ export const RolesListScreen = ({ navigation }: any) => {
       searchPlaceholder="Search roles"
       emptyText="No roles found"
       isEmpty={!isLoading && filteredRoles.length === 0}
-      onAdd={
-        can(PERMISSIONS.ROLE_CREATE)
-          ? () => navigation.navigate('RoleForm')
-          : undefined
-      }
     >
       <FlatList
         data={filteredRoles}
@@ -41,13 +38,18 @@ export const RolesListScreen = ({ navigation }: any) => {
             description={item.description}
             left={(props) => <List.Icon {...props} icon="shield-account" />}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() =>
-              navigation.navigate('RoleForm', { roleId: item._id })
-            }
+            onPress={() => router.push(`/iam/roles/${item._id}`)}
             style={styles.listItem}
           />
         )}
       />
+      {can(PERMISSIONS.ROLE_CREATE) && (
+        <FAB
+          icon="plus"
+          style={styles.fab}
+          onPress={() => router.push('/iam/roles/create')}
+        />
+      )}
     </ListLayout>
   );
 };
@@ -57,6 +59,13 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   listItem: {
-    paddingHorizontal: spacing.sm,
+    backgroundColor: 'white',
+    marginBottom: 1,
+  },
+  fab: {
+    position: 'absolute',
+    margin: spacing.md,
+    right: 0,
+    bottom: 0,
   },
 });

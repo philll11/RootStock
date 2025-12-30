@@ -1,4 +1,3 @@
-// frontend/apps/mobile/src/app/screens/SettingsScreen.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { List, RadioButton, Appbar, useTheme } from 'react-native-paper';
@@ -7,7 +6,7 @@ import { useAuth } from '@rootstock/auth/auth-data-access';
 import { useUsers } from '@rootstock/users/users-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
 
-export const SettingsScreen = ({ navigation }: any) => {
+export default function SettingsScreen() {
   const { user } = useAuth();
   const { updateUser } = useUsers();
   const { toggleDrawer } = useDrawer();
@@ -20,7 +19,10 @@ export const SettingsScreen = ({ navigation }: any) => {
       try {
         await updateUser({
           id: user._id,
-          data: { preferences: { theme: value as 'light' | 'dark' | 'auto' } }
+          data: { 
+            preferences: { theme: value as 'light' | 'dark' | 'auto' },
+            __v: user.__v
+          }
         });
         await queryClient.invalidateQueries({ queryKey: ['auth', 'profile'] });
       } catch (error) {
@@ -63,7 +65,7 @@ export const SettingsScreen = ({ navigation }: any) => {
       </List.Section>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {

@@ -6,12 +6,12 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { TextInput, Button, Text, Title, useTheme } from 'react-native-paper';
+import { TextInput, Button, Text, useTheme } from 'react-native-paper';
 import { useLogin } from '@rootstock/auth/auth-data-access';
-import { spacing } from '@rootstock/ui/theme'; // NEW IMPORT
+import { spacing } from '@rootstock/ui/theme';
 
 export const LoginScreen = ({ navigation }: any) => {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState('leo.phil.work@gmail.com');
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   const loginMutation = useLogin();

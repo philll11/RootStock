@@ -1,15 +1,16 @@
-// frontend/apps/mobile/src/app/screens/ProfileScreen.tsx
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, Appbar, HelperText, useTheme } from 'react-native-paper';
+import { TextInput, Button, Appbar, useTheme } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 import { useAuth, setSuppressSessionExpiry } from '@rootstock/auth/auth-data-access';
 import { useUsers, UpdateUserDto } from '@rootstock/users/users-data-access';
 import { spacing } from '@rootstock/ui/theme';
 
-export const ProfileScreen = ({ navigation }: any) => {
+export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { updateUser, isUpdating } = useUsers();
   const theme = useTheme();
+  const router = useRouter();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -52,6 +53,7 @@ export const ProfileScreen = ({ navigation }: any) => {
       firstName,
       lastName,
       email,
+      __v: user.__v,
     };
 
     if (password) {
@@ -69,7 +71,7 @@ export const ProfileScreen = ({ navigation }: any) => {
       }
 
       setPassword('');
-      navigation.goBack();
+      router.back();
     } catch (error) {
       console.error('Failed to update profile', error);
       setSuppressSessionExpiry(false);
@@ -79,7 +81,7 @@ export const ProfileScreen = ({ navigation }: any) => {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
+        <Appbar.BackAction onPress={() => router.back()} />
         <Appbar.Content title="Edit Profile" />
       </Appbar.Header>
 
@@ -111,24 +113,19 @@ export const ProfileScreen = ({ navigation }: any) => {
             autoCapitalize="none"
             keyboardType="email-address"
           />
-          
           <TextInput
-            label="New Password"
+            label="New Password (Optional)"
             value={password}
             onChangeText={setPassword}
             mode="outlined"
-            style={styles.input}
             secureTextEntry
-            placeholder="Leave blank to keep current"
+            style={styles.input}
           />
-          <HelperText type="info">
-            Leave password blank to keep current password.
-          </HelperText>
 
           <Button 
             mode="contained" 
             onPress={handleSavePress} 
-            loading={isUpdating} 
+            loading={isUpdating}
             style={styles.button}
           >
             Save Changes
@@ -137,7 +134,7 @@ export const ProfileScreen = ({ navigation }: any) => {
       </KeyboardAvoidingView>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -147,7 +144,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   input: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   button: {
     marginTop: spacing.md,
