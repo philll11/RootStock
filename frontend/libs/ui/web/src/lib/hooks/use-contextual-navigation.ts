@@ -99,9 +99,7 @@ export function useContextualNavigation(basePath?: string): ContextualNavigation
       }
 
       const separator = path.includes('?') ? '&' : '?';
-      const nextUrl = returnTo
-        ? `${path}${separator}returnTo=${returnTo}`
-        : path;
+      const nextUrl = returnTo ? `${path}${separator}returnTo=${returnTo}` : path;
 
       navigate(nextUrl, { replace: true });
     },

@@ -72,7 +72,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
 
   const handleCreatePage = () => {
     const url = orchardId ? `/blocks/new?orchardId=${orchardId}` : '/blocks/new';
-    navigate(getLinkTo(url));
+    navigate(getLinkTo(url, { strategy: 'stack' }));
   };
 
   const handleView = (block: Block) => {
@@ -84,7 +84,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
 
   const handleViewPage = (block: Block, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(getLinkTo(`/blocks/${block._id}`));
+    navigate(getLinkTo(`/blocks/${block._id}`, { strategy: 'stack' }));
   };
 
   const handleEdit = (block: Block, e?: React.MouseEvent) => {
@@ -97,7 +97,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
 
   const handleEditPage = (block: Block, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(getLinkTo(`/blocks/${block._id}/edit`));
+    navigate(getLinkTo(`/blocks/${block._id}/edit`, { strategy: 'stack' }));
   };
 
   const handleDeleteClick = (block: Block, e?: React.MouseEvent) => {
