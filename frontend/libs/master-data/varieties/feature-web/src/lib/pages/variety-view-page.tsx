@@ -28,7 +28,7 @@ export function VarietyViewPage() {
   const handleDelete = async () => {
     if (id) {
       try {
-        await deleteVariety({ id });
+        await deleteVariety(id);
         goBack();
       } catch (error) {
         console.error('Failed to delete variety', error);

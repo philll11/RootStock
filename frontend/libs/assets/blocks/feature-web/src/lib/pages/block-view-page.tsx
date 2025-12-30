@@ -30,7 +30,7 @@ export function BlockViewPage() {
 
   const handleDelete = async () => {
     if (id) {
-      await deleteBlock({ id });
+      await deleteBlock(id);
       goBack();
     }
   };

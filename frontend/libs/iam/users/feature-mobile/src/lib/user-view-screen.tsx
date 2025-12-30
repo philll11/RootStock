@@ -32,7 +32,10 @@ export function UserViewScreen() {
   return (
     <UserForm
       mode="view"
-      defaultValues={user}
+      defaultValues={{
+        ...user,
+        roleId: typeof user.roleId === 'object' ? user.roleId._id : user.roleId,
+      }}
       onSubmit={async () => {}}
       onCancel={() => router.back()}
     />

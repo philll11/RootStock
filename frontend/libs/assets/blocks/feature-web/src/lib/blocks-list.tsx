@@ -10,7 +10,7 @@ import {
   useDeleteBlock,
   Block,
   CreateBlockDto,
-} from '@rootstock/assets/blocks/data-access';
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm, BlockFormMode } from './block-form';
 import {
   ConfirmModal,
@@ -108,7 +108,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
   const handleConfirmDelete = async () => {
     if (blockToDelete) {
       try {
-        await deleteBlock({ id: blockToDelete._id });
+        await deleteBlock(blockToDelete._id);
         closeDeleteModal();
         setBlockToDelete(null);
       } catch (error) {
@@ -120,7 +120,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
   const handleSubmit = async (values: any) => {
     try {
       if (formMode === 'create') {
-        await createBlock({ data: values, orchardId });
+        await createBlock({ ...values, orchardId: orchardId ?? values.orchardId });
         setCreateFormDraft({});
       } else {
         if (selectedBlock) {

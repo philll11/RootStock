@@ -218,10 +218,9 @@ export function UserForm({
                 value={value}
                 onValueChange={onChange}
                 buttons={[
-                  { value: UserType.Employee, label: 'Employee' },
-                  { value: UserType.Contact, label: 'Contact' },
+                  { value: UserType.Employee, label: 'Employee', disabled: isView },
+                  { value: UserType.Contact, label: 'Contact', disabled: isView },
                 ]}
-                disabled={isView}
               />
             )}
           />

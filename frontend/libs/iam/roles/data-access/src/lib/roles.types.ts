@@ -26,5 +26,5 @@ export interface UpdateRoleDto {
   visibilityScope?: VisibilityScope;
   permissions?: string[];
   isActive?: boolean;
-  __v: number; // Required for OCC
+  __v?: number; // Required for OCC
 }

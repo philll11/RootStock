@@ -50,7 +50,7 @@ export function MainLayout() {
             >
               <IconUser size={iconSizes.lg} stroke={1.5} />
             </ActionIcon>
-            <Button variant="subtle" onClick={logout}>Logout</Button>
+            <Button variant="subtle" onClick={() => logout()}>Logout</Button>
           </Group>
         </Group>
       </AppShell.Header>

@@ -44,7 +44,7 @@ export interface UpdateUserDto {
   email?: string;
   password?: string;
   userType?: UserType;
-  __v: number;
+  __v?: number;
   roleId?: string;
   clientIds?: string[];
   isActive?: boolean;

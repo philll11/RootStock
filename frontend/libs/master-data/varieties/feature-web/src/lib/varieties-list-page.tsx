@@ -86,7 +86,7 @@ export function VarietiesListPage() {
 
   const handleConfirmDelete = () => {
     if (varietyToDelete) {
-      deleteVariety({ id: varietyToDelete._id });
+      deleteVariety(varietyToDelete._id);
       closeDeleteModal();
       setVarietyToDelete(null);
     }

@@ -42,7 +42,10 @@ export function UserEditScreen() {
   return (
     <UserForm
       mode="edit"
-      defaultValues={user}
+      defaultValues={{
+        ...user,
+        roleId: typeof user.roleId === 'object' ? user.roleId._id : user.roleId,
+      }}
       onSubmit={handleSubmit}
       onCancel={() => router.back()}
       isSubmitting={isUpdating}
