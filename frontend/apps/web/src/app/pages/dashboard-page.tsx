@@ -1,12 +1,23 @@
-import { Skeleton, Title } from '@mantine/core';
+// frontend/apps/web/src/app/pages/dashboard-page.tsx
+import { Skeleton, Title, SimpleGrid, Paper } from '@mantine/core';
+import { shadows } from '@rootstock/ui/theme';
 
 export function DashboardPage() {
   return (
     <>
       <Title order={2} mb="lg">Dashboard</Title>
-      <Skeleton height={200} radius="md" animate={false} />
-      <Skeleton height={200} radius="md" mt="md" animate={false} />
+      
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+        <Paper shadow={shadows.card} p="md" radius="md" withBorder>
+          <Skeleton height={150} radius="md" animate={false} />
+        </Paper>
+        <Paper shadow={shadows.card} p="md" radius="md" withBorder>
+          <Skeleton height={150} radius="md" animate={false} />
+        </Paper>
+        <Paper shadow={shadows.card} p="md" radius="md" withBorder>
+          <Skeleton height={150} radius="md" animate={false} />
+        </Paper>
+      </SimpleGrid>
     </>
   );
 }
-

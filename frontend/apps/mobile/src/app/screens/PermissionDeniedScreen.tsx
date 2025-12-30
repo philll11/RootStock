@@ -1,7 +1,9 @@
+// frontend/apps/mobile/src/app/screens/PermissionDeniedScreen.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
+import { spacing } from '@rootstock/ui/theme';
 
 export const PermissionDeniedScreen = () => {
   const theme = useTheme();
@@ -31,18 +33,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.lg,
   },
   title: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
     fontWeight: 'bold',
   },
   message: {
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: spacing.xl,
     opacity: 0.7,
   },
   button: {
-    marginTop: 16,
+    marginTop: spacing.md,
   },
 });

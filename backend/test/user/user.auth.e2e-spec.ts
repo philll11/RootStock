@@ -8,10 +8,10 @@ import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
 
 describe('Users Authorization & Security (e2e)', () => {
     let app: INestApplication;
@@ -93,10 +93,10 @@ describe('Users Authorization & Security (e2e)', () => {
             ]);
 
             // Create tokens for each persona
-            platformAdminToken = jwtService.sign({ sub: users[0].recordId });
-            regionManagerToken = jwtService.sign({ sub: users[1].recordId });
-            farmOwnerToken = jwtService.sign({ sub: users[2].recordId });
-            unauthorizedUserToken = jwtService.sign({ sub: users[5].recordId });
+            platformAdminToken = jwtService.sign({ sub: users[0].recordId, tokenVersion: 0 });
+            regionManagerToken = jwtService.sign({ sub: users[1].recordId, tokenVersion: 0 });
+            farmOwnerToken = jwtService.sign({ sub: users[2].recordId, tokenVersion: 0 });
+            unauthorizedUserToken = jwtService.sign({ sub: users[5].recordId, tokenVersion: 0 });
         });
 
         it('Global Admin should see ALL users across the entire platform', async () => {
@@ -138,9 +138,9 @@ describe('Users Authorization & Security (e2e)', () => {
                 { recordId: 'CONTACT_CA', name: 'Cali Contact', firstName: 'Cali', lastName: 'Contact', email: 'contact@ca.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [appleOrchardClient._id] },
                 { recordId: 'CONTACT_STANDALONE', name: 'Standalone Contact', firstName: 'Stand', lastName: 'Alone', email: 'standalone@contact.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [independentClient._id] },
             ]);
-            platformAdminToken = jwtService.sign({ sub: users[0].recordId });
-            regionManagerToken = jwtService.sign({ sub: users[1].recordId });
-            farmOwnerToken = jwtService.sign({ sub: users[2].recordId });
+            platformAdminToken = jwtService.sign({ sub: users[0].recordId, tokenVersion: 0 });
+            regionManagerToken = jwtService.sign({ sub: users[1].recordId, tokenVersion: 0 });
+            farmOwnerToken = jwtService.sign({ sub: users[2].recordId, tokenVersion: 0 });
         });
 
         // --- CREATE Operation Tests ---
@@ -190,13 +190,14 @@ describe('Users Authorization & Security (e2e)', () => {
         // --- Layer 3 Subsidiary Containment Tests ---
         describe('PATCH /users/:id - Subsidiary Containment Rules', () => {
             it('should allow assigning a CONTACT to another client WITHIN the same subsidiary', async () => {
+                const current = await request(app.getHttpServer()).get(`/users/${caliContactUser.id}`).set('Authorization', `Bearer ${platformAdminToken}`).expect(200);
                 await request(app.getHttpServer()).patch(`/users/${caliContactUser.id}`).set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ clientIds: [appleOrchardClient._id.toString(), berryFarmClient._id.toString()] })
+                    .send({ clientIds: [appleOrchardClient._id.toString(), berryFarmClient._id.toString()], __v: current.body.__v })
                     .expect(200);
             });
             it('should FORBID assigning a CONTACT to a client in a DIFFERENT subsidiary (Layer 3)', async () => {
                 await request(app.getHttpServer()).patch(`/users/${caliContactUser.id}`).set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ clientIds: [appleOrchardClient._id.toString(), crossSubsidiaryClient._id.toString()] })
+                    .send({ clientIds: [appleOrchardClient._id.toString(), crossSubsidiaryClient._id.toString()], __v: 0 })
                     .expect(400);
             });
             it('should FORBID re-assigning a subsidiary-based CONTACT to a standalone client (Layer 3)', async () => {
@@ -204,7 +205,7 @@ describe('Users Authorization & Security (e2e)', () => {
                 await request(app.getHttpServer())
                     .patch(`/users/${caliContactUser.id}`)
                     .set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ clientIds: [independentClient._id.toString()] })
+                    .send({ clientIds: [independentClient._id.toString()], __v: 0 })
                     .expect(400); // Bad Request, violates the data silo rule
             });
 
@@ -213,7 +214,7 @@ describe('Users Authorization & Security (e2e)', () => {
                 await request(app.getHttpServer())
                     .patch(`/users/${standaloneContactUser.id}`)
                     .set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ clientIds: [appleOrchardClient._id.toString()] })
+                    .send({ clientIds: [appleOrchardClient._id.toString()], __v: 0 })
                     .expect(400); // Bad Request, violates the data silo rule
             });
         });
@@ -221,18 +222,19 @@ describe('Users Authorization & Security (e2e)', () => {
         // --- General UPDATE Operation Tests ---
         describe('PATCH /users/:id - General Permissions', () => {
             it('should allow a user with USER_EDIT to update a user within their scope', async () => {
+                const current = await request(app.getHttpServer()).get(`/users/${caliEmployeeUser.id}`).set('Authorization', `Bearer ${farmOwnerToken}`).expect(200);
                 await request(app.getHttpServer()).patch(`/users/${caliEmployeeUser.id}`).set('Authorization', `Bearer ${farmOwnerToken}`)
-                    .send({ firstName: "Updated" })
+                    .send({ firstName: "Updated", __v: current.body.__v })
                     .expect(200);
             });
             it('should FORBID a user without USER_EDIT from updating a user (Layer 1)', async () => {
                 // We need a user with USER_VIEW but not USER_EDIT to test this properly. Let's create one.
                 const viewOnlyRole = await roleModel.create({ recordId: 'VIEW_ONLY', name: 'View Only', permissions: [PERMISSIONS.USER_VIEW], visibilityScope: VisibilityScope.CLIENT });
                 const viewOnlyUser = await userModel.create({ recordId: 'VIEW_ONLY', name: 'Viewer', firstName: 'View', lastName: 'Only', email: 'view@only.com', userType: UserType.EMPLOYEE, roleId: viewOnlyRole._id, clientIds: [appleOrchardClient._id] });
-                const viewOnlyToken = jwtService.sign({ sub: viewOnlyUser.recordId });
+                const viewOnlyToken = jwtService.sign({ sub: viewOnlyUser.recordId, tokenVersion: 0 });
 
                 await request(app.getHttpServer()).patch(`/users/${caliEmployeeUser.id}`).set('Authorization', `Bearer ${viewOnlyToken}`)
-                    .send({ firstName: "ShouldFail" })
+                    .send({ firstName: "ShouldFail", __v: 0 })
                     .expect(403);
             });
         });

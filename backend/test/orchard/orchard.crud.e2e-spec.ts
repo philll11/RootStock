@@ -1,4 +1,4 @@
-// backend/test/subsidiary/subsidiary.advanced.e2e-spec.ts
+// backend/test/orchard/orchard.crud.e2e-spec.ts
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
@@ -7,12 +7,12 @@ import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Orchard, OrchardDocument } from '../../src/orchards/schemas/orchard.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { CreateOrchardDto } from '../../src/orchards/dto/create-orchard.dto';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Orchard, OrchardDocument } from '../../src/assets/orchards/schemas/orchard.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { CreateOrchardDto } from '../../src/assets/orchards/dto/create-orchard.dto';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
 describe('Orchards CRUD & Business Logic (e2e)', () => {
@@ -62,8 +62,8 @@ describe('Orchards CRUD & Business Logic (e2e)', () => {
             { recordId: 'OWNER_CRUD', name: 'Owner', firstName: 'Owner', lastName: 'User', email: 'owner_crud@test.com', userType: UserType.CONTACT, roleId: clientOwnerRole._id, clientIds: [testClientA._id] },
         ]);
 
-        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId });
-        clientOwnerToken = jwtService.sign({ sub: clientOwner.recordId });
+        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId, tokenVersion: 0 });
+        clientOwnerToken = jwtService.sign({ sub: clientOwner.recordId, tokenVersion: 0 });
 
         [validContactUserA, validContactUserB, inactiveContactUser, employeeUser] = await userModel.create([
             { recordId: 'CONTACT_CRUD_A', name: 'Contact A', firstName: 'Contact', lastName: 'A', email: 'contact_crud_a@test.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [testClientA._id] },
@@ -143,23 +143,48 @@ describe('Orchards CRUD & Business Logic (e2e)', () => {
 
         it('should successfully update an orchard`s name and user list', async () => {
             const res = await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${clientOwnerToken}`)
-                .send({ name: 'Updated Orchard Name', userIds: [validContactUserA._id.toString(), employeeUser._id.toString()] }).expect(200);
+                .send({ 
+                    name: 'Updated Orchard Name', 
+                    userIds: [validContactUserA._id.toString(), employeeUser._id.toString()],
+                    __v: testOrchard.__v 
+                }).expect(200);
             expect(res.body.name).toBe('Updated Orchard Name');
             expect(res.body.userIds).toEqual(
                 expect.arrayContaining([validContactUserA._id.toString(), employeeUser._id.toString()])
             );
+            expect(res.body.__v).toBe(testOrchard.__v + 1);
         });
 
         it('should clear user assignments when an empty array is passed', async () => {
             const res = await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${clientOwnerToken}`)
-                .send({ userIds: [] }).expect(200);
+                .send({ 
+                    userIds: [],
+                    __v: testOrchard.__v
+                }).expect(200);
             expect(res.body.userIds).toHaveLength(0);
         });
 
         it('should reject an update with invalid (non-existent) user IDs', async () => {
             const nonExistentId = new Types.ObjectId().toHexString();
             await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${clientOwnerToken}`)
-                .send({ userIds: [nonExistentId] }).expect(400);
+                .send({ 
+                    userIds: [nonExistentId],
+                    __v: testOrchard.__v
+                }).expect(400);
+        });
+
+        it('should fail with 409 Conflict when version mismatch occurs', async () => {
+            // Simulate a concurrent update
+            await orchardModel.updateOne({ _id: testOrchard._id }, { $inc: { __v: 1 } });
+
+            await request(app.getHttpServer())
+                .patch(`/orchards/${testOrchard._id}`)
+                .set('Authorization', `Bearer ${clientOwnerToken}`)
+                .send({ 
+                    name: 'Conflict Update',
+                    __v: testOrchard.__v // Old version
+                })
+                .expect(409);
         });
     });
 

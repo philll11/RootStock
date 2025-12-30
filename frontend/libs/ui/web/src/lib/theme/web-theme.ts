@@ -1,15 +1,10 @@
 import { createTheme, MantineThemeOverride } from '@mantine/core';
-import { palette, lightColors, darkColors } from '@rootstock/ui/theme';
-import { typography, spacing, radius } from '@rootstock/ui/theme';
+import { palette, typography, spacing, radius, zIndex, shadows } from '@rootstock/ui/theme';
 
-// Helper to map our palette to Mantine's expected 10-shade array
-// Mantine expects colors[5] or colors[6] to be the primary shade
 const brandColors = Object.values(palette.brand) as [
   string, string, string, string, string, string, string, string, string, string
 ];
 
-// Map neutral palette to Mantine's gray scale
-// We skip neutral[0] (white) and neutral[950] to fit into 10 shades
 const neutralColors = [
   palette.neutral[50],
   palette.neutral[100],
@@ -59,11 +54,42 @@ export const webTheme: MantineThemeOverride = createTheme({
     lg: `${radius.lg}px`,
     xl: `${radius.xl}px`,
   },
-  // We can add component defaults here later
   components: {
     Button: {
       defaultProps: {
+        size: 'sm',
         radius: 'md',
+      },
+    },
+    ActionIcon: {
+      defaultProps: {
+        size: 'lg',
+        variant: 'subtle',
+      },
+    },
+    Badge: {
+      defaultProps: {
+        size: 'sm',
+        radius: 'sm',
+      },
+    },
+    Table: {
+      defaultProps: {
+        verticalSpacing: 'sm',
+        highlightOnHover: true,
+      },
+    },
+    Modal: {
+      defaultProps: {
+        zIndex: zIndex.modal,
+        shadow: shadows.lg,
+      },
+    },
+    Drawer: {
+      defaultProps: {
+        zIndex: zIndex.drawer,
+        shadow: shadows.xl,
+        overlayProps: { opacity: 0.5, blur: 2 },
       },
     },
     TextInput: { styles: errorGlowStyles },

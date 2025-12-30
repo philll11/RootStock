@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { UserDocument } from '../../users/schemas/user.schema';
+import { UserDocument } from '../../iam/users/schemas/user.schema';
 
 /**
  * Custom parameter decorator to extract the fully populated user object from the request.

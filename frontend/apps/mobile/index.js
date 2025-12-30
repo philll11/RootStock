@@ -1,4 +1,9 @@
 import { registerRootComponent } from 'expo';
+import { notify, appControl } from '@rootstock/shared/util';
+import { mobileNotificationAdapter, mobileAppControl } from '@rootstock/ui/mobile';
+
+notify.setAdapter(mobileNotificationAdapter);
+appControl.setAdapter(mobileAppControl);
 
 import App from './src/app/App';
 

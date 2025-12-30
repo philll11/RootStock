@@ -20,6 +20,13 @@ export const PERMISSIONS = {
   ORCHARD_DELETE: 'Orchard:Delete',
   ORCHARD_MANAGE_INACTIVE: 'Orchard:ManageInactive',
 
+  // --- Block Management ---
+  BLOCK_CREATE: 'Block:Create',
+  BLOCK_VIEW: 'Block:View',
+  BLOCK_EDIT: 'Block:Edit',
+  BLOCK_DELETE: 'Block:Delete',
+  BLOCK_MANAGE_INACTIVE: 'Block:ManageInactive',
+
   // --- Role Management ---
   ROLE_CREATE: 'Role:Create',
   ROLE_VIEW: 'Role:View',
@@ -33,6 +40,13 @@ export const PERMISSIONS = {
   SUBSIDIARY_EDIT: 'Subsidiary:Edit',
   SUBSIDIARY_DELETE: 'Subsidiary:Delete',
   SUBSIDIARY_MANAGE_INACTIVE: 'Subsidiary:ManageInactive',
+
+  // --- Variety Management (Master Data) ---
+  VARIETY_CREATE: 'Variety:Create',
+  VARIETY_VIEW: 'Variety:View',
+  VARIETY_EDIT: 'Variety:Edit',
+  VARIETY_DELETE: 'Variety:Delete',
+  VARIETY_MANAGE_INACTIVE: 'Variety:ManageInactive',
 
   // --- System Configuration ---
   COUNTERS_VIEW: 'Counters:View',
@@ -49,4 +63,5 @@ export enum Resource {
   ROLE = 'Role',
   SUBSIDIARY = 'Subsidiary',
   COUNTERS = 'Counters',
+  VARIETY = 'Variety',
 }

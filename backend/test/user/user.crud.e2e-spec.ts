@@ -7,11 +7,11 @@ import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { setupTestApp, teardownTestApp } from '../test-utils';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { CreateUserDto } from '../../src/users/dto/create-user.dto';
-import { UpdateUserDto } from '../../src/users/dto/update-user.dto';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { CreateUserDto } from '../../src/iam/users/dto/create-user.dto';
+import { UpdateUserDto } from '../../src/iam/users/dto/update-user.dto';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
 
 describe('Users CRUD & Business Logic (e2e)', () => {
     let app: INestApplication;
@@ -53,8 +53,8 @@ describe('Users CRUD & Business Logic (e2e)', () => {
         const globalAdmin = await userModel.create({ recordId: 'ADMIN_CRUD', name: 'Admin', firstName: 'Admin', lastName: 'User', email: 'admin_crud@test.com', userType: UserType.EMPLOYEE, roleId: employeeRole._id });
         selfUpdatingContactUser = await userModel.create({ recordId: 'CONTACT_SELF_UPDATE', name: 'Self Updater', firstName: 'Self', lastName: 'Updater', email: 'self@update.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [testClientA._id] });
         
-        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId });
-        selfUpdatingContactToken = jwtService.sign({ sub: selfUpdatingContactUser.recordId });
+        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId, tokenVersion: 0 });
+        selfUpdatingContactToken = jwtService.sign({ sub: selfUpdatingContactUser.recordId, tokenVersion: 0 });
     });
 
     afterAll(async () => await teardownTestApp({ app, mongod }));
@@ -127,15 +127,42 @@ describe('Users CRUD & Business Logic (e2e)', () => {
         });
 
         it('should successfully update a user`s name, role, and clients (Happy Path)', async () => {
-            const updateDto: UpdateUserDto = { firstName: 'Patched', lastName: 'User', roleId: contactRole._id.toString(), clientIds: [testClientB._id.toString()] };
+            // 1. Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            const updateDto: UpdateUserDto = { firstName: 'Patched', lastName: 'User', roleId: contactRole._id.toString(), clientIds: [testClientB._id.toString()], __v: current.body.__v };
             const res = await request(app.getHttpServer()).patch(`/users/${testUser._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send(updateDto).expect(200);
             expect(res.body.name).toBe('Patched User');
             expect(res.body.roleId).toBe(contactRole._id.toString());
             expect(res.body.clientIds).toContain(testClientB._id.toString());
+            expect(res.body.__v).toBe(current.body.__v + 1);
+        });
+
+        it('should throw 409 Conflict when updating with an outdated version', async () => {
+            // 1. Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            // 2. Simulate a concurrent update (bump version in DB directly)
+            await userModel.updateOne({ _id: testUser._id }, { $inc: { __v: 1 } });
+
+            // 3. Attempt update with old version
+            const updateDto: UpdateUserDto = { firstName: 'Stale Update', __v: current.body.__v };
+            await request(app.getHttpServer())
+                .patch(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send(updateDto)
+                .expect(409);
         });
 
         it('should allow a CONTACT user with USER_EDIT to update their OWN personal info', async () => {
-            const updateDto: UpdateUserDto = { firstName: 'Self', lastName: 'Updated' };
+            const current = await request(app.getHttpServer()).get(`/users/${selfUpdatingContactUser._id}`).set('Authorization', `Bearer ${selfUpdatingContactToken}`).expect(200);
+            const updateDto: UpdateUserDto = { firstName: 'Self', lastName: 'Updated', __v: current.body.__v };
             const res = await request(app.getHttpServer()).patch(`/users/${selfUpdatingContactUser._id}`).set('Authorization', `Bearer ${selfUpdatingContactToken}`).send(updateDto).expect(200);
             expect(res.body.name).toBe('Self Updated');
         });
@@ -144,9 +171,9 @@ describe('Users CRUD & Business Logic (e2e)', () => {
             // This test requires a contact user WITHOUT USER_EDIT permission.
             const restrictedRole = await app.get<Model<RoleDocument>>(getModelToken(Role.name)).create({ recordId: 'RESTRICTED', name: 'Restricted Contact', permissions: [PERMISSIONS.USER_VIEW], visibilityScope: VisibilityScope.CLIENT });
             const restrictedContact = await userModel.create({ recordId: 'RESTRICTED_PATCH', name: 'Restricted', firstName: 'Restricted', lastName: 'User', email: 'restricted@patch.com', userType: UserType.CONTACT, roleId: restrictedRole._id, clientIds: [testClientA._id] });
-            const restrictedToken = jwtService.sign({ sub: restrictedContact.recordId });
+            const restrictedToken = jwtService.sign({ sub: restrictedContact.recordId, tokenVersion: 0 });
 
-            const updateDto: UpdateUserDto = { roleId: employeeRole._id.toString() };
+            const updateDto: UpdateUserDto = { roleId: employeeRole._id.toString(), __v: 0 };
             await request(app.getHttpServer()).patch(`/users/${restrictedContact._id}`).set('Authorization', `Bearer ${restrictedToken}`).send(updateDto).expect(403);
         });
 
@@ -154,9 +181,9 @@ describe('Users CRUD & Business Logic (e2e)', () => {
             // This test also requires a contact user WITHOUT USER_EDIT permission.
             const restrictedRole = await app.get<Model<RoleDocument>>(getModelToken(Role.name)).create({ recordId: 'RESTRICTED_2', name: 'Restricted Contact 2', permissions: [PERMISSIONS.USER_VIEW], visibilityScope: VisibilityScope.CLIENT });
             const restrictedContact = await userModel.create({ recordId: 'RESTRICTED_PATCH_2', name: 'Restricted 2', firstName: 'Restricted', lastName: 'User 2', email: 'restricted2@patch.com', userType: UserType.CONTACT, roleId: restrictedRole._id, clientIds: [testClientA._id] });
-            const restrictedToken = jwtService.sign({ sub: restrictedContact.recordId });
+            const restrictedToken = jwtService.sign({ sub: restrictedContact.recordId, tokenVersion: 0 });
 
-            const updateDto: UpdateUserDto = { firstName: 'Should Fail' };
+            const updateDto: UpdateUserDto = { firstName: 'Should Fail', __v: 0 };
             await request(app.getHttpServer()).patch(`/users/${testUser._id}`).set('Authorization', `Bearer ${restrictedToken}`).send(updateDto).expect(403);
         });
     });

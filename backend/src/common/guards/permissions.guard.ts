@@ -1,7 +1,7 @@
 // backend/src/common/guards/permissions.guard.ts
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { User } from '../../users/schemas/user.schema';
+import { User } from '../../iam/users/schemas/user.schema';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 
 @Injectable()

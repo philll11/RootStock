@@ -1,4 +1,4 @@
-import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings, IconTree } from '@tabler/icons-react';
+import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings, IconTree, IconLeaf } from '@tabler/icons-react';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export interface NavigationItem {
@@ -7,6 +7,7 @@ export interface NavigationItem {
   icon?: any;
   permission?: string | null;
   type?: 'link' | 'header';
+  children?: NavigationItem[];
 }
 
 export const NAVIGATION_ITEMS: NavigationItem[] = [
@@ -18,42 +19,73 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     type: 'link',
   },
   {
-    label: 'Management',
-    type: 'header',
-  },
-  {
-    label: 'Clients',
-    path: '/clients',
-    icon: IconBuildingSkyscraper,
-    permission: PERMISSIONS.CLIENT_VIEW,
+    label: 'Entities',
     type: 'link',
-  },
-  {
-    label: 'Orchards',
-    path: '/orchards',
     icon: IconTree,
-    permission: PERMISSIONS.ORCHARD_VIEW,
-    type: 'link',
+    children: [
+      {
+        label: 'Clients',
+        path: '/clients',
+        icon: IconBuildingSkyscraper,
+        permission: PERMISSIONS.CLIENT_VIEW,
+        type: 'link',
+      },
+      {
+        label: 'Orchards',
+        path: '/orchards',
+        icon: IconTree,
+        permission: PERMISSIONS.ORCHARD_VIEW,
+        type: 'link',
+      },
+      {
+        label: 'Blocks',
+        path: '/blocks',
+        icon: IconLeaf,
+        permission: PERMISSIONS.BLOCK_VIEW,
+        type: 'link',
+      },
+    ]
   },
   {
-    label: 'Users',
-    path: '/users',
-    icon: IconUsers,
-    permission: PERMISSIONS.USER_VIEW,
+    label: 'Lists',
     type: 'link',
+    icon: IconLeaf,
+    children: [
+      {
+        label: 'Varieties',
+        path: '/varieties',
+        icon: IconLeaf,
+        permission: PERMISSIONS.VARIETY_VIEW,
+        type: 'link',
+      },
+    ]
   },
   {
-    label: 'Roles',
-    path: '/roles',
-    icon: IconShieldLock,
-    permission: PERMISSIONS.ROLE_VIEW,
+    label: 'System Management',
     type: 'link',
-  },
-  {
-    label: 'Settings',
-    path: '/settings',
     icon: IconSettings,
-    permission: null,
-    type: 'link',
+    children: [
+      {
+        label: 'Users',
+        path: '/users',
+        icon: IconUsers,
+        permission: PERMISSIONS.USER_VIEW,
+        type: 'link',
+      },
+      {
+        label: 'Roles',
+        path: '/roles',
+        icon: IconShieldLock,
+        permission: PERMISSIONS.ROLE_VIEW,
+        type: 'link',
+      },
+      {
+        label: 'Settings',
+        path: '/settings',
+        icon: IconSettings,
+        permission: null,
+        type: 'link',
+      },
+    ]
   },
 ];

@@ -8,12 +8,12 @@ import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { UpdateSubsidiaryDto } from '../../src/subsidiaries/dto/update-subsidiary.dto';
+import { UpdateSubsidiaryDto } from '../../src/iam/subsidiaries/dto/update-subsidiary.dto';
 
 describe('Subsidiaries Advanced Business Logic (e2e)', () => {
     let app: INestApplication;
@@ -26,6 +26,10 @@ describe('Subsidiaries Advanced Business Logic (e2e)', () => {
 
     // Tokens
     let platformAdminToken: string;
+
+    // Test Data Entities
+    let testSubsidiary: SubsidiaryDocument;
+    let inactiveSubsidiary: SubsidiaryDocument;
 
     jest.setTimeout(90000);
 
@@ -53,19 +57,37 @@ describe('Subsidiaries Advanced Business Logic (e2e)', () => {
             userType: UserType.EMPLOYEE,
             roleId: adminRole._id,
         });
-        platformAdminToken = jwtService.sign({ sub: adminUser.recordId });
+        platformAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
+
+        [testSubsidiary, inactiveSubsidiary] = await subsidiaryModel.create([
+            { recordId: 'SUB_CRUD_A', name: 'CRUD Test Subsidiary A' },
+            { recordId: 'SUB_CRUD_B', name: 'CRUD Test Subsidiary B', isActive: false },
+        ]);
     });
 
     afterAll(async () => await teardownTestApp({ app, mongod }));
 
-    beforeEach(async () => { 
-        await subsidiaryModel.deleteMany({}); 
+    beforeEach(async () => {
+        await subsidiaryModel.deleteMany({ recordId: { $nin: ['SUB_CRUD_A', 'SUB_CRUD_B'] } });
         await clientModel.deleteMany({});
     });
 
     describe('Transactional Operations - Deletion Integrity', () => {
         it.todo('should handle concurrent deletions gracefully - Requires implementation');
-        it.todo('should correctly throw 409 Conflict when trying to delete a subsidiary with active clients');
+
+
+        it('should prevent deactivation if active clients exist', async () => {
+            await clientModel.create({ recordId: 'CLI_BLOCKER', name: 'Blocking Client', subsidiaryId: testSubsidiary._id, isActive: true });
+
+            // Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/subsidiaries/${testSubsidiary._id}`)
+                .set('Authorization', `Bearer ${platformAdminToken}`)
+                .expect(200);
+
+            const updateDto: UpdateSubsidiaryDto = { isActive: false, __v: current.body.__v };
+            await request(app.getHttpServer()).patch(`/subsidiaries/${testSubsidiary._id}`).set('Authorization', `Bearer ${platformAdminToken}`).send(updateDto).expect(409);
+        });
     });
 
     describe('Business Rule Enforcement - Deactivation Pre-condition', () => {
@@ -76,10 +98,10 @@ describe('Subsidiaries Advanced Business Logic (e2e)', () => {
                 { recordId: 'CLI_ACTIVE_2', name: 'Active Client 2', subsidiaryId: parentSubsidiary._id, isActive: true },
                 { recordId: 'CLI_INACTIVE_1', name: 'Inactive Client', subsidiaryId: parentSubsidiary._id, isActive: false },
             ]);
-            const updateDto: UpdateSubsidiaryDto = { isActive: false };
+            const updateDto: UpdateSubsidiaryDto = { isActive: false, __v: 0 };
 
             const res = await request(app.getHttpServer()).patch(`/subsidiaries/${parentSubsidiary._id}`).set('Authorization', `Bearer ${platformAdminToken}`).send(updateDto).expect(409);
-            
+
             expect(res.body.message).toContain('cannot be deactivated');
             expect(res.body.message).toContain('2 active client(s)');
         });
@@ -89,7 +111,7 @@ describe('Subsidiaries Advanced Business Logic (e2e)', () => {
             await clientModel.create([
                 { recordId: 'CLI_INACTIVE_2', name: 'Inactive Client', subsidiaryId: parentSubsidiary._id, isActive: false },
             ]);
-            const updateDto: UpdateSubsidiaryDto = { isActive: false };
+            const updateDto: UpdateSubsidiaryDto = { isActive: false, __v: 0 };
 
             await request(app.getHttpServer()).patch(`/subsidiaries/${parentSubsidiary._id}`).set('Authorization', `Bearer ${platformAdminToken}`).send(updateDto).expect(200);
         });
@@ -108,14 +130,14 @@ describe('Subsidiaries Advanced Business Logic (e2e)', () => {
 
         it('should return only active clients for a valid subsidiary by default', async () => {
             const res = await request(app.getHttpServer()).get(`/subsidiaries/${parentSubsidiary._id}/clients`).set('Authorization', `Bearer ${platformAdminToken}`).expect(200);
-            
+
             expect(res.body).toHaveLength(1);
             expect(res.body[0].recordId).toBe('CLI_NESTED_1');
         });
 
         it('should return all clients when including inactives', async () => {
             const res = await request(app.getHttpServer()).get(`/subsidiaries/${parentSubsidiary._id}/clients?includeInactives=true`).set('Authorization', `Bearer ${platformAdminToken}`).expect(200);
-            
+
             expect(res.body).toHaveLength(2);
         });
 

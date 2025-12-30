@@ -7,10 +7,10 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
 describe('Clients Authorization & Security (e2e)', () => {
@@ -78,10 +78,10 @@ describe('Clients Authorization & Security (e2e)', () => {
             { recordId: 'STANDALONE', name: 'Standalone', firstName: 'Standalone', lastName: 'User', email: 'standalone@test.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [independentClient._id] },
         ]);
 
-        platformAdminToken = jwtService.sign({ sub: adminUser.recordId });
-        subsidiaryManagerToken = jwtService.sign({ sub: managerUser.recordId });
-        clientOwnerToken = jwtService.sign({ sub: ownerUser.recordId });
-        unauthorizedUserToken = jwtService.sign({ sub: unauthUser.recordId });
+        platformAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
+        subsidiaryManagerToken = jwtService.sign({ sub: managerUser.recordId, tokenVersion: 0 });
+        clientOwnerToken = jwtService.sign({ sub: ownerUser.recordId, tokenVersion: 0 });
+        unauthorizedUserToken = jwtService.sign({ sub: unauthUser.recordId, tokenVersion: 0 });
     });
 
     afterAll(async () => await teardownTestApp({ app, mongod }));
@@ -128,20 +128,21 @@ describe('Clients Authorization & Security (e2e)', () => {
         // --- UPDATE Tests ---
         describe('PATCH /clients/:id', () => {
             it('should allow a user with CLIENT_EDIT to update a client in their scope', async () => {
+                const current = await request(app.getHttpServer()).get(`/clients/${clientA_subA._id}`).set('Authorization', `Bearer ${subsidiaryManagerToken}`).expect(200);
                 await request(app.getHttpServer()).patch(`/clients/${clientA_subA._id}`).set('Authorization', `Bearer ${subsidiaryManagerToken}`)
-                    .send({ name: "Updated Name" }).expect(200);
+                    .send({ name: "Updated Name", __v: current.body.__v }).expect(200);
             });
             it('should FORBID a user without CLIENT_EDIT permission', async () => {
                 await request(app.getHttpServer()).patch(`/clients/${clientA_subA._id}`).set('Authorization', `Bearer ${clientOwnerToken}`)
-                    .send({ name: "Updated Name" }).expect(403);
+                    .send({ name: "Updated Name", __v: 0 }).expect(403);
             });
             it('should FORBID a user from updating a client outside their scope (returns 404)', async () => {
                 await request(app.getHttpServer()).patch(`/clients/${clientC_subB._id}`).set('Authorization', `Bearer ${subsidiaryManagerToken}`)
-                    .send({ name: "Updated Name" }).expect(404);
+                    .send({ name: "Updated Name", __v: 0 }).expect(404);
             });
             it('should FORBID changing the subsidiaryId (Layer 3 - Immutability)', async () => {
                 await request(app.getHttpServer()).patch(`/clients/${clientA_subA._id}`).set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ subsidiaryId: subB._id.toString() })
+                    .send({ subsidiaryId: subB._id.toString(), __v: 0 })
                     .expect(400); // Bad Request because subsidiaryId is not in the DTO whitelist
             });
         });

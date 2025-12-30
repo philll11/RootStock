@@ -1,0 +1,9 @@
+{
+  "name": "auth-feature-mobile",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/iam/auth/feature-mobile/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project auth-feature-mobile --web",
+  "targets": {}
+}

@@ -1,0 +1,13 @@
+ FAIL  test/variety/variety.crud.e2e-spec.ts
+  ● Test suite failed to run
+
+    test/variety/variety.crud.e2e-spec.ts:129:25 - error TS18046: 'variety._id' is of type 'unknown'.
+
+    129             varietyId = variety._id.toString();
+                                ~~~~~~~~~~~
+    test/variety/variety.crud.e2e-spec.ts:218:25 - error TS18046: 'variety._id' is of type 'unknown'.
+
+    218             varietyId = variety._id.toString();
+                                ~~~~~~~~~~~
+
+Test Suites: 1 failed, 1 total

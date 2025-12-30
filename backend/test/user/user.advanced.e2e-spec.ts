@@ -8,10 +8,10 @@ import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
 
 describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (e2e)', () => {
     let app: INestApplication;
@@ -191,7 +191,7 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
             roleId: platformAdministratorRole._id,
             isActive: true
         }).save();
-        platformAdminToken = jwtService.sign({ sub: platformAdmin.recordId });
+        platformAdminToken = jwtService.sign({ sub: platformAdmin.recordId, tokenVersion: 0 });
 
         const regionManager = await new userModel({
             recordId: 'REGION_MANAGER_USER_ADV',
@@ -204,7 +204,7 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
             clientIds: [enterpriseOrchardClient._id, familyOrchardClient._id],
             isActive: true
         }).save();
-        regionManagerToken = jwtService.sign({ sub: regionManager.recordId });
+        regionManagerToken = jwtService.sign({ sub: regionManager.recordId, tokenVersion: 0 });
 
         const crossSubsidiaryConsultant = await new userModel({
             recordId: 'CROSS_SUB_CONSULTANT_ADV',
@@ -217,7 +217,7 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
             clientIds: [enterpriseOrchardClient._id, boutiqueWineryClient._id, crossSubsidiaryClient._id],
             isActive: true
         }).save();
-        crossSubsidiaryConsultantToken = jwtService.sign({ sub: crossSubsidiaryConsultant.recordId });
+        crossSubsidiaryConsultantToken = jwtService.sign({ sub: crossSubsidiaryConsultant.recordId, tokenVersion: 0 });
 
         const multiClientFarmOwner = await new userModel({
             recordId: 'MULTI_CLIENT_OWNER_ADV',
@@ -233,7 +233,7 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
             clientIds: [enterpriseOrchardClient._id, familyOrchardClient._id],
             isActive: true
         }).save();
-        multiClientFarmOwnerToken = jwtService.sign({ sub: multiClientFarmOwner.recordId });
+        multiClientFarmOwnerToken = jwtService.sign({ sub: multiClientFarmOwner.recordId, tokenVersion: 0 });
 
         const temporaryUser = await new userModel({
             recordId: 'TEMP_USER_ADV',
@@ -246,7 +246,7 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
             clientIds: [emergencyClient._id],
             isActive: true
         }).save();
-        temporaryUserToken = jwtService.sign({ sub: temporaryUser.recordId });
+        temporaryUserToken = jwtService.sign({ sub: temporaryUser.recordId, tokenVersion: 0 });
 
         const migrationManager = await new userModel({
             recordId: 'MIGRATION_MANAGER_ADV',
@@ -258,7 +258,7 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
             roleId: migrationSpecialistRole._id,
             isActive: true
         }).save();
-        migrationManagerToken = jwtService.sign({ sub: migrationManager.recordId });
+        migrationManagerToken = jwtService.sign({ sub: migrationManager.recordId, tokenVersion: 0 });
     });
 
     afterAll(async () => {
@@ -535,7 +535,10 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
                 // Act: Perform succession process - update successor as primary
                 const response = await request(app.getHttpServer())
                     .patch(`/users/${retiringOwner._id}`)
-                    .send({ isActive: false })
+                    .send({ 
+                        isActive: false,
+                        __v: retiringOwner.__v
+                    })
                     .set('Authorization', `Bearer ${platformAdminToken}`)
                     .expect(200);
 
@@ -660,7 +663,7 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
                 // Act & Assert: Verify read access allowed
                 const viewResponse = await request(app.getHttpServer())
                     .get(`/users/${targetUser!._id}`)
-                    .set('Authorization', `Bearer ${jwtService.sign({ sub: dataAnalyst.recordId })}`)
+                    .set('Authorization', `Bearer ${jwtService.sign({ sub: dataAnalyst.recordId, tokenVersion: 0 })}`)
                     .expect(200);
 
                 expect(viewResponse.body.name).toBeTruthy();
@@ -669,15 +672,21 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
                 // Verify modification access denied
                 await request(app.getHttpServer())
                     .patch(`/users/${targetUser!._id}`)
-                    .send({ firstName: 'Modified' })
-                    .set('Authorization', `Bearer ${jwtService.sign({ sub: dataAnalyst.recordId })}`)
+                    .send({ 
+                        firstName: 'Modified',
+                        __v: targetUser!.__v
+                    })
+                    .set('Authorization', `Bearer ${jwtService.sign({ sub: dataAnalyst.recordId, tokenVersion: 0 })}`)
                     .expect(403);
 
                 // Verify sensitive operations blocked
                 await request(app.getHttpServer())
                     .patch(`/users/${targetUser!._id}`)
-                    .send({ roleId: dataAnalystRole._id }) // Attempt role elevation
-                    .set('Authorization', `Bearer ${jwtService.sign({ sub: dataAnalyst.recordId })}`)
+                    .send({ 
+                        roleId: dataAnalystRole._id, // Attempt role elevation
+                        __v: targetUser!.__v
+                    })
+                    .set('Authorization', `Bearer ${jwtService.sign({ sub: dataAnalyst.recordId, tokenVersion: 0 })}`)
                     .expect(403);
             });
         });
@@ -713,14 +722,15 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
                     recordId: 'MULTI_CLIENT_OWNER_ADV' 
                 });
 
-                const profileManagerToken = jwtService.sign({ sub: profileManager.recordId });
+                const profileManagerToken = jwtService.sign({ sub: profileManager.recordId, tokenVersion: 0 });
 
                 // Act & Assert: Allow profile field updates
                 await request(app.getHttpServer())
                     .patch(`/users/${targetFarmWorker!._id}`)
                     .send({ 
                         firstName: 'UpdatedFirst',
-                        lastName: 'UpdatedLast'
+                        lastName: 'UpdatedLast',
+                        __v: targetFarmWorker!.__v
                     })
                     .set('Authorization', `Bearer ${profileManagerToken}`)
                     .expect(200);
@@ -734,7 +744,8 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
                 const roleAssignmentResponse = await request(app.getHttpServer())
                     .patch(`/users/${targetFarmWorker!._id}`)
                     .send({ 
-                        roleId: platformAdministratorRole._id // Attempt role escalation
+                        roleId: platformAdministratorRole._id, // Attempt role escalation
+                        __v: updatedUser!.__v
                     })
                     .set('Authorization', `Bearer ${profileManagerToken}`);
 
@@ -824,21 +835,32 @@ describe('Users Advanced Business Logic - Complex Multi-Tenant User Management (
                 // Test updating to valid data (should succeed)
                 await request(app.getHttpServer())
                     .patch(`/users/${constraintTestUser._id}`)
-                    .send({ firstName: 'UpdatedConstraint' })
+                    .send({ 
+                        firstName: 'UpdatedConstraint',
+                        __v: constraintTestUser.__v
+                    })
                     .set('Authorization', `Bearer ${platformAdminToken}`)
                     .expect(200);
+
+                const updatedConstraintUser = await userModel.findById(constraintTestUser._id);
 
                 // Attempt to assign invalid client (should fail)
                 await request(app.getHttpServer())
                     .patch(`/users/${constraintTestUser._id}`)
-                    .send({ clientIds: ['507f1f77bcf86cd799439011'] }) // Non-existent client
+                    .send({ 
+                        clientIds: ['507f1f77bcf86cd799439011'], // Non-existent client
+                        __v: updatedConstraintUser!.__v
+                    })
                     .set('Authorization', `Bearer ${platformAdminToken}`)
                     .expect(400);
 
                 // Attempt to assign invalid role (should fail)
                 await request(app.getHttpServer())
                     .patch(`/users/${constraintTestUser._id}`)
-                    .send({ roleId: '507f1f77bcf86cd799439011' }) // Non-existent role
+                    .send({ 
+                        roleId: '507f1f77bcf86cd799439011', // Non-existent role
+                        __v: updatedConstraintUser!.__v
+                    })
                     .set('Authorization', `Bearer ${platformAdminToken}`)
                     .expect(400);
             });

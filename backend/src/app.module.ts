@@ -6,16 +6,19 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { LoggerModule } from 'nestjs-pino';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ClientsModule } from './clients/clients.module';
-import { UsersModule } from './users/users.module';
-import { RolesModule } from './roles/roles.module';
+import { ClientsModule } from './iam/clients/clients.module';
+import { UsersModule } from './iam/users/users.module';
+import { RolesModule } from './iam/roles/roles.module';
 import { DatabaseModule } from './database/database.module';
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './iam/auth/auth.module';
 import { PermissionsGuard } from './common/guards/permissions.guard';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
-import { SubsidiariesModule } from './subsidiaries/subsidiaries.module';
-import { OrchardsModule } from './orchards/orchards.module';
-import { CountersModule } from './counters/counters.module';
+import { JwtAuthGuard } from './iam/auth/jwt-auth.guard';
+import { SubsidiariesModule } from './iam/subsidiaries/subsidiaries.module';
+import { OrchardsModule } from './assets/orchards/orchards.module';
+import { BlocksModule } from './assets/blocks/blocks.module';
+import { AssessmentsModule } from './operations/assessments/assessments.module';
+import { CountersModule } from './system/counters/counters.module';
+import { VarietiesModule } from './master-data/varieties/varieties.module';
 import appConfig from './config/app.config';
 
 @Module({
@@ -72,7 +75,10 @@ import appConfig from './config/app.config';
     RolesModule,
     SubsidiariesModule,
     OrchardsModule,
+    BlocksModule,
+    AssessmentsModule,
     CountersModule,
+    VarietiesModule,
   ],
   controllers: [AppController],
   providers: [

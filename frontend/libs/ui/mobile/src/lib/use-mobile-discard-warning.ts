@@ -2,6 +2,21 @@ import { useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
+export const confirmDiscard = (onDiscard: () => void) => {
+  Alert.alert(
+    'Discard changes?',
+    'You have unsaved changes. Are you sure you want to discard them?',
+    [
+      { text: "Keep Editing", style: 'cancel' },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        onPress: onDiscard,
+      },
+    ]
+  );
+};
+
 export function useMobileDiscardWarning(isDirty: boolean) {
   const navigation = useNavigation();
 
@@ -16,20 +31,7 @@ export function useMobileDiscardWarning(isDirty: boolean) {
       e.preventDefault();
 
       // Prompt the user before leaving the screen
-      Alert.alert(
-        'Discard changes?',
-        'You have unsaved changes. Are you sure you want to discard them and leave the screen?',
-        [
-          { text: "Don't leave", style: 'cancel', onPress: () => {} },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            // If the user confirmed, then we dispatch the action we blocked earlier
-            // This will continue the action that had triggered the removal of the screen
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ]
-      );
+      confirmDiscard(() => navigation.dispatch(e.data.action));
     });
 
     return unsubscribe;

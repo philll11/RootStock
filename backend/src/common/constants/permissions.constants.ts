@@ -45,6 +45,31 @@ export const PERMISSIONS = {
    */
   ORCHARD_MANAGE_INACTIVE: 'Orchard:ManageInactive',
 
+  // --- Block Management ---
+  // Permissions for managing block entities (child of Orchard).
+  BLOCK_CREATE: 'Block:Create',
+  BLOCK_VIEW: 'Block:View',
+  BLOCK_EDIT: 'Block:Edit',
+  BLOCK_DELETE: 'Block:Delete',
+  /**
+   * Grants the ability to change a block's `isActive` status and to
+   * include inactive block records in query results.
+   */
+  BLOCK_MANAGE_INACTIVE: 'Block:ManageInactive',
+
+  // --- Assessment Management ---
+  // Permissions for managing assessment entities.
+  ASSESSMENT_CREATE: 'Assessment:Create',
+  ASSESSMENT_VIEW: 'Assessment:View',
+  ASSESSMENT_EDIT: 'Assessment:Edit',
+  ASSESSMENT_DELETE: 'Assessment:Delete',
+
+  /**
+   * Grants the ability to change an assessment's `isActive` status and to
+   * include inactive assessment records in query results.
+   */
+  ASSESSMENT_MANAGE_INACTIVE: 'Assessment:ManageInactive',
+
   // --- Role Management ---
   // Permissions for managing user roles and their associated permissions.
   // These are typically restricted to top-level administrators.
@@ -70,6 +95,18 @@ export const PERMISSIONS = {
    */
   SUBSIDIARY_MANAGE_INACTIVE: 'Subsidiary:ManageInactive',
 
+  // --- Variety Management (Master Data) ---
+  // Permissions for managing fruit varieties.
+  VARIETY_CREATE: 'Variety:Create',
+  VARIETY_VIEW: 'Variety:View',
+  VARIETY_EDIT: 'Variety:Edit',
+  VARIETY_DELETE: 'Variety:Delete',
+  /**
+   * Grants the ability to change a variety's `isActive` status and to
+   * include inactive variety records in query results.
+   */
+  VARIETY_MANAGE_INACTIVE: 'Variety:ManageInactive',
+
   // --- System Configuration ---
   // Permissions for managing system-level configurations, like recordId counters.
   COUNTERS_VIEW: 'Counters:View',
@@ -94,7 +131,10 @@ export enum Resource {
   USER = 'User',
   CLIENT = 'Client',
   ORCHARD = 'Orchard',
+  BLOCK = 'Block',
+  ASSESSMENT = 'Assessment',
   ROLE = 'Role',
   SUBSIDIARY = 'Subsidiary',
   COUNTERS = 'Counters',
+  VARIETY = 'Variety',
 }

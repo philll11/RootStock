@@ -1,4 +1,4 @@
-// backend/test/subsidiary/subsidiary.advanced.e2e-spec.ts
+// backend/test/orchard/orchard.auth.e2e-spec.ts
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
@@ -7,11 +7,11 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Orchard, OrchardDocument } from '../../src/orchards/schemas/orchard.schema';
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Orchard, OrchardDocument } from '../../src/assets/orchards/schemas/orchard.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
 describe('Orchards Authorization & Security - Agricultural Business Scenarios (e2e)', () => {
@@ -81,11 +81,11 @@ describe('Orchards Authorization & Security - Agricultural Business Scenarios (e
             { recordId: 'CONTACT_OR', name: 'Oregon Contact', firstName: 'Oregon', lastName: 'Contact', email: 'contact@or.com', userType: UserType.CONTACT, roleId: contactRole._id, clientIds: [berryFarmClient._id] },
         ]);
 
-        platformAdminToken = jwtService.sign({ sub: adminUser.recordId });
-        regionManagerToken = jwtService.sign({ sub: managerUser.recordId });
-        farmOwnerToken = jwtService.sign({ sub: ownerUser.recordId });
-        consultantToken = jwtService.sign({ sub: consultantUser.recordId });
-        unauthorizedUserToken = jwtService.sign({ sub: unauthUser.recordId });
+        platformAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
+        regionManagerToken = jwtService.sign({ sub: managerUser.recordId, tokenVersion: 0 });
+        farmOwnerToken = jwtService.sign({ sub: ownerUser.recordId, tokenVersion: 0 });
+        consultantToken = jwtService.sign({ sub: consultantUser.recordId, tokenVersion: 0 });
+        unauthorizedUserToken = jwtService.sign({ sub: unauthUser.recordId, tokenVersion: 0 });
 
         [orchardA, orchardB, orchardC] = await orchardModel.create([
             { recordId: 'ORCH_A', name: 'Orchard A', clientId: appleOrchardClient._id },
@@ -149,15 +149,24 @@ describe('Orchards Authorization & Security - Agricultural Business Scenarios (e
 
             it('should allow a user with ORCHARD_EDIT to update an orchard in their scope', async () => {
                 await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${farmOwnerToken}`)
-                    .send({ name: 'Updated Name' }).expect(200);
+                    .send({ 
+                        name: 'Updated Name',
+                        __v: testOrchard.__v
+                    }).expect(200);
             });
             it('should FORBID a user without ORCHARD_EDIT permission (Layer 1)', async () => {
                 await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${consultantToken}`)
-                    .send({ name: 'Should Fail' }).expect(403);
+                    .send({ 
+                        name: 'Should Fail',
+                        __v: testOrchard.__v
+                    }).expect(403);
             });
             it('should FORBID updating the clientId (Layer 3 - Immutability)', async () => {
                 await request(app.getHttpServer()).patch(`/orchards/${testOrchard._id}`).set('Authorization', `Bearer ${platformAdminToken}`)
-                    .send({ clientId: berryFarmClient._id.toString() })
+                    .send({ 
+                        clientId: berryFarmClient._id.toString(),
+                        __v: testOrchard.__v
+                    })
                     .expect(400); // Bad Request because clientId is not in DTO whitelist
             });
         });
@@ -192,7 +201,10 @@ describe('Orchards Authorization & Security - Agricultural Business Scenarios (e
                 expect(manager!.clientIds.map(id => id.toString())).not.toContain(appleOrchardClient._id.toString());
 
                 await request(app.getHttpServer()).patch(`/orchards/${orchardToTest._id}`).set('Authorization', `Bearer ${regionManagerToken}`)
-                    .send({ userIds: [caliManager._id.toString()] }).expect(200);
+                    .send({ 
+                        userIds: [caliManager._id.toString()],
+                        __v: orchardToTest.__v
+                    }).expect(200);
 
                 manager = await userModel.findById(caliManager._id);
                 expect(manager!.clientIds.map(id => id.toString())).toContain(appleOrchardClient._id.toString());
@@ -202,7 +214,10 @@ describe('Orchards Authorization & Security - Agricultural Business Scenarios (e
                 // regionManager (Sub A) tries to assign a contact from Sub B. This must fail.
                 // The findOne check in _manageUserAssignmentsInTransaction should throw 404 because the manager can't see the oregonContact.
                 await request(app.getHttpServer()).patch(`/orchards/${orchardToTest._id}`).set('Authorization', `Bearer ${regionManagerToken}`)
-                    .send({ userIds: [oregonContact._id.toString()] }).expect(404);
+                    .send({ 
+                        userIds: [oregonContact._id.toString()],
+                        __v: orchardToTest.__v
+                    }).expect(404);
             });
 
             it('should successfully assign a contact from the SAME subsidiary', async () => {
@@ -212,7 +227,10 @@ describe('Orchards Authorization & Security - Agricultural Business Scenarios (e
                 expect(contact!.clientIds.map(id => id.toString())).not.toContain(appleOrchardClient._id.toString());
 
                 await request(app.getHttpServer()).patch(`/orchards/${orchardToTest._id}`).set('Authorization', `Bearer ${regionManagerToken}`)
-                    .send({ userIds: [caliContact._id.toString()] }).expect(200);
+                    .send({ 
+                        userIds: [caliContact._id.toString()],
+                        __v: orchardToTest.__v
+                    }).expect(200);
 
                 contact = await userModel.findById(caliContact._id);
                 expect(contact!.clientIds.map(id => id.toString())).toContain(appleOrchardClient._id.toString());

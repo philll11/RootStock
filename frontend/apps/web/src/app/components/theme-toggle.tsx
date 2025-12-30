@@ -1,7 +1,9 @@
+// frontend/apps/web/src/app/components/theme-toggle.tsx
 import { ActionIcon, useMantineColorScheme, useComputedColorScheme, Menu } from '@mantine/core';
 import { IconSun, IconMoon, IconDeviceDesktop } from '@tabler/icons-react';
 import { useAuth } from '@rootstock/auth/auth-data-access';
 import { useUsers } from '@rootstock/users/users-data-access';
+import { shadows, iconSizes } from '@rootstock/ui/theme';
 
 export function ThemeToggle() {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
@@ -25,13 +27,13 @@ export function ThemeToggle() {
   };
 
   const getIcon = () => {
-    if (colorScheme === 'auto') return <IconDeviceDesktop stroke={1.5} />;
-    if (computedColorScheme === 'dark') return <IconMoon stroke={1.5} />;
-    return <IconSun stroke={1.5} />;
+    if (colorScheme === 'auto') return <IconDeviceDesktop size={iconSizes.lg} stroke={1.5} />;
+    if (computedColorScheme === 'dark') return <IconMoon size={iconSizes.lg} stroke={1.5} />;
+    return <IconSun size={iconSizes.lg} stroke={1.5} />;
   };
 
   return (
-    <Menu shadow="md" width={150} position="bottom-end">
+    <Menu shadow={shadows.md} width={150} position="bottom-end">
       <Menu.Target>
         <ActionIcon
           variant="default"
@@ -44,21 +46,21 @@ export function ThemeToggle() {
 
       <Menu.Dropdown>
         <Menu.Item 
-          leftSection={<IconSun size={16} />} 
+          leftSection={<IconSun size={iconSizes.md} />} 
           onClick={() => handleThemeChange('light')}
           bg={colorScheme === 'light' ? 'var(--mantine-color-blue-light)' : undefined}
         >
           Light
         </Menu.Item>
         <Menu.Item 
-          leftSection={<IconMoon size={16} />} 
+          leftSection={<IconMoon size={iconSizes.md} />} 
           onClick={() => handleThemeChange('dark')}
           bg={colorScheme === 'dark' ? 'var(--mantine-color-blue-light)' : undefined}
         >
           Dark
         </Menu.Item>
         <Menu.Item 
-          leftSection={<IconDeviceDesktop size={16} />} 
+          leftSection={<IconDeviceDesktop size={iconSizes.md} />} 
           onClick={() => handleThemeChange('auto')}
           bg={colorScheme === 'auto' ? 'var(--mantine-color-blue-light)' : undefined}
         >

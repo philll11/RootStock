@@ -8,13 +8,13 @@ import { JwtService } from '@nestjs/jwt';
 
 import { setupTestApp, teardownTestApp } from '../test-utils';
 
-import { Subsidiary, SubsidiaryDocument } from '../../src/subsidiaries/schemas/subsidiary.schema';
-import { CreateSubsidiaryDto } from '../../src/subsidiaries/dto/create-subsidiary.dto';
-import { UpdateSubsidiaryDto } from '../../src/subsidiaries/dto/update-subsidiary.dto';
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
+import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
+import { CreateSubsidiaryDto } from '../../src/iam/subsidiaries/dto/create-subsidiary.dto';
+import { UpdateSubsidiaryDto } from '../../src/iam/subsidiaries/dto/update-subsidiary.dto';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
-import { Client, ClientDocument } from '../../src/clients/schemas/client.schema';
+import { Client, ClientDocument } from '../../src/iam/clients/schemas/client.schema';
 
 describe('Subsidiaries CRUD & Business Logic (e2e)', () => {
     let app: INestApplication;
@@ -58,7 +58,7 @@ describe('Subsidiaries CRUD & Business Logic (e2e)', () => {
             userType: UserType.EMPLOYEE,
             roleId: adminRole._id,
         });
-        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId });
+        globalAdminToken = jwtService.sign({ sub: globalAdmin.recordId, tokenVersion: 0 });
 
         [testSubsidiary, inactiveSubsidiary] = await subsidiaryModel.create([
             { recordId: 'SUB_CRUD_A', name: 'CRUD Test Subsidiary A' },
@@ -118,15 +118,35 @@ describe('Subsidiaries CRUD & Business Logic (e2e)', () => {
 
     describe('PATCH /subsidiaries/:id', () => {
         it('should successfully update a subsidiary`s name', async () => {
-            const updateDto: UpdateSubsidiaryDto = { name: 'Updated Name' };
+            // 1. Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/subsidiaries/${testSubsidiary._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            const updateDto: UpdateSubsidiaryDto = { name: 'Updated Name', __v: current.body.__v };
             const res = await request(app.getHttpServer()).patch(`/subsidiaries/${testSubsidiary._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send(updateDto).expect(200);
             expect(res.body.name).toBe(updateDto.name);
+            expect(res.body.__v).toBe(current.body.__v + 1);
         });
 
-        it('should prevent deactivation if active clients exist', async () => {
-            await clientModel.create({ recordId: 'CLI_BLOCKER', name: 'Blocking Client', subsidiaryId: testSubsidiary._id });
-            const updateDto: UpdateSubsidiaryDto = { isActive: false };
-            await request(app.getHttpServer()).patch(`/subsidiaries/${testSubsidiary._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send(updateDto).expect(409);
+        it('should throw 409 Conflict when updating with an outdated version', async () => {
+            // 1. Fetch current version
+            const current = await request(app.getHttpServer())
+                .get(`/subsidiaries/${testSubsidiary._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .expect(200);
+
+            // 2. Simulate a concurrent update (bump version in DB directly)
+            await subsidiaryModel.updateOne({ _id: testSubsidiary._id }, { $inc: { __v: 1 } });
+
+            // 3. Attempt update with old version
+            const updateDto: UpdateSubsidiaryDto = { name: 'Stale Update', __v: current.body.__v };
+            await request(app.getHttpServer())
+                .patch(`/subsidiaries/${testSubsidiary._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send(updateDto)
+                .expect(409);
         });
     });
     

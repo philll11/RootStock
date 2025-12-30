@@ -1,3 +1,4 @@
+// frontend/libs/ui/theme/src/lib/palette.ts
 export const palette = {
   // RootStock Green (Nature/Growth)
   brand: {

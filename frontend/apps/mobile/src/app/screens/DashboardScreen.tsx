@@ -1,11 +1,13 @@
+// frontend/apps/mobile/src/app/screens/DashboardScreen.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Appbar, Text, Button, Card, useTheme } from 'react-native-paper';
+import { Appbar, Text, Card, useTheme } from 'react-native-paper';
 import { useAuth } from '@rootstock/auth/auth-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
+import { spacing } from '@rootstock/ui/theme';
 
 export const DashboardScreen = ({ navigation }: any) => {
-  const { logout } = useAuth();
+  const { user } = useAuth();
   const { toggleDrawer } = useDrawer();
   const theme = useTheme();
 
@@ -20,7 +22,9 @@ export const DashboardScreen = ({ navigation }: any) => {
         <Card style={styles.card}>
           <Card.Content>
             <Text variant="titleLarge">Welcome Back!</Text>
-            <Text variant="bodyMedium">You are successfully logged in.</Text>
+            <Text variant="bodyMedium" style={{ marginTop: spacing.sm }}>
+              Logged in as {user?.name}
+            </Text>
           </Card.Content>
         </Card>
       </View>
@@ -33,9 +37,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.md,
   },
   card: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
 });

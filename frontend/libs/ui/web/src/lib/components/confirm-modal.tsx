@@ -1,4 +1,5 @@
 import { Modal, Text, Group, Button } from '@mantine/core';
+import { palette } from '@rootstock/ui/theme';
 
 export interface ConfirmModalProps {
   opened: boolean;
@@ -19,7 +20,7 @@ export function ConfirmModal({
   message, 
   confirmLabel = 'Confirm', 
   cancelLabel = 'Cancel',
-  confirmColor = 'red'
+  confirmColor = palette.actions.delete 
 }: ConfirmModalProps) {
   return (
     <Modal 
@@ -27,7 +28,6 @@ export function ConfirmModal({
       onClose={onClose} 
       title={title} 
       centered
-      zIndex={20000}
     >
       <Text size="sm">
         {message}

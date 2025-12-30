@@ -1,3 +1,4 @@
+// frontend/libs/ui/mobile/src/lib/mobile-theme.ts
 import { MD3LightTheme, MD3DarkTheme, MD3Theme } from 'react-native-paper';
 import { palette, lightColors, darkColors } from '@rootstock/ui/theme';
 import { typography, spacing, radius } from '@rootstock/ui/theme';

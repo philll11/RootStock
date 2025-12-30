@@ -9,10 +9,10 @@ import { JwtService } from '@nestjs/jwt';
 import { setupTestApp, teardownTestApp } from '../test-utils';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
-import { User, UserDocument, UserType } from '../../src/users/schemas/user.schema';
-import { Role, RoleDocument, VisibilityScope } from '../../src/roles/schemas/role.schema';
-import { Counter, CounterDocument } from '../../src/counters/schemas/counter.schema';
-import { UpdateCounterDto } from '../../src/counters/dto/update-counter.dto';
+import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
+import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas/role.schema';
+import { Counter, CounterDocument } from '../../src/system/counters/schemas/counter.schema';
+import { UpdateCounterDto } from '../../src/system/counters/dto/update-counter.dto';
 
 
 describe('Counters CRUD (e2e)', () => {
@@ -55,7 +55,7 @@ describe('Counters CRUD (e2e)', () => {
             userType: UserType.EMPLOYEE, roleId: adminRole._id
         }]);
         
-        globalAdminToken = jwtService.sign({ sub: adminUser.recordId });
+        globalAdminToken = jwtService.sign({ sub: adminUser.recordId, tokenVersion: 0 });
 
         // Create test counters using Promise.all for efficiency
         [subsidiaryCounter] = await counterModel.create([
@@ -88,7 +88,11 @@ describe('Counters CRUD (e2e)', () => {
 
     describe('PATCH /counters/:id', () => {
         it("should update a counter's prefix", async () => {
-            const updateDto: UpdateCounterDto = { prefix: 'COMPANY' };
+            const currentCounter = await counterModel.findById(subsidiaryCounter._id);
+            const updateDto: UpdateCounterDto = { 
+                prefix: 'COMPANY',
+                __v: currentCounter!.__v
+            };
 
             const res = await request(app.getHttpServer())
                 .patch(`/counters/${subsidiaryCounter._id}`)
@@ -98,10 +102,33 @@ describe('Counters CRUD (e2e)', () => {
 
             expect(res.body._id).toEqual(subsidiaryCounter._id);
             expect(res.body.prefix).toEqual(updateDto.prefix);
+            expect(res.body.__v).toEqual(currentCounter!.__v + 1);
+        });
+
+        it('should fail with 409 Conflict when version mismatch occurs', async () => {
+            // Get current version
+            const currentCounter = await counterModel.findById(subsidiaryCounter._id);
+
+            // Simulate concurrent update
+            await counterModel.updateOne({ _id: subsidiaryCounter._id }, { $inc: { __v: 1 } });
+
+            const updateDto: UpdateCounterDto = { 
+                prefix: 'CONFLICT',
+                __v: currentCounter!.__v // Old version
+            };
+
+            await request(app.getHttpServer())
+                .patch(`/counters/${subsidiaryCounter._id}`)
+                .set('Authorization', `Bearer ${globalAdminToken}`)
+                .send(updateDto)
+                .expect(409);
         });
 
         it('should return 404 for a non-existent counter', async () => {
-            const updateDto: UpdateCounterDto = { prefix: 'FAIL' };
+            const updateDto: UpdateCounterDto = { 
+                prefix: 'FAIL',
+                __v: 0
+            };
 
             await request(app.getHttpServer())
                 .patch('/counters/nonexistent')
@@ -112,7 +139,10 @@ describe('Counters CRUD (e2e)', () => {
 
         describe('Validation', () => {
             it('should return 400 for an empty prefix', async () => {
-                const updateDto = { prefix: '' };
+                const updateDto = { 
+                    prefix: '',
+                    __v: subsidiaryCounter.__v
+                };
 
                 await request(app.getHttpServer())
                     .patch(`/counters/${subsidiaryCounter._id}`)
@@ -122,7 +152,10 @@ describe('Counters CRUD (e2e)', () => {
             });
 
             it('should return 400 for a prefix exceeding max length', async () => {
-                const updateDto = { prefix: 'THISISWAYTOOLONG' };
+                const updateDto = { 
+                    prefix: 'THISISWAYTOOLONG',
+                    __v: subsidiaryCounter.__v
+                };
 
                 await request(app.getHttpServer())
                     .patch(`/counters/${subsidiaryCounter._id}`)
@@ -132,7 +165,11 @@ describe('Counters CRUD (e2e)', () => {
             });
 
             it('should return 400 for a non-whitelisted field', async () => {
-                const updateDto = { prefix: 'VALID', unexpected: 'field' };
+                const updateDto = { 
+                    prefix: 'VALID', 
+                    unexpected: 'field',
+                    __v: subsidiaryCounter.__v
+                };
 
                 await request(app.getHttpServer())
                     .patch(`/counters/${subsidiaryCounter._id}`)

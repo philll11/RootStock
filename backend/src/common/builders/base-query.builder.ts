@@ -1,7 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
-import { User } from '../../users/schemas/user.schema';
-import { VisibilityScope } from '../../roles/schemas/role.schema';
-import { ClientResolverService } from '../../clients/client-resolver/client-resolver.service';
+import { User } from '../../iam/users/schemas/user.schema';
+import { VisibilityScope } from '../../iam/roles/schemas/role.schema';
+import { ClientResolverService } from '../../iam/client-resolver/client-resolver.service';
 
 import { PERMISSIONS, Resource } from '../constants/permissions.constants'
 

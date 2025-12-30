@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, TouchableWithoutFeedback, Dimensions } from 'react-native';
-import { Drawer, useTheme, Text, Avatar, Divider } from 'react-native-paper';
+import { Drawer, useTheme, Text, Avatar, Divider, List } from 'react-native-paper';
 import { useDrawer } from '@rootstock/ui/mobile';
 import { useAuth, usePermission } from '@rootstock/auth/auth-data-access';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -114,18 +114,55 @@ export const AppDrawer = ({ navigationRef, currentRoute }: AppDrawerProps) => {
 
           <Drawer.Section showDivider={false} style={styles.section}>
             {NAVIGATION_ITEMS.map((item, index) => {
-              if (item.permission && !hasPermission(item.permission)) {
-                return null;
-              }
-              return (
-                <Drawer.Item
-                  key={index}
-                  label={item.label}
-                  icon={item.icon}
-                  active={currentRoute === item.screen}
-                  onPress={() => handleNavigate(item.screen)}
-                />
-              );
+              const renderDrawerItem = (navItem: any, idx: number) => {
+                // Check permission for the item itself
+                if (navItem.permission && !hasPermission(navItem.permission)) {
+                  return null;
+                }
+
+                // If it has children, check if user has permission for at least one child
+                if (navItem.children && navItem.children.length > 0) {
+                  const visibleChildren = navItem.children.filter((child: any) => 
+                    !child.permission || hasPermission(child.permission)
+                  );
+                  
+                  if (visibleChildren.length === 0) {
+                    return null;
+                  }
+                  
+                  // Use visibleChildren for rendering
+                  navItem = { ...navItem, children: visibleChildren };
+                }
+
+                const hasChildren = navItem.children && navItem.children.length > 0;
+
+                if (hasChildren) {
+                  return (
+                    <List.Accordion
+                      key={idx}
+                      title={navItem.label}
+                      left={props => <List.Icon {...props} icon={navItem.icon} />}
+                      expanded={true} // Default expanded as requested
+                      style={{ paddingVertical: 0, backgroundColor: 'transparent' }}
+                      titleStyle={{ color: theme.colors.onSurfaceVariant }}
+                    >
+                      {navItem.children.map((child: any, childIdx: number) => renderDrawerItem(child, childIdx))}
+                    </List.Accordion>
+                  );
+                }
+
+                return (
+                  <Drawer.Item
+                    key={idx}
+                    label={navItem.label}
+                    icon={navItem.icon}
+                    active={currentRoute === navItem.screen}
+                    onPress={() => handleNavigate(navItem.screen)}
+                  />
+                );
+              };
+
+              return renderDrawerItem(item, index);
             })}
           </Drawer.Section>
 

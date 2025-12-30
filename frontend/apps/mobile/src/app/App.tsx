@@ -1,26 +1,36 @@
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { PaperProvider } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { StatusBar, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as SecureStore from 'expo-secure-store';
+
+// Infrastructure
+import { configureAuth, useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
+import { PERMISSIONS } from '@rootstock/shared/util';
+import { ThemeProvider, DrawerProvider, useDrawer } from '@rootstock/ui/mobile';
+
+// Features - Auth
 import { LoginScreen, ForgotPasswordScreen } from '@rootstock/auth/auth-feature-mobile';
+
+// Features - Core
 import { DashboardScreen } from './screens/DashboardScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
-import * as SecureStore from 'expo-secure-store';
-import { configureAuth, useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
-import { ThemeProvider } from '@rootstock/ui/mobile';
+import { PermissionDeniedScreen } from './screens/PermissionDeniedScreen';
+
+// Features - Resources
 import { ClientsListScreen, ClientFormScreen } from '@rootstock/clients/clients-feature-mobile';
 import { OrchardsListScreen, OrchardFormScreen } from '@rootstock/orchards/orchards-feature-mobile';
 import { UsersListScreen, UserFormScreen } from '@rootstock/users/users-feature-mobile';
 import { RolesListScreen, RoleFormScreen } from '@rootstock/roles/roles-feature-mobile';
-import { DrawerProvider, useDrawer } from '@rootstock/ui/mobile';
+import { VarietiesListScreen, VarietyFormScreen } from '@rootstock/master-data/varieties/varieties-feature-mobile';
+import { BlocksListScreen, BlockFormScreen } from '@rootstock/blocks/blocks-feature-mobile';
+
+// Components
 import { AppDrawer } from './components/AppDrawer';
 import { ProtectedScreen } from './components/ProtectedScreen';
-import { PermissionDeniedScreen } from './screens/PermissionDeniedScreen';
-import { PERMISSIONS } from '@rootstock/shared/util';
 
 const queryClient = new QueryClient();
 
@@ -37,6 +47,7 @@ setupAuthInterceptor(() => {
 
 const Stack = createNativeStackNavigator();
 
+// Wrappers to inject Drawer Context & Permissions
 const ClientsListScreenWrapper = (props: any) => {
   const { toggleDrawer } = useDrawer();
   return (
@@ -73,11 +84,28 @@ const RolesListScreenWrapper = (props: any) => {
   );
 };
 
+const VarietiesListScreenWrapper = (props: any) => {
+  const { toggleDrawer } = useDrawer();
+  return (
+    <ProtectedScreen permission={PERMISSIONS.VARIETY_VIEW}>
+      <VarietiesListScreen {...props} onMenuPress={toggleDrawer} />
+    </ProtectedScreen>
+  );
+};
+
+const BlocksListScreenWrapper = (props: any) => {
+  return (
+    <ProtectedScreen permission={PERMISSIONS.BLOCK_VIEW}>
+      <BlocksListScreen {...props} />
+    </ProtectedScreen>
+  );
+};
+
 function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   return (
@@ -87,14 +115,25 @@ function AppNavigator() {
           <Stack.Screen name="Dashboard" component={DashboardScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          
           <Stack.Screen name="UsersList" component={UsersListScreenWrapper} />
           <Stack.Screen name="UserForm" component={UserFormScreen} />
+          
           <Stack.Screen name="RolesList" component={RolesListScreenWrapper} />
           <Stack.Screen name="RoleForm" component={RoleFormScreen} />
+          
           <Stack.Screen name="ClientsList" component={ClientsListScreenWrapper} />
           <Stack.Screen name="ClientForm" component={ClientFormScreen} />
+          
           <Stack.Screen name="OrchardsList" component={OrchardsListScreenWrapper} />
           <Stack.Screen name="OrchardForm" component={OrchardFormScreen} />
+          
+          <Stack.Screen name="VarietiesList" component={VarietiesListScreenWrapper} />
+          <Stack.Screen name="VarietyForm" component={VarietyFormScreen} />
+          
+          <Stack.Screen name="BlocksList" component={BlocksListScreenWrapper} />
+          <Stack.Screen name="BlockForm" component={BlockFormScreen} />
+          
           <Stack.Screen name="PermissionDenied" component={PermissionDeniedScreen} />
         </>
       ) : (

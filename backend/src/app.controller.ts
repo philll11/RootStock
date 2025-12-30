@@ -2,7 +2,7 @@
 
 import { Controller, Get, InternalServerErrorException, ServiceUnavailableException, } from '@nestjs/common';
 import { AppService } from './app.service';
-import { Public } from './auth/decorators/public.decorator';
+import { Public } from './iam/auth/decorators/public.decorator';
 
 @Controller()
 export class AppController {
