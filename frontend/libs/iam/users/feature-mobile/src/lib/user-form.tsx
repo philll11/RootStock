@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import {
   TextInput,
   Button,
@@ -23,6 +23,7 @@ import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { spacing } from '@rootstock/ui/theme';
 
 const userSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -35,28 +36,22 @@ const userSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-type UserFormData = z.infer<typeof userSchema>;
+export type UserFormData = z.infer<typeof userSchema>;
 
 interface UserFormProps {
   defaultValues?: Partial<UserFormData>;
   onSubmit: (data: UserFormData) => Promise<void>;
-  isSubmitting?: boolean;
-  mode: 'create' | 'edit' | 'view';
-  onCancel: () => void;
+  isEditMode?: boolean;
 }
 
 export function UserForm({
   defaultValues,
   onSubmit,
-  isSubmitting,
-  mode,
-  onCancel,
+  isEditMode = false,
 }: UserFormProps) {
   const theme = useTheme();
   const { can } = usePermission();
-  const isView = mode === 'view';
-  const isEdit = mode === 'edit';
-  const isCreate = mode === 'create';
+  const [isSaving, setIsSaving] = useState(false);
 
   const { data: clients = [] } = useGetClients();
   const { data: roles = [] } = useGetRoles();
@@ -82,7 +77,7 @@ export function UserForm({
     },
   });
 
-  useMobileDiscardWarning(isDirty && !isSubmitting);
+  useMobileDiscardWarning(isDirty && !isSaving);
 
   const [clientModalVisible, setClientModalVisible] = React.useState(false);
   const [roleModalVisible, setRoleModalVisible] = React.useState(false);
@@ -105,10 +100,20 @@ export function UserForm({
     r.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const canToggleActive = isEdit && can(PERMISSIONS.USER_EDIT);
+  const handleFormSubmit = async (data: UserFormData) => {
+    setIsSaving(true);
+    try {
+      await onSubmit(data);
+    } catch (error) {
+      setIsSaving(false);
+    }
+  };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       <ScrollView contentContainerStyle={styles.content}>
         <Controller
           control={control}
@@ -121,7 +126,6 @@ export function UserForm({
                 onChangeText={onChange}
                 onBlur={onBlur}
                 mode="outlined"
-                disabled={isView}
                 error={!!errors.firstName}
               />
               {errors.firstName && (
@@ -144,7 +148,6 @@ export function UserForm({
                 onChangeText={onChange}
                 onBlur={onBlur}
                 mode="outlined"
-                disabled={isView}
                 error={!!errors.lastName}
               />
               {errors.lastName && (
@@ -167,7 +170,6 @@ export function UserForm({
                 onChangeText={onChange}
                 onBlur={onBlur}
                 mode="outlined"
-                disabled={isView}
                 error={!!errors.email}
                 autoCapitalize="none"
                 keyboardType="email-address"
@@ -181,30 +183,28 @@ export function UserForm({
           )}
         />
 
-        {!isView && (
-          <Controller
-            control={control}
-            name="password"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <View style={styles.inputContainer}>
-                <TextInput
-                  label={isCreate ? 'Password' : 'New Password (Optional)'}
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  mode="outlined"
-                  secureTextEntry
-                  error={!!errors.password}
-                />
-                {errors.password && (
-                  <HelperText type="error" visible={!!errors.password}>
-                    {errors.password.message}
-                  </HelperText>
-                )}
-              </View>
-            )}
-          />
-        )}
+        <Controller
+          control={control}
+          name="password"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <View style={styles.inputContainer}>
+              <TextInput
+                label={isEditMode ? 'New Password (Optional)' : 'Password'}
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                mode="outlined"
+                secureTextEntry
+                error={!!errors.password}
+              />
+              {errors.password && (
+                <HelperText type="error" visible={!!errors.password}>
+                  {errors.password.message}
+                </HelperText>
+              )}
+            </View>
+          )}
+        />
 
         <View style={styles.inputContainer}>
           <Text variant="bodyMedium" style={{ marginBottom: 8 }}>
@@ -218,8 +218,8 @@ export function UserForm({
                 value={value}
                 onValueChange={onChange}
                 buttons={[
-                  { value: UserType.Employee, label: 'Employee', disabled: isView },
-                  { value: UserType.Contact, label: 'Contact', disabled: isView },
+                  { value: UserType.Employee, label: 'Employee' },
+                  { value: UserType.Contact, label: 'Contact' },
                 ]}
               />
             )}
@@ -230,22 +230,16 @@ export function UserForm({
           <Text variant="bodyMedium" style={{ marginBottom: 8 }}>
             Role
           </Text>
-          {isView ? (
-            <Text variant="bodyLarge">{selectedRole?.name || 'None'}</Text>
-          ) : (
-            <>
-              <Button
-                mode="outlined"
-                onPress={() => {
-                  setSearchQuery('');
-                  setRoleModalVisible(true);
-                }}
-                style={styles.selectorButton}
-              >
-                {selectedRole?.name || 'Select Role'}
-              </Button>
-            </>
-          )}
+          <Button
+            mode="outlined"
+            onPress={() => {
+              setSearchQuery('');
+              setRoleModalVisible(true);
+            }}
+            style={styles.selectorButton}
+          >
+            {selectedRole?.name || 'Select Role'}
+          </Button>
         </View>
 
         <View style={styles.inputContainer}>
@@ -257,37 +251,31 @@ export function UserForm({
               <Chip
                 key={client._id}
                 style={styles.chip}
-                onClose={
-                  isView
-                    ? undefined
-                    : () => {
-                        setValue(
-                          'clientIds',
-                          selectedClientIds.filter((id) => id !== client._id),
-                          { shouldDirty: true }
-                        );
-                      }
-                }
+                onClose={() => {
+                  setValue(
+                    'clientIds',
+                    selectedClientIds.filter((id) => id !== client._id),
+                    { shouldDirty: true }
+                  );
+                }}
               >
                 {client.name}
               </Chip>
             ))}
-            {!isView && (
-              <Chip
-                icon="plus"
-                onPress={() => {
-                  setSearchQuery('');
-                  setClientModalVisible(true);
-                }}
-                style={styles.chip}
-              >
-                Add Client
-              </Chip>
-            )}
+            <Chip
+              icon="plus"
+              onPress={() => {
+                setSearchQuery('');
+                setClientModalVisible(true);
+              }}
+              style={styles.chip}
+            >
+              Add Client
+            </Chip>
           </View>
         </View>
 
-        {canToggleActive && (
+        {can(PERMISSIONS.USER_MANAGE_INACTIVE) && isEditMode && (
           <Controller
             control={control}
             name="isActive"
@@ -299,29 +287,17 @@ export function UserForm({
             )}
           />
         )}
-      </ScrollView>
 
-      <View style={styles.actions}>
         <Button
-          mode="outlined"
-          onPress={onCancel}
-          style={styles.button}
-          disabled={isSubmitting}
+          mode="contained"
+          onPress={handleSubmit(handleFormSubmit)}
+          style={styles.submitButton}
+          loading={isSaving}
+          disabled={isSaving}
         >
-          {isView ? 'Back' : 'Cancel'}
+          {isEditMode ? 'Save Changes' : 'Create User'}
         </Button>
-        {!isView && (
-          <Button
-            mode="contained"
-            onPress={handleSubmit(onSubmit)}
-            style={styles.button}
-            loading={isSubmitting}
-            disabled={isSubmitting}
-          >
-            Save
-          </Button>
-        )}
-      </View>
+      </ScrollView>
 
       <Portal>
         <Modal
@@ -393,7 +369,7 @@ export function UserForm({
           </ScrollView>
         </Modal>
       </Portal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -402,27 +378,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.md,
   },
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   switchContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
-  actions: {
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
-  },
-  button: {
-    flex: 1,
-    marginHorizontal: 8,
+  submitButton: {
+    marginTop: spacing.md,
   },
   selectorButton: {
     marginTop: 4,

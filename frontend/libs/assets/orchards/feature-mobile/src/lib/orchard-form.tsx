@@ -97,7 +97,7 @@ export function OrchardForm({
   const canToggleActive = isEdit && can(PERMISSIONS.ORCHARD_EDIT);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <Controller
           control={control}

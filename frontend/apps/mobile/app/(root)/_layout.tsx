@@ -1,12 +1,24 @@
 import { Stack } from 'expo-router';
+import { useTheme } from 'react-native-paper';
 
 export default function AppLayout() {
+  const theme = useTheme();
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ 
+      headerShown: false,
+      headerStyle: { backgroundColor: theme.colors.background },
+      headerTintColor: theme.colors.onBackground,
+    }}>
       <Stack.Screen name="iam/roles/index" options={{ title: 'Roles', headerShown: false }} />
       <Stack.Screen name="iam/roles/create" options={{ title: 'Create Role', headerShown: true }} />
       <Stack.Screen name="iam/roles/[id]" options={{ title: 'Role Details', headerShown: true }} />
       <Stack.Screen name="iam/roles/edit" options={{ title: 'Edit Role', headerShown: true }} />
+
+      <Stack.Screen name="iam/users/index" options={{ title: 'Users', headerShown: false }} />
+      <Stack.Screen name="iam/users/create" options={{ title: 'Create User', headerShown: true }} />
+      <Stack.Screen name="iam/users/[id]" options={{ title: 'User Details', headerShown: true }} />
+      <Stack.Screen name="iam/users/edit" options={{ title: 'Edit User', headerShown: true }} />
 
       <Stack.Screen name="iam/clients/index" options={{ title: 'Clients', headerShown: false }} />
       <Stack.Screen name="iam/clients/create" options={{ title: 'Create Client', headerShown: true }} />

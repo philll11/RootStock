@@ -1,46 +1,21 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCreateUser } from '@rootstock/iam/users/users-data-access';
-import { UserForm } from './user-form';
-import { ActivityIndicator, useTheme } from 'react-native-paper';
+import { UserForm, UserFormData } from './user-form';
 
 export function UserCreateScreen() {
   const router = useRouter();
-  const theme = useTheme();
-  const { mutateAsync: createUser, isPending: isCreating } = useCreateUser();
+  const { mutateAsync: createUser } = useCreateUser();
 
-  const handleSubmit = async (data: any) => {
-    try {
-      await createUser(data);
-      router.back();
-    } catch (error) {
-      console.error('Failed to create user:', error);
-    }
+  const handleSubmit = async (data: UserFormData) => {
+    const { isActive, ...createData } = data;
+    const newItem = await createUser(createData);
+    router.replace(`/iam/users/${newItem._id}`);
   };
-
-  if (isCreating) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
-  }
 
   return (
     <UserForm
-      mode="create"
       onSubmit={handleSubmit}
-      onCancel={() => router.back()}
-      isSubmitting={isCreating}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

@@ -104,7 +104,7 @@ export function BlockForm({
   const canToggleActive = isEdit && can(PERMISSIONS.BLOCK_EDIT);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <Controller
           control={control}

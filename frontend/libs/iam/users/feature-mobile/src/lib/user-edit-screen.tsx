@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useGetUser, useUpdateUser } from '@rootstock/iam/users/users-data-access';
-import { UserForm } from './user-form';
+import { UserForm, UserFormData } from './user-form';
 import { ActivityIndicator, Text, useTheme } from 'react-native-paper';
 
 export function UserEditScreen() {
@@ -10,15 +10,14 @@ export function UserEditScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { data: user, isLoading, isError: error } = useGetUser(id!);
-  const { mutateAsync: updateUser, isPending: isUpdating } = useUpdateUser();
+  const { mutateAsync: updateUser } = useUpdateUser();
 
-  const handleSubmit = async (data: any) => {
-    try {
-      await updateUser({ id: id!, data });
-      router.back();
-    } catch (error) {
-      console.error('Failed to update user:', error);
-    }
+  const handleSubmit = async (data: UserFormData) => {
+    await updateUser({ 
+      id: id!, 
+      data: { ...data, __v: user?.__v } 
+    });
+    router.back();
   };
 
   if (isLoading) {
@@ -39,16 +38,21 @@ export function UserEditScreen() {
     );
   }
 
+  const defaultValues: Partial<UserFormData> = {
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    userType: user.userType,
+    roleId: typeof user.roleId === 'object' ? user.roleId?._id : user.roleId,
+    clientIds: user.clientIds?.map((c: any) => (typeof c === 'object' ? c._id : c)) || [],
+    isActive: user.isActive,
+  };
+
   return (
     <UserForm
-      mode="edit"
-      defaultValues={{
-        ...user,
-        roleId: typeof user.roleId === 'object' ? user.roleId._id : user.roleId,
-      }}
+      isEditMode
+      defaultValues={defaultValues}
       onSubmit={handleSubmit}
-      onCancel={() => router.back()}
-      isSubmitting={isUpdating}
     />
   );
 }
