@@ -38,16 +38,18 @@ const userSchema = z.object({
 
 export type UserFormData = z.infer<typeof userSchema>;
 
-interface UserFormProps {
+export interface UserFormProps {
   defaultValues?: Partial<UserFormData>;
   onSubmit: (data: UserFormData) => Promise<void>;
   isEditMode?: boolean;
+  isSubmitting?: boolean;
 }
 
 export function UserForm({
   defaultValues,
   onSubmit,
   isEditMode = false,
+  isSubmitting,
 }: UserFormProps) {
   const theme = useTheme();
   const { can } = usePermission();
@@ -292,8 +294,8 @@ export function UserForm({
           mode="contained"
           onPress={handleSubmit(handleFormSubmit)}
           style={styles.submitButton}
-          loading={isSaving}
-          disabled={isSaving}
+          loading={isSubmitting || isSaving}
+          disabled={isSubmitting || isSaving}
         >
           {isEditMode ? 'Save Changes' : 'Create User'}
         </Button>

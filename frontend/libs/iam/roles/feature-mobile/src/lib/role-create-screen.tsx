@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { useCreateRole } from '@rootstock/iam/roles/roles-data-access';
+import { ResourceCreateLayout } from '@rootstock/ui/mobile';
 import { RoleForm, RoleFormData } from './role-form';
 
 export const RoleCreateScreen = () => {
@@ -18,10 +19,12 @@ export const RoleCreateScreen = () => {
   };
 
   return (
-    <RoleForm
-      onSubmit={handleSubmit}
-      isSubmitting={isCreating}
-      isEditMode={false}
-    />
+    <ResourceCreateLayout title="Create Role">
+      <RoleForm
+        onSubmit={handleSubmit}
+        isSubmitting={isCreating}
+        isEditMode={false}
+      />
+    </ResourceCreateLayout>
   );
 };

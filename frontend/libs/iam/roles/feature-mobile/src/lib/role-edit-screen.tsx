@@ -1,8 +1,7 @@
 import React from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useUpdateRole, useGetRole } from '@rootstock/iam/roles/roles-data-access';
-import { ActivityIndicator } from 'react-native-paper';
-import { View } from 'react-native';
+import { ResourceEditLayout } from '@rootstock/ui/mobile';
 import { RoleForm, RoleFormData } from './role-form';
 
 export const RoleEditScreen = () => {
@@ -27,24 +26,26 @@ export const RoleEditScreen = () => {
     }
   };
 
-  if (isLoading) {
-    return <View style={{flex:1, justifyContent:'center'}}><ActivityIndicator /></View>;
-  }
-
-  if (!role) return null;
-
   return (
-    <RoleForm
-      defaultValues={{
-        name: role.name,
-        description: role.description || '',
-        visibilityScope: role.visibilityScope,
-        permissions: role.permissions || [],
-        isActive: role.isActive
-      }}
-      onSubmit={handleSubmit}
-      isSubmitting={isUpdating}
-      isEditMode={true}
-    />
+    <ResourceEditLayout
+      isLoading={isLoading}
+      error={!role}
+      title="Edit Role"
+    >
+      {role && (
+        <RoleForm
+          defaultValues={{
+            name: role.name,
+            description: role.description || '',
+            visibilityScope: role.visibilityScope,
+            permissions: role.permissions || [],
+            isActive: role.isActive
+          }}
+          onSubmit={handleSubmit}
+          isSubmitting={isUpdating}
+          isEditMode={true}
+        />
+      )}
+    </ResourceEditLayout>
   );
 };

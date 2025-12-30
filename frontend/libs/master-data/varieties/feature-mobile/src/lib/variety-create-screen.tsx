@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { useCreateVariety } from '@rootstock/master-data/varieties/varieties-data-access';
+import { ResourceCreateLayout } from '@rootstock/ui/mobile';
 import { VarietyForm, VarietyFormData } from './variety-form';
 
 export const VarietyCreateScreen = () => {
@@ -18,10 +19,12 @@ export const VarietyCreateScreen = () => {
   };
 
   return (
-    <VarietyForm
-      onSubmit={handleSubmit}
-      isSubmitting={isCreating}
-      isEditMode={false}
-    />
+    <ResourceCreateLayout title="Create Variety">
+      <VarietyForm
+        onSubmit={handleSubmit}
+        isSubmitting={isCreating}
+        isEditMode={false}
+      />
+    </ResourceCreateLayout>
   );
 };

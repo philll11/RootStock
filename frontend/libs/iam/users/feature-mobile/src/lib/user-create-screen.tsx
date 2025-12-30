@@ -1,11 +1,12 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { useCreateUser } from '@rootstock/iam/users/users-data-access';
+import { ResourceCreateLayout } from '@rootstock/ui/mobile';
 import { UserForm, UserFormData } from './user-form';
 
 export function UserCreateScreen() {
   const router = useRouter();
-  const { mutateAsync: createUser } = useCreateUser();
+  const { mutateAsync: createUser, isPending: isCreating } = useCreateUser();
 
   const handleSubmit = async (data: UserFormData) => {
     const { isActive, ...createData } = data;
@@ -14,8 +15,11 @@ export function UserCreateScreen() {
   };
 
   return (
-    <UserForm
-      onSubmit={handleSubmit}
-    />
+    <ResourceCreateLayout title="Create User">
+      <UserForm
+        onSubmit={handleSubmit}
+        isSubmitting={isCreating}
+      />
+    </ResourceCreateLayout>
   );
 }
