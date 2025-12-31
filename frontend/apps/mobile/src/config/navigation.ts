@@ -1,4 +1,4 @@
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { PERMISSIONS, VisibilityScope } from '@rootstock/shared/util';
 
 export interface NavigationItem {
   label: string;
@@ -6,6 +6,7 @@ export interface NavigationItem {
   icon: string;
   permission?: string | null;
   children?: NavigationItem[];
+  requiredScope?: VisibilityScope;
 }
 
 export const NAVIGATION_ITEMS: NavigationItem[] = [
@@ -69,6 +70,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
         screen: '/iam/roles',
         icon: 'shield-account',
         permission: PERMISSIONS.ROLE_VIEW,
+        requiredScope: VisibilityScope.GLOBAL,
       },
       {
         label: 'Settings',

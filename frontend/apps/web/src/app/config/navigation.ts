@@ -1,5 +1,5 @@
 import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings, IconTree, IconLeaf } from '@tabler/icons-react';
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { PERMISSIONS, VisibilityScope } from '@rootstock/shared/util';
 
 export interface NavigationItem {
   label: string;
@@ -8,6 +8,7 @@ export interface NavigationItem {
   permission?: string | null;
   type?: 'link' | 'header';
   children?: NavigationItem[];
+  requiredScope?: VisibilityScope;
 }
 
 export const NAVIGATION_ITEMS: NavigationItem[] = [
@@ -78,6 +79,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
         icon: IconShieldLock,
         permission: PERMISSIONS.ROLE_VIEW,
         type: 'link',
+        requiredScope: VisibilityScope.GLOBAL,
       },
       {
         label: 'Settings',

@@ -159,11 +159,30 @@ export const AppDrawer = () => {
                   return null;
                 }
 
+                // Check requiredScope
+                if (navItem.requiredScope) {
+                  const userRole = user?.roleId;
+                  // Ensure role is populated and matches scope
+                  if (!userRole || typeof userRole !== 'object' || (userRole as any).visibilityScope !== navItem.requiredScope) {
+                    return null;
+                  }
+                }
+
                 // If it has children, check if user has permission for at least one child
                 if (navItem.children && navItem.children.length > 0) {
-                  const visibleChildren = navItem.children.filter((child: any) => 
-                    !child.permission || hasPermission(child.permission)
-                  );
+                  const visibleChildren = navItem.children.filter((child: any) => {
+                    // Check permission
+                    if (child.permission && !hasPermission(child.permission)) return false;
+                    
+                    // Check requiredScope
+                    if (child.requiredScope) {
+                      const userRole = user?.roleId;
+                      if (!userRole || typeof userRole !== 'object' || (userRole as any).visibilityScope !== child.requiredScope) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  });
                   
                   if (visibleChildren.length === 0) {
                     return null;

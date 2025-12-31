@@ -137,7 +137,7 @@ export class UsersService {
     else {
       // If they DON'T have the general USER_EDIT permission, they are restricted to personal info.
       if (!hasEditPermission) {
-        const allowedFields = ['firstName', 'lastName', 'email', "password", 'preferences'];
+        const allowedFields = ['firstName', 'lastName', 'email', "password", 'preferences', '__v'];
         const attemptedFields = Object.keys(updateUserDto);
         const unauthorizedFields = attemptedFields.filter(field => !allowedFields.includes(field));
 

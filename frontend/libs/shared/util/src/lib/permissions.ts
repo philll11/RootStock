@@ -56,6 +56,12 @@ export const PERMISSIONS = {
   VIEW_DELETED: 'Global:ViewDeleted',
 };
 
+export enum VisibilityScope {
+  CLIENT = 'Client',
+  SUBSIDIARY = 'Subsidiary',
+  GLOBAL = 'Global',
+}
+
 export enum Resource {
   USER = 'User',
   CLIENT = 'Client',
