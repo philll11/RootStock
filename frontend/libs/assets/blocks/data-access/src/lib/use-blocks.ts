@@ -4,6 +4,7 @@ import { apiClient } from '@rootstock/shared/api-client';
 import { Block, CreateBlockDto, UpdateBlockDto } from './block.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
+import { v4 as uuid } from 'uuid';
 
 export const BLOCKS_KEYS = {
   all: ['blocks'] as const,
@@ -11,6 +12,11 @@ export const BLOCKS_KEYS = {
   list: (orchardId?: string) => [...BLOCKS_KEYS.lists(), { orchardId }] as const,
   details: () => [...BLOCKS_KEYS.all, 'detail'] as const,
   detail: (id: string) => [...BLOCKS_KEYS.details(), id] as const,
+};
+
+export const fetchBlocks = async () => {
+  const response = await apiClient.get<Block[]>('/blocks');
+  return response.data;
 };
 
 export const getBlock = async (id: string): Promise<Block> => {
@@ -54,15 +60,57 @@ export function useCreateBlock() {
       const response = await apiClient.post<Block>('/blocks', data);
       return response.data;
     },
+    onMutate: async (newBlock) => {
+      await queryClient.cancelQueries({ queryKey: BLOCKS_KEYS.all });
+
+      const previousBlocksAll = queryClient.getQueryData<Block[]>(BLOCKS_KEYS.list(undefined));
+      const previousBlocksOrchard = queryClient.getQueryData<Block[]>(BLOCKS_KEYS.list(newBlock.orchardId));
+
+      const tempBlock: Block = {
+        ...newBlock,
+        _id: uuid(),
+        recordId: 'TEMP',
+        clientId: 'PENDING', // Derived from Orchard on backend
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+        isDeleted: false,
+        __v: 0,
+      } as any;
+
+      if (previousBlocksAll) {
+        queryClient.setQueryData(BLOCKS_KEYS.list(undefined), [
+          tempBlock,
+          ...previousBlocksAll,
+        ]);
+      }
+
+      if (previousBlocksOrchard) {
+        queryClient.setQueryData(BLOCKS_KEYS.list(newBlock.orchardId), [
+          tempBlock,
+          ...previousBlocksOrchard,
+        ]);
+      }
+
+      return { previousBlocksAll, previousBlocksOrchard };
+    },
+    onError: (err, newBlock, context) => {
+      if (context?.previousBlocksAll) {
+        queryClient.setQueryData(BLOCKS_KEYS.list(undefined), context.previousBlocksAll);
+      }
+      if (context?.previousBlocksOrchard) {
+        queryClient.setQueryData(BLOCKS_KEYS.list(newBlock.orchardId), context.previousBlocksOrchard);
+      }
+      notify.error(err, 'Error Creating Block');
+    },
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.all });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.lists() });
       notify.success(
         'The block has been successfully created.',
         'Block Created'
       );
-    },
-    onError: (error: any) => {
-      notify.error(error, 'Error Creating Block');
     },
   });
 }
@@ -81,14 +129,47 @@ export function useUpdateBlock() {
       const response = await apiClient.patch<Block>(`/blocks/${id}`, data);
       return response.data;
     },
-    onSuccess: (updatedBlock, variables) => {
-      queryClient.setQueryData(BLOCKS_KEYS.detail(variables.id), updatedBlock);
-      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.lists() });
-      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.detail(variables.id) });
-      notify.success('The block details have been updated.', 'Block Updated');
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: BLOCKS_KEYS.all });
+
+      const previousBlock = queryClient.getQueryData<Block>(BLOCKS_KEYS.detail(id));
+      // We don't easily know which lists contain this block without searching, 
+      // but we can try to update the "All" list and maybe the specific orchard list if we knew it.
+      // For now, we'll update the detail and the "All" list if present.
+      const previousBlocksAll = queryClient.getQueryData<Block[]>(BLOCKS_KEYS.list(undefined));
+
+      if (previousBlock) {
+        queryClient.setQueryData(BLOCKS_KEYS.detail(id), {
+          ...previousBlock,
+          ...data,
+        });
+      }
+
+      if (previousBlocksAll) {
+        queryClient.setQueryData(
+          BLOCKS_KEYS.list(undefined),
+          previousBlocksAll.map((block) =>
+            block._id === id ? { ...block, ...data } : block
+          )
+        );
+      }
+
+      return { previousBlock, previousBlocksAll };
     },
-    onError: (error: any) => {
-      notify.error(error, 'Error Updating Block');
+    onError: (err, variables, context) => {
+      if (context?.previousBlock) {
+        queryClient.setQueryData(BLOCKS_KEYS.detail(variables.id), context.previousBlock);
+      }
+      if (context?.previousBlocksAll) {
+        queryClient.setQueryData(BLOCKS_KEYS.list(undefined), context.previousBlocksAll);
+      }
+      notify.error(err, 'Error Updating Block');
+    },
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.all });
+    },
+    onSuccess: () => {
+      notify.success('The block details have been updated.', 'Block Updated');
     },
   });
 }

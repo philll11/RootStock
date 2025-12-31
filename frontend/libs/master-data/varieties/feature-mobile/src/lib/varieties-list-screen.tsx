@@ -36,21 +36,41 @@ export const VarietiesListScreen = () => {
         data={filteredVarieties}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <List.Item
-            title={item.name}
-            description={item.recordId}
-            left={props => <List.Icon {...props} icon="sprout" />}
-            right={props => (
-              <View style={styles.statusContainer}>
-                {!item.isActive && <Text style={{ color: theme.colors.error, marginRight: spacing.sm }}>Inactive</Text>}
-                <List.Icon {...props} icon="chevron-right" />
-              </View>
-            )}
-            onPress={() => router.push(`/master-data/varieties/${item._id}`)}
-            style={styles.listItem}
-          />
-        )}
+        renderItem={({ item }) => {
+          const isOptimistic = (item as any).recordId === 'TEMP';
+          return (
+            <List.Item
+              title={item.name}
+              titleStyle={isOptimistic ? { opacity: 0.5 } : undefined}
+              description={isOptimistic ? 'Syncing...' : item.recordId}
+              descriptionStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
+              left={(props) => (
+                <List.Icon
+                  {...props}
+                  icon={isOptimistic ? 'cloud-upload' : 'sprout'}
+                  color={isOptimistic ? theme.colors.outline : undefined}
+                />
+              )}
+              right={(props) => (
+                <View style={styles.statusContainer}>
+                  {!item.isActive && !isOptimistic && (
+                    <Text
+                      style={{
+                        color: theme.colors.error,
+                        marginRight: spacing.sm,
+                      }}
+                    >
+                      Inactive
+                    </Text>
+                  )}
+                  <List.Icon {...props} icon="chevron-right" />
+                </View>
+              )}
+              onPress={() => router.push(`/master-data/varieties/${item._id}`)}
+              style={[styles.listItem, isOptimistic && { opacity: 0.7 }]}
+            />
+          );
+        }}
       />
     </ListLayout>
   );
