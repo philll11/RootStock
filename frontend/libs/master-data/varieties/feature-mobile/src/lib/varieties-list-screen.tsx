@@ -10,7 +10,7 @@ import { spacing } from '@rootstock/ui/theme';
 
 export const VarietiesListScreen = () => {
   const router = useRouter();
-  const theme = useTheme() as AppTheme;
+  const theme = useTheme<AppTheme>();
   const { data: varieties, isLoading } = useGetVarieties();
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.VARIETY_CREATE);

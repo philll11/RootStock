@@ -9,7 +9,7 @@ import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 
 export const UsersListScreen = () => {
-  const theme = useTheme() as AppTheme;
+  const theme = useTheme<AppTheme>();
   const router = useRouter();
   const { data: users = [], isLoading } = useGetUsers();
   const { can } = usePermission();

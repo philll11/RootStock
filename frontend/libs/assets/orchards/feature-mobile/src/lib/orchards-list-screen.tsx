@@ -9,7 +9,7 @@ import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 
 export function OrchardsListScreen() {
-  const theme = useTheme() as AppTheme;
+  const theme = useTheme<AppTheme>();
   const router = useRouter();
   const { data: orchards = [], isLoading } = useGetOrchards();
   const { can } = usePermission();

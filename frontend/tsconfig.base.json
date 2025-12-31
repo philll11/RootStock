@@ -95,6 +95,9 @@
       ],
       "@rootstock/assets/blocks/blocks-feature-mobile": [
         "libs/assets/blocks/feature-mobile/src/index.ts"
+      ],
+      "@rootstock/system/sync/sync-data-access": [
+        "libs/system/sync/data-access/src/index.ts"
       ]
     }
   },

@@ -32,7 +32,14 @@
     "react-native-svg": "*",
     "react-native-svg-transformer": "*",
     "react-native-web": "*",
-    "react-hook-form": "*"
+    "react-hook-form": "*",
+    "@react-native-async-storage/async-storage": "*",
+    "@react-native-community/netinfo": "*",
+    "@tanstack/react-query": "*",
+    "@tanstack/react-query-persist-client": "*",
+    "@tanstack/query-async-storage-persister": "*",
+    "react-native-get-random-values": "*",
+    "uuid": "*"
   },
   "devDependencies": {}
 }

@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Appbar, FAB, Searchbar, ActivityIndicator, Text, useTheme } from 'react-native-paper';
 import { useDrawer } from '../drawer-context';
 import { spacing } from '@rootstock/ui/theme';
+import { SyncIndicator } from './sync-indicator';
 
 interface ListLayoutProps {
   title: string;
@@ -41,6 +42,7 @@ export const ListLayout = ({
           <Appbar.Action icon="menu" onPress={toggleDrawer} />
         )}
         <Appbar.Content title={title} />
+        <SyncIndicator />
       </Appbar.Header>
 
       <View style={styles.content}>

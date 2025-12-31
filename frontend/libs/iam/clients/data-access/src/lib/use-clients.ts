@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
+import { v4 as uuidv4 } from 'uuid';
 import {
   Client,
   CreateClientDto,
@@ -31,16 +32,18 @@ export const getClient = async (id: string): Promise<Client> => {
   return response.data;
 };
 
+export const fetchClients = async (): Promise<Client[]> => {
+  const response = await apiClient.get<Client[]>('/clients');
+  return response.data;
+};
+
 export function useGetClients(options?: { enabled?: boolean }) {
   const { can } = usePermission();
   const isEnabled = (options?.enabled ?? true) && can(PERMISSIONS.CLIENT_VIEW);
 
   return useQuery({
     queryKey: CLIENTS_KEYS.lists(),
-    queryFn: async () => {
-      const response = await apiClient.get<Client[]>('/clients');
-      return response.data;
-    },
+    queryFn: fetchClients,
     enabled: isEnabled,
   });
 }
@@ -60,15 +63,41 @@ export function useCreateClient() {
       const response = await apiClient.post<Client>('/clients', data);
       return response.data;
     },
-    onSuccess: () => {
+    onMutate: async (newClient) => {
+      await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.lists() });
+      const previousClients = queryClient.getQueryData<Client[]>(CLIENTS_KEYS.lists());
+
+      const optimisticClient: Client & { isOptimistic?: boolean } = {
+        _id: uuidv4(),
+        recordId: 'TEMP',
+        isActive: true,
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        __v: 0,
+        ...newClient,
+        isOptimistic: true,
+      };
+
+      queryClient.setQueryData(CLIENTS_KEYS.lists(), (old: Client[] = []) => [
+        optimisticClient,
+        ...old,
+      ]);
+
+      return { previousClients };
+    },
+    onError: (error: any, newClient, context) => {
+      queryClient.setQueryData(CLIENTS_KEYS.lists(), context?.previousClients);
+      notify.error(error, 'Error Creating Client');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
+    },
+    onSuccess: () => {
       notify.success(
         'The client has been successfully created.',
         'Client Created'
       );
-    },
-    onError: (error: any) => {
-      notify.error(error, 'Error Creating Client');
     },
   });
 }
@@ -80,16 +109,48 @@ export function useUpdateClient() {
       const response = await apiClient.patch<Client>(`/clients/${id}`, data);
       return response.data;
     },
-    onSuccess: (data, variables) => {
-      queryClient.setQueryData(CLIENTS_KEYS.detail(variables.id), data);
-      queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
-      queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.detail(variables.id) });
-      notify.success('The client details have been updated.', 'Client Updated');
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.detail(id) });
+      await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.lists() });
+
+      const previousClient = queryClient.getQueryData<Client>(CLIENTS_KEYS.detail(id));
+      const previousClients = queryClient.getQueryData<Client[]>(CLIENTS_KEYS.lists());
+
+      if (previousClient) {
+        queryClient.setQueryData(CLIENTS_KEYS.detail(id), {
+          ...previousClient,
+          ...data,
+          isOptimistic: true,
+        });
+      }
+
+      if (previousClients) {
+        queryClient.setQueryData(CLIENTS_KEYS.lists(), (old: Client[] = []) =>
+          old.map((client) =>
+            client._id === id ? { ...client, ...data, isOptimistic: true } : client
+          )
+        );
+      }
+
+      return { previousClient, previousClients };
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      if (context?.previousClient) {
+        queryClient.setQueryData(CLIENTS_KEYS.detail(variables.id), context.previousClient);
+      }
+      if (context?.previousClients) {
+        queryClient.setQueryData(CLIENTS_KEYS.lists(), context.previousClients);
+      }
       if (error.response?.status !== 409) {
         notify.error(error, 'Error Updating Client');
       }
+    },
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
+    },
+    onSuccess: () => {
+      notify.success('The client details have been updated.', 'Client Updated');
     },
   });
 }

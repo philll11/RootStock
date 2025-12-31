@@ -3,6 +3,7 @@ import { BaseEntity } from '@rootstock/shared/util';
 export interface Client extends BaseEntity {
   name: string;
   subsidiaryId?: string;
+  isOptimistic?: boolean;
 }
 
 export interface CreateClientDto {

@@ -10,7 +10,7 @@ import { spacing } from '@rootstock/ui/theme';
 
 export const RolesListScreen = () => {
   const router = useRouter();
-  const theme = useTheme() as AppTheme;
+  const theme = useTheme<AppTheme>();
   const { data: roles = [], isLoading } = useGetRoles();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');

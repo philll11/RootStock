@@ -4,6 +4,7 @@ import { Drawer, useTheme, Text, Avatar, Divider, List } from 'react-native-pape
 import { useDrawer } from '@rootstock/ui/mobile';
 import { layout, zIndex, transitions, spacing } from '@rootstock/ui/theme';
 import { useLogout, useGetProfile, usePermission } from '@rootstock/iam/auth/auth-data-access';
+import { useSyncOfflineData } from '@rootstock/system/sync/sync-data-access';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, usePathname } from 'expo-router';
 import { NAVIGATION_ITEMS } from '../config/navigation';
@@ -40,6 +41,7 @@ export const AppDrawer = () => {
   const { mutate: logout } = useLogout();
   const { data: user } = useGetProfile();
   const { hasPermission } = usePermission();
+  const { syncAll, isSyncing } = useSyncOfflineData();
   const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -249,6 +251,12 @@ export const AppDrawer = () => {
 
           <View style={[styles.footer, { backgroundColor: theme.colors.surface }]}>
             <Divider />
+            <Drawer.Item
+              label={isSyncing ? 'Syncing...' : 'Sync Data'}
+              icon={isSyncing ? 'loading' : 'sync'}
+              onPress={syncAll}
+              disabled={isSyncing}
+            />
             <Drawer.Item
               label="Logout"
               icon="logout"

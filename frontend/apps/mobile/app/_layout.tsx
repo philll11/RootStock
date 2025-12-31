@@ -1,17 +1,43 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider, DrawerProvider, NotificationProvider } from '@rootstock/ui/mobile';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ThemeProvider, DrawerProvider, NotificationProvider, useNetworkStatus } from '@rootstock/ui/mobile';
 import { AppDrawer } from '../src/components/AppDrawer';
 import { useAuthSession } from '@rootstock/iam/auth/auth-data-access';
+import { useSyncOfflineData } from '@rootstock/system/sync/sync-data-access';
 import { View, ActivityIndicator } from 'react-native';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
+      networkMode: 'offlineFirst',
+    },
+    mutations: {
+      networkMode: 'offlineFirst',
+    },
+  },
+});
+
+const persister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+});
 
 function RootLayoutNav() {
   const { isAuthenticated } = useAuthSession();
   const segments = useSegments();
   const router = useRouter();
+  const { isOnline } = useNetworkStatus();
+  const { syncAll } = useSyncOfflineData();
+
+  useEffect(() => {
+    if (isAuthenticated && isOnline) {
+      syncAll();
+    }
+  }, [isAuthenticated, isOnline]);
 
   useEffect(() => {
     if (isAuthenticated === null) return;
@@ -49,10 +75,10 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
       <ThemeProvider>
         <RootLayoutNav />
       </ThemeProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

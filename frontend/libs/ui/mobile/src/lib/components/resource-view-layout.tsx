@@ -5,6 +5,7 @@ import { Stack } from 'expo-router';
 import { spacing } from '@rootstock/ui/theme';
 import { LoadingScreen } from './loading-screen';
 import { ErrorScreen } from './error-screen';
+import { SyncIndicator } from './sync-indicator';
 
 interface ResourceViewLayoutProps {
   title: string;
@@ -61,9 +62,12 @@ export function ResourceViewLayout({
       <Stack.Screen
         options={{
           headerRight: () => (
-            canEdit && onEdit ? (
-              <Button onPress={onEdit}>Edit</Button>
-            ) : null
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <SyncIndicator />
+              {canEdit && onEdit ? (
+                <Button onPress={onEdit}>Edit</Button>
+              ) : null}
+            </View>
           ),
           title: title
         }}

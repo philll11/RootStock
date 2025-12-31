@@ -9,7 +9,7 @@ import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 
 export const BlocksListScreen = () => {
-  const theme = useTheme() as AppTheme;
+  const theme = useTheme<AppTheme>();
   const router = useRouter();
   const { orchardId } = useLocalSearchParams<{ orchardId: string }>();
   const { data: blocks, isLoading } = useGetBlocks(orchardId);

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Appbar, useTheme, ActivityIndicator } from 'react-native-paper';
 import { spacing } from '@rootstock/ui/theme';
+import { SyncIndicator } from './sync-indicator';
 
 export type FormMode = 'create' | 'edit' | 'view';
 
@@ -41,6 +42,7 @@ export function FormLayout({
       <Appbar.Header>
         <Appbar.BackAction onPress={onCancel} />
         <Appbar.Content title={title} />
+        <SyncIndicator />
         {isView ? (
           canEdit && onEdit && <Appbar.Action icon="pencil" onPress={onEdit} />
         ) : (

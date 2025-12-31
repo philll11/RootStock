@@ -10,7 +10,7 @@ import { spacing } from '@rootstock/ui/theme';
 
 export const ClientsListScreen = () => {
   const router = useRouter();
-  const theme = useTheme() as AppTheme;
+  const theme = useTheme<AppTheme>();
   const { data: clients = [], isLoading } = useGetClients();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,12 +41,13 @@ export const ClientsListScreen = () => {
         renderItem={({ item }) => (
           <List.Item
             title={item.name}
-            left={(props) => <List.Icon {...props} icon="domain" />}
+            description={item.isOptimistic ? 'Syncing...' : undefined}
+            left={(props) => <List.Icon {...props} icon="domain" color={item.isOptimistic ? theme.colors.outline : props.color} />}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() =>
               router.push(`/iam/clients/${item._id}`)
             }
-            style={styles.listItem}
+            style={[styles.listItem, item.isOptimistic && { opacity: 0.6 }]}
           />
         )}
       />
