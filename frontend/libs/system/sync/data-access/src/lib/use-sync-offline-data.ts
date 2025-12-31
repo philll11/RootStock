@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { CLIENTS_KEYS, fetchClients } from '@rootstock/iam/clients/clients-data-access';
+import { ORCHARDS_KEYS, fetchOrchards } from '@rootstock/assets/orchards/orchards-data-access';
 import { useState, useCallback } from 'react';
 import { notify } from '@rootstock/shared/util';
 
@@ -19,7 +20,13 @@ export function useSyncOfflineData() {
         queryFn: fetchClients 
       });
 
-      // Future: Add Orchards, Blocks, Varieties here
+      // Prefetch Orchards
+      await queryClient.prefetchQuery({ 
+        queryKey: ORCHARDS_KEYS.lists(), 
+        queryFn: fetchOrchards 
+      });
+
+      // Future: Add Blocks, Varieties here
       
       notify.success('Offline data synchronized successfully.', 'Sync Complete');
     } catch (error) {

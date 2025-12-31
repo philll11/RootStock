@@ -9,6 +9,7 @@ import {
 } from './orchard.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
+import { v4 as uuid } from 'uuid';
 
 export const ORCHARDS_KEYS = {
   all: ['orchards'] as const,
@@ -16,6 +17,11 @@ export const ORCHARDS_KEYS = {
   list: (filters: string) => [...ORCHARDS_KEYS.lists(), { filters }] as const,
   details: () => [...ORCHARDS_KEYS.all, 'detail'] as const,
   detail: (id: string) => [...ORCHARDS_KEYS.details(), id] as const,
+};
+
+export const fetchOrchards = async () => {
+  const response = await apiClient.get<Orchard[]>('/orchards');
+  return response.data;
 };
 
 // Helper for searching orchards (useful for dropdowns)
@@ -39,10 +45,7 @@ export function useGetOrchards() {
 
   return useQuery({
     queryKey: ORCHARDS_KEYS.lists(),
-    queryFn: async () => {
-      const response = await apiClient.get<Orchard[]>('/orchards');
-      return response.data;
-    },
+    queryFn: fetchOrchards,
     enabled: isEnabled,
     staleTime: Infinity,
   });
@@ -67,15 +70,41 @@ export function useCreateOrchard() {
       const response = await apiClient.post<Orchard>('/orchards', data);
       return response.data;
     },
-    onSuccess: () => {
+    onMutate: async (newOrchard) => {
+      await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.lists() });
+      const previousOrchards = queryClient.getQueryData<Orchard[]>(ORCHARDS_KEYS.lists());
+
+      const tempOrchard: Orchard = {
+        ...newOrchard,
+        _id: uuid(),
+        recordId: 'TEMP',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as any;
+
+      if (previousOrchards) {
+        queryClient.setQueryData<Orchard[]>(ORCHARDS_KEYS.lists(), [
+          tempOrchard,
+          ...previousOrchards,
+        ]);
+      }
+
+      return { previousOrchards };
+    },
+    onError: (err, newOrchard, context) => {
+      if (context?.previousOrchards) {
+        queryClient.setQueryData(ORCHARDS_KEYS.lists(), context.previousOrchards);
+      }
+      notify.error(err, 'Error Creating Orchard');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ORCHARDS_KEYS.lists() });
+    },
+    onSuccess: () => {
       notify.success(
         'The orchard has been successfully created.',
         'Orchard Created'
       );
-    },
-    onError: (error: any) => {
-      notify.error(error, 'Error Creating Orchard');
     },
   });
 }
@@ -88,16 +117,49 @@ export function useUpdateOrchard() {
       const response = await apiClient.patch<Orchard>(`/orchards/${id}`, data);
       return response.data;
     },
-    onSuccess: (data, variables) => {
-      queryClient.setQueryData(ORCHARDS_KEYS.detail(variables.id), data);
-      queryClient.invalidateQueries({ queryKey: ORCHARDS_KEYS.lists() });
-      queryClient.invalidateQueries({
-        queryKey: ORCHARDS_KEYS.detail(variables.id),
-      });
-      notify.success('The orchard details have been updated.', 'Orchard Updated');
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.detail(id) });
+      await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.lists() });
+
+      const previousOrchard = queryClient.getQueryData<Orchard>(ORCHARDS_KEYS.detail(id));
+      const previousOrchards = queryClient.getQueryData<Orchard[]>(ORCHARDS_KEYS.lists());
+
+      if (previousOrchard) {
+        queryClient.setQueryData(ORCHARDS_KEYS.detail(id), {
+          ...previousOrchard,
+          ...data,
+        });
+      }
+
+      if (previousOrchards) {
+        queryClient.setQueryData(
+          ORCHARDS_KEYS.lists(),
+          previousOrchards.map((orchard) =>
+            orchard._id === id ? { ...orchard, ...data } : orchard
+          )
+        );
+      }
+
+      return { previousOrchard, previousOrchards };
     },
-    onError: (error: any) => {
-      notify.error(error, 'Error Updating Orchard');
+    onError: (err, variables, context) => {
+      if (context?.previousOrchard) {
+        queryClient.setQueryData(
+          ORCHARDS_KEYS.detail(variables.id),
+          context.previousOrchard
+        );
+      }
+      if (context?.previousOrchards) {
+        queryClient.setQueryData(ORCHARDS_KEYS.lists(), context.previousOrchards);
+      }
+      notify.error(err, 'Error Updating Orchard');
+    },
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ORCHARDS_KEYS.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: ORCHARDS_KEYS.lists() });
+    },
+    onSuccess: () => {
+      notify.success('The orchard details have been updated.', 'Orchard Updated');
     },
   });
 }
