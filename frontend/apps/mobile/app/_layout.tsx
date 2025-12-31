@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, DrawerProvider, NotificationProvider } from '@rootstock/ui/mobile';
-import { AppDrawer } from './components/AppDrawer';
+import { AppDrawer } from '../src/components/AppDrawer';
 import { useAuthSession } from '@rootstock/iam/auth/auth-data-access';
 import { View, ActivityIndicator } from 'react-native';
 
