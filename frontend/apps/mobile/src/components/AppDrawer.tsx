@@ -1,13 +1,39 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Animated, TouchableWithoutFeedback, ScrollView, Platform } from 'react-native';
 import { Drawer, useTheme, Text, Avatar, Divider, List } from 'react-native-paper';
 import { useDrawer } from '@rootstock/ui/mobile';
+import { layout, zIndex, transitions, spacing } from '@rootstock/ui/theme';
 import { useLogout, useGetProfile, usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, usePathname } from 'expo-router';
 import { NAVIGATION_ITEMS } from '../config/navigation';
 
-const DRAWER_WIDTH = 280;
+const DRAWER_WIDTH = layout.sidebarWidth;
+const ANIMATION_DURATION = parseInt(transitions.duration.normal);
+
+const CollapsibleSection = ({ children, expanded }: { children: React.ReactNode, expanded: boolean }) => {
+  const [contentHeight, setContentHeight] = React.useState(0);
+  const animatedHeight = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+     Animated.timing(animatedHeight, {
+        toValue: expanded ? contentHeight : 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+  }, [expanded, contentHeight]);
+
+  return (
+    <Animated.View style={{ height: animatedHeight, overflow: 'hidden' }}>
+      <View 
+        onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
+        style={{ position: 'absolute', width: '100%', top: 0 }}
+      >
+        {children}
+      </View>
+    </Animated.View>
+  );
+};
 
 export const AppDrawer = () => {
   const { isOpen, closeDrawer } = useDrawer();
@@ -17,6 +43,14 @@ export const AppDrawer = () => {
   const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
+  const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
+
+  const toggleExpand = (label: string) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [label]: !prev[label]
+    }));
+  };
   
   // Animation value: 0 = closed, 1 = open
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -27,12 +61,12 @@ export const AppDrawer = () => {
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 1,
-          duration: 250,
+          duration: ANIMATION_DURATION,
           useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 250,
+          duration: ANIMATION_DURATION,
           useNativeDriver: true,
         }),
       ]).start();
@@ -40,12 +74,12 @@ export const AppDrawer = () => {
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 200,
+          duration: parseInt(transitions.duration.fast),
           useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 200,
+          duration: parseInt(transitions.duration.fast),
           useNativeDriver: true,
         }),
       ]).start();
@@ -116,7 +150,8 @@ export const AppDrawer = () => {
           
           <Divider />
 
-          <Drawer.Section showDivider={false} style={styles.section}>
+          <ScrollView style={styles.section} contentContainerStyle={{ paddingBottom: 16 }}>
+            <Drawer.Section showDivider={false}>
             {NAVIGATION_ITEMS.map((item, index) => {
               const renderDrawerItem = (navItem: any, idx: number) => {
                 // Check permission for the item itself
@@ -141,17 +176,30 @@ export const AppDrawer = () => {
                 const hasChildren = navItem.children && navItem.children.length > 0;
 
                 if (hasChildren) {
+                  // Check if any child is active
+                  const isChildActive = navItem.children.some((child: any) => {
+                    let route = child.screen;
+                    if (route === 'Dashboard') route = '/';
+                    else if (!route.startsWith('/')) route = `/${route.toLowerCase()}`;
+                    return pathname === route || (route !== '/' && pathname.startsWith(route));
+                  });
+
                   return (
-                    <List.Accordion
-                      key={idx}
-                      title={navItem.label}
-                      left={props => <List.Icon {...props} icon={navItem.icon} />}
-                      expanded={true}
-                      style={{ paddingVertical: 0, backgroundColor: 'transparent' }}
-                      titleStyle={{ color: theme.colors.onSurfaceVariant }}
-                    >
-                      {navItem.children.map((child: any, childIdx: number) => renderDrawerItem(child, childIdx))}
-                    </List.Accordion>
+                    <View key={idx}>
+                      <List.Item
+                        title={navItem.label}
+                        left={props => <List.Icon {...props} icon={navItem.icon} color={isChildActive ? theme.colors.primary : props.color} />}
+                        right={props => <List.Icon {...props} icon={expandedItems[navItem.label] ? "chevron-up" : "chevron-down"} color={isChildActive ? theme.colors.primary : props.color} />}
+                        onPress={() => toggleExpand(navItem.label)}
+                        titleStyle={{ color: isChildActive ? theme.colors.primary : theme.colors.onSurfaceVariant, fontWeight: isChildActive ? 'bold' : 'normal' }}
+                        style={{ paddingVertical: spacing.sm }}
+                      />
+                      <CollapsibleSection expanded={!!expandedItems[navItem.label]}>
+                        <View style={{ paddingLeft: spacing.md, marginTop: 4 }}>
+                          {navItem.children.map((child: any, childIdx: number) => renderDrawerItem(child, childIdx))}
+                        </View>
+                      </CollapsibleSection>
+                    </View>
                   );
                 }
 
@@ -170,15 +218,17 @@ export const AppDrawer = () => {
                     icon={navItem.icon}
                     active={isActive}
                     onPress={() => handleNavigate(navItem.screen)}
+                    style={{ marginBottom: spacing.xs, paddingVertical: spacing.xs }}
                   />
                 );
               };
 
               return renderDrawerItem(item, index);
             })}
-          </Drawer.Section>
+            </Drawer.Section>
+          </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, { backgroundColor: theme.colors.surface }]}>
             <Divider />
             <Drawer.Item
               label="Logout"
@@ -195,8 +245,8 @@ export const AppDrawer = () => {
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 1000,
-    elevation: 1000,
+    zIndex: zIndex.drawer,
+    elevation: zIndex.drawer,
   },
   containerClosed: {
   },
@@ -217,19 +267,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 16,
+    padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
   },
   userInfo: {
-    marginLeft: 16,
+    marginLeft: spacing.md,
     flex: 1,
   },
   section: {
     flex: 1,
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   footer: {
-    marginBottom: 8,
+    marginBottom: 0,
+    paddingBottom: spacing.sm,
+    elevation: 4,
+    zIndex: 1,
   },
 });

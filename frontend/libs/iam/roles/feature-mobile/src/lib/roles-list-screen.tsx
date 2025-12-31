@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
-import { List, FAB } from 'react-native-paper';
+import { List, FAB, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
-import { ListLayout } from '@rootstock/ui/mobile';
+import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 
 export const RolesListScreen = () => {
   const router = useRouter();
+  const theme = useTheme() as AppTheme;
   const { data: roles = [], isLoading } = useGetRoles();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,8 +60,7 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   listItem: {
-    backgroundColor: 'white',
-    marginBottom: 1,
+    paddingHorizontal: spacing.sm,
   },
   fab: {
     position: 'absolute',

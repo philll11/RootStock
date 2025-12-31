@@ -7,10 +7,12 @@ import {
   ScrollView,
 } from 'react-native';
 import { TextInput, Button, Text, useTheme } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 import { useLogin } from '@rootstock/iam/auth/auth-data-access';
 import { spacing } from '@rootstock/ui/theme';
 
-export const LoginScreen = ({ navigation }: any) => {
+export const LoginScreen = () => {
+  const router = useRouter();
   const [username, setUsername] = useState('leo.phil.work@gmail.com');
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -94,7 +96,7 @@ export const LoginScreen = ({ navigation }: any) => {
 
         <Button
           mode="text"
-          onPress={() => navigation.navigate('ForgotPassword')}
+          onPress={() => router.push('/forgot-password')}
           style={styles.forgotPasswordButton}
           compact
         >

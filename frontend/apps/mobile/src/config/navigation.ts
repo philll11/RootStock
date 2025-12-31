@@ -41,6 +41,19 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     ]
   },
   {
+    label: 'Lists',
+    screen: '',
+    icon: 'format-list-bulleted',
+    children: [
+      {
+        label: 'Varieties',
+        screen: '/master-data/varieties',
+        icon: 'leaf',
+        permission: PERMISSIONS.VARIETY_VIEW,
+      },
+    ]
+  },
+  {
     label: 'System Management',
     screen: '',
     icon: 'cog',
@@ -62,19 +75,6 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
         screen: '/settings',
         icon: 'cog',
         permission: null,
-      },
-    ]
-  },
-  {
-    label: 'Lists',
-    screen: '',
-    icon: 'format-list-bulleted',
-    children: [
-      {
-        label: 'Varieties',
-        screen: '/master-data/varieties',
-        icon: 'leaf',
-        permission: PERMISSIONS.VARIETY_VIEW,
       },
     ]
   },

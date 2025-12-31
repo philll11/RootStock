@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
-import { List, useTheme, Text } from 'react-native-paper';
+import { useState } from 'react';
+import { FlatList, StyleSheet } from 'react-native';
+import { List, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';

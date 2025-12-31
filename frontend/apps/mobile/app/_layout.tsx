@@ -16,7 +16,7 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isAuthenticated === null) return;
 
-    const inAuthGroup = segments[0] === 'login';
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'forgot-password';
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/login');
@@ -39,6 +39,7 @@ function RootLayoutNav() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(root)" />
           <Stack.Screen name="login" />
+          <Stack.Screen name="forgot-password" />
         </Stack>
         {isAuthenticated && <AppDrawer />}
       </NotificationProvider>
