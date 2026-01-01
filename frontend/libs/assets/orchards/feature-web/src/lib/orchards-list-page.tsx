@@ -24,6 +24,7 @@ import {
   Orchard,
   CreateOrchardDto,
   UpdateOrchardDto,
+  OrchardFormData,
 } from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm, OrchardFormMode } from './orchard-form';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
@@ -47,7 +48,7 @@ export function OrchardsListPage() {
   const [mode, setMode] = useState<OrchardFormMode>('create');
   const [selectedOrchard, setSelectedOrchard] = useState<Orchard | null>(null);
 
-  const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateOrchardDto>>({});
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<OrchardFormData>>({});
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty && mode === 'edit');
@@ -116,16 +117,25 @@ export function OrchardsListPage() {
     }
   };
 
-  const handleSubmit = async (values: CreateOrchardDto | UpdateOrchardDto) => {
+  const handleSubmit = async (values: OrchardFormData) => {
     try {
       if (mode === 'create') {
-        await createOrchard(values as CreateOrchardDto);
+        await createOrchard({
+          name: values.name,
+          clientId: values.clientId,
+          userIds: values.userIds,
+        });
         setCreateFormDraft({});
       } else {
         if (selectedOrchard) {
           await updateOrchard({
             id: selectedOrchard._id,
-            data: values as UpdateOrchardDto,
+            data: {
+              name: values.name,
+              userIds: values.userIds,
+              isActive: values.isActive,
+              __v: selectedOrchard.__v
+            },
           });
         }
       }

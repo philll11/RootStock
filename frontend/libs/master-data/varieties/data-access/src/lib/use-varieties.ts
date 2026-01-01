@@ -13,7 +13,7 @@ export const VARIETIES_KEYS = {
   detail: (id: string) => [...VARIETIES_KEYS.details(), id] as const,
 };
 
-export const fetchVarieties = async () => {
+export const getVarieties = async () => {
   const response = await apiClient.get<Variety[]>('/varieties');
   return response.data;
 };
@@ -29,7 +29,7 @@ export function useGetVarieties() {
 
   return useQuery({
     queryKey: VARIETIES_KEYS.lists(),
-    queryFn: fetchVarieties,
+    queryFn: getVarieties,
     enabled: isEnabled,
     staleTime: Infinity,
   });

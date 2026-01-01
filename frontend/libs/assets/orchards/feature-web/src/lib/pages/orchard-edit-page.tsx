@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
   useGetOrchard,
   useUpdateOrchard,
-  UpdateOrchardDto,
+  OrchardFormData,
 } from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -20,10 +20,18 @@ export function OrchardEditPage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: any) => {
-    if (!id) return;
+  const handleSubmit = async (values: OrchardFormData) => {
+    if (!id || !orchard) return;
     try {
-      await updateOrchard({ id, data: values as UpdateOrchardDto });
+      await updateOrchard({ 
+        id, 
+        data: {
+          name: values.name,
+          userIds: values.userIds,
+          isActive: values.isActive,
+          __v: orchard.__v
+        } 
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/orchards/${id}`), 0);
     } catch (error) {

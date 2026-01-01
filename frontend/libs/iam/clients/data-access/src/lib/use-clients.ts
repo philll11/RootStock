@@ -32,7 +32,7 @@ export const getClient = async (id: string): Promise<Client> => {
   return response.data;
 };
 
-export const fetchClients = async (): Promise<Client[]> => {
+export const getClients = async (): Promise<Client[]> => {
   const response = await apiClient.get<Client[]>('/clients');
   return response.data;
 };
@@ -43,7 +43,7 @@ export function useGetClients(options?: { enabled?: boolean }) {
 
   return useQuery({
     queryKey: CLIENTS_KEYS.lists(),
-    queryFn: fetchClients,
+    queryFn: getClients,
     enabled: isEnabled,
   });
 }

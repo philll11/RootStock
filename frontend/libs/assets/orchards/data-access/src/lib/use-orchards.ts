@@ -19,8 +19,11 @@ export const ORCHARDS_KEYS = {
   detail: (id: string) => [...ORCHARDS_KEYS.details(), id] as const,
 };
 
-export const fetchOrchards = async () => {
-  const response = await apiClient.get<Orchard[]>('/orchards');
+// --- API Functions ---
+const BASE_URL = '/orchards';
+
+export const getOrchards = async () => {
+  const response = await apiClient.get<Orchard[]>(BASE_URL);
   return response.data;
 };
 
@@ -29,14 +32,28 @@ export const searchOrchards = async (query: string): Promise<Orchard[]> => {
   const params = new URLSearchParams();
   if (query) params.append('name', query);
   const response = await apiClient.get<Orchard[]>(
-    `/orchards?${params.toString()}`
+    `${BASE_URL}?${params.toString()}`
   );
   return response.data;
 };
 
 export const getOrchard = async (id: string): Promise<Orchard> => {
-  const response = await apiClient.get<Orchard>(`/orchards/${id}`);
+  const response = await apiClient.get<Orchard>(`${BASE_URL}/${id}`);
   return response.data;
+};
+
+export const createOrchard = async (data: CreateOrchardDto): Promise<Orchard> => {
+  const response = await apiClient.post<Orchard>(BASE_URL, data);
+  return response.data;
+};
+
+export const updateOrchard = async ({ id, data }: { id: string; data: UpdateOrchardDto }): Promise<Orchard> => {
+  const response = await apiClient.patch<Orchard>(`${BASE_URL}/${id}`, data);
+  return response.data;
+};
+
+export const deleteOrchard = async (id: string): Promise<void> => {
+  await apiClient.delete(`${BASE_URL}/${id}`);
 };
 
 export function useGetOrchards() {
@@ -45,7 +62,7 @@ export function useGetOrchards() {
 
   return useQuery({
     queryKey: ORCHARDS_KEYS.lists(),
-    queryFn: fetchOrchards,
+    queryFn: getOrchards,
     enabled: isEnabled,
     staleTime: Infinity,
   });
@@ -66,10 +83,7 @@ export function useCreateOrchard() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateOrchardDto) => {
-      const response = await apiClient.post<Orchard>('/orchards', data);
-      return response.data;
-    },
+    mutationFn: createOrchard,
     onMutate: async (newOrchard) => {
       await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.lists() });
       const previousOrchards = queryClient.getQueryData<Orchard[]>(ORCHARDS_KEYS.lists());
@@ -113,10 +127,7 @@ export function useUpdateOrchard() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateOrchardDto }) => {
-      const response = await apiClient.patch<Orchard>(`/orchards/${id}`, data);
-      return response.data;
-    },
+    mutationFn: updateOrchard,
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.detail(id) });
       await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.lists() });
@@ -172,7 +183,7 @@ export function useDeleteOrchard() {
       await apiClient.delete(`/orchards/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ORCHARDS_KEYS.lists() });
+      queryClient.invalidateQueries({ queryKey: ['orchards'] });
       notify.success('The orchard has been removed.', 'Orchard Deleted');
     },
     onError: (error: any) => {

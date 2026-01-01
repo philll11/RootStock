@@ -2,8 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import {
   useCreateOrchard,
-  CreateOrchardDto,
-  UpdateOrchardDto,
+  OrchardFormData,
 } from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -17,9 +16,13 @@ export function OrchardCreatePage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: CreateOrchardDto | UpdateOrchardDto) => {
+  const handleSubmit = async (values: OrchardFormData) => {
     try {
-      const newOrchard = await createOrchard(values as CreateOrchardDto);
+      const newOrchard = await createOrchard({
+        name: values.name,
+        clientId: values.clientId,
+        userIds: values.userIds,
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/orchards/${newOrchard._id}`), 0);
     } catch (error) {

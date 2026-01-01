@@ -1,0 +1,12 @@
+Line 59:
+Type 'Resolver<{ name: string; clientId: string; userIds?: string[] | undefined; isActive?: boolean | undefined; __v?: number | undefined; }, any, { name: string; clientId: string; userIds: string[]; isActive: boolean; __v?: number | undefined; }>' is not assignable to type 'Resolver<{ name: string; clientId: string; userIds: string[]; isActive: boolean; __v?: number | undefined; }, any, { name: string; clientId: string; userIds: string[]; isActive: boolean; __v?: number | undefined; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ name: string; clientId: string; userIds: string[]; isActive: boolean; __v?: number | undefined; }>' is not assignable to type 'ResolverOptions<{ name: string; clientId: string; userIds?: string[] | undefined; isActive?: boolean | undefined; __v?: number | undefined; }>'.
+      Type 'string[] | undefined' is not assignable to type 'string[]'.
+        Type 'undefined' is not assignable to type 'string[]'.
+
+Line 211:
+Argument of type '(data: { name: string; clientId: string; userIds: string[]; isActive: boolean; __v?: number | undefined; }) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ name: string; clientId: string; userIds: string[]; isActive: boolean; __v?: number | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ name: string; clientId: string; userIds: string[]; isActive: boolean; __v?: number | undefined; }': name, clientId, userIds, isActive

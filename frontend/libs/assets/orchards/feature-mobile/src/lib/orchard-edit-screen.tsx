@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useGetOrchard, useUpdateOrchard } from '@rootstock/assets/orchards/orchards-data-access';
+import { useGetOrchard, useUpdateOrchard, OrchardFormData } from '@rootstock/assets/orchards/orchards-data-access';
 import { ResourceEditLayout } from '@rootstock/ui/mobile';
 import { OrchardForm } from './orchard-form';
 
@@ -21,8 +21,17 @@ export function OrchardEditScreen() {
     isActive: orchard.isActive,
   } : undefined;
 
-  const handleSubmit = async (data: any) => {
-    await updateOrchard({ id: id!, data });
+  const handleSubmit = async (data: OrchardFormData) => {
+    if (!orchard) return;
+    await updateOrchard({ 
+      id: id!, 
+      data: {
+        name: data.name,
+        userIds: data.userIds,
+        isActive: data.isActive,
+        __v: orchard.__v
+      } 
+    });
     router.back();
   };
 

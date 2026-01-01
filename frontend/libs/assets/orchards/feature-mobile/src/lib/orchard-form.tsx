@@ -15,22 +15,16 @@ import {
 } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Orchard } from '@rootstock/assets/orchards/orchards-data-access';
+import {
+  Orchard,
+  orchardSchema,
+  OrchardFormData,
+} from '@rootstock/assets/orchards/orchards-data-access';
 import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
 import { useGetUsers } from '@rootstock/iam/users/users-data-access';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-
-const orchardSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  clientId: z.string().min(1, 'Client is required'),
-  userIds: z.array(z.string()).optional(),
-  isActive: z.boolean().optional(),
-});
-
-type OrchardFormData = z.infer<typeof orchardSchema>;
 
 interface OrchardFormProps {
   defaultValues?: Partial<OrchardFormData>;
@@ -62,7 +56,7 @@ export function OrchardForm({
     setValue,
     watch,
   } = useForm<OrchardFormData>({
-    resolver: zodResolver(orchardSchema),
+    resolver: zodResolver(orchardSchema) as any,
     defaultValues: {
       name: '',
       clientId: '',

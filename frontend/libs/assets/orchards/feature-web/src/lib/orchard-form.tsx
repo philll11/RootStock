@@ -16,8 +16,7 @@ import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
 import { useGetUsers } from '@rootstock/iam/users/users-data-access';
 import {
   Orchard,
-  CreateOrchardDto,
-  UpdateOrchardDto,
+  OrchardFormData,
 } from '@rootstock/assets/orchards/orchards-data-access';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
@@ -29,13 +28,13 @@ export type OrchardFormMode = 'create' | 'edit' | 'view';
 interface OrchardFormProps {
   mode: OrchardFormMode;
   orchard?: Orchard | null;
-  initialValues?: Partial<CreateOrchardDto>;
-  onSubmit: (values: CreateOrchardDto | UpdateOrchardDto) => void;
+  initialValues?: Partial<OrchardFormData>;
+  onSubmit: (values: OrchardFormData) => void;
   isLoading: boolean;
   onCancel: () => void;
   onEdit?: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
-  onValuesChange?: (values: Partial<CreateOrchardDto>) => void;
+  onValuesChange?: (values: Partial<OrchardFormData>) => void;
   fullHeight?: boolean;
 }
 
@@ -108,9 +107,9 @@ export function OrchardForm({
   const handleSubmit = (values: typeof form.values) => {
     if (isCreating) {
       const { isActive, __v, ...createValues } = values;
-      onSubmit(createValues as CreateOrchardDto);
+      onSubmit(values as OrchardFormData);
     } else {
-      const submissionData: UpdateOrchardDto = { ...values };
+      const submissionData: any = { ...values };
       // Only send isActive if it has actually changed
       if (orchard && orchard.isActive === values.isActive) {
         delete submissionData.isActive;
