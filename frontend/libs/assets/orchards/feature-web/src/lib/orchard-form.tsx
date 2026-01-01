@@ -76,7 +76,7 @@ export function OrchardForm({
   useEffect(() => {
     if (isCreating && onValuesChange) {
       const { isActive, ...rest } = form.values;
-      onValuesChange(rest as CreateOrchardDto);
+      onValuesChange(rest as OrchardFormData);
     }
   }, [form.values, isCreating, onValuesChange]);
 

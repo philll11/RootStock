@@ -15,6 +15,7 @@ import {
   CreateUserDto,
   UpdateUserDto,
   User,
+  UserFormData,
 } from '@rootstock/iam/users/users-data-access';
 import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
 import { useEffect, useState } from 'react';
@@ -32,12 +33,12 @@ export type UserFormMode = 'create' | 'edit' | 'view';
 interface UserFormProps {
   mode: UserFormMode;
   user?: User | null;
-  initialValues?: Partial<CreateUserDto>;
-  onSubmit: (values: CreateUserDto | UpdateUserDto) => void;
+  initialValues?: Partial<UserFormData>;
+  onSubmit: (values: UserFormData) => void;
   isLoading: boolean;
   onCancel: () => void;
   onEdit?: () => void;
-  onValuesChange?: (values: Partial<CreateUserDto>) => void;
+  onValuesChange?: (values: Partial<UserFormData>) => void;
   onDirtyChange?: (isDirty: boolean) => void;
   fullHeight?: boolean;
 }
@@ -63,13 +64,13 @@ export function UserForm({
   const { data: roles = [] } = useGetRoles();
   const { can } = usePermission();
 
-  const form = useForm({
+  const form = useForm<UserFormData & { __v: number }>({
     initialValues: {
       firstName: '',
       lastName: '',
       email: '',
       userType: UserType.Employee,
-      roleId: null,
+      roleId: undefined,
       password: '',
       isActive: true,
       clientIds: [] as string[],
@@ -137,7 +138,7 @@ export function UserForm({
         lastName: user.lastName,
         email: user.email,
         userType: user.userType,
-        roleId: (typeof user.roleId === 'object' ? user.roleId._id : user.roleId) || null,
+        roleId: (typeof user.roleId === 'object' ? user.roleId._id : user.roleId) || undefined,
         password: '',
         isActive: user.isActive,
         clientIds: user.clientIds || [],
@@ -149,7 +150,7 @@ export function UserForm({
         lastName: initialValues.lastName || '',
         email: initialValues.email || '',
         userType: initialValues.userType || UserType.Employee,
-        roleId: initialValues.roleId || null,
+        roleId: initialValues.roleId || undefined,
         password: initialValues.password || '',
         clientIds: initialValues.clientIds || [],
         __v: 0,
@@ -183,7 +184,7 @@ export function UserForm({
       lastName: '',
       email: '',
       userType: UserType.Employee,
-      roleId: null,
+      roleId: undefined,
       password: '',
       clientIds: []
     });

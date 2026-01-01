@@ -17,7 +17,7 @@ export const BLOCKS_KEYS = {
 // --- API Functions ---
 const BASE_URL = '/blocks';
 
-export const getBlocks = async (orchardId?: string) => {
+export const getBlocks = async (orchardId?: string): Promise<Block[]> => {
   const queryParams = orchardId ? { orchardId } : {};
   const response = await apiClient.get<Block[]>(BASE_URL, {
     params: queryParams,
@@ -30,17 +30,17 @@ export const getBlock = async (id: string): Promise<Block> => {
   return response.data;
 };
 
-export const createBlock = async (data: CreateBlockDto) => {
+export const createBlock = async (data: CreateBlockDto): Promise<Block> => {
   const response = await apiClient.post<Block>(BASE_URL, data);
   return response.data;
 };
 
-export const updateBlock = async ({ id, data }: { id: string; data: UpdateBlockDto }) => {
+export const updateBlock = async ({ id, data }: { id: string; data: UpdateBlockDto }): Promise<Block> => {
   const response = await apiClient.patch<Block>(`${BASE_URL}/${id}`, data);
   return response.data;
 };
 
-export const deleteBlock = async (id: string) => {
+export const deleteBlock = async (id: string): Promise<void> => {
   await apiClient.delete(`${BASE_URL}/${id}`);
 };
 

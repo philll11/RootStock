@@ -10,8 +10,7 @@ import {
   useUpdateUser,
   useDeleteUser,
   User,
-  CreateUserDto,
-  UpdateUserDto,
+  UserFormData,
 } from '@rootstock/iam/users/users-data-access';
 import { UserForm, UserFormMode } from './user-form';
 import {
@@ -49,7 +48,7 @@ export function UsersListPage() {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   const [createFormDraft, setCreateFormDraft] = useState<
-    Partial<CreateUserDto>
+    Partial<UserFormData>
   >({});
   const [isFormDirty, setIsFormDirty] = useState(false);
 
@@ -117,16 +116,18 @@ export function UsersListPage() {
     }
   };
 
-  const handleSubmit = async (values: CreateUserDto | UpdateUserDto) => {
+  const handleSubmit = async (values: UserFormData) => {
     try {
+      const { __v, ...data } = values;
       if (mode === 'create') {
-        await createUser(values as CreateUserDto);
+        const { isActive, ...createData } = data;
+        await createUser(createData);
         setCreateFormDraft({});
       } else {
         if (selectedUser) {
           await updateUser({
             id: selectedUser._id,
-            data: values as UpdateUserDto,
+            data: data,
           });
         }
       }

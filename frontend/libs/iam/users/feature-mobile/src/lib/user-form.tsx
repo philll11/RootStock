@@ -16,27 +16,13 @@ import {
 } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { UserType } from '@rootstock/iam/users/users-data-access';
+import { UserType, userSchema, UserFormData } from '@rootstock/iam/users/users-data-access';
 import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
 import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
-
-const userSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email'),
-  password: z.string().optional(),
-  userType: z.nativeEnum(UserType),
-  roleId: z.string().optional(),
-  clientIds: z.array(z.string()).optional(),
-  isActive: z.boolean().optional(),
-});
-
-export type UserFormData = z.infer<typeof userSchema>;
 
 export interface UserFormProps {
   defaultValues?: Partial<UserFormData>;
@@ -65,7 +51,7 @@ export function UserForm({
     setValue,
     watch,
   } = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(userSchema) as any,
     defaultValues: {
       firstName: '',
       lastName: '',

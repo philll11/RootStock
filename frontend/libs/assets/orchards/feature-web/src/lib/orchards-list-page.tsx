@@ -22,8 +22,6 @@ import {
   useUpdateOrchard,
   useDeleteOrchard,
   Orchard,
-  CreateOrchardDto,
-  UpdateOrchardDto,
   OrchardFormData,
 } from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm, OrchardFormMode } from './orchard-form';

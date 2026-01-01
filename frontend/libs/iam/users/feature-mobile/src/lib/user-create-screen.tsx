@@ -1,8 +1,8 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { useCreateUser } from '@rootstock/iam/users/users-data-access';
+import { useCreateUser, UserFormData } from '@rootstock/iam/users/users-data-access';
 import { ResourceCreateLayout } from '@rootstock/ui/mobile';
-import { UserForm, UserFormData } from './user-form';
+import { UserForm } from './user-form';
 
 export function UserCreateScreen() {
   const router = useRouter();

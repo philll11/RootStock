@@ -11,18 +11,38 @@ export const USERS_KEYS = {
   detail: (id: string) => [...USERS_KEYS.details(), id] as const,
 };
 
+// --- API Functions ---
+
+const BASE_URL = '/users';
+
 export const getUser = async (id: string): Promise<User> => {
-  const response = await apiClient.get<User>(`/users/${id}`);
+  const response = await apiClient.get<User>(`${BASE_URL}/${id}`);
   return response.data;
+};
+
+export const getUsers = async (): Promise<User[]> => {
+  const response = await apiClient.get<User[]>(BASE_URL);
+  return response.data;
+};
+
+export const createUser = async (data: CreateUserDto): Promise<User> => {
+  const response = await apiClient.post<User>(BASE_URL, data);
+  return response.data;
+};
+
+export const updateUser = async ({ id, data, }: { id: string; data: UpdateUserDto;}) : Promise<User> => {
+  const response = await apiClient.patch<User>(`${BASE_URL}/${id}`, data);
+  return response.data;
+};
+
+export const deleteUser = async (id: string): Promise<void> => {
+  await apiClient.delete(`${BASE_URL}/${id}`);
 };
 
 export function useGetUsers() {
   return useQuery({
     queryKey: USERS_KEYS.lists(),
-    queryFn: async () => {
-      const response = await apiClient.get<User[]>('/users');
-      return response.data;
-    },
+    queryFn: getUsers,
   });
 }
 
@@ -38,10 +58,7 @@ export function useCreateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateUserDto) => {
-      const response = await apiClient.post<User>('/users', data);
-      return response.data;
-    },
+    mutationFn: createUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: USERS_KEYS.lists() });
       notify.success('The user has been successfully created.', 'User Created');
@@ -56,10 +73,7 @@ export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateUserDto }) => {
-      const response = await apiClient.patch<User>(`/users/${id}`, data);
-      return response.data;
-    },
+    mutationFn: updateUser,
     onSuccess: (data, variables) => {
       queryClient.setQueryData(USERS_KEYS.detail(variables.id), data);
       queryClient.invalidateQueries({ queryKey: USERS_KEYS.lists() });
@@ -80,9 +94,7 @@ export function useDeleteUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      await apiClient.delete(`/users/${id}`);
-    },
+    mutationFn: deleteUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: USERS_KEYS.lists() });
       notify.success('The user has been removed.', 'User Deleted');

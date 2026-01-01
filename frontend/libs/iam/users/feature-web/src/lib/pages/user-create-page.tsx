@@ -2,8 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import {
   useCreateUser,
-  CreateUserDto,
-  UpdateUserDto
+  UserFormData,
 } from '@rootstock/iam/users/users-data-access';
 import { UserForm } from '../user-form';
 import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
@@ -17,9 +16,10 @@ export function UserCreatePage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: CreateUserDto | UpdateUserDto) => {
+  const handleSubmit = async (values: UserFormData) => {
     try {
-      const newUser = await createUser(values as CreateUserDto);
+      const { isActive, __v, ...createData } = values;
+      const newUser = await createUser(createData);
       setIsDirty(false);
       setTimeout(() => transitionTo(`/users/${newUser._id}`), 0);
     } catch (error) {

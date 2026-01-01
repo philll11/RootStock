@@ -6,7 +6,7 @@ import { useState } from 'react';
 import {
   useUpdateUser,
   useGetUser,
-  UpdateUserDto
+  UserFormData
 } from '@rootstock/iam/users/users-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
@@ -20,10 +20,11 @@ export function UserEditPage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: UpdateUserDto) => {
+  const handleSubmit = async (values: UserFormData) => {
     if (!id) return;
     try {
-      await updateUser({ id, data: values });
+      const { __v, ...updateData } = values;
+      await updateUser({ id, data: updateData });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/users/${id}`), 0);
     } catch (error) {
