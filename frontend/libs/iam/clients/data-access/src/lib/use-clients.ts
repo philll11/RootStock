@@ -17,24 +17,42 @@ export const CLIENTS_KEYS = {
   detail: (id: string) => [...CLIENTS_KEYS.details(), id] as const,
 };
 
+// --- API Functions ---
+const BASE_URL = '/clients';
+
+export const getClients = async (): Promise<Client[]> => {
+  const response = await apiClient.get<Client[]>(BASE_URL);
+  return response.data;
+};
+
+export const getClient = async (id: string): Promise<Client> => {
+  const response = await apiClient.get<Client>(`${BASE_URL}/${id}`);
+  return response.data;
+};
+
 // Helper for searching clients (useful for dropdowns)
 export const searchClients = async (query: string): Promise<Client[]> => {
   const params = new URLSearchParams();
   if (query) params.append('name', query);
   const response = await apiClient.get<Client[]>(
-    `/clients?${params.toString()}`
+    `${BASE_URL}?${params.toString()}`
   );
   return response.data;
 };
 
-export const getClient = async (id: string): Promise<Client> => {
-  const response = await apiClient.get<Client>(`/clients/${id}`);
+
+export const createClient = async (data: CreateClientDto): Promise<Client> => {
+  const response = await apiClient.post<Client>(BASE_URL, data);
   return response.data;
 };
 
-export const getClients = async (): Promise<Client[]> => {
-  const response = await apiClient.get<Client[]>('/clients');
+export const updateClient = async ({ id, data }: { id: string; data: UpdateClientDto }): Promise<Client> => {
+  const response = await apiClient.patch<Client>(`${BASE_URL}/${id}`, data);
   return response.data;
+};
+
+export const deleteClient = async (id: string): Promise<void> => {
+  await apiClient.delete(`${BASE_URL}/${id}`);
 };
 
 export function useGetClients(options?: { enabled?: boolean }) {
@@ -59,10 +77,7 @@ export function useGetClient(id: string | undefined) {
 export function useCreateClient() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: CreateClientDto) => {
-      const response = await apiClient.post<Client>('/clients', data);
-      return response.data;
-    },
+    mutationFn: createClient,
     onMutate: async (newClient) => {
       await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.lists() });
       const previousClients = queryClient.getQueryData<Client[]>(CLIENTS_KEYS.lists());
@@ -105,10 +120,7 @@ export function useCreateClient() {
 export function useUpdateClient() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateClientDto }) => {
-      const response = await apiClient.patch<Client>(`/clients/${id}`, data);
-      return response.data;
-    },
+    mutationFn: updateClient,
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.detail(id) });
       await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.lists() });
@@ -158,9 +170,7 @@ export function useUpdateClient() {
 export function useDeleteClient() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      await apiClient.delete(`/clients/${id}`);
-    },
+    mutationFn: deleteClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
       notify.success('The client has been removed.', 'Client Deleted');

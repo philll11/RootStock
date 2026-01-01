@@ -23,8 +23,7 @@ import {
   useUpdateClient,
   useDeleteClient,
   Client,
-  CreateClientDto,
-  UpdateClientDto,
+  ClientFormData,
 } from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm, ClientFormMode } from './client-form';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
@@ -49,7 +48,7 @@ export function ClientsListPage() {
   const [mode, setMode] = useState<ClientFormMode>('create');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateClientDto>>({});
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<ClientFormData>>({});
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty && mode === 'edit');
@@ -119,16 +118,21 @@ export function ClientsListPage() {
     }
   };
 
-  const handleSubmit = async (values: CreateClientDto | UpdateClientDto) => {
+  const handleSubmit = async (values: ClientFormData) => {
     try {
       if (mode === 'create') {
-        await createClient(values as CreateClientDto);
+        const { isActive, __v, ...createData } = values;
+        await createClient(createData);
         setCreateFormDraft({});
       } else {
         if (selectedClient) {
+          const { subsidiaryId, ...updateData } = values;
           await updateClient({
             id: selectedClient._id,
-            data: values as UpdateClientDto,
+            data: {
+              ...updateData,
+              __v: selectedClient.__v
+            },
           });
         }
       }

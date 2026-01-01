@@ -2,8 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { 
   useCreateClient, 
-  CreateClientDto,
-  UpdateClientDto,
+  ClientFormData,
 } from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm } from '../client-form';
 import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
@@ -17,13 +16,14 @@ export function ClientCreatePage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: CreateClientDto | UpdateClientDto) => {
+  const handleSubmit = async (values: ClientFormData) => {
     try {
-    const newClient = await createClient(values as CreateClientDto);
+      const { isActive, __v, ...createData } = values;
+      const newClient = await createClient(createData);
       setIsDirty(false);
       setTimeout(() => transitionTo(`/clients/${newClient._id}`), 0);
     } catch (error) {
-      console.error('Failed to create variety', error);
+      console.error('Failed to create client', error);
     }
   };
 

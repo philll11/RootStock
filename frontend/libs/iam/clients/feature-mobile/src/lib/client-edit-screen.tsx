@@ -1,8 +1,8 @@
 import React from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useUpdateClient, useGetClient } from '@rootstock/iam/clients/clients-data-access';
+import { useUpdateClient, useGetClient, ClientFormData } from '@rootstock/iam/clients/clients-data-access';
 import { ResourceEditLayout } from '@rootstock/ui/mobile';
-import { ClientForm, ClientFormData } from './client-form';
+import { ClientForm } from './client-form';
 
 export const ClientEditScreen = () => {
   const router = useRouter();
@@ -13,10 +13,11 @@ export const ClientEditScreen = () => {
   const handleSubmit = async (data: ClientFormData) => {
     if (!id || !client) return;
     try {
+      const { subsidiaryId, ...updateData } = data;
       await updateClient({ 
         id, 
         data: { 
-          ...data, 
+          ...updateData, 
           __v: client.__v 
         } 
       });

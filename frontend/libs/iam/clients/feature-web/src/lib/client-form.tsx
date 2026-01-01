@@ -3,9 +3,8 @@ import { useEffect } from 'react';
 import { TextInput, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import {
-  CreateClientDto,
-  UpdateClientDto,
   Client,
+  ClientFormData,
 } from '@rootstock/iam/clients/clients-data-access';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
@@ -16,12 +15,12 @@ export type ClientFormMode = 'create' | 'edit' | 'view';
 interface ClientFormProps {
   mode: ClientFormMode;
   client?: Client | null;
-  initialValues?: Partial<CreateClientDto>;
-  onSubmit: (values: CreateClientDto | UpdateClientDto) => void;
+  initialValues?: Partial<ClientFormData>;
+  onSubmit: (values: ClientFormData) => void;
   isLoading: boolean;
   onCancel: () => void;
   onEdit?: () => void;
-  onValuesChange?: (values: Partial<CreateClientDto>) => void;
+  onValuesChange?: (values: Partial<ClientFormData>) => void;
   onDirtyChange?: (isDirty: boolean) => void;
   fullHeight?: boolean;
 }
@@ -83,17 +82,7 @@ export function ClientForm({
   }, [client, mode, isEditing, isViewing, isCreating]);
 
   const handleSubmit = (values: typeof form.values) => {
-    if (isCreating) {
-      const { isActive, __v, ...createValues } = values;
-      onSubmit(createValues);
-    } else {
-      const submissionData: any = { ...values };
-      // Only send isActive if it has actually changed
-      if (client && client.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
-      onSubmit(submissionData);
-    }
+    onSubmit(values as ClientFormData);
   };
 
   const handleValidationErrors = () => {

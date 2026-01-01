@@ -22,8 +22,13 @@ export const ORCHARDS_KEYS = {
 // --- API Functions ---
 const BASE_URL = '/orchards';
 
-export const getOrchards = async () => {
+export const getOrchards = async (): Promise<Orchard[]> => {
   const response = await apiClient.get<Orchard[]>(BASE_URL);
+  return response.data;
+};
+
+export const getOrchard = async (id: string): Promise<Orchard> => {
+  const response = await apiClient.get<Orchard>(`${BASE_URL}/${id}`);
   return response.data;
 };
 
@@ -34,11 +39,6 @@ export const searchOrchards = async (query: string): Promise<Orchard[]> => {
   const response = await apiClient.get<Orchard[]>(
     `${BASE_URL}?${params.toString()}`
   );
-  return response.data;
-};
-
-export const getOrchard = async (id: string): Promise<Orchard> => {
-  const response = await apiClient.get<Orchard>(`${BASE_URL}/${id}`);
   return response.data;
 };
 

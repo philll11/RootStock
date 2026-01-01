@@ -6,8 +6,7 @@ import { useState } from 'react';
 import {
   useUpdateClient,
   useGetClient,
-  UpdateClientDto,
-  CreateClientDto
+  ClientFormData
 } from '@rootstock/iam/clients/clients-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
@@ -21,10 +20,17 @@ export function ClientEditPage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: UpdateClientDto | CreateClientDto) => {
-    if (!id) return;
+  const handleSubmit = async (values: ClientFormData) => {
+    if (!id || !client) return;
     try {
-      await updateClient({ id, data: values as UpdateClientDto });
+      const { subsidiaryId, ...updateData } = values;
+      await updateClient({ 
+        id, 
+        data: {
+          ...updateData,
+          __v: client.__v
+        } 
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/clients/${id}`), 0);
     } catch (error) {

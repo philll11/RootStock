@@ -2,19 +2,16 @@ import React from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { TextInput, Button, HelperText, List, Switch, useTheme } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-
-export interface ClientFormData {
-  name: string;
-  isActive: boolean;
-}
+import { ClientFormData, clientSchema } from '@rootstock/iam/clients/clients-data-access';
 
 interface ClientFormProps {
   defaultValues?: Partial<ClientFormData>;
-  onSubmit: (data: ClientFormData) => void;
+  onSubmit: (data: ClientFormData) => Promise<void>;
   isSubmitting?: boolean;
   isEditMode?: boolean;
 }
@@ -24,6 +21,7 @@ export const ClientForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }
   const { can } = usePermission();
   const [isSaving, setIsSaving] = React.useState(false);
   const { control, handleSubmit, formState: { errors, isDirty } } = useForm<ClientFormData>({
+    resolver: zodResolver(clientSchema) as any,
     defaultValues: {
       name: '',
       isActive: true,
