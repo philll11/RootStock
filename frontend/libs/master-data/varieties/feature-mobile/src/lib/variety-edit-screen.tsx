@@ -1,8 +1,8 @@
 import React from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useGetVariety, useUpdateVariety } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useGetVariety, useUpdateVariety, VarietyFormData } from '@rootstock/master-data/varieties/varieties-data-access';
 import { ResourceEditLayout } from '@rootstock/ui/mobile';
-import { VarietyForm, VarietyFormData } from './variety-form';
+import { VarietyForm } from './variety-form';
 
 export const VarietyEditScreen = () => {
   const router = useRouter();

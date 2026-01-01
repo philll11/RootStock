@@ -2,8 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import {
   useCreateVariety,
-  CreateVarietyDto,
-  UpdateVarietyDto,
+  VarietyFormData,
 } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm } from '../variety-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -17,9 +16,10 @@ export function VarietyCreatePage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: CreateVarietyDto | UpdateVarietyDto) => {
+  const handleSubmit = async (values: VarietyFormData) => {
     try {
-      const newVariety = await createVariety(values as CreateVarietyDto);
+      const { isActive, __v, ...createData } = values;
+      const newVariety = await createVariety(createData);
       setIsDirty(false);
       setTimeout(() => transitionTo(`/varieties/${newVariety._id}`), 0);
     } catch (error) {

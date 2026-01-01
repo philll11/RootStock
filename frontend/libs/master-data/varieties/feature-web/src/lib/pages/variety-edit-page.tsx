@@ -6,7 +6,7 @@ import { useState } from 'react';
 import {
   useGetVariety,
   useUpdateVariety,
-  UpdateVarietyDto,
+  VarietyFormData,
 } from '@rootstock/master-data/varieties/varieties-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
@@ -20,10 +20,16 @@ export function VarietyEditPage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: any) => {
-    if (!id) return;
+  const handleSubmit = async (values: VarietyFormData) => {
+    if (!id || !variety) return;
     try {
-      await updateVariety({ id, data: values as UpdateVarietyDto });
+      await updateVariety({ 
+        id, 
+        data: {
+          ...values,
+          __v: variety.__v
+        } 
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/varieties/${id}`), 0);
     } catch (error) {

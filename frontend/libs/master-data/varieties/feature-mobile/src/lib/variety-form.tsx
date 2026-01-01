@@ -2,15 +2,12 @@ import React from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { TextInput, Button, HelperText, List, Switch, useTheme } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { varietySchema, VarietyFormData } from '@rootstock/master-data/varieties/varieties-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-
-export interface VarietyFormData {
-  name: string;
-  isActive: boolean;
-}
 
 interface VarietyFormProps {
   defaultValues?: Partial<VarietyFormData>;
@@ -24,6 +21,7 @@ export const VarietyForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode 
   const { can } = usePermission();
   const [isSaving, setIsSaving] = React.useState(false);
   const { control, handleSubmit, formState: { errors, isDirty } } = useForm<VarietyFormData>({
+    resolver: zodResolver(varietySchema),
     defaultValues: {
       name: '',
       isActive: true,
@@ -48,7 +46,6 @@ export const VarietyForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode 
         <Controller
           control={control}
           name="name"
-          rules={{ required: 'Name is required', minLength: { value: 2, message: 'Name must be at least 2 characters' } }}
           render={({ field: { onChange, onBlur, value } }) => (
             <View>
               <TextInput

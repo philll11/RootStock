@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
-import { useGetVarieties, useCreateVariety, useUpdateVariety, useDeleteVariety, Variety, CreateVarietyDto } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useGetVarieties, useCreateVariety, useUpdateVariety, useDeleteVariety, Variety, VarietyFormData } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm, VarietyFormMode } from './variety-form';
 import { 
   ConfirmModal, 
@@ -36,7 +36,7 @@ export function VarietiesListPage() {
   const [selectedVariety, setSelectedVariety] = useState<Variety | null>(null);
   const [varietyToDelete, setVarietyToDelete] = useState<Variety | null>(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
-  const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateVarietyDto>>({});
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<VarietyFormData>>({});
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty && mode === 'edit');
   
@@ -92,16 +92,23 @@ export function VarietiesListPage() {
     }
   };
 
-  const handleSubmit = (values: any) => {
+  const handleSubmit = (values: VarietyFormData) => {
     if (mode === 'create') {
-      createVariety(values, {
+      const { isActive, __v, ...createData } = values;
+      createVariety(createData, {
         onSuccess: () => {
           close();
           setCreateFormDraft({});
         },
       });
     } else if (mode === 'edit' && selectedVariety) {
-      updateVariety({ id: selectedVariety._id, data: values }, {
+      updateVariety({ 
+        id: selectedVariety._id, 
+        data: {
+          ...values,
+          __v: selectedVariety.__v
+        } 
+      }, {
         onSuccess: () => {
           close();
         },
@@ -244,7 +251,7 @@ export function VarietiesListPage() {
           isLoading={isCreating || isUpdating}
           onDirtyChange={setIsFormDirty}
           draftValues={createFormDraft}
-          onValuesChange={(values) => setCreateFormDraft(values as CreateVarietyDto)}
+          onValuesChange={(values) => setCreateFormDraft(values)}
         />
       </FormDrawer>
 

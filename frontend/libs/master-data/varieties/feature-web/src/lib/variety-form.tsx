@@ -1,7 +1,7 @@
 import { TextInput, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useEffect } from 'react';
-import { Variety, CreateVarietyDto, UpdateVarietyDto } from '@rootstock/master-data/varieties/varieties-data-access';
+import { Variety, VarietyFormData } from '@rootstock/master-data/varieties/varieties-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { FormLayout } from '@rootstock/ui/web';
@@ -11,13 +11,13 @@ export type VarietyFormMode = 'create' | 'edit' | 'view';
 interface VarietyFormProps {
   mode: VarietyFormMode;
   initialValues?: Variety | null;
-  onSubmit: (values: CreateVarietyDto | UpdateVarietyDto) => void;
+  onSubmit: (values: VarietyFormData) => void;
   onCancel: () => void;
   onEdit?: () => void;
   isLoading?: boolean;
   onDirtyChange?: (isDirty: boolean) => void;
-  draftValues?: Partial<CreateVarietyDto>;
-  onValuesChange?: (values: Partial<CreateVarietyDto>) => void;
+  draftValues?: Partial<VarietyFormData>;
+  onValuesChange?: (values: Partial<VarietyFormData>) => void;
   fullHeight?: boolean;
 }
 
@@ -34,7 +34,7 @@ export function VarietyForm({
   fullHeight = true,
 }: VarietyFormProps) {
   const { can } = usePermission();
-  const form = useForm({
+  const form = useForm<VarietyFormData & { __v: number }>({
     initialValues: {
       name: initialValues?.name || '',
       isActive: initialValues?.isActive ?? true,
@@ -48,16 +48,16 @@ export function VarietyForm({
 
   useEffect(() => {
     if (mode === 'create' && onValuesChange) {
-      const { isActive, __v, ...rest } = form.values;
+      const { isActive, __v, ...rest } = form.getValues();
       onValuesChange(rest);
     }
-  }, [form.values, mode, onValuesChange]);
+  }, [form.getValues(), mode, onValuesChange]);
 
   useEffect(() => {
     if (onDirtyChange) {
       onDirtyChange(form.isDirty());
     }
-  }, [form.values, onDirtyChange]);
+  }, [form.isDirty(), onDirtyChange]);
 
   useEffect(() => {
     if (initialValues) {
@@ -76,23 +76,14 @@ export function VarietyForm({
   }, [initialValues, mode]);
 
   const handleSubmit = (values: typeof form.values) => {
-    if (mode === 'create') {
-      const { isActive, __v, ...createValues } = values;
-      onSubmit(createValues);
-    } else {
-      const submissionData: any = { ...values };
-      // Only send isActive if it has actually changed
-      if (initialValues && initialValues.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
-      onSubmit(submissionData);
-    }
+    onSubmit(values);
   };
 
   const handleClear = () => {
     form.setValues({
       name: '',
-      isActive: true
+      isActive: true,
+      __v: 0
     });
   };
 

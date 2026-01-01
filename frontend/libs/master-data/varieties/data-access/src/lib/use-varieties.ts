@@ -13,14 +13,38 @@ export const VARIETIES_KEYS = {
   detail: (id: string) => [...VARIETIES_KEYS.details(), id] as const,
 };
 
+// --- API Functions ---
+
+const BASE_URL = '/varieties';
+
 export const getVarieties = async () => {
-  const response = await apiClient.get<Variety[]>('/varieties');
+  const response = await apiClient.get<Variety[]>(BASE_URL);
   return response.data;
 };
 
 export const getVariety = async (id: string): Promise<Variety> => {
-  const response = await apiClient.get<Variety>(`/varieties/${id}`);
+  const response = await apiClient.get<Variety>(`${BASE_URL}/${id}`);
   return response.data;
+};
+
+export const createVariety = async (data: CreateVarietyDto) => {
+  const response = await apiClient.post<Variety>(BASE_URL, data);
+  return response.data;
+};
+
+export const updateVariety = async ({
+  id,
+  data,
+}: {
+  id: string;
+  data: UpdateVarietyDto;
+}) => {
+  const response = await apiClient.patch<Variety>(`${BASE_URL}/${id}`, data);
+  return response.data;
+};
+
+export const deleteVariety = async (id: string) => {
+  await apiClient.delete(`${BASE_URL}/${id}`);
 };
 
 export function useGetVarieties() {
@@ -50,10 +74,7 @@ export function useCreateVariety() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateVarietyDto) => {
-      const response = await apiClient.post<Variety>('/varieties', data);
-      return response.data;
-    },
+    mutationFn: createVariety,
     onMutate: async (newVariety) => {
       await queryClient.cancelQueries({ queryKey: VARIETIES_KEYS.lists() });
       const previousVarieties = queryClient.getQueryData<Variety[]>(VARIETIES_KEYS.lists());
@@ -100,16 +121,7 @@ export function useUpdateVariety() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: UpdateVarietyDto;
-    }) => {
-      const response = await apiClient.patch<Variety>(`/varieties/${id}`, data);
-      return response.data;
-    },
+    mutationFn: updateVariety,
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: VARIETIES_KEYS.detail(id) });
       await queryClient.cancelQueries({ queryKey: VARIETIES_KEYS.lists() });
@@ -145,9 +157,6 @@ export function useUpdateVariety() {
       if (context?.previousVarieties) {
         queryClient.setQueryData(VARIETIES_KEYS.lists(), context.previousVarieties);
       }
-      if (err.response?.status !== 409) {
-        notify.error(err, 'Error Updating Variety');
-      }
     },
     onSettled: (data, error, variables) => {
       queryClient.invalidateQueries({ queryKey: VARIETIES_KEYS.detail(variables.id) });
@@ -163,9 +172,7 @@ export function useDeleteVariety() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      await apiClient.delete(`/varieties/${id}`);
-    },
+    mutationFn: deleteVariety,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: VARIETIES_KEYS.lists() });
       notify.success('The variety has been successfully deleted.', 'Variety Deleted');

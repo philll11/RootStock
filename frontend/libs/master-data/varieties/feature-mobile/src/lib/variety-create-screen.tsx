@@ -1,8 +1,8 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { useCreateVariety } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useCreateVariety, VarietyFormData } from '@rootstock/master-data/varieties/varieties-data-access';
 import { ResourceCreateLayout } from '@rootstock/ui/mobile';
-import { VarietyForm, VarietyFormData } from './variety-form';
+import { VarietyForm } from './variety-form';
 
 export const VarietyCreateScreen = () => {
   const router = useRouter();
