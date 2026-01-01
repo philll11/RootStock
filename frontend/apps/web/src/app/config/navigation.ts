@@ -1,4 +1,4 @@
-import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings, IconTree, IconLeaf } from '@tabler/icons-react';
+import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings, IconTree, IconLeaf, IconClipboardCheck } from '@tabler/icons-react';
 import { PERMISSIONS, VisibilityScope } from '@rootstock/shared/util';
 
 export interface NavigationItem {
@@ -43,6 +43,20 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
         path: '/blocks',
         icon: IconLeaf,
         permission: PERMISSIONS.BLOCK_VIEW,
+        type: 'link',
+      },
+    ]
+  },
+  {
+    label: 'Operations',
+    type: 'link',
+    icon: IconClipboardCheck,
+    children: [
+      {
+        label: 'Assessments',
+        path: '/assessments',
+        icon: IconClipboardCheck,
+        permission: PERMISSIONS.ASSESSMENT_VIEW,
         type: 'link',
       },
     ]

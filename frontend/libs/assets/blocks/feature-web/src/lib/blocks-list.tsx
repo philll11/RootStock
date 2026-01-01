@@ -191,7 +191,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
       accessor: 'isActive',
       title: 'Status',
       render: (block) => (
-        <Badge color={block.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={block.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {block.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),

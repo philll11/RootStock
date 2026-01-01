@@ -139,7 +139,7 @@ export function VarietiesListPage() {
       accessor: 'isActive',
       title: 'Status',
       render: (variety) => (
-        <Badge color={variety.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={variety.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {variety.isActive ? 'Active' : 'Inactive'}
         </Badge>
       )

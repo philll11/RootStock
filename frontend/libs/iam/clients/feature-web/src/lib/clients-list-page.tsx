@@ -162,7 +162,7 @@ export function ClientsListPage() {
       accessor: 'isActive',
       title: 'Status',
       render: (client) => (
-        <Badge color={client.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={client.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {client.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),

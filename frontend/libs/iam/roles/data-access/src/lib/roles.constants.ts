@@ -48,6 +48,13 @@ export const PERMISSIONS = {
   VARIETY_DELETE: 'Variety:Delete',
   VARIETY_MANAGE_INACTIVE: 'Variety:ManageInactive',
 
+  // --- Assessment Management ---
+  ASSESSMENT_CREATE: 'Assessment:Create',
+  ASSESSMENT_VIEW: 'Assessment:View',
+  ASSESSMENT_EDIT: 'Assessment:Edit',
+  ASSESSMENT_DELETE: 'Assessment:Delete',
+  ASSESSMENT_MANAGE_INACTIVE: 'Assessment:ManageInactive',
+
   // --- System Configuration ---
   COUNTERS_VIEW: 'Counters:View',
   COUNTERS_EDIT: 'Counters:Edit',

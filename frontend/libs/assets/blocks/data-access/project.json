@@ -1,5 +1,5 @@
 {
-  "name": "data-access",
+  "name": "blocks-data-access",
   "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/assets/blocks/data-access/src",
   "projectType": "library",

@@ -157,7 +157,7 @@ export function RolesListPage() {
       accessor: 'isActive',
       title: 'Status',
       render: (role) => (
-        <Badge color={role.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={role.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {role.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),

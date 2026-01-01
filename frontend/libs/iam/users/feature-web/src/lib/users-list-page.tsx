@@ -168,7 +168,7 @@ export function UsersListPage() {
       accessor: 'isActive',
       title: 'Status',
       render: (user) => (
-        <Badge color={user.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={user.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {user.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),

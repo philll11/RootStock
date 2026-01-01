@@ -27,6 +27,13 @@ export const PERMISSIONS = {
   BLOCK_DELETE: 'Block:Delete',
   BLOCK_MANAGE_INACTIVE: 'Block:ManageInactive',
 
+  // --- Assessment Management ---
+  ASSESSMENT_CREATE: 'Assessment:Create',
+  ASSESSMENT_VIEW: 'Assessment:View',
+  ASSESSMENT_EDIT: 'Assessment:Edit',
+  ASSESSMENT_DELETE: 'Assessment:Delete',
+  ASSESSMENT_MANAGE_INACTIVE: 'Assessment:ManageInactive',
+
   // --- Role Management ---
   ROLE_CREATE: 'Role:Create',
   ROLE_VIEW: 'Role:View',

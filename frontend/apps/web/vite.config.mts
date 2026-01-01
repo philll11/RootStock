@@ -17,7 +17,9 @@ export default defineConfig(() => ({
   },
   plugins: [react(), nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
   define: {
-    'process.env': process.env,
+    'process.env': {
+      NX_PUBLIC_API_URL: process.env['NX_PUBLIC_API_URL'],
+    },
   },
   // Uncomment this if you are using workers.
   // worker: {

@@ -169,7 +169,7 @@ export function OrchardsListPage() {
       accessor: 'isActive',
       title: 'Status',
       render: (orchard) => (
-        <Badge color={orchard.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={orchard.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {orchard.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),

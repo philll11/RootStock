@@ -20,7 +20,6 @@ import {
 } from '@rootstock/iam/roles/roles-data-access';
 import { notify, PERMISSIONS as SHARED_PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-import { palette } from '@rootstock/ui/theme';
 import { FormLayout } from '@rootstock/ui/web';
 
 export type RoleFormMode = 'create' | 'edit' | 'view';

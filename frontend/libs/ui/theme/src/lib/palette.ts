@@ -42,6 +42,11 @@ export const palette = {
     dark: '#34d399',
   },
   status: {
+    pending: '#22c55e', // brand[500]
+    inProgress: '#64748b', // neutral[500]
+    completed: '#3b82f6', // blue[500]
+  },
+  state: {
     active: '#22c55e', // brand[500]
     inactive: '#64748b', // neutral[500]
   },

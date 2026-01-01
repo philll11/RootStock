@@ -46,6 +46,12 @@ import {
   VarietyEditPage,
   VarietyViewPage
 } from '@rootstock/master-data/varieties/varieties-feature-web';
+import { 
+  AssessmentListPage,
+  AssessmentCreatePage,
+  AssessmentEditPage,
+  AssessmentViewPage
+} from '@rootstock/operations/assessments/assessments-feature-web';
 
 // Layout & Components
 import { MainLayout } from './layouts/main-layout';
@@ -257,6 +263,40 @@ export function App() {
                 element={
                   <ProtectedRoute permission={PERMISSIONS.BLOCK_EDIT}>
                     <BlockEditPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+            <Route path="assessments">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ASSESSMENT_VIEW}>
+                    <AssessmentListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="create" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ASSESSMENT_CREATE}>
+                    <AssessmentCreatePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ASSESSMENT_VIEW}>
+                    <AssessmentViewPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id/edit" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ASSESSMENT_EDIT}>
+                    <AssessmentEditPage />
                   </ProtectedRoute>
                 } 
               />
