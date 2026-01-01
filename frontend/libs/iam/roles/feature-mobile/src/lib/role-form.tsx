@@ -2,19 +2,12 @@ import React from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { TextInput, Button, HelperText, SegmentedButtons, Text, List, Checkbox, useTheme, Switch } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
-import { VisibilityScope } from '@rootstock/iam/roles/roles-data-access';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { VisibilityScope, RoleFormData, roleSchema } from '@rootstock/iam/roles/roles-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-
-export interface RoleFormData {
-  name: string;
-  description: string;
-  visibilityScope: VisibilityScope;
-  permissions: string[];
-  isActive: boolean;
-}
 
 interface RoleFormProps {
   defaultValues?: Partial<RoleFormData>;
@@ -28,6 +21,7 @@ export const RoleForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }: 
   const { can } = usePermission();
   const [isSaving, setIsSaving] = React.useState(false);
   const { control, handleSubmit, formState: { errors, isDirty }, watch, setValue } = useForm<RoleFormData>({
+    resolver: zodResolver(roleSchema) as any,
     defaultValues: {
       name: '',
       description: '',
@@ -89,7 +83,6 @@ export const RoleForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }: 
         <Controller
           control={control}
           name="name"
-          rules={{ required: 'Name is required' }}
           render={({ field: { onChange, onBlur, value } }) => (
             <View>
               <TextInput

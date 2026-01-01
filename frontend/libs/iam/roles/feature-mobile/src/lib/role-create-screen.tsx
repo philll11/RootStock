@@ -1,8 +1,8 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { useCreateRole } from '@rootstock/iam/roles/roles-data-access';
+import { useCreateRole, RoleFormData } from '@rootstock/iam/roles/roles-data-access';
 import { ResourceCreateLayout } from '@rootstock/ui/mobile';
-import { RoleForm, RoleFormData } from './role-form';
+import { RoleForm } from './role-form';
 
 export const RoleCreateScreen = () => {
   const router = useRouter();
@@ -10,7 +10,7 @@ export const RoleCreateScreen = () => {
 
   const handleSubmit = async (data: RoleFormData) => {
     try {
-      const { isActive, ...createData } = data;
+      const { isActive, __v, ...createData } = data;
       const newRole = await createRole(createData);
       router.replace(`/iam/roles/${newRole._id}`);
     } catch (error) {

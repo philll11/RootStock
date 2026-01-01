@@ -6,7 +6,7 @@ import { useState } from 'react';
 import {
   useUpdateRole,
   useGetRole,
-  UpdateRoleDto
+  RoleFormData
 } from '@rootstock/iam/roles/roles-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
@@ -20,10 +20,11 @@ export function RoleEditPage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: UpdateRoleDto) => {
+  const handleSubmit = async (values: RoleFormData) => {
     if (!id) return;
     try {
-      await updateRole({ id, data: values });
+      const { __v, ...updateData } = values;
+      await updateRole({ id, data: updateData });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/roles/${id}`), 0);
     } catch (error) {

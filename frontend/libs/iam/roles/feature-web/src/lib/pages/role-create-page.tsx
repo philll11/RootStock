@@ -2,8 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { 
   useCreateRole,
-  CreateRoleDto,
-  UpdateRoleDto
+  RoleFormData
 } from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm } from '../role-form';
 import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
@@ -17,9 +16,10 @@ export function RoleCreatePage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: CreateRoleDto | UpdateRoleDto) => {
+  const handleSubmit = async (values: RoleFormData) => {
     try {
-      const newRole = await createRole(values as CreateRoleDto);
+      const { isActive, __v, ...createData } = values;
+      const newRole = await createRole(createData);
       setIsDirty(false);
       setTimeout(() => transitionTo(`/roles/${newRole._id}`), 0);
     } catch (error) {

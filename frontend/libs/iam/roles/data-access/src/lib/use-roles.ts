@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
 import { Role, CreateRoleDto, UpdateRoleDto } from './roles.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
 export const ROLES_KEYS = {
@@ -13,10 +13,35 @@ export const ROLES_KEYS = {
   detail: (id: string) => [...ROLES_KEYS.details(), id] as const,
 };
 
-export const getRole = async (id: string): Promise<Role> => {
-  const response = await apiClient.get<Role>(`/roles/${id}`);
+// --- API Functions ---
+
+const BASE_URL = '/roles';
+
+export const getRoles = async (): Promise<Role[]> => {
+  const response = await apiClient.get<Role[]>(BASE_URL);
   return response.data;
 };
+
+export const getRole = async (id: string): Promise<Role> => {
+  const response = await apiClient.get<Role>(`${BASE_URL}/${id}`);
+  return response.data;
+};
+
+export const createRole = async (data: CreateRoleDto): Promise<Role> => {
+  const response = await apiClient.post<Role>(BASE_URL, data);
+  return response.data;
+};
+
+export const updateRole = async ({ id, data }: { id: string; data: UpdateRoleDto }): Promise<Role> => {
+  const response = await apiClient.patch<Role>(`${BASE_URL}/${id}`, data);
+  return response.data;
+};
+
+export const deleteRole = async (id: string): Promise<void> => {
+  await apiClient.delete(`${BASE_URL}/${id}`);
+};
+
+// --- Hooks ---
 
 export function useGetRoles(options?: { enabled?: boolean }) {
   const { can } = usePermission();
@@ -24,10 +49,7 @@ export function useGetRoles(options?: { enabled?: boolean }) {
 
   return useQuery({
     queryKey: ROLES_KEYS.lists(),
-    queryFn: async () => {
-      const response = await apiClient.get<Role[]>('/roles');
-      return response.data;
-    },
+    queryFn: getRoles,
     enabled: isEnabled,
   });
 }
@@ -43,10 +65,7 @@ export function useGetRole(id: string | undefined) {
 export function useCreateRole() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: CreateRoleDto) => {
-      const response = await apiClient.post<Role>('/roles', data);
-      return response.data;
-    },
+    mutationFn: createRole,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ROLES_KEYS.lists() });
       notify.success('The role has been successfully created.', 'Role Created');
@@ -60,10 +79,7 @@ export function useCreateRole() {
 export function useUpdateRole() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateRoleDto }) => {
-      const response = await apiClient.patch<Role>(`/roles/${id}`, data);
-      return response.data;
-    },
+    mutationFn: updateRole,
     onSuccess: (data, variables) => {
       queryClient.setQueryData(ROLES_KEYS.detail(variables.id), data);
       queryClient.invalidateQueries({ queryKey: ROLES_KEYS.lists() });
@@ -81,9 +97,7 @@ export function useUpdateRole() {
 export function useDeleteRole() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      await apiClient.delete(`/roles/${id}`);
-    },
+    mutationFn: deleteRole,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ROLES_KEYS.lists() });
       notify.success('The role has been removed.', 'Role Deleted');

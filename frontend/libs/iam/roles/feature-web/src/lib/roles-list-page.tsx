@@ -10,8 +10,7 @@ import {
   useUpdateRole,
   useDeleteRole,
   Role,
-  CreateRoleDto,
-  UpdateRoleDto,
+  RoleFormData,
 } from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm, RoleFormMode } from './role-form';
 import {
@@ -49,7 +48,7 @@ export function RolesListPage() {
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
 
   const [createFormDraft, setCreateFormDraft] = useState<
-    Partial<CreateRoleDto>
+    Partial<RoleFormData>
   >({});
   const [isFormDirty, setIsFormDirty] = useState(false);
 
@@ -118,15 +117,17 @@ export function RolesListPage() {
     }
   };
 
-  const handleSubmit = async (values: CreateRoleDto | UpdateRoleDto) => {
+  const handleSubmit = async (values: RoleFormData) => {
     try {
+      const { __v, ...data } = values;
       if (mode === 'edit' && selectedRole) {
         await updateRole({
           id: selectedRole._id,
-          data: values as UpdateRoleDto,
+          data: data,
         });
       } else if (mode === 'create') {
-        await createRole(values as CreateRoleDto);
+        const { isActive, ...createData } = data;
+        await createRole(createData);
         setCreateFormDraft({});
       }
       close();

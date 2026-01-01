@@ -14,8 +14,7 @@ import {
 import { useForm } from '@mantine/form';
 import {
   Role,
-  CreateRoleDto,
-  UpdateRoleDto,
+  RoleFormData,
   VisibilityScope,
   PERMISSIONS,
 } from '@rootstock/iam/roles/roles-data-access';
@@ -29,12 +28,12 @@ export type RoleFormMode = 'create' | 'edit' | 'view';
 interface RoleFormProps {
   mode: RoleFormMode;
   role?: Role | null;
-  initialValues?: Partial<CreateRoleDto>;
-  onSubmit: (values: CreateRoleDto | UpdateRoleDto) => void;
+  initialValues?: Partial<RoleFormData>;
+  onSubmit: (values: RoleFormData) => void;
   isLoading: boolean;
   onCancel: () => void;
   onEdit?: () => void;
-  onValuesChange?: (values: Partial<CreateRoleDto>) => void;
+  onValuesChange?: (values: Partial<RoleFormData>) => void;
   onDirtyChange?: (isDirty: boolean) => void;
   fullHeight?: boolean;
 }
@@ -56,14 +55,14 @@ export function RoleForm({
   const isViewing = mode === 'view';
   const { can } = usePermission();
 
-  const form = useForm({
+  const form = useForm<RoleFormData & { __v: number }>({
     initialValues: {
       name: '',
       description: '',
       visibilityScope: VisibilityScope.Client,
       permissions: [] as string[],
       isActive: true,
-      __v: 0,
+      __v: role?.__v ?? 0,
       ...initialValues,
     },
     validate: {
@@ -212,10 +211,10 @@ export function RoleForm({
                   label={perm.split(':')[1]} // Show only the action part
                   value={perm}
                   disabled={isView}
-                  checked={form.values.permissions.includes(perm)}
+                  checked={form.values.permissions?.includes(perm)}
                   onChange={(event) => {
                     const checked = event.currentTarget.checked;
-                    const current = form.values.permissions;
+                    const current = form.values.permissions || [];
                     if (checked) {
                       form.setFieldValue('permissions', [...current, perm]);
                     } else {

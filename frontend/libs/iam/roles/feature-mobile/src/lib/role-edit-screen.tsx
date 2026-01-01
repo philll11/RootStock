@@ -1,8 +1,8 @@
 import React from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useUpdateRole, useGetRole } from '@rootstock/iam/roles/roles-data-access';
+import { useUpdateRole, useGetRole, RoleFormData } from '@rootstock/iam/roles/roles-data-access';
 import { ResourceEditLayout } from '@rootstock/ui/mobile';
-import { RoleForm, RoleFormData } from './role-form';
+import { RoleForm } from './role-form';
 
 export const RoleEditScreen = () => {
   const router = useRouter();
@@ -13,10 +13,11 @@ export const RoleEditScreen = () => {
   const handleSubmit = async (data: RoleFormData) => {
     if (!id || !role) return;
     try {
+      const { __v, ...updateData } = data;
       await updateRole({ 
         id, 
         data: { 
-          ...data, 
+          ...updateData, 
           __v: role.__v 
         } 
       });
