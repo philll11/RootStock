@@ -15,26 +15,15 @@ import {
 } from 'react-native-paper';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useGetOrchards } from '@rootstock/assets/orchards/orchards-data-access';
 import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
+import {
+  blockSchema,
+  BlockFormData,
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-
-const plantingSchema = z.object({
-  varietyId: z.string().min(1, 'Variety is required'),
-  treeCount: z.coerce.number().min(1, 'Tree count must be at least 1'),
-});
-
-const blockSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  orchardId: z.string().min(1, 'Orchard is required'),
-  plantings: z.array(plantingSchema).optional(),
-  isActive: z.boolean().optional(),
-});
-
-type BlockFormData = z.infer<typeof blockSchema>;
 
 interface BlockFormProps {
   defaultValues?: Partial<BlockFormData>;
@@ -144,6 +133,7 @@ export function BlockForm({
                   setOrchardModalVisible(true);
                 }}
                 style={styles.selectorButton}
+                disabled={isEdit}
               >
                 {selectedOrchard?.name || 'Select Orchard'}
               </Button>

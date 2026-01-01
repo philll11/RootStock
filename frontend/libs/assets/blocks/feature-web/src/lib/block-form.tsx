@@ -18,6 +18,7 @@ import {
   Block,
   CreateBlockDto,
   UpdateBlockDto,
+  BlockFormData,
 } from '@rootstock/assets/blocks/blocks-data-access';
 import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
 import { useGetOrchards } from '@rootstock/assets/orchards/orchards-data-access';
@@ -31,13 +32,13 @@ export type BlockFormMode = 'create' | 'edit' | 'view';
 interface BlockFormProps {
   block?: Block | null;
   mode: BlockFormMode;
-  onSubmit: (values: CreateBlockDto | UpdateBlockDto) => void;
+  onSubmit: (values: BlockFormData) => void;
   onCancel: () => void;
   onEdit?: () => void;
   isLoading?: boolean;
   onDirtyChange?: (isDirty: boolean) => void;
-  initialValues?: Partial<CreateBlockDto>;
-  onValuesChange?: (values: Partial<CreateBlockDto>) => void;
+  initialValues?: Partial<BlockFormData>;
+  onValuesChange?: (values: Partial<BlockFormData>) => void;
   orchardId?: string;
   fullHeight?: boolean;
 }
@@ -150,7 +151,7 @@ export function BlockForm({
   const proceedSubmit = (values: typeof form.values) => {
     if (isCreating) {
       const { isActive, __v, ...createValues } = values;
-      onSubmit(createValues as CreateBlockDto);
+      onSubmit(values as BlockFormData);
     } else {
       const submissionData: any = { ...values };
       // Only send isActive if it has actually changed
@@ -215,6 +216,7 @@ export function BlockForm({
             data={(orchards || []).map((o) => ({ value: o._id, label: o.name }))}
             required={!isView}
             readOnly={isView}
+            disabled={isEditing}
             searchable
             {...form.getInputProps('orchardId')}
           />

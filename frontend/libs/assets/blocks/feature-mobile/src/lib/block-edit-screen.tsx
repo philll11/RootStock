@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useGetBlock, useUpdateBlock } from '@rootstock/assets/blocks/blocks-data-access';
+import { useGetBlock, useUpdateBlock, BlockFormData } from '@rootstock/assets/blocks/blocks-data-access';
 import { ResourceEditLayout } from '@rootstock/ui/mobile';
 import { BlockForm } from './block-form';
 
@@ -25,8 +25,20 @@ export function BlockEditScreen() {
     isActive: block.isActive,
   } : undefined;
 
-  const handleSubmit = async (data: any) => {
-    await updateBlock({ id: id!, data });
+  const handleSubmit = async (data: BlockFormData) => {
+    if (!block) return;
+    await updateBlock({ 
+      id: id!, 
+      data: {
+        name: data.name,
+        isActive: data.isActive,
+        plantings: data.plantings.map(p => ({
+          varietyId: p.varietyId!,
+          treeCount: p.treeCount
+        })),
+        __v: block.__v
+      } 
+    });
     router.back();
   };
 

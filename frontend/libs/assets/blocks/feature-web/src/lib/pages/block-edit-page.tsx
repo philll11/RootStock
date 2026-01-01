@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
   useGetBlock,
   useUpdateBlock,
-  UpdateBlockDto,
+  BlockFormData,
 } from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -22,10 +22,21 @@ export function BlockEditPage() {
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: any) => {
-    if (!id) return;
+  const handleSubmit = async (values: BlockFormData) => {
+    if (!id || !block) return;
     try {
-      await updateBlock({ id, data: values as UpdateBlockDto });
+      await updateBlock({ 
+        id, 
+        data: {
+          name: values.name,
+          isActive: values.isActive,
+          plantings: values.plantings.map((p: any) => ({
+            varietyId: p.varietyId!,
+            treeCount: p.treeCount
+          })),
+          __v: block.__v
+        } 
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/blocks/${id}`), 0);
     } catch (error) {

@@ -2,8 +2,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
   useCreateBlock,
-  CreateBlockDto,
-  UpdateBlockDto,
+  BlockFormData,
 } from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -20,9 +19,16 @@ export function BlockCreatePage() {
 
   const { modalProps, handleAction } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: CreateBlockDto | UpdateBlockDto) => {
+  const handleSubmit = async (values: BlockFormData) => {
     try {
-      const newBlock = await createBlock({ ...values as CreateBlockDto, orchardId: orchardId! });
+      const newBlock = await createBlock({
+        name: values.name,
+        orchardId: values.orchardId || orchardId!,
+        plantings: values.plantings.map(p => ({
+          varietyId: p.varietyId!,
+          treeCount: p.treeCount
+        }))
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/blocks/${newBlock._id}`), 0);
     } catch (error) {

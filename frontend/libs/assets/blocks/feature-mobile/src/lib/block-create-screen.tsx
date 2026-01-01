@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { useCreateBlock } from '@rootstock/assets/blocks/blocks-data-access';
+import { useCreateBlock, BlockFormData } from '@rootstock/assets/blocks/blocks-data-access';
 import { ResourceCreateLayout } from '@rootstock/ui/mobile';
 import { BlockForm } from './block-form';
 
@@ -8,9 +8,15 @@ export function BlockCreateScreen() {
   const router = useRouter();
   const { mutateAsync: createBlock, isPending: isCreating } = useCreateBlock();
 
-  const handleSubmit = async (data: any) => {
-    const { isActive, ...createData } = data;
-    await createBlock(createData);
+  const handleSubmit = async (data: BlockFormData) => {
+    await createBlock({
+      name: data.name,
+      orchardId: data.orchardId!,
+      plantings: data.plantings.map(p => ({
+        varietyId: p.varietyId!,
+        treeCount: p.treeCount
+      })),
+    });
     router.back();
   };
 

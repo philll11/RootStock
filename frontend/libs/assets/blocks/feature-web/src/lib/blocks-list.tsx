@@ -10,6 +10,7 @@ import {
   useDeleteBlock,
   Block,
   CreateBlockDto,
+  BlockFormData,
 } from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm, BlockFormMode } from './block-form';
 import {
@@ -55,9 +56,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
   const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
   const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
-  const [createFormDraft, setCreateFormDraft] = useState<
-    Partial<CreateBlockDto>
-  >({});
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<BlockFormData>>({});
 
   const { handleAction: handleCloseWithWarning, modalProps } =
     useDiscardWarning(isFormDirty && formMode === 'edit');
@@ -117,16 +116,31 @@ export function BlocksList({ orchardId }: BlocksListProps) {
     }
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: BlockFormData) => {
     try {
       if (formMode === 'create') {
-        await createBlock({ ...values, orchardId: orchardId ?? values.orchardId });
+        await createBlock({
+          name: values.name,
+          orchardId: orchardId ?? values.orchardId!,
+          plantings: values.plantings.map(p => ({
+            varietyId: p.varietyId!,
+            treeCount: p.treeCount
+          })),
+        });
         setCreateFormDraft({});
       } else {
         if (selectedBlock) {
           await updateBlock({
             id: selectedBlock._id,
-            data: values,
+            data: {
+              name: values.name,
+              isActive: values.isActive,
+              plantings: values.plantings.map(p => ({
+                varietyId: p.varietyId!,
+                treeCount: p.treeCount
+              })),
+              __v: selectedBlock.__v
+            },
           });
         }
       }
