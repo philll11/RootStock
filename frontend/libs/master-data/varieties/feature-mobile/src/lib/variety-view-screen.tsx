@@ -12,17 +12,23 @@ export const VarietyViewScreen = () => {
   const { data: variety, isLoading } = useGetVariety(id!);
   const { can } = usePermission();
 
+  const handleEdit = () => {
+    router.push(`/master-data/varieties/edit?id=${id}`);
+  };
+
+  const handleDelete = async () => {
+    await deleteVariety(id!);
+    router.back();
+  };
+
   return (
     <ResourceViewLayout
       title={variety?.name || 'Variety Details'}
       isLoading={isLoading}
       error={!variety}
       entityName="Variety"
-      onEdit={() => router.push(`/master-data/varieties/edit?id=${id}`)}
-      onDelete={async () => {
-        await deleteVariety(id!);
-        router.back();
-      }}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
       canEdit={can(PERMISSIONS.VARIETY_EDIT)}
       canDelete={can(PERMISSIONS.VARIETY_DELETE)}
     >

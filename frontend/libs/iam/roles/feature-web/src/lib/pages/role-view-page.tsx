@@ -35,6 +35,10 @@ export function RoleViewPage() {
       }
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   if (isLoading) {
     return <LoadingOverlay visible />;
@@ -73,7 +77,7 @@ export function RoleViewPage() {
           role={role}
           onSubmit={() => { }}
           isLoading={false}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
             onEdit={can(PERMISSIONS.ROLE_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />

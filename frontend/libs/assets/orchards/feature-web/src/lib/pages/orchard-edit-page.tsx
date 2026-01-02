@@ -39,6 +39,10 @@ export function OrchardEditPage() {
     }
   };
 
+  const handleCancel = () => {
+    goBack();
+  };
+
   if (isLoading) {
     return <LoadingOverlay visible />;
   }
@@ -61,7 +65,7 @@ export function OrchardEditPage() {
           mode="edit"
           orchard={orchard}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

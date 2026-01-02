@@ -5,6 +5,7 @@ import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import '@mantine/dates/styles.css';
 
 // Features
 import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '@rootstock/iam/auth/auth-feature-web';
@@ -277,7 +278,7 @@ export function App() {
                 } 
               />
               <Route 
-                path="create" 
+                path="new" 
                 element={
                   <ProtectedRoute permission={PERMISSIONS.ASSESSMENT_CREATE}>
                     <AssessmentCreatePage />

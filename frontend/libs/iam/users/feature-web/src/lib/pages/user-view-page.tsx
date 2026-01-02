@@ -35,6 +35,10 @@ export function UserViewPage() {
       }
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   if (isLoading) {
     return <LoadingOverlay visible />;
@@ -73,7 +77,7 @@ export function UserViewPage() {
           user={user}
           onSubmit={() => { }}
           isLoading={false}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
             onEdit={can(PERMISSIONS.USER_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />

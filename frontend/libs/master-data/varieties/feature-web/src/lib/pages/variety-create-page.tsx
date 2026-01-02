@@ -26,7 +26,11 @@ export function VarietyCreatePage() {
       console.error('Failed to create variety', error);
     }
   };
-
+  
+  const handleCancel = () => {
+    goBack();
+  };
+  
   return (
     <Container size="xl">
       <PageHeader title="Create Variety" />
@@ -35,7 +39,7 @@ export function VarietyCreatePage() {
           mode="create"
           onSubmit={handleSubmit}
           isLoading={isCreating}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           onDirtyChange={setIsDirty}
           fullHeight={false}
         />

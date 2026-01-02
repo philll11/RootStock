@@ -39,7 +39,7 @@ export function OrchardsListPage() {
     deleteModalOpened,
     { open: openDeleteModal, close: closeDeleteModal },
   ] = useDisclosure(false);
-  
+
   const navigate = useNavigate();
   const { getLinkTo } = useContextualNavigation();
 
@@ -50,7 +50,7 @@ export function OrchardsListPage() {
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty && mode === 'edit');
-  
+
   const [sortState, setSortState] = useState<{
     accessor: string;
     direction: 'asc' | 'desc';
@@ -71,7 +71,7 @@ export function OrchardsListPage() {
     e?.stopPropagation();
     navigate(getLinkTo(`/orchards/${orchard._id}`));
   };
-  
+
   const handleEditPage = (orchard: Orchard, e?: React.MouseEvent) => {
     e?.stopPropagation();
     navigate(getLinkTo(`/orchards/${orchard._id}/edit`));
@@ -142,7 +142,7 @@ export function OrchardsListPage() {
       // Error handling is done in the hook via notify
     }
   };
-  
+
   const getDrawerTitle = () => {
     switch (mode) {
       case 'create':
@@ -181,14 +181,14 @@ export function OrchardsListPage() {
       render: (orchard) => (
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.ORCHARD_VIEW) && (
-          <ActionIcon
-            variant="subtle"
-            color={palette.actions.view}
-            onClick={(e) => handleViewPage(orchard, e)}
-            title="View Page"
-          >
-            <IconEye size={iconSizes.md} />
-          </ActionIcon>
+            <ActionIcon
+              variant="subtle"
+              color={palette.actions.view}
+              onClick={(e) => handleViewPage(orchard, e)}
+              title="View Page"
+            >
+              <IconEye size={iconSizes.md} />
+            </ActionIcon>
           )}
           {can(PERMISSIONS.ORCHARD_EDIT) && (
             <>
@@ -226,28 +226,28 @@ export function OrchardsListPage() {
 
   const sortedOrchards = orchards
     ? [...orchards].sort((a, b) => {
-        const { accessor, direction } = sortState;
-        let aValue = (a as any)[accessor];
-        let bValue = (b as any)[accessor];
+      const { accessor, direction } = sortState;
+      let aValue = (a as any)[accessor];
+      let bValue = (b as any)[accessor];
 
-        if (accessor === 'clientId') {
-          aValue = typeof a.clientId === 'object' ? a.clientId.name : '';
-          bValue = typeof b.clientId === 'object' ? b.clientId.name : '';
-        }
+      if (accessor === 'clientId') {
+        aValue = typeof a.clientId === 'object' ? a.clientId.name : '';
+        bValue = typeof b.clientId === 'object' ? b.clientId.name : '';
+      }
 
-        aValue = aValue || '';
-        bValue = bValue || '';
+      aValue = aValue || '';
+      bValue = bValue || '';
 
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return direction === 'asc'
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
-        }
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
 
-        if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return direction === 'asc' ? 1 : -1;
-        return 0;
-      })
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    })
     : undefined;
 
   return (
@@ -293,12 +293,12 @@ export function OrchardsListPage() {
           key={opened ? 'opened' : 'closed'}
           mode={mode}
           orchard={selectedOrchard}
-          initialValues={createFormDraft}
           onSubmit={handleSubmit}
           isLoading={isCreating || isUpdating}
           onCancel={handleClose}
           onEdit={() => setMode('edit')}
           onValuesChange={setCreateFormDraft}
+          initialValues={createFormDraft}
           onDirtyChange={setIsFormDirty}
         />
       </FormDrawer>

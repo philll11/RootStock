@@ -31,6 +31,10 @@ export function RoleEditPage() {
       console.error('Failed to update role', error);
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   if (isLoading) {
     return <LoadingOverlay visible />;
@@ -54,7 +58,7 @@ export function RoleEditPage() {
           mode="edit"
           role={role}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

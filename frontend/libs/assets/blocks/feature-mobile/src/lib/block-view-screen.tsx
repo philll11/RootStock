@@ -16,6 +16,15 @@ export function BlockViewScreen() {
   const { can } = usePermission();
   const theme = useTheme();
 
+  const handleEdit = () => {
+    router.push(`/assets/blocks/edit?id=${id}`);
+  };
+
+  const handleDelete = async () => {
+    await deleteBlock(id!);
+    router.back();
+  };
+
   const orchardName = typeof block?.orchardId === 'object' ? (block.orchardId as any).name : 'Unknown Orchard';
 
   return (
@@ -24,11 +33,8 @@ export function BlockViewScreen() {
       isLoading={isLoading}
       error={!block}
       entityName="Block"
-      onEdit={() => router.push(`/assets/blocks/edit?id=${id}`)}
-      onDelete={async () => {
-        await deleteBlock(id!);
-        router.back();
-      }}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
       canEdit={can(PERMISSIONS.BLOCK_EDIT)}
       canDelete={can(PERMISSIONS.BLOCK_DELETE)}
     >

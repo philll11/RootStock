@@ -26,6 +26,10 @@ export function ClientCreatePage() {
       console.error('Failed to create client', error);
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   return (
     <Container size="xl">
@@ -35,7 +39,7 @@ export function ClientCreatePage() {
           mode="create"
           onSubmit={handleSubmit}
           isLoading={isCreating}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           onDirtyChange={setIsDirty}
           fullHeight={false}
         />

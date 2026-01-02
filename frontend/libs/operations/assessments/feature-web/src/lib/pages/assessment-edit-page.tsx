@@ -3,10 +3,10 @@ import { useState } from 'react';
 import {
   useGetAssessment,
   useUpdateAssessment,
-  UpdateAssessmentDto,
+  AssessmentFormData,
 } from '@rootstock/operations/assessments/assessments-data-access';
 import { AssessmentForm } from '../assessment-form';
-import { useDiscardWarning, PageHeader, useContextualNavigation } from '@rootstock/ui/web';
+import { useDiscardWarning, PageHeader, useContextualNavigation, ConfirmDiscardModal } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 
@@ -14,18 +14,24 @@ export function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/assessments');
-  
   const { data: assessment, isLoading } = useGetAssessment(id!);
   const { mutateAsync: updateAssessment, isPending: isUpdating } = useUpdateAssessment();
-
   const [isDirty, setIsDirty] = useState(false);
 
-  useDiscardWarning(isDirty);
+  const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: any) => {
-    if (!id) return;
+  const handleSubmit = async (values: AssessmentFormData) => {
+    if (!id || !assessment) return;
     try {
-      await updateAssessment({ id, dto: values as UpdateAssessmentDto });
+      await updateAssessment({ 
+        id, 
+        data: {
+          status: values.status,
+          samples: values.samples,
+          changeReason: values.changeReason,
+          __v: assessment.__v,
+        } 
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/assessments/${id}`), 0);
     } catch (error) {
@@ -53,7 +59,7 @@ export function AssessmentEditPage() {
 
   return (
     <Container size="xl">
-      <PageHeader title={`Edit Assessment ${assessment.recordId}`} />
+      <PageHeader title={`Edit ${assessment.name}`} />
       <Paper p="md" withBorder>
         <AssessmentForm
           mode="edit"
@@ -65,6 +71,7 @@ export function AssessmentEditPage() {
           fullHeight={false}
         />
       </Paper>
+      <ConfirmDiscardModal {...modalProps} />
     </Container>
   );
 }

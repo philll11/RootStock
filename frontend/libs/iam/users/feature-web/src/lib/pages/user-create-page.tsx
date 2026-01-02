@@ -26,6 +26,10 @@ export function UserCreatePage() {
       console.error('Failed to create user', error);
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   return (
     <Container size="xl">
@@ -35,7 +39,7 @@ export function UserCreatePage() {
           mode="create"
           onSubmit={handleSubmit}
           isLoading={isCreating}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           onDirtyChange={setIsDirty}
           fullHeight={false}
         />

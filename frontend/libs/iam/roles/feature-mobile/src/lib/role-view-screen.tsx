@@ -14,17 +14,23 @@ export const RoleViewScreen = () => {
   const { data: role, isLoading } = useGetRole(id);
   const { can } = usePermission();
 
+  const handleEdit = () => {
+    router.push(`/iam/roles/edit?id=${id}`);
+  };
+
+  const handleDelete = async () => {
+    await deleteRole(id!);
+    router.back();
+  };
+
   return (
     <ResourceViewLayout
       title={role?.name || 'Role Details'}
       isLoading={isLoading}
       error={!role}
       entityName="Role"
-      onEdit={() => router.push(`/iam/roles/edit?id=${id}`)}
-      onDelete={async () => {
-        await deleteRole(id!);
-        router.back();
-      }}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
       canEdit={can(PERMISSIONS.ROLE_EDIT)}
       canDelete={can(PERMISSIONS.ROLE_DELETE)}
     >

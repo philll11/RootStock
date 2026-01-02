@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
   useCreateOrchard,
@@ -10,7 +10,11 @@ import { Container, Paper } from '@mantine/core';
 
 export function OrchardCreatePage() {
   const navigate = useNavigate();
-  const { goBack, transitionTo } = useContextualNavigation('/orchards');
+  const [searchParams] = useSearchParams();
+  const clientId = searchParams.get('clientId') || undefined;
+  
+  // If we came from a client, return to that client. Otherwise return to orchard list.
+  const { goBack, transitionTo } = useContextualNavigation(clientId ? `/clients/${clientId}` : '/orchards');
   const { mutateAsync: createOrchard, isPending: isCreating } = useCreateOrchard();
   const [isDirty, setIsDirty] = useState(false);
 
@@ -24,10 +28,16 @@ export function OrchardCreatePage() {
         userIds: values.userIds,
       });
       setIsDirty(false);
+      // Navigate to the view page of the new assessment, preserving the "returnTo" context
+      // so that "Back" from the View page goes back to where we started (Client or List).
       setTimeout(() => transitionTo(`/orchards/${newOrchard._id}`), 0);
     } catch (error) {
       console.error('Failed to create orchard', error);
     }
+  };
+
+  const handleCancel = () => {
+    goBack();
   };
 
   return (
@@ -37,7 +47,7 @@ export function OrchardCreatePage() {
         <OrchardForm
           mode="create"
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isCreating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

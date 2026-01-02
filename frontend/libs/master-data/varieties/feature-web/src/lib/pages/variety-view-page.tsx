@@ -35,6 +35,10 @@ export function VarietyViewPage() {
       }
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   if (isLoading) {
     return <LoadingOverlay visible />;
@@ -73,7 +77,7 @@ export function VarietyViewPage() {
           initialValues={variety}
           onSubmit={() => { }}
           isLoading={false}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           onEdit={can(PERMISSIONS.VARIETY_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />

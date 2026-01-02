@@ -43,6 +43,10 @@ export function BlockEditPage() {
       console.error('Failed to update block', error);
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   if (isLoading) {
     return <LoadingOverlay visible />;
@@ -66,7 +70,7 @@ export function BlockEditPage() {
           mode="edit"
           block={block}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

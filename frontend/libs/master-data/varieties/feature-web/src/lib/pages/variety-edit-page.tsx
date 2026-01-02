@@ -36,6 +36,10 @@ export function VarietyEditPage() {
       console.error('Failed to update variety', error);
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   if (isLoading) {
     return <LoadingOverlay visible />;
@@ -59,7 +63,7 @@ export function VarietyEditPage() {
           mode="edit"
           initialValues={variety}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

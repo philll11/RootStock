@@ -48,17 +48,17 @@ export function BlocksListPage() {
     direction: 'asc' | 'desc';
   }>({ accessor: 'name', direction: 'asc' });
 
-  const [formMode, setFormMode] = useState<BlockFormMode>('create');
+  const [mode, setMode] = useState<BlockFormMode>('create');
   const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
   const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [createFormDraft, setCreateFormDraft] = useState<Partial<BlockFormData>>({});
 
   const { handleAction: handleCloseWithWarning, modalProps } =
-    useDiscardWarning(isFormDirty && formMode === 'edit');
+    useDiscardWarning(isFormDirty && mode === 'edit');
 
   const handleCreate = () => {
-    setFormMode('create');
+    setMode('create');
     setSelectedBlock(null);
     setIsFormDirty(false);
     openDrawer();
@@ -69,7 +69,7 @@ export function BlocksListPage() {
   };
 
   const handleView = (block: Block) => {
-    setFormMode('view');
+    setMode('view');
     setSelectedBlock(block);
     setIsFormDirty(false);
     openDrawer();
@@ -82,7 +82,7 @@ export function BlocksListPage() {
 
   const handleEdit = (block: Block, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setFormMode('edit');
+    setMode('edit');
     setSelectedBlock(block);
     setIsFormDirty(false);
     openDrawer();
@@ -113,7 +113,7 @@ export function BlocksListPage() {
 
   const handleSubmit = async (values: BlockFormData) => {
     try {
-      if (formMode === 'create') {
+      if (mode === 'create') {
         await createBlock({
           name: values.name,
           orchardId: values.orchardId!,
@@ -153,7 +153,7 @@ export function BlocksListPage() {
   };
 
   const getDrawerTitle = () => {
-    switch (formMode) {
+    switch (mode) {
       case 'create':
         return 'Create Block';
       case 'edit':
@@ -171,13 +171,13 @@ export function BlocksListPage() {
     {
       accessor: 'orchardId',
       title: 'Orchard',
-      render: (block) => typeof block.orchardId === 'object' ? block.orchardId.name : 'Unknown Orchard',
+      render: (block: Block) => typeof block.orchardId === 'object' ? block.orchardId.name : 'Unknown Orchard',
       sortable: true,
     },
     {
       accessor: 'plantings',
       title: 'Plantings',
-      render: (block) => (
+      render: (block: Block) => (
         <>
           {block.plantings.map((p, i) => (
             <div key={i}>
@@ -191,7 +191,7 @@ export function BlocksListPage() {
     {
       accessor: 'isActive',
       title: 'Status',
-      render: (block) => (
+      render: (block: Block) => (
         <Badge color={block.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {block.isActive ? 'Active' : 'Inactive'}
         </Badge>
@@ -201,7 +201,7 @@ export function BlocksListPage() {
       accessor: 'actions',
       title: '',
       align: 'right',
-      render: (block) => (
+      render: (block: Block) => (
         <Group gap={0} justify="flex-end">
           <ActionIcon
             variant="subtle"
@@ -312,11 +312,11 @@ export function BlocksListPage() {
       >
         <BlockForm
           key={drawerOpened ? 'opened' : 'closed'}
-          mode={formMode}
+          mode={mode}
           block={selectedBlock}
           onSubmit={handleSubmit}
           onCancel={handleClose}
-          onEdit={() => setFormMode('edit')}
+          onEdit={() => setMode('edit')}
           isLoading={isCreating || isUpdating}
           onDirtyChange={setIsFormDirty}
           initialValues={createFormDraft}

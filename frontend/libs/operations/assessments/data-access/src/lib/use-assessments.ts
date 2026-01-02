@@ -17,23 +17,23 @@ export const ASSESSMENTS_KEYS = {
 
 // API Functions
 export const getAssessments = async (params?: AssessmentQueryParams): Promise<Assessment[]> => {
-  const { data } = await apiClient.get<Assessment[]>(BASE_URL, { params });
-  return data;
+  const response = await apiClient.get<Assessment[]>(BASE_URL, { params });
+  return response.data;
 };
 
 export const getAssessment = async (id: string): Promise<Assessment> => {
-  const { data } = await apiClient.get<Assessment>(`${BASE_URL}/${id}`);
-  return data;
+  const response = await apiClient.get<Assessment>(`${BASE_URL}/${id}`);
+  return response.data;
 };
 
-export const createAssessment = async (dto: CreateAssessmentDto): Promise<Assessment> => {
-  const { data } = await apiClient.post<Assessment>(BASE_URL, dto);
-  return data;
+export const createAssessment = async (data: CreateAssessmentDto): Promise<Assessment> => {
+  const response = await apiClient.post<Assessment>(BASE_URL, data);
+  return response.data;
 };
 
-export const updateAssessment = async (id: string, dto: UpdateAssessmentDto): Promise<Assessment> => {
-  const { data } = await apiClient.patch<Assessment>(`${BASE_URL}/${id}`, dto);
-  return data;
+export const updateAssessment = async ({ id, data }: { id: string; data: UpdateAssessmentDto }): Promise<Assessment> => {
+  const response = await apiClient.patch<Assessment>(`${BASE_URL}/${id}`, data);
+  return response.data;
 };
 
 export const deleteAssessment = async (id: string): Promise<void> => {
@@ -67,7 +67,7 @@ export const useCreateAssessment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (dto: CreateAssessmentDto) => createAssessment(dto),
+    mutationFn: createAssessment,
     onMutate: async (newAssessment) => {
       await queryClient.cancelQueries({ queryKey: ASSESSMENTS_KEYS.lists() });
 
@@ -122,6 +122,9 @@ export const useCreateAssessment = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ASSESSMENTS_KEYS.lists() });
     },
+    onSuccess: () => {
+      notify.success('The assessment has been successfully created.', 'Assessment Created');
+    },
   });
 };
 
@@ -129,10 +132,45 @@ export const useUpdateAssessment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: UpdateAssessmentDto }) => updateAssessment(id, dto),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ASSESSMENTS_KEYS.detail(data._id) });
-      queryClient.invalidateQueries({ queryKey: ASSESSMENTS_KEYS.lists() });
+    mutationFn: updateAssessment,
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ASSESSMENTS_KEYS.all });
+
+      const previousAssessment = queryClient.getQueryData<Assessment>(ASSESSMENTS_KEYS.detail(id));
+      const previousAssessmentsAll = queryClient.getQueryData<Assessment[]>(ASSESSMENTS_KEYS.list({}));
+
+      if (previousAssessment) {
+        queryClient.setQueryData(ASSESSMENTS_KEYS.detail(id), {
+          ...previousAssessment,
+          ...data,
+        });
+      }
+
+      if (previousAssessmentsAll) {
+        queryClient.setQueryData(
+          ASSESSMENTS_KEYS.list({}),
+          previousAssessmentsAll.map((assessment) =>
+            assessment._id === id ? { ...assessment, ...data } : assessment
+          )
+        );
+      }
+
+      return { previousAssessment, previousAssessmentsAll };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousAssessment) {
+        queryClient.setQueryData(ASSESSMENTS_KEYS.detail(variables.id), context.previousAssessment);
+      }
+      if (context?.previousAssessmentsAll) {
+        queryClient.setQueryData(ASSESSMENTS_KEYS.list({}), context.previousAssessmentsAll);
+      }
+      notify.error(err, 'Error Updating Assessment');
+    },
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ASSESSMENTS_KEYS.all });
+    },
+    onSuccess: () => {
+      notify.success('The assessment details have been updated.', 'Assessment Updated');
     },
   });
 };
@@ -141,9 +179,13 @@ export const useDeleteAssessment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => deleteAssessment(id),
+    mutationFn: deleteAssessment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ASSESSMENTS_KEYS.lists() });
+      notify.success('The assessment has been deleted.', 'Assessment Deleted');
+    },
+    onError: (error: any) => {
+      notify.error(error, 'Error Deleting Assessment');
     },
   });
 };

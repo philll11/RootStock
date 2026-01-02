@@ -12,17 +12,23 @@ export const ClientViewScreen = () => {
   const { data: client, isLoading } = useGetClient(id);
   const { can } = usePermission();
 
+  const handleEdit = () => {
+    router.push(`/iam/clients/edit?id=${id}`);
+  };
+
+  const handleDelete = async () => {
+    await deleteClient(id!);
+    router.back();
+  };
+
   return (
     <ResourceViewLayout
       title={client?.name || 'Client Details'}
       isLoading={isLoading}
       error={!client}
       entityName="Client"
-      onEdit={() => router.push(`/iam/clients/edit?id=${id}`)}
-      onDelete={async () => {
-        await deleteClient(id!);
-        router.back();
-      }}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
       canEdit={can(PERMISSIONS.CLIENT_EDIT)}
       canDelete={can(PERMISSIONS.CLIENT_DELETE)}
     >

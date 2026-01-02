@@ -31,6 +31,10 @@ export function UserEditPage() {
       console.error('Failed to update user', error);
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   if (isLoading) {
     return <LoadingOverlay visible />;
@@ -54,7 +58,7 @@ export function UserEditPage() {
           mode="edit"
           user={user}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

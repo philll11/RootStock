@@ -35,6 +35,10 @@ export function ClientViewPage() {
       }
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   if (isLoading) {
     return <LoadingOverlay visible />;
@@ -73,7 +77,7 @@ export function ClientViewPage() {
           client={client}
           onSubmit={() => { }}
           isLoading={false}
-            onCancel={() => goBack()}
+            onCancel={handleCancel}
             onEdit={can(PERMISSIONS.CLIENT_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />

@@ -1,43 +1,32 @@
 import React from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet } from 'react-native';
-import { Appbar } from 'react-native-paper';
-import { AssessmentForm, AssessmentFormData } from './assessment-form';
-import { useCreateAssessment } from '@rootstock/operations/assessments/assessments-data-access';
+import { AssessmentForm } from './assessment-form';
+import { useCreateAssessment, AssessmentFormData } from '@rootstock/operations/assessments/assessments-data-access';
+import { ResourceCreateLayout } from '@rootstock/ui/mobile';
 
 export function AssessmentCreateScreen() {
   const router = useRouter();
   const { blockId } = useLocalSearchParams<{ blockId: string }>();
-  const createAssessment = useCreateAssessment();
+  const { mutateAsync: createAssessment, isPending: isCreating } = useCreateAssessment();
 
   const handleSubmit = async (data: AssessmentFormData) => {
-    await createAssessment.mutateAsync({
-      ...data,
+    await createAssessment({
       blockId: blockId!,
+      date: data.date,
+      samples: data.samples,
     });
     router.back();
   };
 
   return (
-    <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.BackAction onPress={() => router.back()} />
-        <Appbar.Content title="New Assessment" />
-      </Appbar.Header>
+    <ResourceCreateLayout title="New Assessment">
       <AssessmentForm
         mode="create"
         onSubmit={handleSubmit}
         onCancel={() => router.back()}
-        isSubmitting={createAssessment.isPending}
+        isSubmitting={isCreating}
         blockId={blockId}
       />
-    </View>
+    </ResourceCreateLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-});

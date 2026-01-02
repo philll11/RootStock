@@ -13,11 +13,9 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Block,
-  CreateBlockDto,
-  UpdateBlockDto,
   BlockFormData,
 } from '@rootstock/assets/blocks/blocks-data-access';
 import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
@@ -59,6 +57,14 @@ export function BlockForm({
   const { data: varieties = [], isLoading: isVarietiesLoading } = useGetVarieties();
   const { data: orchards = [], isLoading: isOrchardsLoading } = useGetOrchards();
 
+  const orchardOptions = useMemo(() => {
+    return (orchards || []).map((o) => ({ value: o._id, label: o.name }));
+  }, [orchards]);
+
+  const varietyOptions = useMemo(() => {
+    return (varieties || []).map((v) => ({ value: v._id, label: v.name }));
+  }, [varieties]);
+
   const { can } = usePermission();
   const [showReplantingWarning, setShowReplantingWarning] = useState(false);
   const [
@@ -70,7 +76,7 @@ export function BlockForm({
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
 
-  const form = useForm({
+  const form = useForm<BlockFormData>({
     initialValues: {
       name: '',
       // Safe id extraction with fallback to orchardId prop
@@ -179,11 +185,6 @@ export function BlockForm({
     });
   };
 
-  const varietyOptions = (varieties || []).map((v) => ({
-    value: v._id,
-    label: v.name,
-  }));
-
   const isView = mode === 'view';
 
   const isDataLoading = isLoading || isVarietiesLoading || isOrchardsLoading;
@@ -213,7 +214,7 @@ export function BlockForm({
           <Select
             label="Orchard"
             placeholder="Select Orchard"
-            data={(orchards || []).map((o) => ({ value: o._id, label: o.name }))}
+            data={orchardOptions}
             required={!isView}
             readOnly={isView}
             disabled={isEditing}

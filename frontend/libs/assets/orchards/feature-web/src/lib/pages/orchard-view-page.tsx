@@ -36,6 +36,10 @@ export function OrchardViewPage() {
       }
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   if (isLoading) {
     return <LoadingOverlay visible />;
@@ -72,7 +76,7 @@ export function OrchardViewPage() {
           mode="view"
           orchard={orchard}
           onSubmit={() => { }}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           onEdit={can(PERMISSIONS.ORCHARD_EDIT) ? handleEdit : undefined}
           isLoading={false}
           fullHeight={false}

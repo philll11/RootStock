@@ -30,9 +30,17 @@ export function BlockViewPage() {
 
   const handleDelete = async () => {
     if (id) {
-      await deleteBlock(id);
-      goBack();
+      try {
+        await deleteBlock(id);
+        goBack();
+      } catch (error) {
+        console.error('Failed to delete block', error);
+      }
     }
+  };
+
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -51,13 +59,13 @@ export function BlockViewPage() {
 
   return (
     <Container size="xl">
-      <PageHeader 
+      <PageHeader
         title={block.name}
         action={
           can(PERMISSIONS.BLOCK_DELETE) && (
-            <ActionIcon 
-              variant="subtle" 
-              color={palette.actions.delete} 
+            <ActionIcon
+              variant="subtle"
+              color={palette.actions.delete}
               onClick={openDeleteModal}
             >
               <IconTrash size={iconSizes.md} />
@@ -69,8 +77,8 @@ export function BlockViewPage() {
         <BlockForm
           mode="view"
           block={block}
-          onSubmit={() => {}}
-          onCancel={() => goBack()}
+          onSubmit={() => { }}
+          onCancel={handleCancel}
           onEdit={can(PERMISSIONS.BLOCK_EDIT) ? handleEdit : undefined}
           isLoading={false}
           fullHeight={false}

@@ -6,30 +6,19 @@ import {
   Text,
   HelperText,
   useTheme,
-  List,
   IconButton,
   DataTable,
 } from 'react-native-paper';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
-import { CreateAssessmentDto, AssessmentSample } from '@rootstock/operations/assessments/assessments-data-access';
 import { DatePickerInput } from 'react-native-paper-dates';
-
-const sampleSchema = z.object({
-  rowNumber: z.coerce.number().min(1, 'Row number is required'),
-  totalFruit: z.coerce.number().min(0, 'Total fruit must be >= 0'),
-  damagedFruit: z.coerce.number().min(0, 'Damaged fruit must be >= 0'),
-});
-
-const assessmentSchema = z.object({
-  date: z.date(),
-  samples: z.array(sampleSchema).optional(),
-});
-
-export type AssessmentFormData = z.infer<typeof assessmentSchema>;
+import {
+  AssessmentFormData,
+  assessmentSchema,
+  AssessmentStatus,
+} from '@rootstock/operations/assessments/assessments-data-access';
 
 interface AssessmentFormProps {
   defaultValues?: Partial<AssessmentFormData>;
@@ -58,6 +47,8 @@ export function AssessmentForm({
   } = useForm<AssessmentFormData>({
     resolver: zodResolver(assessmentSchema) as any,
     defaultValues: {
+      blockId: blockId || '',
+      status: AssessmentStatus.PENDING,
       date: new Date(),
       samples: [],
       ...defaultValues,
@@ -72,12 +63,7 @@ export function AssessmentForm({
   useMobileDiscardWarning(isDirty && !isSubmitting);
 
   const handleFormSubmit = async (data: AssessmentFormData) => {
-    if (!blockId && mode === 'create') return; // Should not happen
-    await onSubmit({
-      blockId: blockId!,
-      date: data.date,
-      samples: data.samples,
-    });
+    await onSubmit(data);
   };
 
   return (
@@ -133,7 +119,7 @@ export function AssessmentForm({
                 <DataTable.Title numeric>Row</DataTable.Title>
                 <DataTable.Title numeric>Total</DataTable.Title>
                 <DataTable.Title numeric>Damaged</DataTable.Title>
-                {!isView && <DataTable.Title style={{ flex: 0.5 }}></DataTable.Title>}
+                {!isView && <DataTable.Title style={{ flex: 0.5 }}> </DataTable.Title>}
               </DataTable.Header>
 
               {fields.map((field, index) => (

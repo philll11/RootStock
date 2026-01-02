@@ -37,6 +37,10 @@ export function ClientEditPage() {
       console.error('Failed to update client', error);
     }
   };
+  
+  const handleCancel = () => {
+    goBack();
+  };
 
   if (isLoading) {
     return <LoadingOverlay visible />;
@@ -60,7 +64,7 @@ export function ClientEditPage() {
           mode="edit"
           client={client}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

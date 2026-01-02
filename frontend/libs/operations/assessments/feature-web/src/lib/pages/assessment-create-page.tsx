@@ -3,20 +3,20 @@ import { useState } from 'react';
 import { Container, Paper } from '@mantine/core';
 import {
   useCreateAssessment,
-  CreateAssessmentDto,
-  UpdateAssessmentDto,
+  AssessmentFormData,
 } from '@rootstock/operations/assessments/assessments-data-access';
 import { AssessmentForm } from '../assessment-form';
 import {
   useDiscardWarning,
   PageHeader,
   useContextualNavigation,
+  ConfirmDiscardModal,
 } from '@rootstock/ui/web';
 
 export function AssessmentCreatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const blockId = searchParams.get('blockId');
+  const blockId = searchParams.get('blockId') || undefined;
   
   // If we came from a block, return to that block. Otherwise return to assessment list.
   const { goBack, transitionTo } = useContextualNavigation(blockId ? `/blocks/${blockId}` : '/assessments');
@@ -24,15 +24,15 @@ export function AssessmentCreatePage() {
   const { mutateAsync: createAssessment, isPending: isCreating } = useCreateAssessment();
   const [isDirty, setIsDirty] = useState(false);
 
-  useDiscardWarning(isDirty);
+  const { modalProps } = useDiscardWarning(isDirty);
 
-  if (!blockId) {
-    return <div>Error: Block ID is required to create an assessment.</div>;
-  }
-
-  const handleSubmit = async (values: CreateAssessmentDto | UpdateAssessmentDto) => {
+  const handleSubmit = async (values: AssessmentFormData) => {
     try {
-      const newAssessment = await createAssessment(values as CreateAssessmentDto);
+      const newAssessment = await createAssessment({
+        blockId: values.blockId || blockId!,
+        date: values.date,
+        samples: values.samples,
+      });
       setIsDirty(false);
       // Navigate to the view page of the new assessment, preserving the "returnTo" context
       // so that "Back" from the View page goes back to where we started (Block or List).
@@ -48,7 +48,7 @@ export function AssessmentCreatePage() {
 
   return (
     <Container size="xl">
-      <PageHeader title="New Assessment" />
+      <PageHeader title="Create Assessment" />
       <Paper p="md" withBorder>
         <AssessmentForm
           mode="create"
@@ -60,6 +60,7 @@ export function AssessmentCreatePage() {
           fullHeight={false}
         />
       </Paper>
+      <ConfirmDiscardModal {...modalProps} />
     </Container>
   );
 }

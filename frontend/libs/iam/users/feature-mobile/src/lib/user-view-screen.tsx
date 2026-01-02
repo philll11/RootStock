@@ -16,6 +16,15 @@ export function UserViewScreen() {
   const { can } = usePermission();
   const theme = useTheme();
 
+  const handleEdit = () => {
+    router.push(`/iam/users/edit?id=${id}`);
+  };
+
+  const handleDelete = async () => {
+    await deleteUser(id!);
+    router.back();
+  };
+
   const roleName = typeof user?.roleId === 'object' ? user.roleId?.name : 'Unknown Role';
   const clientNames = user?.clientIds?.map((c: any) => (typeof c === 'object' ? c.name : 'Unknown Client')) || [];
 
@@ -25,11 +34,8 @@ export function UserViewScreen() {
       isLoading={isLoading}
       error={!user}
       entityName="User"
-      onEdit={() => router.push(`/iam/users/edit?id=${id}`)}
-      onDelete={async () => {
-        await deleteUser(id!);
-        router.back();
-      }}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
       canEdit={can(PERMISSIONS.USER_EDIT)}
       canDelete={can(PERMISSIONS.USER_DELETE)}
     >

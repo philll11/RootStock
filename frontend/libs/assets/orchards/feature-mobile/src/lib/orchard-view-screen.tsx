@@ -16,10 +16,17 @@ export function OrchardViewScreen() {
   const { can } = usePermission();
   const theme = useTheme();
 
+  const handleEdit = () => {
+    router.push(`/assets/orchards/edit?id=${id}`);
+  };
+
+  const handleDelete = async () => {
+    await deleteOrchard(id!);
+    router.back();
+  };
+
   const clientName = typeof orchard?.clientId === 'object' ? (orchard.clientId as any).name : 'Unknown Client';
-  const userNames = orchard?.userIds?.map((u: any) => 
-    typeof u === 'object' ? u.name : 'Unknown User'
-  ) || [];
+  const userNames = orchard?.userIds?.map((u: any) => typeof u === 'object' ? u.name : 'Unknown User') || [];
 
   return (
     <ResourceViewLayout
@@ -27,11 +34,8 @@ export function OrchardViewScreen() {
       isLoading={isLoading}
       error={!orchard}
       entityName="Orchard"
-      onEdit={() => router.push(`/assets/orchards/edit?id=${id}`)}
-      onDelete={async () => {
-        await deleteOrchard(id!);
-        router.back();
-      }}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
       canEdit={can(PERMISSIONS.ORCHARD_EDIT)}
       canDelete={can(PERMISSIONS.ORCHARD_DELETE)}
     >

@@ -2,7 +2,7 @@ import { BaseEntity } from '@rootstock/shared/util';
 
 export interface Client extends BaseEntity {
   name: string;
-  subsidiaryId?: string;
+  subsidiaryId?: string | { _id: string; name: string; recordId: string };
   isOptimistic?: boolean;
 }
 

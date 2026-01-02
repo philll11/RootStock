@@ -12,6 +12,8 @@ export function BlockCreatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orchardId = searchParams.get('orchardId') || undefined;
+
+  // If we came from an orchard, return to that orchard. Otherwise return to block list.
   const { goBack, transitionTo } = useContextualNavigation(orchardId ? `/orchards/${orchardId}` : '/blocks');
   
   const { mutateAsync: createBlock, isPending: isCreating } = useCreateBlock();

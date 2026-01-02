@@ -1,5 +1,5 @@
 // frontend/libs/assets/orchards/feature-web/src/lib/orchard-form.tsx
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   TextInput,
   Switch,
@@ -56,6 +56,17 @@ export function OrchardForm({
   const { data: clients = [], isLoading: isLoadingClients } = useGetClients();
   const { data: users = [], isLoading: isLoadingUsers } = useGetUsers();
   const { can } = usePermission();
+
+  const clientOptions = useMemo(() => {
+    return (clients || []).map((c) => ({ value: c._id, label: c.name }));
+  }, [clients]);
+
+  const userOptions = useMemo(() => {
+    return (users || []).map((u) => ({
+      value: u._id,
+      label: `${u.firstName} ${u.lastName}`,
+    }));
+  }, [users]);
 
 
   const form = useForm({
@@ -156,7 +167,7 @@ export function OrchardForm({
           <Select
             label="Client"
             placeholder="Select client"
-            data={clients?.map((c) => ({ value: c._id, label: c.name })) || []}
+            data={clientOptions}
             withAsterisk={!isViewing}
             disabled={isEditing}
             readOnly={isViewing}
@@ -174,12 +185,7 @@ export function OrchardForm({
         <MultiSelect
           label="Assign Users"
           placeholder="Select users"
-          data={
-            users?.map((u) => ({
-              value: u._id,
-              label: `${u.firstName} ${u.lastName}`,
-            })) || []
-          }
+          data={userOptions}
           searchable
           readOnly={isViewing}
           {...form.getInputProps('userIds')}
