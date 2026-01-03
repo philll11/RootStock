@@ -163,7 +163,7 @@ export class UsersService {
     const updatePayload = await this._prepareUpdatePayload(updateUserDto, existingUser, requestingUser);
     
     const updateOp: any = { $set: updatePayload, $inc: { __v: 1 } };
-    if (updatePayload.password) {
+    if (updatePayload.password || updatePayload.roleId) {
       updateOp.$inc.tokenVersion = 1;
     }
 
@@ -346,6 +346,14 @@ export class UsersService {
       isDeleted: false,
     }).exec();
     return !!existingUser;
+  }
+
+  /**
+   * Finds a user by their internal ObjectId.
+   * Internal use only (trusted).
+   */
+  async findOneById(id: string): Promise<UserDocument | null> {
+    return this.userModel.findById(id).exec();
   }
 
   /**

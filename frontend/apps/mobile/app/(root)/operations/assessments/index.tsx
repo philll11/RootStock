@@ -1,2 +1,2 @@
-import { AssessmentListScreen } from '@rootstock/operations/assessments/feature-mobile';
+import { AssessmentListScreen } from '@rootstock/operations/assessments/assessments-feature-mobile';
 export default AssessmentListScreen;

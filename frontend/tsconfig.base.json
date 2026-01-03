@@ -10,15 +10,26 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": ["es2020", "dom"],
+    "lib": [
+      "es2020",
+      "dom"
+    ],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@rootstock/shared/api-client": ["libs/shared/api-client/src/index.ts"],
-      "@rootstock/shared/util": ["libs/shared/util/src/index.ts"],
-      "@rootstock/ui/web": ["libs/ui/web/src/index.ts"],
-      "@rootstock/ui/mobile": ["libs/ui/mobile/src/index.ts"],
+      "@rootstock/shared/api-client": [
+        "libs/shared/api-client/src/index.ts"
+      ],
+      "@rootstock/shared/util": [
+        "libs/shared/util/src/index.ts"
+      ],
+      "@rootstock/ui/web": [
+        "libs/ui/web/src/index.ts"
+      ],
+      "@rootstock/ui/mobile": [
+        "libs/ui/mobile/src/index.ts"
+      ],
       "@rootstock/iam/auth/auth-data-access": [
         "libs/iam/auth/data-access/src/index.ts"
       ],
@@ -46,7 +57,9 @@
       "@rootstock/iam/clients/clients-feature-mobile": [
         "libs/iam/clients/feature-mobile/src/index.ts"
       ],
-      "@rootstock/ui/theme": ["libs/ui/theme/src/index.ts"],
+      "@rootstock/ui/theme": [
+        "libs/ui/theme/src/index.ts"
+      ],
       "@rootstock/iam/roles/roles-data-access": [
         "libs/iam/roles/data-access/src/index.ts"
       ],
@@ -97,5 +110,8 @@
       ]
     }
   },
-  "exclude": ["node_modules", "tmp"]
+  "exclude": [
+    "node_modules",
+    "tmp"
+  ]
 }

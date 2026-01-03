@@ -83,7 +83,7 @@ export function useLogin() {
   return useMutation<AuthResponse, Error, LoginCredentials>({
     mutationFn: (credentials) => AuthService.login(credentials),
     onSuccess: async (data) => {
-      await setToken(data.accessToken);
+      await setToken(data.accessToken, data.refreshToken);
     },
   });
 }

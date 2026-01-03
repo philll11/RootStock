@@ -39,6 +39,11 @@ export default function AppLayout() {
       <Stack.Screen name="assets/blocks/create" options={{ title: 'Create Block', headerShown: true }} />
       <Stack.Screen name="assets/blocks/[id]" options={{ title: 'Block Details', headerShown: true }} />
       <Stack.Screen name="assets/blocks/edit" options={{ title: 'Edit Block', headerShown: true }} />
+
+      <Stack.Screen name="operations/assessments/index" options={{ title: 'Assessments', headerShown: false }} />
+      <Stack.Screen name="operations/assessments/create" options={{ title: 'Create Assessment', headerShown: true }} />
+      <Stack.Screen name="operations/assessments/[id]" options={{ title: 'Assessment Details', headerShown: true }} />
+      <Stack.Screen name="operations/assessments/edit" options={{ title: 'Edit Assessment', headerShown: true }} />
     </Stack>
   );
 }

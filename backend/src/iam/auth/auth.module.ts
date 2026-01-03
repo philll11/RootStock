@@ -8,11 +8,14 @@ import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { MongooseModule } from '@nestjs/mongoose';
+import { RefreshToken, RefreshTokenSchema } from './schemas/refresh-token.schema';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     UsersModule,
+    MongooseModule.forFeature([{ name: RefreshToken.name, schema: RefreshTokenSchema }]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({

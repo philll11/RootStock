@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
@@ -9,6 +9,14 @@ import { AppDrawer } from '../src/components/AppDrawer';
 import { useAuthSession } from '@rootstock/iam/auth/auth-data-access';
 import { useSyncOfflineData } from '@rootstock/system/sync/sync-data-access';
 import { View, ActivityIndicator } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+import { initAuth } from '../src/config/auth';
+
+// Initialize Auth System (Storage + Interceptors)
+initAuth();
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,25 +59,32 @@ function RootLayoutNav() {
     }
   }, [isAuthenticated, segments]);
 
+  const onLayoutRootView = useCallback(async () => {
+    if (isAuthenticated !== null) {
+      // This tells the splash screen to hide immediately! If we do this, it is too late!
+      // We need to wait for navigation to be ready?
+      // Actually, just hiding it when auth is determined is good enough for now.
+      await SplashScreen.hideAsync();
+    }
+  }, [isAuthenticated]);
+
   if (isAuthenticated === null) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return null; // Render nothing while splash screen is up
   }
 
   return (
-    <DrawerProvider>
-      <NotificationProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(root)" />
-          <Stack.Screen name="login" />
-          <Stack.Screen name="forgot-password" />
-        </Stack>
-        {isAuthenticated && <AppDrawer />}
-      </NotificationProvider>
-    </DrawerProvider>
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <DrawerProvider>
+        <NotificationProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(root)" />
+            <Stack.Screen name="login" />
+            <Stack.Screen name="forgot-password" />
+          </Stack>
+          {isAuthenticated && <AppDrawer />}
+        </NotificationProvider>
+      </DrawerProvider>
+    </View>
   );
 }
 
