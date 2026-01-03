@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
@@ -8,9 +8,10 @@ import { ThemeProvider, DrawerProvider, NotificationProvider, useNetworkStatus }
 import { AppDrawer } from '../src/components/AppDrawer';
 import { useAuthSession } from '@rootstock/iam/auth/auth-data-access';
 import { useSyncOfflineData } from '@rootstock/system/sync/sync-data-access';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, AppState } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { initAuth } from '../src/config/auth';
+import { apiClient } from '@rootstock/shared/api-client';
 
 // Initialize Auth System (Storage + Interceptors)
 initAuth();
@@ -40,36 +41,58 @@ function RootLayoutNav() {
   const router = useRouter();
   const { isOnline } = useNetworkStatus();
   const { syncAll } = useSyncOfflineData();
+  const lastSyncTime = useRef<number>(0);
 
+  // App State Listener for Session Verification
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && isAuthenticated) {
+        // Verify session validity when app resumes
+        apiClient.get('/auth/profile').catch(() => {
+          // If 401, interceptor will handle refresh or logout
+        });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated]);
+
+  // Optimized Sync Logic
   useEffect(() => {
     if (isAuthenticated && isOnline) {
-      syncAll();
+      const now = Date.now();
+      // Sync if never synced or > 15 mins ago
+      if (now - lastSyncTime.current > 15 * 60 * 1000) {
+        syncAll();
+        lastSyncTime.current = now;
+      }
     }
-  }, [isAuthenticated, isOnline]);
+  }, [isAuthenticated, isOnline, syncAll]);
+
+  const inAuthGroup = segments[0] === 'login' || segments[0] === 'forgot-password';
 
   useEffect(() => {
     if (isAuthenticated === null) return;
-
-    const inAuthGroup = segments[0] === 'login' || segments[0] === 'forgot-password';
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/login');
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/');
     }
-  }, [isAuthenticated, segments]);
+  }, [isAuthenticated, segments, inAuthGroup]);
 
   const onLayoutRootView = useCallback(async () => {
     if (isAuthenticated !== null) {
-      // This tells the splash screen to hide immediately! If we do this, it is too late!
-      // We need to wait for navigation to be ready?
-      // Actually, just hiding it when auth is determined is good enough for now.
       await SplashScreen.hideAsync();
     }
   }, [isAuthenticated]);
 
-  if (isAuthenticated === null) {
-    return null; // Render nothing while splash screen is up
+  // Prevent rendering the UI until the navigation state matches the auth state
+  // This avoids the "Flash of Unauthenticated Content" (FOUC)
+  if (isAuthenticated === null || (!isAuthenticated && !inAuthGroup) || (isAuthenticated && inAuthGroup)) {
+    return null;
   }
 
   return (
