@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { Stack } from 'expo-router';
+import { AppTheme } from '../mobile-theme';
 
 interface ResourceCreateLayoutProps {
   title?: string;
@@ -12,7 +13,7 @@ export function ResourceCreateLayout({
   title,
   children,
 }: ResourceCreateLayoutProps) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

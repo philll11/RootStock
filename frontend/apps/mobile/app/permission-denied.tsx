@@ -3,9 +3,10 @@ import { View, StyleSheet } from 'react-native';
 import { Text, Button, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { spacing } from '@rootstock/ui/theme';
+import { AppTheme } from '@rootstock/ui/mobile';
 
 export default function PermissionDeniedScreen() {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const router = useRouter();
 
   return (

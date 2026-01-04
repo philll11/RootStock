@@ -10,6 +10,7 @@ import { TextInput, Button, Text, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useLogin } from '@rootstock/iam/auth/auth-data-access';
 import { spacing } from '@rootstock/ui/theme';
+import { AppTheme } from '@rootstock/ui/mobile';
 
 export const LoginScreen = () => {
   const router = useRouter();
@@ -17,7 +18,7 @@ export const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   const loginMutation = useLogin();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   const handleLogin = () => {
     setValidationError(null);

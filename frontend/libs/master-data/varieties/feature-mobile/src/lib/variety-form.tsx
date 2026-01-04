@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { varietySchema, VarietyFormData } from '@rootstock/master-data/varieties/varieties-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
-import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
 interface VarietyFormProps {
@@ -17,7 +17,7 @@ interface VarietyFormProps {
 }
 
 export const VarietyForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }: VarietyFormProps) => {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const { can } = usePermission();
   const [isSaving, setIsSaving] = React.useState(false);
   const { control, handleSubmit, formState: { errors, isDirty } } = useForm<VarietyFormData>({

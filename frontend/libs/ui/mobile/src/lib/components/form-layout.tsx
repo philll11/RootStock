@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Appbar, useTheme, ActivityIndicator } from 'react-native-paper';
 import { spacing } from '@rootstock/ui/theme';
+import { AppTheme } from '../mobile-theme';
 import { SyncIndicator } from './sync-indicator';
 
 export type FormMode = 'create' | 'edit' | 'view';
@@ -33,7 +34,7 @@ export function FormLayout({
   isDirty = false,
   submitLabel,
 }: FormLayoutProps) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isView = mode === 'view';
   const isCreate = mode === 'create';
 

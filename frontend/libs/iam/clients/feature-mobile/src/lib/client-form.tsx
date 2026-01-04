@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
-import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { ClientFormData, clientSchema } from '@rootstock/iam/clients/clients-data-access';
 
@@ -17,7 +17,7 @@ interface ClientFormProps {
 }
 
 export const ClientForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }: ClientFormProps) => {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const { can } = usePermission();
   const [isSaving, setIsSaving] = React.useState(false);
   const { control, handleSubmit, formState: { errors, isDirty } } = useForm<ClientFormData>({

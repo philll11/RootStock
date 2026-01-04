@@ -51,8 +51,10 @@ export class AssessmentsService {
     // 5. Default Status Logic
     const initialStatus = (samples && samples.length > 0) ? AssessmentStatus.IN_PROGRESS : AssessmentStatus.PENDING;
 
-    // 6. Source of Truth Calculation
-    const summary = this.calculator.calculateStats(samples || []);
+    // 6. Data Sanitization & Calculation
+    // Enforce sequential row numbers (Backend Source of Truth)
+    const sanitizedSamples = this.calculator.reindexSamples(samples || []);
+    const summary = this.calculator.calculateStats(sanitizedSamples);
 
     const newAssessment = new this.assessmentModel({
       recordId,
@@ -61,7 +63,7 @@ export class AssessmentsService {
       varietyId: snapshotVarietyId,    // Immutable Snapshot
       date,
       status: initialStatus,
-      samples: samples || [],
+      samples: sanitizedSamples,
       summary,
     });
 
@@ -122,12 +124,15 @@ export class AssessmentsService {
     let newStatus = updateDto.status || existing.status;
 
     if (updateDto.samples) {
-        const newSummary = this.calculator.calculateStats(updateDto.samples);
-        updateOps.$set.samples = updateDto.samples;
+        // Enforce sequential row numbers (Backend Source of Truth)
+        const sanitizedSamples = this.calculator.reindexSamples(updateDto.samples);
+        const newSummary = this.calculator.calculateStats(sanitizedSamples);
+        
+        updateOps.$set.samples = sanitizedSamples;
         updateOps.$set.summary = newSummary;
         
         // Auto-Transition
-        if (existing.status === AssessmentStatus.PENDING && updateDto.samples.length > 0) {
+        if (existing.status === AssessmentStatus.PENDING && sanitizedSamples.length > 0) {
              newStatus = AssessmentStatus.IN_PROGRESS;
         }
         hasChanges = true;

@@ -2,10 +2,12 @@ import React from 'react';
 import { View, ScrollView, Alert, StyleSheet } from 'react-native';
 import { Button, useTheme } from 'react-native-paper';
 import { Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing } from '@rootstock/ui/theme';
 import { LoadingScreen } from './loading-screen';
 import { ErrorScreen } from './error-screen';
 import { SyncIndicator } from './sync-indicator';
+import { AppTheme } from '../mobile-theme';
 
 interface ResourceViewLayoutProps {
   title: string;
@@ -30,7 +32,8 @@ export function ResourceViewLayout({
   canDelete = false,
   children,
 }: ResourceViewLayoutProps) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
+  const insets = useSafeAreaInsets();
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -74,7 +77,7 @@ export function ResourceViewLayout({
       />
       <ScrollView 
         style={{ backgroundColor: theme.colors.background }}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: spacing.md + insets.bottom }]}
       >
         {children}
 

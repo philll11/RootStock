@@ -42,6 +42,19 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     ]
   },
   {
+    label: 'Operations',
+    screen: '',
+    icon: 'clipboard-check',
+    children: [
+      {
+        label: 'Assessments',
+        screen: '/operations/assessments',
+        icon: 'clipboard-text',
+        permission: PERMISSIONS.ASSESSMENT_VIEW,
+      },
+    ]
+  },
+  {
     label: 'Lists',
     screen: '',
     icon: 'format-list-bulleted',

@@ -4,6 +4,7 @@ import { useTheme } from 'react-native-paper';
 import { Stack } from 'expo-router';
 import { LoadingScreen } from './loading-screen';
 import { ErrorScreen } from './error-screen';
+import { AppTheme } from '../mobile-theme';
 
 interface ResourceEditLayoutProps {
   title?: string;
@@ -18,7 +19,7 @@ export function ResourceEditLayout({
   error,
   children,
 }: ResourceEditLayoutProps) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   if (isLoading) {
     return <LoadingScreen />;

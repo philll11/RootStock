@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Text, List, useTheme } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGetBlock, useDeleteBlock } from '@rootstock/assets/blocks/blocks-data-access';
-import { DetailRow, ResourceViewLayout } from '@rootstock/ui/mobile';
+import { DetailRow, ResourceViewLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -14,7 +14,7 @@ export function BlockViewScreen() {
   const { mutateAsync: deleteBlock } = useDeleteBlock();
   const { data: block, isLoading } = useGetBlock(id!);
   const { can } = usePermission();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   const handleEdit = () => {
     router.push(`/assets/blocks/edit?id=${id}`);

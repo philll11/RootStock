@@ -5,12 +5,13 @@ import { useRouter } from 'expo-router';
 import { useGetProfile, useLogout, setSuppressSessionExpiry } from '@rootstock/iam/auth/auth-data-access';
 import { useUpdateUser, UpdateUserDto } from '@rootstock/iam/users/users-data-access';
 import { spacing } from '@rootstock/ui/theme';
+import { AppTheme } from '@rootstock/ui/mobile';
 
 export default function ProfileScreen() {
   const { data: user } = useGetProfile();
   const { mutate: logout } = useLogout();
   const { mutateAsync: updateUser, isPending: isUpdating } = useUpdateUser();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const router = useRouter();
 
   const [firstName, setFirstName] = useState('');

@@ -11,17 +11,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const isDark = useMemo(() => {
     const userPref = user?.preferences?.theme || 'auto';
-    return userPref === 'auto' 
-      ? colorScheme === 'dark' 
-      : userPref === 'dark';
+    return userPref === 'auto' ? colorScheme === 'dark' : userPref === 'dark';
   }, [user?.preferences?.theme, colorScheme]);
 
   const theme = isDark ? mobileDarkTheme : mobileLightTheme;
 
   return (
     <PaperProvider theme={theme}>
-      <StatusBar 
-        barStyle={isDark ? 'light-content' : 'dark-content'} 
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={theme.colors.background}
       />
       {children}

@@ -21,7 +21,7 @@ import {
   blockSchema,
   BlockFormData,
 } from '@rootstock/assets/blocks/blocks-data-access';
-import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
@@ -40,7 +40,7 @@ export function BlockForm({
   mode,
   onCancel,
 }: BlockFormProps) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const { can } = usePermission();
   const isView = mode === 'view';
   const isEdit = mode === 'edit';

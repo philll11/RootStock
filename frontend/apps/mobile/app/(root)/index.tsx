@@ -5,11 +5,12 @@ import { useRouter } from 'expo-router';
 import { useGetProfile } from '@rootstock/iam/auth/auth-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
+import { AppTheme } from '@rootstock/ui/mobile';
 
 export default function DashboardScreen() {
   const { data: user } = useGetProfile();
   const { toggleDrawer } = useDrawer();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const router = useRouter();
 
   return (

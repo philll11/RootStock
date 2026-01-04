@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Text, Chip, useTheme } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useDeleteUser, useGetUser } from '@rootstock/iam/users/users-data-access';
-import { DetailRow, ResourceViewLayout } from '@rootstock/ui/mobile';
+import { DetailRow, ResourceViewLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -14,7 +14,7 @@ export function UserViewScreen() {
   const { mutateAsync: deleteUser } = useDeleteUser();
   const { data: user, isLoading } = useGetUser(id!);
   const { can } = usePermission();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   const handleEdit = () => {
     router.push(`/iam/users/edit?id=${id}`);

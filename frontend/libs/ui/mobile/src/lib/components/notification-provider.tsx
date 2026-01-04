@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Snackbar, useTheme } from 'react-native-paper';
 import { mobileNotificationAdapter } from '../services/notifications.mobile';
+import { AppTheme } from '../mobile-theme';
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [type, setType] = useState<'success' | 'error' | 'info'>('success');

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, TouchableWithoutFeedback, ScrollView, Platform } from 'react-native';
 import { Drawer, useTheme, Text, Avatar, Divider, List } from 'react-native-paper';
-import { useDrawer } from '@rootstock/ui/mobile';
+import { useDrawer, AppTheme } from '@rootstock/ui/mobile';
 import { layout, zIndex, transitions, spacing } from '@rootstock/ui/theme';
 import { useLogout, useGetProfile, usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { useSyncOfflineData } from '@rootstock/system/sync/sync-data-access';
@@ -42,7 +42,7 @@ export const AppDrawer = () => {
   const { data: user } = useGetProfile();
   const { hasPermission } = usePermission();
   const { syncAll, isSyncing } = useSyncOfflineData();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const router = useRouter();
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});

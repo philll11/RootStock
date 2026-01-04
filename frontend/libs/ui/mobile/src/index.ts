@@ -15,6 +15,7 @@ export * from './lib/components/notification-provider';
 export * from './lib/services/notifications.mobile';
 export * from './lib/services/app-control.mobile';
 export * from './lib/hooks/use-network-status';
+export * from './lib/components/wizard/data-entry-wizard';
 
 
 

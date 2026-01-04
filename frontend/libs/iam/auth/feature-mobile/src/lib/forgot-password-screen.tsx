@@ -25,7 +25,7 @@ export const ForgotPasswordScreen = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   const handleReset = async () => {
     setError(null);

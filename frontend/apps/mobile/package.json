@@ -21,6 +21,7 @@
     "expo-constants": "*",
     "expo-linking": "*",
     "expo-router": "*",
+    "expo-haptics": "*",
     "jest-expo": "*",
     "metro-config": "*",
     "metro-resolver": "*",

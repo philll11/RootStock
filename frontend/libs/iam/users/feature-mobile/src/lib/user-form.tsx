@@ -19,7 +19,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { UserType, userSchema, UserFormData } from '@rootstock/iam/users/users-data-access';
 import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
 import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
-import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
@@ -37,7 +37,7 @@ export function UserForm({
   isEditMode = false,
   isSubmitting,
 }: UserFormProps) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const { can } = usePermission();
   const [isSaving, setIsSaving] = useState(false);
 

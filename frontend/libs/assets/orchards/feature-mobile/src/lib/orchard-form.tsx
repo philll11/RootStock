@@ -22,7 +22,7 @@ import {
 } from '@rootstock/assets/orchards/orchards-data-access';
 import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
 import { useGetUsers } from '@rootstock/iam/users/users-data-access';
-import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
@@ -41,7 +41,7 @@ export function OrchardForm({
   mode,
   onCancel,
 }: OrchardFormProps) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const { can } = usePermission();
   const isView = mode === 'view';
   const isEdit = mode === 'edit';

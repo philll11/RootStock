@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { VisibilityScope, RoleFormData, roleSchema } from '@rootstock/iam/roles/roles-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
-import { useMobileDiscardWarning } from '@rootstock/ui/mobile';
+import { useMobileDiscardWarning, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
 interface RoleFormProps {
@@ -17,7 +17,7 @@ interface RoleFormProps {
 }
 
 export const RoleForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }: RoleFormProps) => {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const { can } = usePermission();
   const [isSaving, setIsSaving] = React.useState(false);
   const { control, handleSubmit, formState: { errors, isDirty }, watch, setValue } = useForm<RoleFormData>({

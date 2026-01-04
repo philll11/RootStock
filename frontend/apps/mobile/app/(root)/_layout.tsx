@@ -1,8 +1,9 @@
 import { Stack } from 'expo-router';
 import { useTheme } from 'react-native-paper';
+import { AppTheme } from '@rootstock/ui/mobile';
 
 export default function AppLayout() {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   return (
     <Stack screenOptions={{ 

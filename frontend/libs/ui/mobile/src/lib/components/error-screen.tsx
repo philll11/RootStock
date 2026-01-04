@@ -1,13 +1,14 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
+import { AppTheme } from '../mobile-theme';
 
 interface ErrorScreenProps {
   message?: string;
 }
 
 export function ErrorScreen({ message = 'An error occurred' }: ErrorScreenProps) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

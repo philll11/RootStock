@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { spacing } from '@rootstock/ui/theme';
+import { AppTheme } from '../mobile-theme';
 
 interface DetailRowProps {
   label: string;
@@ -10,7 +11,7 @@ interface DetailRowProps {
 }
 
 export const DetailRow = ({ label, value, children }: DetailRowProps) => {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   return (
     <View style={styles.container}>

@@ -5,12 +5,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useGetProfile } from '@rootstock/iam/auth/auth-data-access';
 import { useUpdateUser } from '@rootstock/iam/users/users-data-access';
 import { useDrawer } from '@rootstock/ui/mobile';
+import { AppTheme } from '@rootstock/ui/mobile';
 
 export default function SettingsScreen() {
   const { data: user } = useGetProfile();
   const { mutateAsync: updateUser } = useUpdateUser();
   const { toggleDrawer } = useDrawer();
-  const paperTheme = useTheme();
+  const paperTheme = useTheme<AppTheme>();
   const queryClient = useQueryClient();
   const theme = user?.preferences?.theme || 'auto';
 
