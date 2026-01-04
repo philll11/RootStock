@@ -12,7 +12,7 @@ import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas
 import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
 import { Orchard, OrchardDocument } from '../../src/assets/orchards/schemas/orchard.schema';
 import { Block, BlockDocument } from '../../src/assets/blocks/schemas/block.schema';
-import { Assessment, AssessmentDocument, AssessmentStatus } from '../../src/operations/assessments/schemas/assessment.schema';
+import { Assessment, AssessmentDocument, AssessmentStatus, AssessmentType } from '../../src/operations/assessments/schemas/assessment.schema';
 import { Variety, VarietyDocument } from '../../src/master-data/varieties/schemas/variety.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
@@ -72,6 +72,8 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
             // Create a COMPLETED assessment
             completedAssessment = await assessmentModel.create({
                 recordId: 'ASM_LOCKED',
+                name: 'Locked Assessment',
+                type: AssessmentType.HAIL,
                 blockId: testBlock._id,
                 clientId: testClient._id,
                 varietyId: variety._id,
@@ -126,7 +128,7 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
     describe('State Machine & Workflow', () => {
         it('should PREVENT completing an assessment with no samples', async () => {
             const pending = await assessmentModel.create({
-                recordId: 'ASM_EMPTY', blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
+                recordId: 'ASM_EMPTY', name: 'Empty Assessment', type: AssessmentType.HAIL, blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
                 status: AssessmentStatus.PENDING, samples: []
             });
 
@@ -139,7 +141,7 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
 
         it('should AUTO-TRANSITION from Pending to In_Progress when samples are added', async () => {
             const pending = await assessmentModel.create({
-                recordId: 'ASM_AUTO', blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
+                recordId: 'ASM_AUTO', name: 'Auto Assessment', type: AssessmentType.HAIL, blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
                 status: AssessmentStatus.PENDING, samples: []
             });
 
@@ -160,7 +162,7 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
         it('should filter records using updatedSince', async () => {
             // 1. Create Old Record
             const oldRecord = await assessmentModel.create({
-                recordId: 'ASM_OLD', blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
+                recordId: 'ASM_OLD', name: 'Old Assessment', type: AssessmentType.HAIL, blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
                 status: AssessmentStatus.PENDING
             });
 
@@ -168,7 +170,7 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
 
             // 2. Create Recent Record
             const recentRecord = await assessmentModel.create({
-                recordId: 'ASM_NEW', blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
+                recordId: 'ASM_NEW', name: 'New Assessment', type: AssessmentType.HAIL, blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
                 status: AssessmentStatus.PENDING
                 // updatedAt will be Now()
             });

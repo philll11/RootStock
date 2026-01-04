@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AssessmentStatus } from './assessment.types';
+import { AssessmentStatus, AssessmentType } from './assessment.types';
 
 export const assessmentSampleSchema = z.object({
   rowNumber: z.coerce.number().min(1, 'Row number must be positive'),
@@ -8,7 +8,9 @@ export const assessmentSampleSchema = z.object({
 });
 
 export const assessmentSchema = z.object({
-  blockId: z.string().min(1, 'Block is required'),
+  name: z.string().min(1, 'Name is required'),
+  type: z.enum(AssessmentType).nullable().refine((val) => val !== null, { message: 'Type is required' }),
+  blockId: z.string().nullable().refine((val) => val !== null && val.length > 0, { message: 'Block is required' }),
   date: z.date({ message: 'Date is required' }),
   status: z.enum(AssessmentStatus).default(AssessmentStatus.PENDING),
   samples: z.array(assessmentSampleSchema).default([]),

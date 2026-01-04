@@ -19,6 +19,7 @@ import {
   AssessmentFormData,
   AssessmentStatus,
   AssessmentSample,
+  AssessmentType,
 } from '@rootstock/operations/assessments/assessments-data-access';
 import { useGetBlocks } from '@rootstock/assets/blocks/blocks-data-access';
 import { IconTrash, IconPlus, IconCalendar } from '@tabler/icons-react';
@@ -63,17 +64,16 @@ export function AssessmentForm({
     return (
       blocks?.map((block) => ({
         value: block._id,
-        label:
-          typeof block.orchardId === 'object'
-            ? `${block.orchardId.name} - ${block.name}`
-            : block.name,
+        label: typeof block.orchardId === 'object' ? `${block.orchardId.name} - ${block.name}`: block.name,
       })) || []
     );
   }, [blocks]);
 
   const form = useForm<AssessmentFormData>({
     initialValues: {
-      blockId: blockId || '',
+      name: '',
+      type: null,
+      blockId: blockId || null,
       date: new Date(),
       samples: [],
       status: AssessmentStatus.PENDING,
@@ -82,6 +82,7 @@ export function AssessmentForm({
       ...initialValues,
     },
     validate: {
+      name: (value) => (value ? null : 'Name is required'),
       blockId: (value) => (value ? null : 'Block is required'),
       date: (value) => (value ? null : 'Date is required'),
       samples: {
@@ -107,6 +108,8 @@ export function AssessmentForm({
   useEffect(() => {
     if (assessment && (isEditing || isViewing)) {
       form.initialize({
+        name: assessment.name,
+        type: assessment.type,
         blockId: typeof assessment.blockId === 'object' ? assessment.blockId._id : assessment.blockId,
         date: new Date(assessment.date),
         samples: assessment.samples,
@@ -116,7 +119,9 @@ export function AssessmentForm({
       });
     } else if (isCreating && initialValues) {
       form.setValues({
-        blockId: initialValues.blockId || blockId || '',
+        name: initialValues.name || '',
+        type: initialValues.type || null,
+        blockId: initialValues.blockId || blockId || null,
         date: initialValues.date || new Date(),
         samples: initialValues.samples || [],
         status: initialValues.status || AssessmentStatus.PENDING,
@@ -127,7 +132,11 @@ export function AssessmentForm({
   }, [assessment, mode, blockId, isEditing, isViewing, isCreating]);
 
   const handleSubmit = (values: typeof form.values) => {
-    onSubmit(values);
+    const indexedSamples = values.samples?.map((sample, index) => ({
+      ...sample,
+      rowNumber: index + 1,
+    }));
+    onSubmit({ ...values, samples: indexedSamples });
   };
 
   const addSample = () => {
@@ -144,7 +153,9 @@ export function AssessmentForm({
 
   const handleClear = () => {
     form.setValues({
-      blockId: blockId || '',
+      name: '',
+      type: null,
+      blockId: blockId || null,
       date: new Date(),
       samples: [],
       status: AssessmentStatus.PENDING,
@@ -165,6 +176,23 @@ export function AssessmentForm({
       fullHeight={fullHeight}
     >
       <Stack gap={spacing.md}>
+        <TextInput
+          label="Name"
+          placeholder="Assessment Name"
+          required
+          readOnly={isViewing}
+          {...form.getInputProps('name')}
+        />
+
+        <Select
+          label="Type"
+          placeholder="Select type"
+          data={Object.values(AssessmentType)}
+          required
+          readOnly={isViewing}
+          {...form.getInputProps('type')}
+        />
+
         <Select
           label="Block"
           placeholder="Select block"
@@ -187,6 +215,15 @@ export function AssessmentForm({
           {...form.getInputProps('date')}
         />
 
+        {isEditing && assessment?.status === AssessmentStatus.COMPLETED && (
+          <TextInput
+            label="Reason for Change"
+            placeholder="Explain why you are modifying this locked record"
+            required
+            {...form.getInputProps('changeReason')}
+          />
+        )}
+
         <Box>
           <Text fw={500} mb={spacing.sm}>Samples</Text>
 
@@ -204,12 +241,9 @@ export function AssessmentForm({
                 {form.values.samples.map((sample, index) => (
                   <Table.Tr key={index}>
                     <Table.Td>
-                      <NumberInput
-                        min={1}
-                        size="xs"
-                        readOnly={isViewing}
-                        {...form.getInputProps(`samples.${index}.rowNumber`)}
-                      />
+                      <Text size="sm" ta="center">
+                        {index + 1}
+                      </Text>
                     </Table.Td>
                     <Table.Td>
                       <NumberInput

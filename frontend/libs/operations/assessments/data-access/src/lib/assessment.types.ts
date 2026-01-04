@@ -6,6 +6,10 @@ export enum AssessmentStatus {
   COMPLETED = 'COMPLETED',
 }
 
+export enum AssessmentType {
+  HAIL = 'HAIL',
+}
+
 export interface AssessmentSample {
   rowNumber: number;
   totalFruit: number;
@@ -28,9 +32,11 @@ export interface AssessmentAuditLog {
 }
 
 export interface Assessment extends BaseEntity {
+  name: string;
+  type: AssessmentType;
   blockId: string | { _id: string; name: string; recordId: string }; // Populated or ID
   clientId: string;
-  varietyId: string | { _id: string; name: string }; // Populated or ID
+  varietyId: string | { _id: string; name: string; recordId: string }; // Populated or ID
   date: string; // ISO Date string
   status: AssessmentStatus;
   samples: AssessmentSample[];
@@ -39,6 +45,8 @@ export interface Assessment extends BaseEntity {
 }
 
 export interface CreateAssessmentDto {
+  name: string;
+  type: AssessmentType;
   blockId: string;
   date: Date;
   samples?: AssessmentSample[];
@@ -57,6 +65,7 @@ export interface AssessmentQueryParams {
   blockId?: string;
   clientId?: string;
   status?: AssessmentStatus;
+  updatedSince?: string;
   startDate?: string;
   endDate?: string;
 }

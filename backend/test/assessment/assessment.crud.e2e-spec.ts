@@ -12,7 +12,7 @@ import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas
 import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
 import { Orchard, OrchardDocument } from '../../src/assets/orchards/schemas/orchard.schema';
 import { Block, BlockDocument } from '../../src/assets/blocks/schemas/block.schema';
-import { Assessment, AssessmentDocument, AssessmentStatus } from '../../src/operations/assessments/schemas/assessment.schema';
+import { Assessment, AssessmentDocument, AssessmentStatus, AssessmentType } from '../../src/operations/assessments/schemas/assessment.schema';
 import { Variety, VarietyDocument } from '../../src/master-data/varieties/schemas/variety.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 import { CreateAssessmentDto } from '../../src/operations/assessments/dto/create-assessment.dto';
@@ -93,6 +93,8 @@ describe('Assessments CRUD & Data Logic (e2e)', () => {
     describe('POST /assessments - Creation & Logic', () => {
         it('should create an assessment and SNAPSHOT the variety from the block', async () => {
             const createDto: CreateAssessmentDto = {
+                name: 'Test Assessment',
+                type: AssessmentType.HAIL,
                 blockId: testBlock._id.toString(),
                 date: new Date(),
                 samples: []
@@ -113,6 +115,8 @@ describe('Assessments CRUD & Data Logic (e2e)', () => {
 
         it('should calculate Summary Statistics (Source of Truth) from samples', async () => {
             const createDto: CreateAssessmentDto = {
+                name: 'Stats Assessment',
+                type: AssessmentType.HAIL,
                 blockId: testBlock._id.toString(),
                 date: new Date(),
                 samples: [
@@ -139,6 +143,8 @@ describe('Assessments CRUD & Data Logic (e2e)', () => {
 
         it('should fail if blockId is invalid', async () => {
             const createDto = {
+                name: 'Invalid Block Assessment',
+                type: AssessmentType.HAIL,
                 blockId: new Types.ObjectId().toString(), // Non-existent
                 date: new Date()
             };
@@ -156,6 +162,8 @@ describe('Assessments CRUD & Data Logic (e2e)', () => {
         beforeEach(async () => {
             assessment = await assessmentModel.create({
                 recordId: 'ASM_GET',
+                name: 'Get Assessment',
+                type: AssessmentType.HAIL,
                 blockId: testBlock._id,
                 clientId: testClient._id,
                 varietyId: varietyGala._id, // Snapshot
@@ -185,6 +193,8 @@ describe('Assessments CRUD & Data Logic (e2e)', () => {
         beforeEach(async () => {
             assessment = await assessmentModel.create({
                 recordId: 'ASM_PATCH',
+                name: 'Patch Assessment',
+                type: AssessmentType.HAIL,
                 blockId: testBlock._id,
                 clientId: testClient._id,
                 varietyId: varietyGala._id,
@@ -236,7 +246,7 @@ describe('Assessments CRUD & Data Logic (e2e)', () => {
         let assessment: AssessmentDocument;
         beforeEach(async () => {
             assessment = await assessmentModel.create({
-                recordId: 'ASM_DEL', blockId: testBlock._id, clientId: testClient._id, varietyId: varietyGala._id, date: new Date(),
+                recordId: 'ASM_DEL', name: 'Delete Assessment', type: AssessmentType.HAIL, blockId: testBlock._id, clientId: testClient._id, varietyId: varietyGala._id, date: new Date(),
             });
         });
 

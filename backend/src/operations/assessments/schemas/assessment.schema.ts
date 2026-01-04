@@ -10,6 +10,10 @@ export enum AssessmentStatus {
     COMPLETED = 'COMPLETED',     // Locked, report ready
 }
 
+export enum AssessmentType {
+    HAIL = 'HAIL',
+}
+
 /**
  * Embedded Schema: A single data point (e.g., one tree or one row)
  */
@@ -92,6 +96,12 @@ export class Assessment {
     varietyId: Types.ObjectId;
 
     // -- DATA --
+
+    @Prop({ required: true })
+    name: string;
+
+    @Prop({ required: true, enum: AssessmentType })
+    type: AssessmentType;
 
     @Prop({ required: true })
     date: Date;

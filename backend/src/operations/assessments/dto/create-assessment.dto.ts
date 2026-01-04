@@ -1,9 +1,18 @@
 // backend/src/operations/assessments/dto/create-assessment.dto.ts
-import { IsArray, IsDate, IsMongoId, IsNotEmpty, IsOptional, ValidateNested } from 'class-validator';
+import { IsArray, IsDate, IsEnum, IsMongoId, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AssessmentSampleDto } from './assessment-sample.dto';
+import { AssessmentType } from '../schemas/assessment.schema';
 
 export class CreateAssessmentDto {
+    @IsString()
+    @IsNotEmpty()
+    readonly name: string;
+
+    @IsEnum(AssessmentType)
+    @IsNotEmpty()
+    readonly type: AssessmentType;
+
     @IsMongoId()
     @IsNotEmpty()
     readonly blockId: string;

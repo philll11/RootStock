@@ -8,6 +8,10 @@ import {
   useTheme,
   IconButton,
   DataTable,
+  Modal,
+  Portal,
+  List,
+  Searchbar,
 } from 'react-native-paper';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,10 +19,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMobileDiscardWarning, DataEntryWizard, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 import { DatePickerInput } from 'react-native-paper-dates';
+import { useGetBlocks } from '@rootstock/assets/blocks/blocks-data-access';
 import {
   AssessmentFormData,
   assessmentSchema,
   AssessmentStatus,
+  AssessmentType,
 } from '@rootstock/operations/assessments/assessments-data-access';
 
 interface AssessmentFormProps {
@@ -40,19 +46,32 @@ export function AssessmentForm({
 }: AssessmentFormProps) {
   const theme = useTheme<AppTheme>();
   const insets = useSafeAreaInsets();
+
   const isView = mode === 'view';
+  const isEdit = mode === 'edit';
+  const isCreate = mode === 'create';
+
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [wizardData, setWizardData] = useState({ totalFruit: '', damagedFruit: '' });
+  const [blockModalVisible, setBlockModalVisible] = useState(false);
+  const [typeModalVisible, setTypeModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const { data: blocks = [] } = useGetBlocks();
 
   const {
     control,
     handleSubmit,
     formState: { errors, isDirty },
+    watch,
+    setValue,
   } = useForm<AssessmentFormData>({
     resolver: zodResolver(assessmentSchema) as any,
     defaultValues: {
-      blockId: blockId || '',
+      name: '',
+      type: null,
+      blockId: blockId || null,
       status: AssessmentStatus.PENDING,
       date: new Date(),
       samples: [],
@@ -66,6 +85,14 @@ export function AssessmentForm({
   });
 
   useMobileDiscardWarning(isDirty && !isSubmitting);
+
+  const selectedBlockId = watch('blockId');
+  const selectedBlock = blocks.find((b) => b._id === selectedBlockId);
+  const selectedType = watch('type');
+
+  const filteredBlocks = blocks.filter((b) =>
+    b.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleFormSubmit = async (data: AssessmentFormData) => {
     // Re-index samples to ensure sequential row numbers
@@ -168,6 +195,68 @@ export function AssessmentForm({
           <View style={styles.section}>
             <Controller
               control={control}
+              name="name"
+              render={({ field: { value, onChange, onBlur } }) => (
+                <TextInput
+                  label="Name"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  mode="outlined"
+                  disabled={isView}
+                  style={styles.input}
+                  error={!!errors.name}
+                />
+              )}
+            />
+            {errors.name && (
+              <HelperText type="error" visible={!!errors.name}>
+                {errors.name.message}
+              </HelperText>
+            )}
+
+            <View style={styles.input}>
+              <Text variant="bodySmall" style={{ marginBottom: 4, color: theme.colors.onSurfaceVariant }}>
+                Type
+              </Text>
+              <Button
+                mode="outlined"
+                onPress={() => setTypeModalVisible(true)}
+                disabled={isView}
+                contentStyle={{ justifyContent: 'flex-start' }}
+                style={{ borderColor: theme.colors.outline }}
+                textColor={theme.colors.onSurface}
+              >
+                {selectedType || 'Select Type'}
+              </Button>
+            </View>
+
+            <View style={styles.input}>
+              <Text variant="bodySmall" style={{ marginBottom: 4, color: theme.colors.onSurfaceVariant }}>
+                Block
+              </Text>
+              <Button
+                mode="outlined"
+                onPress={() => {
+                  setSearchQuery('');
+                  setBlockModalVisible(true);
+                }}
+                disabled={isView || !!blockId}
+                contentStyle={{ justifyContent: 'flex-start' }}
+                style={{ borderColor: theme.colors.outline }}
+                textColor={theme.colors.onSurface}
+              >
+                {selectedBlock?.name || 'Select Block'}
+              </Button>
+              {errors.blockId && (
+                <HelperText type="error" visible={!!errors.blockId}>
+                  {errors.blockId.message}
+                </HelperText>
+              )}
+            </View>
+
+            <Controller
+              control={control}
               name="date"
               render={({ field: { value, onChange } }) => (
                 <DatePickerInput
@@ -188,6 +277,31 @@ export function AssessmentForm({
               </HelperText>
             )}
           </View>
+
+          {isEdit && defaultValues?.status === AssessmentStatus.COMPLETED && (
+             <View style={styles.section}>
+                <Controller
+                  control={control}
+                  name="changeReason"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      label="Reason for Change"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      mode="outlined"
+                      style={styles.input}
+                      error={!!errors.changeReason}
+                    />
+                  )}
+                />
+                {errors.changeReason && (
+                  <HelperText type="error" visible={!!errors.changeReason}>
+                    {errors.changeReason.message}
+                  </HelperText>
+                )}
+             </View>
+          )}
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -303,6 +417,67 @@ export function AssessmentForm({
           </View>
         )}
       </KeyboardAvoidingView>
+
+      <Portal>
+        <Modal
+          visible={blockModalVisible}
+          onDismiss={() => setBlockModalVisible(false)}
+          contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.surface }]}
+        >
+          <Searchbar
+            placeholder="Search Blocks"
+            onChangeText={setSearchQuery}
+            value={searchQuery}
+            style={styles.searchBar}
+          />
+          <ScrollView style={{ maxHeight: 300 }}>
+            {filteredBlocks.map((block) => (
+              <List.Item
+                key={block._id}
+                title={block.name}
+                onPress={() => {
+                  setValue('blockId', block._id, { shouldDirty: true });
+                  setBlockModalVisible(false);
+                }}
+                right={(props) =>
+                  selectedBlockId === block._id ? <List.Icon {...props} icon="check" /> : null
+                }
+              />
+            ))}
+          </ScrollView>
+          <Button onPress={() => setBlockModalVisible(false)} style={{ marginTop: spacing.md }}>
+            Close
+          </Button>
+        </Modal>
+
+        <Modal
+          visible={typeModalVisible}
+          onDismiss={() => setTypeModalVisible(false)}
+          contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.surface }]}
+        >
+          <Text variant="titleMedium" style={{ marginBottom: spacing.md, textAlign: 'center' }}>
+            Select Assessment Type
+          </Text>
+          <ScrollView style={{ maxHeight: 300 }}>
+            {Object.values(AssessmentType).map((type) => (
+              <List.Item
+                key={type}
+                title={type}
+                onPress={() => {
+                  setValue('type', type, { shouldDirty: true });
+                  setTypeModalVisible(false);
+                }}
+                right={(props) =>
+                  selectedType === type ? <List.Icon {...props} icon="check" /> : null
+                }
+              />
+            ))}
+          </ScrollView>
+          <Button onPress={() => setTypeModalVisible(false)} style={{ marginTop: spacing.md }}>
+            Close
+          </Button>
+        </Modal>
+      </Portal>
     </View>
   );
 }
@@ -351,5 +526,13 @@ const styles = StyleSheet.create({
   },
   button: {
     minWidth: 100,
+  },
+  modalContent: {
+    margin: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: 8,
+  },
+  searchBar: {
+    marginBottom: spacing.md,
   },
 });
