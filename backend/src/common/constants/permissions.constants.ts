@@ -115,6 +115,9 @@ export const PERMISSIONS = {
   SYSTEM_CONFIG_VIEW: 'SystemConfig:View',
   SYSTEM_CONFIG_EDIT: 'SystemConfig:Edit',
 
+  // --- Audit Management ---
+  AUDIT_VIEW: 'Audit:View',
+
   // --- Global & System-Wide Permissions ---
   // Special permissions that are not tied to a single resource's CRUD operations.
   /**

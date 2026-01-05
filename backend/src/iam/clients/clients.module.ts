@@ -10,6 +10,7 @@ import { SubsidiariesModule } from '../subsidiaries/subsidiaries.module';
 import { UsersModule } from '../users/users.module';
 import { OrchardsModule } from '../../assets/orchards/orchards.module';
 import { CountersModule } from '../../system/counters/counters.module';
+import { AuditsModule } from '../../system/audits/audits.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { CountersModule } from '../../system/counters/counters.module';
     forwardRef(() => UsersModule),
     forwardRef(() => OrchardsModule),
     CountersModule,
+    AuditsModule,
   ],
   controllers: [ClientsController],
   providers: [

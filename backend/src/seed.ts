@@ -97,6 +97,7 @@ async function bootstrap() {
           PERMISSIONS.ASSESSMENT_VIEW,
           PERMISSIONS.ASSESSMENT_CREATE,
           PERMISSIONS.ASSESSMENT_EDIT,
+          PERMISSIONS.AUDIT_VIEW,
         ],
         isActive: true,
       },

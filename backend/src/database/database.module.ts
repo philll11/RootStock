@@ -12,6 +12,7 @@ import { Block, BlockSchema } from '../assets/blocks/schemas/block.schema';
 import { Assessment, AssessmentSchema } from '../operations/assessments/schemas/assessment.schema';
 import { Variety, VarietySchema } from '../master-data/varieties/schemas/variety.schema';
 import { SystemConfig, SystemConfigSchema } from '../system/config/schemas/system-config.schema';
+import { AuditEntry, AuditEntrySchema } from '../system/audits/schemas/audit.schema';
 
 @Global()
 @Module({
@@ -27,6 +28,7 @@ import { SystemConfig, SystemConfigSchema } from '../system/config/schemas/syste
             { name: Assessment.name, schema: AssessmentSchema },
             { name: Variety.name, schema: VarietySchema },
             { name: SystemConfig.name, schema: SystemConfigSchema },
+            { name: AuditEntry.name, schema: AuditEntrySchema },
         ]),
     ],
     exports: [MongooseModule],
