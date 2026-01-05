@@ -15,6 +15,9 @@ import { CountersService } from '../../system/counters/counters.service';
 import { ClientResolverService } from '../../iam/client-resolver/client-resolver.service';
 import { UserDocument } from '../../iam/users/schemas/user.schema';
 import { handleConcurrentSoftDelete } from '../../common/utils/concurrent-deletion.util';
+import { AuditsService } from '../../system/audits/audits.service';
+import { AuditAction } from '../../system/audits/schemas/audit.schema';
+import { Resource } from '../../common/constants/permissions.constants';
 
 @Injectable()
 export class AssessmentsService {
@@ -22,6 +25,7 @@ export class AssessmentsService {
     @InjectModel(Assessment.name) private assessmentModel: Model<AssessmentDocument>,
     @InjectConnection() private connection: Connection,
     @Inject(forwardRef(() => BlocksService)) private readonly blocksService: BlocksService,
+    @Inject(forwardRef(() => AuditsService)) private readonly auditsService: AuditsService,
     private readonly calculator: AssessmentCalculatorService,
     private readonly countersService: CountersService,
     private readonly clientResolverService: ClientResolverService,
@@ -69,7 +73,19 @@ export class AssessmentsService {
       summary,
     });
 
-    return newAssessment.save();
+    const savedDoc = await newAssessment.save();
+
+    await this.auditsService.log(
+      Resource.ASSESSMENT,
+      savedDoc._id.toString(),
+      AuditAction.CREATE,
+      null,
+      savedDoc.toObject(),
+      requestingUser._id.toString(),
+      'Assessment Created'
+    );
+
+    return savedDoc;
   }
 
   async findOne(assessmentId: string, requestingUser: UserDocument): Promise<AssessmentDocument> {
@@ -106,20 +122,16 @@ export class AssessmentsService {
     const updateOps: any = { $set: {}, $push: {}, $inc: {} };
     let hasChanges = false;
 
-    // 2. Audit & Locking Logic
+    // 1. Compliance Check (The Lock)
     if (existing.status === AssessmentStatus.COMPLETED) {
-        if (!updateDto.changeReason) {
-            throw new BadRequestException('A changeReason is mandatory when modifying a Completed assessment.');
+        // If trying to change anything OTHER than status back to IN_PROGRESS
+        if (updateDto.status !== AssessmentStatus.IN_PROGRESS) {
+             throw new BadRequestException('Completed assessments are locked. You must reopen the assessment (set status to IN_PROGRESS) to make changes.');
         }
-
-        updateOps.$push.revisionHistory = {
-            userId: requestingUser._id,
-            action: 'UPDATE', 
-            reason: updateDto.changeReason,
-            previousSummary: { ...existing.summary }, 
-            date: new Date(),
-        };
-        hasChanges = true;
+        // If Reopening, ensure reason exists
+        if (!updateDto.changeReason) {
+            throw new BadRequestException('A changeReason is mandatory when reopening a Completed assessment.');
+        }
     }
 
     // 3. Calculate New State
@@ -174,26 +186,42 @@ export class AssessmentsService {
         hasChanges = true;
     }
 
-    // 4. Execute Atomic Update
+    // 6. Execute Atomic Update
     if (!hasChanges) return existing;
 
     updateOps.$inc.__v = 1;
 
+    // OCC Check
+    if (updateDto.__v !== undefined && updateDto.__v !== existing.__v) {
+        throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
+    }
+
     const updatedAssessment = await this.assessmentModel.findOneAndUpdate(
-        { _id: assessmentId, __v: updateDto.__v },
+        { _id: assessmentId, __v: existing.__v },
         updateOps,
-        { new: true, runValidators: true }
+        { new: true }
     ).exec();
 
     if (!updatedAssessment) {
-        throw new ConflictException('The record has been modified by another user. Please refresh.');
+         throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
     }
+
+    // 7. Log Audit
+    await this.auditsService.log(
+        Resource.ASSESSMENT,
+        updatedAssessment._id.toString(),
+        AuditAction.UPDATE,
+        existing.toObject(),
+        updatedAssessment.toObject(),
+        requestingUser._id.toString(),
+        updateDto.changeReason || 'Assessment Updated'
+    );
 
     return updatedAssessment;
   }
 
   async remove(assessmentId: string, requestingUser: UserDocument): Promise<AssessmentDocument> {
-    await this.findOne(assessmentId, requestingUser); // Layer 2 Check
+    const existing = await this.findOne(assessmentId, requestingUser); // Layer 2 Check & Snapshot
 
     const session = await this.connection.startSession();
     session.startTransaction();
@@ -206,6 +234,17 @@ export class AssessmentsService {
         );
         
         await session.commitTransaction();
+
+        await this.auditsService.log(
+            Resource.ASSESSMENT,
+            assessmentId,
+            AuditAction.DELETE,
+            existing.toObject(),
+            null,
+            requestingUser._id.toString(),
+            'Assessment Deleted'
+        );
+
         return deletedAssessment;
     } catch (error) {
         await session.abortTransaction();

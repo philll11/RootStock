@@ -17,7 +17,7 @@ export enum AssessmentType {
 /**
  * Embedded Schema: A single data point (e.g., one tree or one row)
  */
-@Schema({ _id: false })
+@Schema()
 export class AssessmentSample {
     @Prop({ required: true })
     rowNumber: number;
@@ -50,28 +50,6 @@ export class AssessmentSummary {
 }
 export const AssessmentSummarySchema = SchemaFactory.createForClass(AssessmentSummary);
 
-/**
- * Embedded Schema: Audit Log for Completed Assessments
- * Required for Insurance/Compliance (Story C-4)
- */
-@Schema({ _id: false })
-export class AssessmentAuditLog {
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-    userId: Types.ObjectId;
-
-    @Prop({ required: true })
-    action: string; // e.g., 'UPDATE_SAMPLES', 'STATUS_CHANGE'
-
-    @Prop({ required: true })
-    reason: string; // The mandatory change reason
-
-    @Prop({ type: AssessmentSummarySchema })
-    previousSummary: AssessmentSummary; // Snapshot of stats before the change
-
-    @Prop({ default: Date.now })
-    date: Date;
-}
-export const AssessmentAuditLogSchema = SchemaFactory.createForClass(AssessmentAuditLog);
 
 /**
  * Main Assessment Document
@@ -117,8 +95,6 @@ export class Assessment {
     @Prop({ type: AssessmentSummarySchema, default: {} })
     summary: AssessmentSummary;
 
-    @Prop({ type: [AssessmentAuditLogSchema], default: [] })
-    revisionHistory: AssessmentAuditLog[];
 
     // -- STANDARD --
 
