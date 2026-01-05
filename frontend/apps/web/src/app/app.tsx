@@ -53,6 +53,7 @@ import {
   AssessmentEditPage,
   AssessmentViewPage
 } from '@rootstock/operations/assessments/assessments-feature-web';
+import { SystemSettingsPage } from '@rootstock/system/config/system-config-feature-web';
 
 // Layout & Components
 import { MainLayout } from './layouts/main-layout';
@@ -370,6 +371,14 @@ export function App() {
                 } 
               />
             </Route>
+            <Route 
+              path="settings" 
+              element={
+                <ProtectedRoute permission={PERMISSIONS.SYSTEM_CONFIG_VIEW}>
+                  <SystemSettingsPage />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="profile" element={<UserProfilePage />} />
           </Route>
         </Routes>

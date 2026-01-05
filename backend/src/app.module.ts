@@ -19,6 +19,7 @@ import { BlocksModule } from './assets/blocks/blocks.module';
 import { AssessmentsModule } from './operations/assessments/assessments.module';
 import { CountersModule } from './system/counters/counters.module';
 import { VarietiesModule } from './master-data/varieties/varieties.module';
+import { SystemConfigModule } from './system/config/system-config.module';
 import appConfig from './config/app.config';
 
 @Module({
@@ -79,6 +80,7 @@ import appConfig from './config/app.config';
     AssessmentsModule,
     CountersModule,
     VarietiesModule,
+    SystemConfigModule,
   ],
   controllers: [AppController],
   providers: [

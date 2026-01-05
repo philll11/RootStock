@@ -58,6 +58,8 @@ export const PERMISSIONS = {
   // --- System Configuration ---
   COUNTERS_VIEW: 'Counters:View',
   COUNTERS_EDIT: 'Counters:Edit',
+  SYSTEM_CONFIG_VIEW: 'SystemConfig:View',
+  SYSTEM_CONFIG_EDIT: 'SystemConfig:Edit',
 
   // --- Global ---
   VIEW_DELETED: 'Global:ViewDeleted',
@@ -76,5 +78,6 @@ export enum Resource {
   ROLE = 'Role',
   SUBSIDIARY = 'Subsidiary',
   COUNTERS = 'Counters',
+  SYSTEM_CONFIG = 'SystemConfig',
   VARIETY = 'Variety',
 }

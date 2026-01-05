@@ -99,7 +99,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
         label: 'Settings',
         path: '/settings',
         icon: IconSettings,
-        permission: null,
+        permission: PERMISSIONS.SYSTEM_CONFIG_VIEW,
         type: 'link',
       },
     ]

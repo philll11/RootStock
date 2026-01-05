@@ -11,6 +11,7 @@ import { Counter, CounterSchema } from '../system/counters/schemas/counter.schem
 import { Block, BlockSchema } from '../assets/blocks/schemas/block.schema';
 import { Assessment, AssessmentSchema } from '../operations/assessments/schemas/assessment.schema';
 import { Variety, VarietySchema } from '../master-data/varieties/schemas/variety.schema';
+import { SystemConfig, SystemConfigSchema } from '../system/config/schemas/system-config.schema';
 
 @Global()
 @Module({
@@ -25,6 +26,7 @@ import { Variety, VarietySchema } from '../master-data/varieties/schemas/variety
             { name: Block.name, schema: BlockSchema },
             { name: Assessment.name, schema: AssessmentSchema },
             { name: Variety.name, schema: VarietySchema },
+            { name: SystemConfig.name, schema: SystemConfigSchema },
         ]),
     ],
     exports: [MongooseModule],

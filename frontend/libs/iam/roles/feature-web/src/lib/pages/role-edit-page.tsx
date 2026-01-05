@@ -23,8 +23,16 @@ export function RoleEditPage() {
   const handleSubmit = async (values: RoleFormData) => {
     if (!id) return;
     try {
-      const { __v, ...updateData } = values;
-      await updateRole({ id, data: updateData });
+      await updateRole({
+        id,
+        data: {
+          name: values.name,
+          description: values.description,
+          permissions: values.permissions,
+          isActive: values.isActive,
+          __v: values.__v,
+        },
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/roles/${id}`), 0);
     } catch (error) {

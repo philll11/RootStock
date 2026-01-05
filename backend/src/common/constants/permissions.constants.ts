@@ -112,6 +112,9 @@ export const PERMISSIONS = {
   COUNTERS_VIEW: 'Counters:View',
   COUNTERS_EDIT: 'Counters:Edit',
 
+  SYSTEM_CONFIG_VIEW: 'SystemConfig:View',
+  SYSTEM_CONFIG_EDIT: 'SystemConfig:Edit',
+
   // --- Global & System-Wide Permissions ---
   // Special permissions that are not tied to a single resource's CRUD operations.
   /**
@@ -136,5 +139,6 @@ export enum Resource {
   ROLE = 'Role',
   SUBSIDIARY = 'Subsidiary',
   COUNTERS = 'Counters',
+  SYSTEM_CONFIG = 'SystemConfig',
   VARIETY = 'Variety',
 }

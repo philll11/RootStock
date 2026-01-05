@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "",
   "author": "",
   "private": true,
@@ -49,11 +49,14 @@
     "test:e2e:counter:crud": "jest --config ./test/jest-e2e.json test/counter/counter.crud.e2e-spec.ts --verbose",
     "test:e2e:counter:auth": "jest --config ./test/jest-e2e.json test/counter/counter.auth.e2e-spec.ts --verbose",
     "test:e2e:counter:advanced": "jest --config ./test/jest-e2e.json test/counter/counter.advanced.e2e-spec.ts --verbose",
+    "test:e2e:system-config:all": "jest --config ./test/jest-e2e.json test/system-config --verbose",
+    "test:e2e:system-config:crud": "jest --config ./test/jest-e2e.json test/system-config/system-config.crud.e2e-spec.ts --verbose",
+    "test:e2e:system-config:auth": "jest --config ./test/jest-e2e.json test/system-config/system-config.auth.e2e-spec.ts --verbose",
     "test:e2e:variety:all": "jest --config ./test/jest-e2e.json test/variety --verbose",
     "test:e2e:variety:crud": "jest --config ./test/jest-e2e.json test/variety/variety.crud.e2e-spec.ts --verbose",
     "test:e2e:variety:auth": "jest --config ./test/jest-e2e.json test/variety/variety.auth.e2e-spec.ts --verbose",
     "test:e2e:variety:advanced": "jest --config ./test/jest-e2e.json test/variety/variety.advanced.e2e-spec.ts --verbose",
-    "test:e2e": "npm run test:e2e:subsidiary:all && npm run test:e2e:role:all && npm run test:e2e:client:all && npm run test:e2e:user:all && npm run test:e2e:orchard:all && npm run test:e2e:counter:all && npm run test:e2e:block:all && npm run test:e2e:assessment:all && npm run test:e2e:variety:all",
+    "test:e2e": "npm run test:e2e:subsidiary:all && npm run test:e2e:role:all && npm run test:e2e:client:all && npm run test:e2e:user:all && npm run test:e2e:orchard:all && npm run test:e2e:counter:all && npm run test:e2e:block:all && npm run test:e2e:assessment:all && npm run test:e2e:variety:all && npm run test:e2e:system-config:all",
     "seed": "ts-node src/seed.ts",
     "seed:prod": "node dist/seed.js"
   },
