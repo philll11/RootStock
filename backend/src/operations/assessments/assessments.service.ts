@@ -28,7 +28,7 @@ export class AssessmentsService {
   ) {}
 
   async create(createAssessmentDto: CreateAssessmentDto, requestingUser: UserDocument): Promise<AssessmentDocument> {
-    const { blockId, samples, date } = createAssessmentDto;
+    const { blockId, samples, date, name, type } = createAssessmentDto;
 
     // 1. Context Resolution (Find the block to get the orchard/client context)
     // Note: Ensure BlocksService has the 'findByIdInternal' method we discussed
@@ -58,6 +58,8 @@ export class AssessmentsService {
 
     const newAssessment = new this.assessmentModel({
       recordId,
+      name,
+      type,
       blockId: new Types.ObjectId(blockId),
       clientId: blockContext.clientId, // Inherit Scope from Block
       varietyId: snapshotVarietyId,    // Immutable Snapshot
@@ -149,6 +151,16 @@ export class AssessmentsService {
     // Apply Status Change
     if (newStatus !== existing.status) {
         updateOps.$set.status = newStatus;
+        hasChanges = true;
+    }
+
+    if (updateDto.name) {
+        updateOps.$set.name = updateDto.name;
+        hasChanges = true;
+    }
+
+    if (updateDto.type) {
+        updateOps.$set.type = updateDto.type;
         hasChanges = true;
     }
 

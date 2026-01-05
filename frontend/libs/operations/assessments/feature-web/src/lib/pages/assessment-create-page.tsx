@@ -30,6 +30,8 @@ export function AssessmentCreatePage() {
     try {
       const newAssessment = await createAssessment({
         blockId: values.blockId || blockId!,
+        name: values.name,
+        type: values.type!,
         date: values.date,
         samples: values.samples,
       });

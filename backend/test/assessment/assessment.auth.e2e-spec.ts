@@ -12,7 +12,7 @@ import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas
 import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
 import { Orchard, OrchardDocument } from '../../src/assets/orchards/schemas/orchard.schema';
 import { Block, BlockDocument } from '../../src/assets/blocks/schemas/block.schema';
-import { Assessment, AssessmentDocument, AssessmentStatus } from '../../src/operations/assessments/schemas/assessment.schema';
+import { Assessment, AssessmentDocument, AssessmentStatus, AssessmentType } from '../../src/operations/assessments/schemas/assessment.schema';
 import { Subsidiary, SubsidiaryDocument } from '../../src/iam/subsidiaries/schemas/subsidiary.schema';
 import { Variety, VarietyDocument } from '../../src/master-data/varieties/schemas/variety.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
@@ -81,6 +81,8 @@ describe('Assessments Authorization & Security (e2e)', () => {
             });
             const assessment = await assessmentModel.create({
                 recordId: `ASM_${suffix}`,
+                name: `Assessment ${suffix}`,
+                type: AssessmentType.HAIL,
                 blockId: block._id,
                 clientId: client._id, // Critical for Scope
                 varietyId: variety._id,
@@ -164,14 +166,24 @@ describe('Assessments Authorization & Security (e2e)', () => {
     describe('Layer 1 - Permissions (Write)', () => {
         describe('POST /assessments', () => {
             it('should allow Owner to create an assessment', async () => {
-                const dto = { blockId: blockA1._id.toString(), date: new Date() };
+                const dto = { 
+                    name: 'Owner Assessment',
+                    type: AssessmentType.HAIL,
+                    blockId: blockA1._id.toString(), 
+                    date: new Date() 
+                };
                 await request(app.getHttpServer()).post('/assessments')
                     .set('Authorization', `Bearer ${ownerToken}`)
                     .send(dto).expect(201);
             });
 
             it('should FORBID Consultant (Read Only) from creating', async () => {
-                const dto = { blockId: blockA1._id.toString(), date: new Date() };
+                const dto = { 
+                    name: 'Consultant Assessment',
+                    type: AssessmentType.HAIL,
+                    blockId: blockA1._id.toString(), 
+                    date: new Date() 
+                };
                 await request(app.getHttpServer()).post('/assessments')
                     .set('Authorization', `Bearer ${consultantToken}`)
                     .send(dto).expect(403);
@@ -196,7 +208,14 @@ describe('Assessments Authorization & Security (e2e)', () => {
             it('should allow Owner to delete an assessment', async () => {
                 // Create temp to delete
                 const temp = await assessmentModel.create({
-                    recordId: 'TEMP', blockId: blockA1._id, clientId: blockA1.clientId, varietyId: blockA1.plantings[0].varietyId, date: new Date()
+                    recordId: 'TEMP', 
+                    name: 'Temp Assessment',
+                    type: AssessmentType.HAIL,
+                    blockId: blockA1._id, 
+                    clientId: blockA1.clientId, 
+                    varietyId: blockA1.plantings[0].varietyId, 
+                    date: new Date(),
+                    status: AssessmentStatus.PENDING
                 });
 
                 await request(app.getHttpServer()).delete(`/assessments/${temp._id}`)

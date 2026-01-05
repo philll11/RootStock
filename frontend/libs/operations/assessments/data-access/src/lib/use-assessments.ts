@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
-import { Assessment, AssessmentQueryParams, CreateAssessmentDto, UpdateAssessmentDto } from './assessment.types';
+import { AssessmentStatus, Assessment, AssessmentQueryParams, CreateAssessmentDto, UpdateAssessmentDto } from './assessment.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { v4 as uuid } from 'uuid';
@@ -78,6 +78,8 @@ export const useCreateAssessment = () => {
         ...newAssessment,
         _id: uuid(),
         recordId: 'TEMP',
+        name: 'TEMP',
+        type: 'PENDING' as any,
         clientId: 'PENDING',
         varietyId: 'PENDING',
         status: 'PENDING' as any,
@@ -173,6 +175,21 @@ export const useUpdateAssessment = () => {
       notify.success('The assessment details have been updated.', 'Assessment Updated');
     },
   });
+};
+
+export const useReopenAssessment = () => {
+  const { mutateAsync } = useUpdateAssessment();
+  return {
+    reopenAssessment: (id: string, reason: string, version: number) =>
+      mutateAsync({
+        id,
+        data: {
+          status: AssessmentStatus.IN_PROGRESS,
+          changeReason: reason,
+          __v: version,
+        },
+      }),
+  };
 };
 
 export const useDeleteAssessment = () => {

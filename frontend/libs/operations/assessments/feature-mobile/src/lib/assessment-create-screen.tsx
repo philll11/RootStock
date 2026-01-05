@@ -13,7 +13,7 @@ export function AssessmentCreateScreen() {
     await createAssessment({
       name: data.name,
       type: data.type!,
-      blockId: blockId!,
+      blockId: data.blockId!,
       date: data.date,
       samples: data.samples,
     });

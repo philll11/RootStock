@@ -1,7 +1,8 @@
 import React from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Banner } from 'react-native-paper';
 import { AssessmentForm } from './assessment-form';
-import { useGetAssessment, useUpdateAssessment, AssessmentFormData } from '@rootstock/operations/assessments/assessments-data-access';
+import { useGetAssessment, useUpdateAssessment, AssessmentFormData, AssessmentStatus } from '@rootstock/operations/assessments/assessments-data-access';
 import { ResourceEditLayout } from '@rootstock/ui/mobile';
 
 export function AssessmentEditScreen() {
@@ -11,6 +12,8 @@ export function AssessmentEditScreen() {
   const { mutateAsync: updateAssessment, isPending: isUpdating } = useUpdateAssessment();
 
   const defaultValues = assessment ? {
+    name: assessment.name,
+    type: assessment.type,
     date: new Date(assessment.date),
     samples: assessment.samples,
     status: assessment.status,
@@ -38,15 +41,22 @@ export function AssessmentEditScreen() {
       title="Edit Assessment"
     >
       {assessment && (
-        <AssessmentForm
-          mode="edit"
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          onCancel={() => router.back()}
-          isSubmitting={isUpdating}
-          blockId={typeof assessment.blockId === 'object' ? assessment.blockId._id : assessment.blockId}
-        />
+        <>
+          <Banner visible={assessment.status === AssessmentStatus.COMPLETED} icon="lock">
+            This assessment is completed and cannot be edited.
+          </Banner>
+          <AssessmentForm
+            mode="edit"
+            defaultValues={defaultValues}
+            onSubmit={handleSubmit}
+            onCancel={() => router.back()}
+            isSubmitting={isUpdating}
+            blockId={typeof assessment.blockId === 'object' ? assessment.blockId._id : assessment.blockId}
+            isLocked={assessment.status === AssessmentStatus.COMPLETED}
+          />
+        </>
       )}
     </ResourceEditLayout>
   );
 }
+

@@ -116,7 +116,13 @@ export function AssessmentListPage() {
   const handleSubmit = async (values: AssessmentFormData) => {
     try {
       if (mode === 'create') {
-        await createAssessment(values);
+        await createAssessment({
+          blockId: values.blockId || blockId!,
+          name: values.name,
+          type: values.type!,
+          date: values.date,
+          samples: values.samples,
+        });
         setCreateFormDraft({});
       } else if (mode === 'edit' && selectedAssessment) {
         await updateAssessment({
@@ -159,6 +165,8 @@ export function AssessmentListPage() {
 
   const columns: DataTableColumn<Assessment>[] = [
     { accessor: 'recordId', title: 'ID', sortable: true },
+    { accessor: 'name', title: 'Name', sortable: true },
+    { accessor: 'type', title: 'Type', sortable: true },
     {
       accessor: 'blockId',
       title: 'Block',

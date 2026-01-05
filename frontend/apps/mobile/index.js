@@ -1,3 +1,4 @@
+import 'react-native-get-random-values';
 import { notify, appControl } from '@rootstock/shared/util';
 import { mobileNotificationAdapter, mobileAppControl } from '@rootstock/ui/mobile';
 import { configureAuth, setupAuthInterceptor } from '@rootstock/iam/auth/auth-data-access';

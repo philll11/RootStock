@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useGetAssessments } from '@rootstock/operations/assessments/assessments-data-access';
+import { useGetAssessments, AssessmentStatus } from '@rootstock/operations/assessments/assessments-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
-import { spacing } from '@rootstock/ui/theme';
+import { spacing, palette } from '@rootstock/ui/theme';
 import dayjs from 'dayjs';
 
 export function AssessmentListScreen() {
@@ -24,6 +24,19 @@ export function AssessmentListScreen() {
     assessments?.filter((a) =>
       a.recordId.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
+
+  const getStatusColor = (status: AssessmentStatus) => {
+    switch (status) {
+      case AssessmentStatus.PENDING:
+        return palette.status.pending;
+      case AssessmentStatus.IN_PROGRESS:
+        return palette.status.completed; // Blue
+      case AssessmentStatus.COMPLETED:
+        return palette.status.completed; // Green
+      default:
+        return palette.status.pending;
+    }
+  };
 
   return (
     <ListLayout
@@ -52,21 +65,22 @@ export function AssessmentListScreen() {
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const isOptimistic = (item as any).recordId === 'TEMP';
+          const statusColor = getStatusColor(item.status);
           return (
             <List.Item
-              title={`Assessment - ${dayjs(item.date).format('MMM D, YYYY')}`}
+              title={`${item.name || 'Assessment'} - ${dayjs(item.date).format('MMM D, YYYY')}`}
               titleStyle={isOptimistic ? { opacity: 0.5 } : undefined}
               description={
                 isOptimistic
                   ? 'Syncing...'
-                  : `ID: ${item.recordId} • Samples: ${item.samples?.length || 0}`
+                  : `Type: ${item.type || 'N/A'} • ID: ${item.recordId} • Samples: ${item.samples?.length || 0}`
               }
               descriptionStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
               left={(props) => (
                 <List.Icon
                   {...props}
                   icon={isOptimistic ? 'cloud-upload' : 'clipboard-check-outline'}
-                  color={isOptimistic ? theme.colors.outline : undefined}
+                  color={isOptimistic ? theme.colors.outline : statusColor}
                 />
               )}
               right={(props) => (

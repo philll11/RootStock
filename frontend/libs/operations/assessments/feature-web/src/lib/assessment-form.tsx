@@ -40,6 +40,7 @@ interface AssessmentFormProps {
   onValuesChange?: (values: Partial<AssessmentFormData>) => void;
   blockId?: string;
   fullHeight?: boolean;
+  isLocked?: boolean;
 }
 
 export function AssessmentForm({
@@ -54,6 +55,7 @@ export function AssessmentForm({
   onValuesChange,
   blockId,
   fullHeight = true,
+  isLocked = false,
 }: AssessmentFormProps) {
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
@@ -181,6 +183,7 @@ export function AssessmentForm({
           placeholder="Assessment Name"
           required
           readOnly={isViewing}
+          disabled={isLocked}
           {...form.getInputProps('name')}
         />
 
@@ -190,6 +193,7 @@ export function AssessmentForm({
           data={Object.values(AssessmentType)}
           required
           readOnly={isViewing}
+          disabled={isLocked}
           {...form.getInputProps('type')}
         />
 
@@ -200,9 +204,16 @@ export function AssessmentForm({
           required
           searchable
           readOnly={isViewing || !!blockId}
-          disabled={isLoadingBlocks}
+          disabled={isLoadingBlocks || isLocked}
           rightSection={isLoadingBlocks ? <Loader size="xs" /> : null}
           {...form.getInputProps('blockId')}
+        />
+
+        <TextInput
+          label="Status"
+          readOnly
+          disabled
+          {...form.getInputProps('status')}
         />
 
         <DateInput
@@ -210,6 +221,7 @@ export function AssessmentForm({
           placeholder="Pick date"
           required
           readOnly={isViewing}
+          disabled={isLocked}
           valueFormat="DD MMM YYYY"
           leftSection={<IconCalendar size={iconSizes.sm} />}
           {...form.getInputProps('date')}
@@ -250,6 +262,7 @@ export function AssessmentForm({
                         min={0}
                         size="xs"
                         readOnly={isViewing}
+                        disabled={isLocked}
                         {...form.getInputProps(`samples.${index}.totalFruit`)}
                       />
                     </Table.Td>
@@ -258,10 +271,11 @@ export function AssessmentForm({
                         min={0}
                         size="xs"
                         readOnly={isViewing}
+                        disabled={isLocked}
                         {...form.getInputProps(`samples.${index}.damagedFruit`)}
                       />
                     </Table.Td>
-                    {!isViewing && (
+                    {!isViewing && !isLocked && (
                       <Table.Td>
                         <ActionIcon
                           color="red"
@@ -282,7 +296,7 @@ export function AssessmentForm({
             </Text>
           )}
 
-          {!isViewing && (
+          {!isViewing && !isLocked && (
             <Button
               leftSection={<IconPlus size={iconSizes.sm} />}
               variant="light"
