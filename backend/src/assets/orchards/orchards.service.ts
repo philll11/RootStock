@@ -20,7 +20,9 @@ import { CountersService } from '../../system/counters/counters.service';
 
 import { BlocksService } from '../blocks/blocks.service';
 
-import { PERMISSIONS } from '../../common/constants/permissions.constants';
+import { PERMISSIONS, Resource } from '../../common/constants/permissions.constants';
+import { AuditsService } from '../../system/audits/audits.service';
+import { AuditAction } from '../../system/audits/schemas/audit.schema';
 
 
 @Injectable()
@@ -33,6 +35,7 @@ export class OrchardsService {
         @Inject(forwardRef(() => BlocksService)) private readonly blocksService: BlocksService,
         private readonly countersService: CountersService,
         private readonly usersService: UsersService,
+        private readonly auditsService: AuditsService,
     ) { }
 
     async create(createOrchardDto: CreateOrchardDto, requestingUser: UserDocument): Promise<OrchardDocument> {
@@ -66,6 +69,17 @@ export class OrchardsService {
             }
 
             await session.commitTransaction();
+
+            await this.auditsService.log(
+                Resource.ORCHARD,
+                savedOrchard._id.toString(),
+                AuditAction.CREATE,
+                null,
+                savedOrchard.toObject(),
+                requestingUser._id.toString(),
+                'Orchard Created'
+            );
+
             return savedOrchard;
         } catch (error) {
             await session.abortTransaction();
@@ -155,6 +169,17 @@ export class OrchardsService {
             }
 
             await session.commitTransaction();
+
+            await this.auditsService.log(
+                Resource.ORCHARD,
+                updatedOrchard._id.toString(),
+                AuditAction.UPDATE,
+                targetOrchard.toObject(),
+                updatedOrchard.toObject(),
+                requestingUser._id.toString(),
+                'Orchard Updated'
+            );
+
             return updatedOrchard;
         } catch (error) {
             await session.abortTransaction();
@@ -165,7 +190,7 @@ export class OrchardsService {
     }
 
     async remove(orchardId: string, requestingUser: UserDocument): Promise<OrchardDocument> {
-        await this.findOne(orchardId, requestingUser); // Layer 2 Orchard Check
+        const orchardToDelete = await this.findOne(orchardId, requestingUser); // Layer 2 Orchard Check
 
         const activeBlockCount = await this.blocksService.countActiveByOrchardId(orchardId);
         if (activeBlockCount > 0) {
@@ -178,6 +203,17 @@ export class OrchardsService {
             const deletedOrchard = await handleConcurrentSoftDelete<OrchardDocument>(this.orchardModel, orchardId, session, "Orchard");
 
             await session.commitTransaction();
+
+            await this.auditsService.log(
+                Resource.ORCHARD,
+                orchardId,
+                AuditAction.DELETE,
+                orchardToDelete.toObject(),
+                null,
+                requestingUser._id.toString(),
+                'Orchard Deleted'
+            );
+
             return deletedOrchard;
         } catch (error) {
             await session.abortTransaction();

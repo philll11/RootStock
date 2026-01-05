@@ -37,6 +37,7 @@
     "test:e2e:orchard:all": "jest --config ./test/jest-e2e.json test/orchard --verbose",
     "test:e2e:orchard:crud": "jest --config ./test/jest-e2e.json test/orchard/orchard.crud.e2e-spec.ts --verbose",
     "test:e2e:orchard:auth": "jest --config ./test/jest-e2e.json test/orchard/orchard.auth.e2e-spec.ts --verbose",
+    "test:e2e:orchard:audit": "jest --config ./test/jest-e2e.json test/orchard/orchard.audit.e2e-spec.ts --verbose",
     "test:e2e:orchard:advanced": "jest --config ./test/jest-e2e.json test/orchard/orchard.advanced.e2e-spec.ts --verbose",
     "test:e2e:block:all": "jest --config ./test/jest-e2e.json test/block --verbose",
     "test:e2e:block:crud": "jest --config ./test/jest-e2e.json test/block/block.crud.e2e-spec.ts --verbose",
