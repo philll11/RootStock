@@ -16,9 +16,9 @@ import { AuditsModule } from '../../system/audits/audits.module';
     forwardRef(() => ClientsModule),
     forwardRef(() => UsersModule),
     forwardRef(() => BlocksModule),
+    forwardRef(() => AuditsModule),
     CountersModule,
     ClientResolverModule,
-    AuditsModule,
   ],
   controllers: [OrchardsController],
   providers: [

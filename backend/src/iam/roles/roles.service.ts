@@ -1,5 +1,5 @@
 // backend/src/roles/roles.service.ts
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 
@@ -22,8 +22,8 @@ export class RolesService {
     @InjectModel(Role.name) private roleModel: Model<RoleDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectConnection() private connection: Connection,
+    @Inject(forwardRef(() => UsersService)) private readonly usersService: UsersService,
     private readonly clientResolverService: ClientResolverService,
-    private readonly usersService: UsersService,
     private readonly countersService: CountersService,
   ) { }
 

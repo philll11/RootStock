@@ -30,12 +30,12 @@ export class OrchardsService {
     constructor(
         @InjectModel(Orchard.name) private orchardModel: Model<OrchardDocument>,
         @InjectConnection() private connection: Connection,
-        private readonly clientResolverService: ClientResolverService,
         @Inject(forwardRef(() => ClientsService)) private readonly clientsService: ClientsService,
         @Inject(forwardRef(() => BlocksService)) private readonly blocksService: BlocksService,
+        @Inject(forwardRef(() => UsersService)) private readonly usersService: UsersService,
+        @Inject(forwardRef(() => AuditsService)) private readonly auditsService: AuditsService,
+        private readonly clientResolverService: ClientResolverService,
         private readonly countersService: CountersService,
-        private readonly usersService: UsersService,
-        private readonly auditsService: AuditsService,
     ) { }
 
     async create(createOrchardDto: CreateOrchardDto, requestingUser: UserDocument): Promise<OrchardDocument> {

@@ -28,12 +28,11 @@ export class ClientsService {
     @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectConnection() private connection: Connection,
-    private readonly usersService: UsersService,
-    @Inject(forwardRef(() => OrchardsService))
-    private readonly orchardsService: OrchardsService,
+    @Inject(forwardRef(() => AuditsService)) private readonly auditsService: AuditsService,
+    @Inject(forwardRef(() => UsersService)) private readonly usersService: UsersService,
+    @Inject(forwardRef(() => OrchardsService)) private readonly orchardsService: OrchardsService,
     private readonly clientResolverService: ClientResolverService,
     private readonly countersService: CountersService,
-    private readonly auditsService: AuditsService,
   ) { }
 
   async create(createClientDto: CreateClientDto, requestingUser: UserDocument): Promise<ClientDocument> {

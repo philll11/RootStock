@@ -1,5 +1,5 @@
 // backend/src/users/users.service.ts
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
@@ -14,8 +14,10 @@ import { UserQueryBuilder } from './builders/user-query.builder';
 import { Client } from '../clients/schemas/client.schema';
 import { ClientResolverService } from '../client-resolver/client-resolver.service';
 
-import { PERMISSIONS } from '../../common/constants/permissions.constants';
+import { PERMISSIONS, Resource } from '../../common/constants/permissions.constants';
 import { CountersService } from '../../system/counters/counters.service';
+import { AuditsService } from '../../system/audits/audits.service';
+import { AuditAction } from '../../system/audits/schemas/audit.schema';
 
 @Injectable()
 export class UsersService {
@@ -23,6 +25,7 @@ export class UsersService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Client.name) private clientModel: Model<Client>,
     @InjectConnection() private connection: Connection,
+    @Inject(forwardRef(() => AuditsService)) private readonly auditsService: AuditsService,
     private readonly clientResolverService: ClientResolverService,
     private readonly countersService: CountersService,
   ) { }
@@ -70,7 +73,19 @@ export class UsersService {
 
     const userToCreate = new this.userModel(payload);
     try {
-      return await userToCreate.save();
+      const savedUser = await userToCreate.save();
+
+      await this.auditsService.log(
+        Resource.USER,
+        savedUser._id.toString(),
+        AuditAction.CREATE,
+        null,
+        savedUser.toObject(),
+        requestingUser._id.toString(),
+        'User Created'
+      );
+
+      return savedUser;
     } catch (error: any) {
       if (error.code === 11000) {
         throw new ConflictException('User with this email already exists.');
@@ -176,6 +191,17 @@ export class UsersService {
     if (!updatedUser) {
       throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
     }
+
+    await this.auditsService.log(
+      Resource.USER,
+      updatedUser._id.toString(),
+      AuditAction.UPDATE,
+      existingUser.toObject(),
+      updatedUser.toObject(),
+      requestingUser._id.toString(),
+      'User Updated'
+    );
+
     return updatedUser;
   }
 
@@ -196,12 +222,22 @@ export class UsersService {
    */
   async remove(userId: string, requestingUser: UserDocument): Promise<UserDocument> {
     // === LAYER 2 VALIDATION: findOne serves as the authorization check ===
-    await this.findOne(userId, requestingUser);
+    const docToDelete = await this.findOne(userId, requestingUser);
 
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
       const deletedUser = await handleConcurrentSoftDelete<UserDocument>(this.userModel, userId, session, 'User');
+
+      await this.auditsService.log(
+        Resource.USER,
+        userId,
+        AuditAction.DELETE,
+        docToDelete.toObject(),
+        null,
+        requestingUser._id.toString(),
+        'User Deleted'
+      );
 
       await session.commitTransaction();
       return deletedUser;

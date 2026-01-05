@@ -30,9 +30,9 @@ export class BlocksService {
     @InjectConnection() private connection: Connection,
     @Inject(forwardRef(() => OrchardsService)) private readonly orchardsService: OrchardsService,
     @Inject(forwardRef(() => AssessmentsService)) private readonly assessmentsService: AssessmentsService,
+    @Inject(forwardRef(() => AuditsService)) private readonly auditsService: AuditsService,
     private readonly countersService: CountersService,
     private readonly clientResolverService: ClientResolverService,
-    private readonly auditsService: AuditsService,
   ) { }
 
   async create(createBlockDto: CreateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {

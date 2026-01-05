@@ -33,6 +33,7 @@
     "test:e2e:user:all": "jest --config ./test/jest-e2e.json test/user --verbose",
     "test:e2e:user:crud": "jest --config ./test/jest-e2e.json test/user/user.crud.e2e-spec.ts --verbose",
     "test:e2e:user:auth": "jest --config ./test/jest-e2e.json test/user/user.auth.e2e-spec.ts --verbose",
+    "test:e2e:user:audit": "jest --config ./test/jest-e2e.json test/user/user.audit.e2e-spec.ts --verbose",
     "test:e2e:user:advanced": "jest --config ./test/jest-e2e.json test/user/user.advanced.e2e-spec.ts --verbose",
     "test:e2e:orchard:all": "jest --config ./test/jest-e2e.json test/orchard --verbose",
     "test:e2e:orchard:crud": "jest --config ./test/jest-e2e.json test/orchard/orchard.crud.e2e-spec.ts --verbose",
