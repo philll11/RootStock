@@ -42,6 +42,7 @@
     "test:e2e:block:all": "jest --config ./test/jest-e2e.json test/block --verbose",
     "test:e2e:block:crud": "jest --config ./test/jest-e2e.json test/block/block.crud.e2e-spec.ts --verbose",
     "test:e2e:block:auth": "jest --config ./test/jest-e2e.json test/block/block.auth.e2e-spec.ts --verbose",
+    "test:e2e:block:audit": "jest --config ./test/jest-e2e.json test/block/block.audit.e2e-spec.ts --verbose",
     "test:e2e:block:advanced": "jest --config ./test/jest-e2e.json test/block/block.advanced.e2e-spec.ts --verbose",
     "test:e2e:assessment:all": "jest --config ./test/jest-e2e.json test/assessment --verbose",
     "test:e2e:assessment:crud": "jest --config ./test/jest-e2e.json test/assessment/assessment.crud.e2e-spec.ts --verbose",

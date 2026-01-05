@@ -9,6 +9,7 @@ import { CountersModule } from '../../system/counters/counters.module';
 import { ClientResolverModule } from '../../iam/client-resolver/client-resolver.module';
 import { VarietiesModule } from '../../master-data/varieties/varieties.module';
 import { AssessmentsModule } from '../../operations/assessments/assessments.module';
+import { AuditsModule } from '../../system/audits/audits.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AssessmentsModule } from '../../operations/assessments/assessments.modu
     forwardRef(() => AssessmentsModule),
     CountersModule,
     ClientResolverModule,
+    AuditsModule,
   ],
   controllers: [BlocksController],
   providers: [BlocksService],

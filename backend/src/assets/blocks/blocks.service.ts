@@ -18,8 +18,10 @@ import { UserDocument } from '../../iam/users/schemas/user.schema';
 import { AssessmentsService } from '../../operations/assessments/assessments.service';
 import { AssessmentStatus } from '../../operations/assessments/schemas/assessment.schema';
 
-import { PERMISSIONS } from '../../common/constants/permissions.constants';
+import { PERMISSIONS, Resource } from '../../common/constants/permissions.constants';
 import { log } from 'console';
+import { AuditsService } from '../../system/audits/audits.service';
+import { AuditAction } from '../../system/audits/schemas/audit.schema';
 
 @Injectable()
 export class BlocksService {
@@ -30,6 +32,7 @@ export class BlocksService {
     @Inject(forwardRef(() => AssessmentsService)) private readonly assessmentsService: AssessmentsService,
     private readonly countersService: CountersService,
     private readonly clientResolverService: ClientResolverService,
+    private readonly auditsService: AuditsService,
   ) { }
 
   async create(createBlockDto: CreateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {
@@ -51,7 +54,19 @@ export class BlocksService {
 
     // Simple atomic save since Block has no children yet
     try {
-      return await newBlock.save();
+      const savedBlock = await newBlock.save();
+
+      await this.auditsService.log(
+        Resource.BLOCK,
+        savedBlock._id.toString(),
+        AuditAction.CREATE,
+        null,
+        savedBlock.toObject(),
+        requestingUser._id.toString(),
+        'Block Created'
+      );
+
+      return savedBlock;
     } catch (error) {
       if (error.code === 11000) {
         throw new ConflictException('Block name already exists in this orchard.');
@@ -95,7 +110,7 @@ export class BlocksService {
   }
 
   async update(blockId: string, updateBlockDto: UpdateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {
-    await this.findOne(blockId, requestingUser, { includeInactive: true });
+    const blockToUpdate = await this.findOne(blockId, requestingUser, { includeInactive: true });
 
     const { isActive, __v, ...restOfDto } = updateBlockDto;
     const updatePayload: any = { ...restOfDto };
@@ -120,12 +135,22 @@ export class BlocksService {
       throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
     }
 
+    await this.auditsService.log(
+      Resource.BLOCK,
+      updatedBlock._id.toString(),
+      AuditAction.UPDATE,
+      blockToUpdate.toObject(),
+      updatedBlock.toObject(),
+      requestingUser._id.toString(),
+      'Block Updated'
+    );
+
     return updatedBlock;
   }
 
   async remove(blockId: string, requestingUser: UserDocument): Promise<BlockDocument> {
     // Validate access first
-    await this.findOne(blockId, requestingUser);
+    const blockToDelete = await this.findOne(blockId, requestingUser);
 
     // Check for active assessments
     const hasActiveAssessments = await this.assessmentsService.checkActiveAssessmentsForBlock(blockId);
@@ -144,6 +169,17 @@ export class BlocksService {
       );
 
       await session.commitTransaction();
+
+      await this.auditsService.log(
+        Resource.BLOCK,
+        blockId,
+        AuditAction.DELETE,
+        blockToDelete.toObject(),
+        null,
+        requestingUser._id.toString(),
+        'Block Deleted'
+      );
+
       return deletedBlock;
     } catch (error) {
       await session.abortTransaction();
