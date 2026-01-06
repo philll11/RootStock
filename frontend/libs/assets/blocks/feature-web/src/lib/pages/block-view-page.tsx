@@ -4,13 +4,14 @@ import {
   useDeleteBlock,
 } from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
-import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
+import { PageHeader, ConfirmModal, useContextualNavigation, SubResourceTabs } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay, ActionIcon } from '@mantine/core';
-import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
+import { IconAlertCircle, IconTrash, IconHistory } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { AuditTable } from '@rootstock/system/audit/audit-feature-web';
 
 export function BlockViewPage() {
   const { id } = useParams<{ id: string }>();
@@ -84,6 +85,17 @@ export function BlockViewPage() {
           fullHeight={false}
         />
       </Paper>
+
+      <SubResourceTabs
+        tabs={[
+          ...(can(PERMISSIONS.AUDIT_VIEW) ? [{
+            value: 'audit',
+            label: 'Audit Trail',
+            icon: <IconHistory size={iconSizes.sm} />,
+            content: <AuditTable resource="Block" recordId={id!} />,
+          }] : []),
+        ]}
+      />
 
       <ConfirmModal
         opened={deleteModalOpened}

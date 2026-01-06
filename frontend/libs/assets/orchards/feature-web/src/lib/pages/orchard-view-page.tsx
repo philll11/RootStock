@@ -12,6 +12,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { AuditTable } from '@rootstock/system/audit/audit-feature-web';
 
 export function OrchardViewPage() {
   const { id } = useParams<{ id: string }>();
@@ -84,7 +85,6 @@ export function OrchardViewPage() {
       </Paper>
 
       <SubResourceTabs
-        title="Orchard Details"
         tabs={[
           {
             value: 'blocks',
@@ -98,12 +98,12 @@ export function OrchardViewPage() {
             icon: <IconUsers size={iconSizes.sm} />,
             content: <Text p="md" c="dimmed">User assignment coming soon...</Text>,
           },
-          {
+          ...(can(PERMISSIONS.AUDIT_VIEW) ? [{
             value: 'audit',
             label: 'Audit Trail',
             icon: <IconHistory size={iconSizes.sm} />,
-            content: <Text p="md" c="dimmed">Audit trail coming soon...</Text>,
-          },
+            content: <AuditTable resource="Orchard" recordId={id!} />,
+          }] : []),
         ]}
       />
 

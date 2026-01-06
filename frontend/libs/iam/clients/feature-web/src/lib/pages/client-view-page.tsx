@@ -85,7 +85,6 @@ export function ClientViewPage() {
       </Paper>
       
       <SubResourceTabs
-        title="Details"
         tabs={[
           ...(can(PERMISSIONS.AUDIT_VIEW) ? [{
             value: 'audit',
