@@ -23,6 +23,7 @@ import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { iconSizes } from '@rootstock/ui/theme';
 import { FormLayout } from '@rootstock/ui/web';
 
+// ### Interfaces & Types ###
 export type OrchardFormMode = 'create' | 'edit' | 'view';
 
 interface OrchardFormProps {
@@ -50,26 +51,16 @@ export function OrchardForm({
   onDirtyChange,
   fullHeight = true,
 }: OrchardFormProps) {
+
+  // ### Form Modes, Permissions & State ###
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
-  const { data: clients = [], isLoading: isLoadingClients } = useGetClients();
-  const { data: users = [], isLoading: isLoadingUsers } = useGetUsers();
-  const { can } = usePermission();
 
-  const clientOptions = useMemo(() => {
-    return (clients || []).map((c) => ({ value: c._id, label: c.name }));
-  }, [clients]);
+  const { can } = usePermission()
 
-  const userOptions = useMemo(() => {
-    return (users || []).map((u) => ({
-      value: u._id,
-      label: `${u.firstName} ${u.lastName}`,
-    }));
-  }, [users]);
-
-
-  const form = useForm({
+  // ### Form Definition ###
+  const form = useForm<OrchardFormData>({
     initialValues: {
       name: '',
       clientId: null as string | null,
@@ -83,7 +74,25 @@ export function OrchardForm({
       clientId: (value) => (!value ? 'Client is required' : null),
     },
   });
+  ;
 
+  // ### Data Fetching & Options ###
+  const { data: clients = [], isLoading: isLoadingClients } = useGetClients();
+  const { data: users = [], isLoading: isLoadingUsers } = useGetUsers();
+
+  const clientOptions = useMemo(() => {
+    return (clients || []).map((c) => ({ value: c._id, label: c.name }));
+  }, [clients]);
+
+  const userOptions = useMemo(() => {
+    return (users || []).map((u) => ({
+      value: u._id,
+      label: `${u.firstName} ${u.lastName}`,
+    }));
+  }, [users]);
+
+
+  // ### Side Effects ###
   useEffect(() => {
     if (isCreating && onValuesChange) {
       const { isActive, ...rest } = form.values;
@@ -115,18 +124,21 @@ export function OrchardForm({
     }
   }, [orchard, mode, isEditing, isViewing, isCreating]);
 
+  // ### Event Handlers ###
   const handleSubmit = (values: typeof form.values) => {
-    if (isCreating) {
-      const { isActive, __v, ...createValues } = values;
-      onSubmit(values as OrchardFormData);
-    } else {
-      const submissionData: any = { ...values };
+    const submissionData: any = { ...values };
+    if (isEditing) {
       // Only send isActive if it has actually changed
       if (orchard && orchard.isActive === values.isActive) {
         delete submissionData.isActive;
       }
-      onSubmit(submissionData);
+      submissionData.__v = orchard!.__v;
     }
+    if (isCreating) {
+      delete submissionData.isActive;
+      delete submissionData.__v;
+    }
+    onSubmit(submissionData as OrchardFormData);
   };
 
   const handleValidationErrors = () => {
@@ -141,6 +153,7 @@ export function OrchardForm({
     });
   };
 
+  // ### Render ###
   return (
     <FormLayout
       mode={mode}
@@ -209,7 +222,7 @@ export function OrchardForm({
         <Switch
           label="Active"
           readOnly={isViewing}
-          disabled={isViewing}
+          style={{ pointerEvents: isViewing ? 'none' : 'auto' }}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
           mt="md"
         />

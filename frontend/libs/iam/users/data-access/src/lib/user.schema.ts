@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { optional, z } from 'zod';
 import { UserType } from './user.types';
 
 export const userSchema = z.object({
@@ -9,7 +9,7 @@ export const userSchema = z.object({
     userType: z.enum(UserType),
     roleId: z.string().optional(),
     clientIds: z.array(z.string()).optional(),
-    isActive: z.boolean().default(true),
+    isActive: z.boolean().optional(),
     __v: z.number().optional(),
 });
 

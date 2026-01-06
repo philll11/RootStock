@@ -1,3 +1,4 @@
+// frontend/libs/assets/blocks/feature-web/src/lib/block-form.tsx
 import {
   TextInput,
   Button,
@@ -22,9 +23,11 @@ import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data
 import { useGetOrchards } from '@rootstock/assets/orchards/orchards-data-access';
 import { IconTrash, IconPlus, IconAlertTriangle } from '@tabler/icons-react';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { FormLayout, ConfirmModal } from '@rootstock/ui/web';
+import { palette } from '@rootstock/ui/theme';
 
+// ### Interfaces & Types ###
 export type BlockFormMode = 'create' | 'edit' | 'view';
 
 interface BlockFormProps {
@@ -54,28 +57,21 @@ export function BlockForm({
   orchardId,
   fullHeight = true,
 }: BlockFormProps) {
-  const { data: varieties = [], isLoading: isVarietiesLoading } = useGetVarieties();
-  const { data: orchards = [], isLoading: isOrchardsLoading } = useGetOrchards();
 
-  const orchardOptions = useMemo(() => {
-    return (orchards || []).map((o) => ({ value: o._id, label: o.name }));
-  }, [orchards]);
-
-  const varietyOptions = useMemo(() => {
-    return (varieties || []).map((v) => ({ value: v._id, label: v.name }));
-  }, [varieties]);
+  // ### Form Modes, Permissions & State ###
+  const isEditing = mode === 'edit';
+  const isCreating = mode === 'create';
+  const isViewing = mode === 'view';
 
   const { can } = usePermission();
+
   const [showReplantingWarning, setShowReplantingWarning] = useState(false);
   const [
     confirmReplantOpened,
     { open: openConfirmReplant, close: closeConfirmReplant },
   ] = useDisclosure(false);
 
-  const isEditing = mode === 'edit';
-  const isCreating = mode === 'create';
-  const isViewing = mode === 'view';
-
+  // 3. Form Definition
   const form = useForm<BlockFormData>({
     initialValues: {
       name: '',
@@ -99,10 +95,25 @@ export function BlockForm({
     },
   });
 
+  // ### Data Fetching & Options ###
+  const { data: varieties = [], isLoading: isVarietiesLoading } = useGetVarieties();
+  const { data: orchards = [], isLoading: isOrchardsLoading } = useGetOrchards();
+
+  const orchardOptions = useMemo(() => {
+    return (orchards || []).map((o) => ({ value: o._id, label: o.name }));
+  }, [orchards]);
+
+  const varietyOptions = useMemo(() => {
+    return (varieties || []).map((v) => ({ value: v._id, label: v.name }));
+  }, [varieties]);
+
+  const isDataLoading = isLoading || isVarietiesLoading || isOrchardsLoading;
+
+  // ### Side Effects ###
   useEffect(() => {
     if (isCreating && onValuesChange) {
       const { isActive, ...rest } = form.values;
-      onValuesChange(rest as any);
+      onValuesChange(rest as BlockFormData);
     }
   }, [form.values, isCreating, onValuesChange]);
 
@@ -154,18 +165,21 @@ export function BlockForm({
     }
   }, [block, mode, orchardId, isEditing, isViewing, isCreating]);
 
+  // ### Event Handlers ###
   const proceedSubmit = (values: typeof form.values) => {
-    if (isCreating) {
-      const { isActive, __v, ...createValues } = values;
-      onSubmit(values as BlockFormData);
-    } else {
-      const submissionData: any = { ...values };
+    const submissionData: any = { ...values };
+    if (isEditing) {
       // Only send isActive if it has actually changed
       if (block && block.isActive === values.isActive) {
         delete submissionData.isActive;
       }
-      onSubmit(submissionData);
+      submissionData.__v = block!.__v;
     }
+    if (isCreating) {
+      delete submissionData.isActive;
+      delete submissionData.__v;
+    }
+    onSubmit(submissionData as BlockFormData);
   };
 
   const handleSubmit = (values: typeof form.values) => {
@@ -176,26 +190,26 @@ export function BlockForm({
     proceedSubmit(values);
   };
 
+  const handleValidationErrors = () => {
+    notify.validation();
+  };
+
   const handleClear = () => {
     form.setValues({
       name: '',
       orchardId: orchardId || null,
-      isActive: true,
       plantings: [{ varietyId: null, treeCount: 0 }],
     });
   };
 
-  const isView = mode === 'view';
-
-  const isDataLoading = isLoading || isVarietiesLoading || isOrchardsLoading;
-
+  // ### Render ###
   return (
     <FormLayout
       mode={mode}
       isDirty={form.isDirty()}
       isLoading={isDataLoading}
       onCancel={onCancel}
-      onSubmit={form.onSubmit(handleSubmit)}
+      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       onEdit={onEdit}
       onClear={mode === 'create' ? handleClear : undefined}
       canEdit={can(PERMISSIONS.BLOCK_EDIT)}
@@ -205,8 +219,8 @@ export function BlockForm({
         <TextInput
           label="Name"
           placeholder="Block Name"
-          required={!isView}
-          readOnly={isView}
+          required={!isViewing}
+          readOnly={isViewing}
           {...form.getInputProps('name')}
         />
 
@@ -215,8 +229,8 @@ export function BlockForm({
             label="Orchard"
             placeholder="Select Orchard"
             data={orchardOptions}
-            required={!isView}
-            readOnly={isView}
+            required={!isViewing}
+            readOnly={isViewing}
             disabled={isEditing}
             searchable
             {...form.getInputProps('orchardId')}
@@ -229,7 +243,7 @@ export function BlockForm({
           <Text fw={500} size="sm">
             Plantings
           </Text>
-          {!isView && (
+          {!isViewing && (
             <Button
               variant="subtle"
               size="xs"
@@ -263,18 +277,18 @@ export function BlockForm({
               <Select
                 placeholder="Select Variety"
                 data={varietyOptions}
-                readOnly={isView}
+                readOnly={isViewing}
                 style={{ flex: 1 }}
                 {...form.getInputProps(`plantings.${index}.varietyId`)}
               />
               <NumberInput
                 placeholder="Count"
                 min={0}
-                readOnly={isView}
+                readOnly={isViewing}
                 style={{ width: 100 }}
                 {...form.getInputProps(`plantings.${index}.treeCount`)}
               />
-              {!isView && form.values.plantings.length > 1 && (
+              {!isViewing && form.values.plantings.length > 1 && (
                 <ActionIcon
                   color="red"
                   variant="subtle"
@@ -292,8 +306,8 @@ export function BlockForm({
       {mode !== 'create' && can(PERMISSIONS.BLOCK_MANAGE_INACTIVE) && (
         <Switch
           label="Active"
-          readOnly={isView}
-          disabled={isView}
+          readOnly={isViewing}
+          style={{ pointerEvents: isViewing ? 'none' : 'auto' }}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
           mt="md"
         />
@@ -309,7 +323,7 @@ export function BlockForm({
         title="Confirm Replanting"
         message="Changing the variety implies a replanting. Historical assessments will remain linked to the old variety context. Are you sure you want to proceed?"
         confirmLabel="Confirm Change"
-        confirmColor="yellow"
+        confirmColor={palette.buttons.warning}
       />
     </FormLayout>
   );

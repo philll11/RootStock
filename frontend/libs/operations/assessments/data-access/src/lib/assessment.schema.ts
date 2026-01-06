@@ -15,6 +15,7 @@ export const assessmentSchema = z.object({
   status: z.enum(AssessmentStatus).default(AssessmentStatus.PENDING),
   samples: z.array(assessmentSampleSchema).default([]),
   changeReason: z.string().optional(),
+  isActive: z.boolean().optional(),
   __v: z.number().optional(),
 });
 

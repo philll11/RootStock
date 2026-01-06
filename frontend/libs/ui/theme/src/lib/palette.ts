@@ -61,6 +61,12 @@ export const palette = {
     update: '#3b82f6', // warning.light
     delete: '#ef4444', // error.light
   },
+  buttons: {
+    confirm: '#22c55e', // brand[500]
+    warning: '#ef4444', // error.light
+    inform: '#3b82f6', // blue[500]
+    cancel: '#64748b', // neutral[500]
+  },
 };
 
 export const lightColors = {

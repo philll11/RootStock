@@ -1,7 +1,7 @@
+// frontend/libs/operations/assessments/feature-web/src/lib/assessment-form.tsx
 import {
   TextInput,
   Button,
-  Group,
   Stack,
   Text,
   ActionIcon,
@@ -10,6 +10,7 @@ import {
   Table,
   Select,
   Loader,
+  Switch
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
@@ -18,14 +19,16 @@ import {
   Assessment,
   AssessmentFormData,
   AssessmentStatus,
-  AssessmentSample,
   AssessmentType,
 } from '@rootstock/operations/assessments/assessments-data-access';
 import { useGetBlocks } from '@rootstock/assets/blocks/blocks-data-access';
 import { IconTrash, IconPlus, IconCalendar } from '@tabler/icons-react';
+import { notify, PERMISSIONS } from '@rootstock/shared/util';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { FormLayout } from '@rootstock/ui/web';
 import { palette, iconSizes, spacing } from '@rootstock/ui/theme';
 
+// ### Interfaces & Types ###
 export type AssessmentFormMode = 'create' | 'edit' | 'view';
 
 interface AssessmentFormProps {
@@ -57,20 +60,15 @@ export function AssessmentForm({
   fullHeight = true,
   isLocked = false,
 }: AssessmentFormProps) {
+
+  // ### Form Modes, Permissions & State ###
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
-  const { data: blocks, isLoading: isLoadingBlocks } = useGetBlocks();
 
-  const blockOptions = useMemo(() => {
-    return (
-      blocks?.map((block) => ({
-        value: block._id,
-        label: typeof block.orchardId === 'object' ? `${block.orchardId.name} - ${block.name}`: block.name,
-      })) || []
-    );
-  }, [blocks]);
+  const { can } = usePermission();
 
+  // ### Form Definition ###
   const form = useForm<AssessmentFormData>({
     initialValues: {
       name: '',
@@ -95,6 +93,19 @@ export function AssessmentForm({
     },
   });
 
+  // ### Data Fetching & Options ###
+  const { data: blocks, isLoading: isLoadingBlocks } = useGetBlocks();
+
+  const blockOptions = useMemo(() => {
+    return (
+      blocks?.map((block) => ({
+        value: block._id,
+        label: typeof block.orchardId === 'object' ? `${block.orchardId.name} - ${block.name}` : block.name,
+      })) || []
+    );
+  }, [blocks]);
+
+  // ### Side Effects ###
   useEffect(() => {
     if (isCreating && onValuesChange) {
       onValuesChange(form.values);
@@ -133,12 +144,27 @@ export function AssessmentForm({
     }
   }, [assessment, mode, blockId, isEditing, isViewing, isCreating]);
 
+  // ### Event Handlers ###
   const handleSubmit = (values: typeof form.values) => {
+    const submissionData: any = { ...values };
+    if (isEditing) {
+      // Only send isActive if it has actually changed
+      if (assessment && assessment.isActive === values.isActive) {
+        delete submissionData.isActive;
+      }
+      submissionData.__v = assessment!.__v;
+    }
+    if (isCreating) {
+      delete submissionData.isActive;
+      delete submissionData.__v;
+    }
+
     const indexedSamples = values.samples?.map((sample, index) => ({
       ...sample,
       rowNumber: index + 1,
     }));
-    onSubmit({ ...values, samples: indexedSamples });
+    
+    onSubmit({ ...values as AssessmentFormData, samples: indexedSamples });
   };
 
   const addSample = () => {
@@ -153,6 +179,11 @@ export function AssessmentForm({
     form.removeListItem('samples', index);
   };
 
+  const handleValidationErrors = () => {
+    notify.validation();
+  };
+
+
   const handleClear = () => {
     form.setValues({
       name: '',
@@ -166,13 +197,15 @@ export function AssessmentForm({
     });
   };
 
+  // ### Render ###
   return (
     <FormLayout
       mode={mode}
-      onSubmit={form.onSubmit(handleSubmit)}
+      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       onCancel={onCancel}
       onEdit={onEdit}
       onClear={isCreating ? handleClear : undefined}
+      canEdit={can(PERMISSIONS.ASSESSMENT_EDIT)}
       isLoading={isLoading}
       isDirty={form.isDirty()}
       fullHeight={fullHeight}
@@ -233,6 +266,17 @@ export function AssessmentForm({
             placeholder="Explain why you are modifying this locked record"
             required
             {...form.getInputProps('changeReason')}
+          />
+        )}
+
+
+        {!isCreating && can(PERMISSIONS.ASSESSMENT_MANAGE_INACTIVE) && (
+          <Switch
+            label="Active"
+            readOnly={isViewing}
+            style={{ pointerEvents: isViewing ? 'none' : 'auto' }}
+            {...form.getInputProps('isActive', { type: 'checkbox' })}
+            mt="md"
           />
         )}
 
