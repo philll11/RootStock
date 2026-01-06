@@ -62,7 +62,7 @@ export function VarietyViewPage() {
           can(PERMISSIONS.VARIETY_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={openDeleteModal}
               title="Delete Variety"
             >
@@ -90,7 +90,7 @@ export function VarietyViewPage() {
         title="Delete Variety"
         message={`Are you sure you want to delete variety "${variety.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </Container>
   );

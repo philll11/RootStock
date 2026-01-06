@@ -176,7 +176,7 @@ export function ClientsListPage() {
           {can(PERMISSIONS.CLIENT_VIEW) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.view}
+              color={palette.icons.view}
               onClick={(e) => handleViewPage(client._id, e)}
               title="View Page"
             >
@@ -187,7 +187,7 @@ export function ClientsListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(client._id, e)}
                 title="Edit Page"
               >
@@ -195,7 +195,7 @@ export function ClientsListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(client, e)}
                 title="Quick Edit"
               >
@@ -206,7 +206,7 @@ export function ClientsListPage() {
           {can(PERMISSIONS.CLIENT_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDeleteClick(client, e)}
               title="Delete Client"
             >
@@ -297,7 +297,7 @@ export function ClientsListPage() {
         title="Delete Client"
         message={`Are you sure you want to delete "${selectedClient?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

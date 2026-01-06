@@ -200,7 +200,7 @@ export function AssessmentListPage() {
           {can(PERMISSIONS.ASSESSMENT_VIEW) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.view}
+              color={palette.icons.view}
               onClick={(e) => handleViewPage(assessment, e)}
             >
               <IconEye size={iconSizes.md} />
@@ -210,7 +210,7 @@ export function AssessmentListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(assessment, e)}
                 title="Edit Page"
               >
@@ -218,7 +218,7 @@ export function AssessmentListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(assessment, e)}
                 title="Quick Edit"
               >
@@ -229,7 +229,7 @@ export function AssessmentListPage() {
           {can(PERMISSIONS.ASSESSMENT_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDeleteClick(assessment, e)}
             >
               <IconTrash size={iconSizes.md} />
@@ -332,7 +332,7 @@ export function AssessmentListPage() {
         title="Delete Assessment"
         message={`Are you sure you want to delete assessment ${assessmentToDelete?.recordId}? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
 
     </>

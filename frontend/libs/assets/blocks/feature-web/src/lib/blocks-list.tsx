@@ -204,7 +204,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
         <Group gap={0} justify="flex-end">
           <ActionIcon
             variant="subtle"
-            color={palette.actions.view}
+            color={palette.icons.view}
             onClick={(e) => handleViewPage(block, e)}
             title="View Page"
           >
@@ -214,7 +214,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(block, e)}
                 title="Edit Page"
               >
@@ -222,7 +222,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(block, e)}
                 title="Quick Edit"
               >
@@ -233,7 +233,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
           {can(PERMISSIONS.BLOCK_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDeleteClick(block, e)}
             >
               <IconTrash size={iconSizes.md} />
@@ -320,7 +320,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
         title="Delete Block"
         message={`Are you sure you want to delete block "${blockToDelete?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

@@ -20,7 +20,7 @@ export function ConfirmModal({
   message, 
   confirmLabel = 'Confirm', 
   cancelLabel = 'Cancel',
-  confirmColor = palette.actions.delete 
+  confirmColor = palette.icons.delete 
 }: ConfirmModalProps) {
   return (
     <Modal 

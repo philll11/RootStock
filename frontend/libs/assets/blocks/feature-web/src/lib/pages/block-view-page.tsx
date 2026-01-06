@@ -65,7 +65,7 @@ export function BlockViewPage() {
           can(PERMISSIONS.BLOCK_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={openDeleteModal}
             >
               <IconTrash size={iconSizes.md} />
@@ -92,7 +92,7 @@ export function BlockViewPage() {
         title="Delete Block"
         message={`Are you sure you want to delete block "${block.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </Container>
   );

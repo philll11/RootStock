@@ -60,6 +60,7 @@ export const PERMISSIONS = {
   COUNTERS_EDIT: 'Counters:Edit',
   SYSTEM_CONFIG_VIEW: 'SystemConfig:View',
   SYSTEM_CONFIG_EDIT: 'SystemConfig:Edit',
+  AUDIT_VIEW: 'Audit:View',
 
   // --- Global ---
   VIEW_DELETED: 'Global:ViewDeleted',

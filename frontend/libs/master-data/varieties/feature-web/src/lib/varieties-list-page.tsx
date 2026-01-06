@@ -152,7 +152,7 @@ export function VarietiesListPage() {
         <Group gap={0} justify="flex-end">
           <ActionIcon
             variant="subtle"
-            color={palette.actions.view}
+            color={palette.icons.view}
             onClick={(e) => handleViewPage(variety, e)}
             title="View Page"
           >
@@ -162,7 +162,7 @@ export function VarietiesListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(variety, e)}
                 title="Edit Page"
               >
@@ -170,7 +170,7 @@ export function VarietiesListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(variety, e)}
                 title="Quick Edit"
               >
@@ -179,7 +179,7 @@ export function VarietiesListPage() {
             </>
           )}
           {can(PERMISSIONS.VARIETY_DELETE) && (
-            <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDeleteClick(variety, e)}>
+            <ActionIcon variant="subtle" color={palette.icons.delete} onClick={(e) => handleDeleteClick(variety, e)}>
               <IconTrash size={iconSizes.md} />
             </ActionIcon>
           )}
@@ -264,7 +264,7 @@ export function VarietiesListPage() {
         title="Delete Variety"
         message={`Are you sure you want to delete variety "${varietyToDelete?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

@@ -10,6 +10,7 @@ export const SYSTEM_CONFIG_KEYS = {
   detail: (key: string) => [...SYSTEM_CONFIG_KEYS.details(), key] as const,
 };
 
+// --- API Functions ---
 const BASE_URL = '/system/config';
 
 export const getSystemConfigs = async (): Promise<SystemConfig[]> => {
@@ -25,6 +26,8 @@ export const getSystemConfig = async (key: string): Promise<SystemConfig> => {
 export const updateSystemConfig = async ({ key, data }: { key: string; data: UpdateSystemConfigDto }): Promise<void> => {
   await apiClient.patch(`${BASE_URL}/${key}`, data);
 };
+
+// --- Hooks ---
 
 export function useGetSystemConfigs() {
   return useQuery({

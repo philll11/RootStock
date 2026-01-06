@@ -183,7 +183,7 @@ export function OrchardsListPage() {
           {can(PERMISSIONS.ORCHARD_VIEW) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.view}
+              color={palette.icons.view}
               onClick={(e) => handleViewPage(orchard, e)}
               title="View Page"
             >
@@ -194,7 +194,7 @@ export function OrchardsListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(orchard, e)}
                 title="Edit Page"
               >
@@ -202,7 +202,7 @@ export function OrchardsListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(orchard, e)}
                 title="Quick Edit"
               >
@@ -213,7 +213,7 @@ export function OrchardsListPage() {
           {can(PERMISSIONS.ORCHARD_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDeleteClick(orchard, e)}
             >
               <IconTrash size={iconSizes.md} />
@@ -312,7 +312,7 @@ export function OrchardsListPage() {
         title="Delete Orchard"
         message={`Are you sure you want to delete "${selectedOrchard?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

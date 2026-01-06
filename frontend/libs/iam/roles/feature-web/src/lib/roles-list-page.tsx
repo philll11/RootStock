@@ -171,7 +171,7 @@ export function RolesListPage() {
           {can(PERMISSIONS.ROLE_VIEW) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.view}
+              color={palette.icons.view}
               onClick={(e) => handleViewPage(role._id, e)}
               title="View Page"
             >
@@ -182,7 +182,7 @@ export function RolesListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(role._id, e)}
                 title="Edit Page"
               >
@@ -190,7 +190,7 @@ export function RolesListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(role, e)}
                 title="Quick Edit"
               >
@@ -201,7 +201,7 @@ export function RolesListPage() {
           {can(PERMISSIONS.ROLE_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDelete(role._id, e)}
               title="Delete Role"
             >
@@ -305,7 +305,7 @@ export function RolesListPage() {
         title="Delete Role"
         message="Are you sure you want to delete this role? This action cannot be undone. Note: Roles assigned to users cannot be deleted."
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

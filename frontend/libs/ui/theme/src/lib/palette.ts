@@ -42,18 +42,24 @@ export const palette = {
     dark: '#34d399',
   },
   status: {
-    pending: '#22c55e', // brand[500]
-    inProgress: '#64748b', // neutral[500]
-    completed: '#3b82f6', // blue[500]
+    pending: '#64748b', // neutral[500]
+    inProgress: '#3b82f6', // blue[500]
+    completed: '#22c55e', // brand[500]
   },
   state: {
     active: '#22c55e', // brand[500]
     inactive: '#64748b', // neutral[500]
   },
-  actions: {
+  icons: {
+    create: '#4ade80', // brand[400]
     edit: '#f59e0b', // warning.light
     delete: '#ef4444', // error.light
     view: '#3b82f6', // blue
+  },
+  actions: {
+    create: '#4ade80', // brand[400]
+    update: '#3b82f6', // warning.light
+    delete: '#ef4444', // error.light
   },
 };
 

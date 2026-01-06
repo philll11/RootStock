@@ -62,7 +62,7 @@ export function RoleViewPage() {
           can(PERMISSIONS.ROLE_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={openDeleteModal}
               title="Delete Role"
             >
@@ -89,7 +89,7 @@ export function RoleViewPage() {
         title="Delete Role"
         message={`Are you sure you want to delete role "${role?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </Container>
   );

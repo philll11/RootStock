@@ -103,7 +103,7 @@ export function AssessmentViewPage() {
              {can(PERMISSIONS.ASSESSMENT_DELETE) && (
               <ActionIcon 
                 variant="subtle" 
-                color={palette.actions.delete} 
+                color={palette.icons.delete} 
                 onClick={openDeleteModal}
               >
                 <IconTrash size={iconSizes.md} />
@@ -161,7 +161,7 @@ export function AssessmentViewPage() {
         title="Delete Assessment"
         message={`Are you sure you want to delete assessment ${assessment.recordId}? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
 
       <ConfirmModal

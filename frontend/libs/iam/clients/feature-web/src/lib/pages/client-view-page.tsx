@@ -4,13 +4,14 @@ import {
   useGetClient
 } from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm } from '../client-form';
-import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
+import { PageHeader, ConfirmModal, useContextualNavigation, SubResourceTabs } from '@rootstock/ui/web';
 import { Container, Paper, Alert, ActionIcon, LoadingOverlay } from '@mantine/core';
-import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
+import { IconAlertCircle, IconTrash, IconHistory } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { AuditTable } from '@rootstock/system/audit/audit-feature-web';
 
 export function ClientViewPage() {
   const { id } = useParams<{ id: string }>();
@@ -62,7 +63,7 @@ export function ClientViewPage() {
           can(PERMISSIONS.CLIENT_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={openDeleteModal}
               title="Delete Client"
             >
@@ -82,6 +83,19 @@ export function ClientViewPage() {
           fullHeight={false}
         />
       </Paper>
+      
+      <SubResourceTabs
+        title="Details"
+        tabs={[
+          ...(can(PERMISSIONS.AUDIT_VIEW) ? [{
+            value: 'audit',
+            label: 'Audit Trail',
+            icon: <IconHistory size={iconSizes.sm} />,
+            content: <AuditTable resource="Client" recordId={id!} />,
+          }] : []),
+        ]}
+      />
+
       <ConfirmModal
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
@@ -89,7 +103,7 @@ export function ClientViewPage() {
         title="Delete Client"
         message={`Are you sure you want to delete client "${client?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </Container>
   );

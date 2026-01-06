@@ -182,7 +182,7 @@ export function UsersListPage() {
           {can(PERMISSIONS.USER_VIEW) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.view}
+              color={palette.icons.view}
               onClick={(e) => handleViewPage(user._id, e)}
               title="View Page"
             >
@@ -193,7 +193,7 @@ export function UsersListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(user._id, e)}
                 title="Edit Page"
               >
@@ -201,7 +201,7 @@ export function UsersListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(user, e)}
                 title="Quick Edit"
               >
@@ -212,7 +212,7 @@ export function UsersListPage() {
           {can(PERMISSIONS.USER_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDelete(user._id, e)}
               title="Delete User"
             >
@@ -303,7 +303,7 @@ export function UsersListPage() {
         title="Delete User"
         message={`Are you sure you want to delete "${selectedUser?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

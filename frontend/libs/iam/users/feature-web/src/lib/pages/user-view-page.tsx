@@ -62,7 +62,7 @@ export function UserViewPage() {
           can(PERMISSIONS.USER_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={openDeleteModal}
               title="Delete User"
             >
@@ -89,7 +89,7 @@ export function UserViewPage() {
         title="Delete User"
         message={`Are you sure you want to delete user ${user?.name}? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </Container>
   );

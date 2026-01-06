@@ -55,6 +55,8 @@ export const deleteClient = async (id: string): Promise<void> => {
   await apiClient.delete(`${BASE_URL}/${id}`);
 };
 
+// --- Hooks ---
+
 export function useGetClients(options?: { enabled?: boolean }) {
   const { can } = usePermission();
   const isEnabled = (options?.enabled ?? true) && can(PERMISSIONS.CLIENT_VIEW);
