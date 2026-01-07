@@ -13,13 +13,9 @@ export const RoleEditScreen = () => {
   const handleSubmit = async (data: RoleFormData) => {
     if (!id || !role) return;
     try {
-      const { __v, ...updateData } = data;
       await updateRole({ 
         id, 
-        data: { 
-          ...updateData, 
-          __v: role.__v 
-        } 
+        data 
       });
       router.back();
     } catch (error) {

@@ -23,8 +23,7 @@ export function UserEditPage() {
   const handleSubmit = async (values: UserFormData) => {
     if (!id) return;
     try {
-      const { __v, ...updateData } = values;
-      await updateUser({ id, data: updateData });
+      await updateUser({ id, data: values });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/users/${id}`), 0);
     } catch (error) {

@@ -14,7 +14,7 @@ export function BlockEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/blocks');
-  
+
   const { data: block, isLoading } = useGetBlock(id!);
   const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
 
@@ -25,17 +25,18 @@ export function BlockEditPage() {
   const handleSubmit = async (values: BlockFormData) => {
     if (!id || !block) return;
     try {
-      await updateBlock({ 
-        id, 
+      await updateBlock({
+        id,
         data: {
           name: values.name,
           isActive: values.isActive,
           plantings: values.plantings.map((p: any) => ({
+            _id: p._id,
             varietyId: p.varietyId!,
             treeCount: p.treeCount
           })),
           __v: block.__v
-        } 
+        }
       });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/blocks/${id}`), 0);
@@ -43,7 +44,7 @@ export function BlockEditPage() {
       console.error('Failed to update block', error);
     }
   };
-  
+
   const handleCancel = () => {
     goBack();
   };

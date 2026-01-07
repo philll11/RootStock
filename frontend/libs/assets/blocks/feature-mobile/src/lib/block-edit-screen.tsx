@@ -27,17 +27,18 @@ export function BlockEditScreen() {
 
   const handleSubmit = async (data: BlockFormData) => {
     if (!block) return;
-    await updateBlock({ 
-      id: id!, 
+    await updateBlock({
+      id: id!,
       data: {
         name: data.name,
         isActive: data.isActive,
         plantings: data.plantings.map(p => ({
+          _id: (p as any)._id,
           varietyId: p.varietyId!,
           treeCount: p.treeCount
         })),
         __v: block.__v
-      } 
+      }
     });
     router.back();
   };

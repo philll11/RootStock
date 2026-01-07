@@ -8,14 +8,16 @@ export type BlockDocument = HydratedDocument<Block>;
  * Embedded Schema for Plantings
  * Defined here as it is strictly a sub-document of Block
  */
-@Schema({ _id: false }) // Embedded docs don't always need their own _id, but can have one if needed. Blueprint implies generic embedding.
+@Schema()
 export class Planting {
+  
   @Prop({ type: Types.ObjectId, ref: 'Variety', required: true })
   varietyId: Types.ObjectId;
 
   @Prop({ required: true, min: 0 })
   treeCount: number;
 }
+
 export const PlantingSchema = SchemaFactory.createForClass(Planting);
 
 /**

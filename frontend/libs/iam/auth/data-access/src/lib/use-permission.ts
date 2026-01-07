@@ -1,5 +1,4 @@
 import { useGetProfile } from './use-auth';
-import { Role } from '@rootstock/iam/users/users-data-access';
 
 export const usePermission = () => {
   const { data: user } = useGetProfile();
@@ -13,8 +12,8 @@ export const usePermission = () => {
       return false;
     }
 
-    const role = user.roleId as Role;
-    return role.permissions.includes(permission);
+    // It's an object, so we access permissions safely
+    return user.roleId.permissions?.includes(permission) ?? false;
   };
 
   const can = (permission: string) => hasPermission(permission);

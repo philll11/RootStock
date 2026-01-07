@@ -147,6 +147,7 @@ export function BlockForm({
         isActive: block.isActive,
         plantings:
           block.plantings?.map((p) => ({
+            _id: p._id, // Add _id here to preserve stable identity
             varietyId:
               typeof p.varietyId === 'object' ? p.varietyId._id : p.varietyId,
             treeCount: p.treeCount,
@@ -169,10 +170,6 @@ export function BlockForm({
   const proceedSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
     if (isEditing) {
-      // Only send isActive if it has actually changed
-      if (block && block.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
       submissionData.__v = block!.__v;
     }
     if (isCreating) {

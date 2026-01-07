@@ -8,23 +8,25 @@ export class AuditDiffService {
    * Computes the difference between two objects.
    * Returns an array of AuditChange.
    */
-  computeDiff(oldObj: any, newObj: any, prefix = ''): AuditChange[] {
+  computeDiff(oldObj: any, newObj: any, prefix = '', ignoredPaths: string[] = [], labelConfig: Record<string, string> = {}): AuditChange[] {
     const changes: AuditChange[] = [];
     const allKeys = new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})]);
 
     // Fields to ignore
-    const ignoredFields = ['_id', '__v', 'createdAt', 'updatedAt', 'password', 'hash'];
+    const systemIgnoredFields = ['_id', '__v', 'createdAt', 'updatedAt', 'password', 'hash'];
 
     for (const key of allKeys) {
-      if (ignoredFields.includes(key)) continue;
+      if (systemIgnoredFields.includes(key)) continue;
 
       const oldVal = oldObj ? oldObj[key] : undefined;
       const newVal = newObj ? newObj[key] : undefined;
       const currentPath = prefix ? `${prefix}.${key}` : key;
 
+      if (ignoredPaths.includes(currentPath)) continue;
+
       // 1. Handle Arrays
       if (Array.isArray(oldVal) || Array.isArray(newVal)) {
-        const arrayChanges = this.diffArray(oldVal || [], newVal || [], currentPath);
+        const arrayChanges = this.diffArray(oldVal || [], newVal || [], currentPath, ignoredPaths, labelConfig);
         changes.push(...arrayChanges);
         continue;
       }
@@ -49,7 +51,7 @@ export class AuditDiffService {
 
       // 4. Handle Objects (Recursive)
       if (this.isObject(oldVal) && this.isObject(newVal)) {
-        changes.push(...this.computeDiff(oldVal, newVal, currentPath));
+        changes.push(...this.computeDiff(oldVal, newVal, currentPath, ignoredPaths, labelConfig));
         continue;
       }
 
@@ -62,39 +64,80 @@ export class AuditDiffService {
     return changes;
   }
 
-  private diffArray(oldArr: any[], newArr: any[], path: string): AuditChange[] {
+  private diffArray(oldArr: any[], newArr: any[], path: string, ignoredPaths: string[], labelConfig: Record<string, string>): AuditChange[] {
     const changes: AuditChange[] = [];
 
     // Check if array contains objects with _id (Stable ID strategy)
-    const isStableArray = (oldArr.length > 0 && oldArr[0]?._id) || (newArr.length > 0 && newArr[0]?._id);
+    // Both arrays (if not empty) must have _ids to use this strategy
+    const oldHasIds = oldArr.length === 0 || (oldArr[0] && oldArr[0]._id);
+    const newHasIds = newArr.length === 0 || (newArr[0] && newArr[0]._id);
+    const isStableArray = oldHasIds && newHasIds;
 
     if (isStableArray) {
+      let labelKey = labelConfig[path];
+      let valueOnly = false;
+
+      // Support for "Value Only" syntax: "^key"
+      if (labelKey && labelKey.startsWith('^')) {
+          labelKey = labelKey.substring(1);
+          valueOnly = true;
+      }
+
       const oldMap = new Map(oldArr.map((item) => [String(item._id), item]));
       const newMap = new Map(newArr.map((item) => [String(item._id), item]));
+
+      // Helper to generate field name
+      const getFieldPath = (item: any, id: string) => {
+         const labelValue = labelKey ? this.resolvePath(item, labelKey) : undefined;
+         if (labelValue !== undefined) {
+             return valueOnly 
+                ? `${path}[${labelValue}]` 
+                : `${path}[${labelKey}=${labelValue}]`;
+         }
+         return `${path}[_id=${id}]`;
+      };
+
+      // Helper to sanitize object for log value (removes _id and optionally labelKey)
+      const sanitize = (item: any) => {
+          if (!item || typeof item !== 'object') return item;
+          const clone = { ...item };
+          delete clone._id;
+
+          if (labelKey) {
+             // Removes the property used for labeling from the value object.
+             // If complex path (e.g. varietyId.name), removes the rootKey (varietyId).
+             const rootKey = labelKey.split('.')[0];
+             delete clone[rootKey];
+          }
+          return clone;
+      };
 
       // Check for modifications and removals
       for (const [id, oldItem] of oldMap) {
         const newItem = newMap.get(id);
+        const fieldName = getFieldPath(oldItem, id);
+
         if (!newItem) {
           // Removed
           changes.push({
-            field: `${path}[_id=${id}]`,
-            oldValue: oldItem,
+            field: fieldName,
+            oldValue: sanitize(oldItem),
             newValue: null,
           });
         } else {
           // Modified? Recurse
-          changes.push(...this.computeDiff(oldItem, newItem, `${path}[_id=${id}]`));
+          changes.push(...this.computeDiff(oldItem, newItem, fieldName, ignoredPaths, labelConfig));
         }
       }
 
       // Check for additions
       for (const [id, newItem] of newMap) {
         if (!oldMap.has(id)) {
+          const fieldName = getFieldPath(newItem, id);
           changes.push({
-            field: `${path}[_id=${id}]`,
+            field: fieldName,
             oldValue: null,
-            newValue: newItem,
+            newValue: sanitize(newItem),
           });
         }
       }
@@ -108,6 +151,11 @@ export class AuditDiffService {
     }
 
     return changes;
+  }
+
+  private resolvePath(obj: any, path: string): any {
+    if (!path || !obj) return undefined;
+    return path.split('.').reduce((o, key) => (o ? o[key] : undefined), obj);
   }
 
   private isObject(val: any): boolean {

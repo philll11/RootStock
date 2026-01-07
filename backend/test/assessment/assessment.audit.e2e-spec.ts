@@ -282,8 +282,8 @@ describe('Assessment Audit Integration (e2e)', () => {
     // Check Diff Engine Output
     const changes = logs[0].changes;
     
-    // Expect change on the existing sample
-    const sampleChange = changes.find(c => c.field.includes(`samples[_id=${sampleId}].damagedFruit`));
+    // Expect change on the existing sample (Semantic Key)
+    const sampleChange = changes.find(c => c.field.includes('samples[rowNumber=1].damagedFruit'));
     expect(sampleChange).toBeDefined();
     if (sampleChange) {
         expect(sampleChange.oldValue).toBe(10);
@@ -292,7 +292,11 @@ describe('Assessment Audit Integration (e2e)', () => {
 
     // Expect addition of new sample
     // Note: The specific output format depends on AuditDiffService implementation for arrays
-    const newSampleChange = changes.find(c => c.field.includes('samples') && c.newValue?.rowNumber === 2);
+    const newSampleChange = changes.find(c => c.field.includes('samples[rowNumber=2]'));
     expect(newSampleChange).toBeDefined();
+    if (newSampleChange) {
+       expect(newSampleChange.oldValue).toBeNull();
+       expect(newSampleChange.newValue).toBeDefined();
+    }
   });
 });

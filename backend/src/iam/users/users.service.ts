@@ -75,7 +75,7 @@ export class UsersService {
     try {
       const savedUser = await userToCreate.save();
       await savedUser.populate([
-        { path: 'roleId', select: 'name recordId' },
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
         { path: 'clientIds', select: 'name recordId' }
       ]);
 
@@ -102,7 +102,7 @@ export class UsersService {
     const queryBuilder = new UserQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     return this.userModel.find(filter).populate([
-        { path: 'roleId', select: 'name recordId' },
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
         { path: 'clientIds', select: 'name recordId' }
       ]).exec();
   }
@@ -112,7 +112,7 @@ export class UsersService {
     const filter = await queryBuilder.build();
     filter.clientIds = new Types.ObjectId(clientId);
     return this.userModel.find(filter).populate([
-        { path: 'roleId', select: 'name recordId' },
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
         { path: 'clientIds', select: 'name recordId' }
       ]).exec();
   }
@@ -122,7 +122,7 @@ export class UsersService {
     const filter = await queryBuilder.build();
     filter.roleId = new Types.ObjectId(roleId);
     return this.userModel.find(filter).populate([
-        { path: 'roleId', select: 'name recordId' },
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
         { path: 'clientIds', select: 'name recordId' }
       ]).exec();
   }
@@ -141,7 +141,7 @@ export class UsersService {
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(userId) }] };
 
     const targetUser = await this.userModel.findOne(finalFilter).populate([
-        { path: 'roleId', select: 'name recordId' },
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
         { path: 'clientIds', select: 'name recordId' }
       ]).exec();
 
@@ -204,7 +204,7 @@ export class UsersService {
       { new: true }
     )
     .populate([
-        { path: 'roleId', select: 'name recordId' },
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
         { path: 'clientIds', select: 'name recordId' }
       ])
     .exec();

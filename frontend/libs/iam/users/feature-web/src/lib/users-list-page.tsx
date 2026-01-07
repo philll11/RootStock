@@ -118,16 +118,14 @@ export function UsersListPage() {
 
   const handleSubmit = async (values: UserFormData) => {
     try {
-      const { __v, ...data } = values;
       if (mode === 'create') {
-        const { isActive, ...createData } = data;
-        await createUser(createData);
+        await createUser(values as any);
         setCreateFormDraft({});
       } else {
         if (selectedUser) {
           await updateUser({
             id: selectedUser._id,
-            data: data,
+            data: values,
           });
         }
       }

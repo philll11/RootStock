@@ -130,7 +130,7 @@ export class AssessmentsService {
     const existing = await this.findOne(assessmentId, requestingUser);
 
     // 1. Determine Expected Version
-    const updateOps: any = { $set: {}, $push: {}, $inc: {} };
+    const updateOps: any = { $set: {}, $inc: {} };
     let hasChanges = false;
 
     // 1. Compliance Check (The Lock)
@@ -230,7 +230,9 @@ export class AssessmentsService {
         existing.toObject(),
         updatedAssessment.toObject(),
         requestingUser._id.toString(),
-        updateDto.changeReason || 'Assessment Updated'
+        updateDto.changeReason || 'Assessment Updated',
+        ['summary'],
+        { 'samples': 'rowNumber' }
     );
 
     return updatedAssessment;

@@ -19,6 +19,7 @@ export enum AssessmentType {
  */
 @Schema()
 export class AssessmentSample {
+
     @Prop({ required: true })
     rowNumber: number;
 

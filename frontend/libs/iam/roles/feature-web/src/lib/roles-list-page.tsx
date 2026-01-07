@@ -119,15 +119,13 @@ export function RolesListPage() {
 
   const handleSubmit = async (values: RoleFormData) => {
     try {
-      const { __v, ...data } = values;
       if (mode === 'edit' && selectedRole) {
         await updateRole({
           id: selectedRole._id,
-          data: data,
+          data: values,
         });
       } else if (mode === 'create') {
-        const { isActive, ...createData } = data;
-        await createRole(createData);
+        await createRole(values as any);
         setCreateFormDraft({});
       }
       close();

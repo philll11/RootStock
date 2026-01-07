@@ -15,7 +15,7 @@ export interface User extends BaseEntity {
   name: string;
   email: string;
   userType: UserType;
-  roleId?: string | { _id: string; name: string; recordId: string };
+  roleId?: string | { _id: string; name: string; recordId: string; permissions: string[]; visibilityScope: string };
   clientIds?: string[] | { _id: string; name: string; recordId: string }[];
   preferences?: UserPreferences;
 }

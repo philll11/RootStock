@@ -39,7 +39,7 @@ const formatValue = (value: any) => {
         return dayjs(value).format('DD MMM YYYY, HH:mm');
     }
     if (typeof value === 'object') return <Code fz="xs">{JSON.stringify(value)}</Code>;
-    return <Text size='sm'>{value.toString()}</Text>;
+    return value.toString();
 };
 
 export const AuditTable = ({ resource, recordId }: AuditTableProps) => {
@@ -120,7 +120,29 @@ export const AuditTable = ({ resource, recordId }: AuditTableProps) => {
             accessor: 'field',
             title: 'Field',
             sortable: true,
-            render: (entry) => <Code>{entry.field}</Code>
+            width: 250,
+            render: (entry) => {
+                const isUpdate = entry.action === AuditAction.UPDATE;
+                const wasEmpty = entry.oldValue === null || entry.oldValue === undefined;
+                const isEmptyNow = entry.newValue === null || entry.newValue === undefined;
+                
+                let badge = null;
+
+                if (isUpdate) {
+                    if (wasEmpty && !isEmptyNow) {
+                        badge = <Badge color={palette.actions.create} variant="filled" size="xs" ml="xs">ADDED</Badge>;
+                    } else if (!wasEmpty && isEmptyNow) {
+                        badge = <Badge color={palette.actions.delete} variant="filled" size="xs" ml="xs">REMOVED</Badge>;
+                    }
+                }
+
+                return (
+                    <Group gap={0}>
+                        <Code style={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{entry.field}</Code>
+                        {badge}
+                    </Group>
+                );
+            }
         },
         {
             accessor: 'oldValue',

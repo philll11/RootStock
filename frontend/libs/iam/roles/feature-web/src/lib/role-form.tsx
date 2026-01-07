@@ -125,10 +125,6 @@ export function RoleForm({
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
     if (isEditing) {
-      // Only send isActive if it has actually changed
-      if (role && role.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
       submissionData.__v = role!.__v;
     }
     if (isCreating) {

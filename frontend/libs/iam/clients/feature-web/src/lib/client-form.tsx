@@ -91,10 +91,6 @@ export function ClientForm({
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
     if (isEditing) {
-      // Only send isActive if it has actually changed
-      if (client && client.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
       submissionData.__v = client!.__v;
     }
     if (isCreating) {

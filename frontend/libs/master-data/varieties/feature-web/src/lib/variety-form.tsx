@@ -88,10 +88,6 @@ export function VarietyForm({
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
     if (isEditing) {
-      // Only send isActive if it has actually changed
-      if (variety && variety.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
       submissionData.__v = variety!.__v;
     }
     if (isCreating) {

@@ -22,7 +22,7 @@ import {
   DataTable,
   FormDrawer,
   DataTableColumn,
-  ActionSplitButton, 
+  ActionSplitButton,
 } from '@rootstock/ui/web';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
@@ -136,6 +136,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
               name: values.name,
               isActive: values.isActive,
               plantings: values.plantings.map(p => ({
+                _id: (p as any)._id,
                 varietyId: p.varietyId!,
                 treeCount: p.treeCount
               })),
@@ -246,20 +247,20 @@ export function BlocksList({ orchardId }: BlocksListProps) {
 
   const sortedBlocks = blocks
     ? [...blocks].sort((a, b) => {
-        const { accessor, direction } = sortState;
-        const aValue = (a as any)[accessor] || '';
-        const bValue = (b as any)[accessor] || '';
+      const { accessor, direction } = sortState;
+      const aValue = (a as any)[accessor] || '';
+      const bValue = (b as any)[accessor] || '';
 
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return direction === 'asc'
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
-        }
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
 
-        if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return direction === 'asc' ? 1 : -1;
-        return 0;
-      })
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    })
     : undefined;
 
   const actionButton = can(PERMISSIONS.BLOCK_CREATE) ? (

@@ -221,4 +221,50 @@ describe('Blocks Audit Integration (e2e)', () => {
     expect(logs[0].metadata?.snapshot).toBeDefined();
     expect(logs[0].metadata?.snapshot.name).toBe('Delete Test Block');
   });
+
+  it('should log semantic audit for plantings updates', async () => {
+    // 1. Create Block with Plantings
+    const block = await blockModel.create({
+      name: 'Planting Audit Block',
+      orchardId: orchard._id,
+      clientId: client._id,
+      recordId: 'BLK_PLT',
+      hectares: 5,
+      plantings: [
+        { varietyId: variety._id, treeCount: 100 }
+      ]
+    });
+
+    // 2. Update Block (Modify planting trees)
+    // IMPORTANT: block.plantings[0]._id exists because we updated the schema
+    const updateDto = {
+      plantings: [
+        {
+          _id: block.plantings[0]['_id'], // Must pass _id to trigger Update logic inside diff
+          varietyId: variety._id,
+          treeCount: 150, // Changed from 100 to 150
+        }
+      ],
+      __v: block.__v,
+    };
+
+    const res = await request(app.getHttpServer())
+      .patch(`/blocks/${block._id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(updateDto)
+      .expect(200);
+
+    // 3. Verify Audit Log
+    const logs = await auditModel.find({ resource: Resource.BLOCK, resourceId: block._id, action: AuditAction.UPDATE }).exec();
+    expect(logs).toHaveLength(1);
+    
+    // Check for semantic key
+    const change = logs[0].changes.find(c => c.field.includes('plantings'));
+    expect(change).toBeDefined();
+    // Expected key: plantings[Test Variety].treeCount
+    expect(change!.field).toContain('plantings[Test Variety].treeCount');
+    expect(change!.oldValue).toBe(100);
+    expect(change!.newValue).toBe(150);
+  });
 });
+

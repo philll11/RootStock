@@ -150,6 +150,7 @@ export class BlocksService {
       throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
     }
 
+    const labelConfig = { 'plantings': '^varietyId.name' };
     await this.auditsService.log(
       Resource.BLOCK,
       updatedBlock._id.toString(),
@@ -157,7 +158,9 @@ export class BlocksService {
       blockToUpdate.toObject(),
       updatedBlock.toObject(),
       requestingUser._id.toString(),
-      'Block Updated'
+      'Block Updated',
+      [],
+      labelConfig
     );
 
     return updatedBlock;

@@ -128,10 +128,6 @@ export function OrchardForm({
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
     if (isEditing) {
-      // Only send isActive if it has actually changed
-      if (orchard && orchard.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
       submissionData.__v = orchard!.__v;
     }
     if (isCreating) {

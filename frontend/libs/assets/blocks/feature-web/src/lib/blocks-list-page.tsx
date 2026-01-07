@@ -131,6 +131,7 @@ export function BlocksListPage() {
               name: values.name,
               isActive: values.isActive,
               plantings: values.plantings.map(p => ({
+                _id: (p as any)._id,
                 varietyId: p.varietyId!,
                 treeCount: p.treeCount
               })),

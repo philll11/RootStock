@@ -175,10 +175,6 @@ export function UserForm({
     const submissionData: any = { ...values };
     if (isEditing) {
       delete submissionData.password;
-      // Only send isActive if it has actually changed
-      if (user && user.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
       submissionData.__v = user!.__v;
     }
     if (isCreating) {

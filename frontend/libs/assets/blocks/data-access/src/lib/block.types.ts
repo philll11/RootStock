@@ -1,6 +1,7 @@
 import { BaseEntity } from '@rootstock/shared/util';
 
 export interface Planting {
+  _id?: string; // Stable ID for audits
   varietyId: string | { _id: string; name: string; recordId: string };
   treeCount: number;
 }
@@ -24,6 +25,7 @@ export interface CreateBlockDto {
 export interface UpdateBlockDto {
   name?: string;
   plantings?: {
+    _id?: string;
     varietyId: string;
     treeCount: number;
   }[];
