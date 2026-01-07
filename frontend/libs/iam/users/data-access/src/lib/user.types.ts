@@ -9,21 +9,14 @@ export interface UserPreferences {
   theme?: 'light' | 'dark' | 'auto';
 }
 
-export interface Role {
-  _id: string;
-  name: string;
-  permissions: string[];
-  visibilityScope: string;
-}
-
 export interface User extends BaseEntity {
   firstName: string;
   lastName: string;
   name: string;
   email: string;
   userType: UserType;
-  roleId?: string | Role;
-  clientIds?: string[];
+  roleId?: string | { _id: string; name: string; recordId: string };
+  clientIds?: string[] | { _id: string; name: string; recordId: string }[];
   preferences?: UserPreferences;
 }
 

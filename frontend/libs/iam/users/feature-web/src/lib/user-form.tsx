@@ -107,7 +107,8 @@ export function UserForm({
         return;
       }
 
-      const idsToFetch = user?.clientIds || initialValues?.clientIds;
+      const rawIds = user?.clientIds || initialValues?.clientIds;
+      const idsToFetch = rawIds?.map((id) => (typeof id === 'object' ? id._id : id));
       // Avoid reloading if we already have options for these IDs
       // This prevents the infinite loop/freeze when typing in other fields
       // because initialValues changes on every keystroke.

@@ -9,7 +9,7 @@ export const blockSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   orchardId: z.string().nullable().refine((val) => val !== null && val.length > 0, { message: 'Orchard is required' }),
   plantings: z.array(plantingSchema).min(1, 'At least one planting is required'),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean().optional(),
   __v: z.number().optional(),
 });
 

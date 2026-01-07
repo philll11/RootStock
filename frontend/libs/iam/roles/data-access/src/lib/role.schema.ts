@@ -6,7 +6,7 @@ export const roleSchema = z.object({
   description: z.string().optional(),
   visibilityScope: z.enum(VisibilityScope),
   permissions: z.array(z.string()).optional(),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean().optional(),
   __v: z.number().optional(),
 });
 

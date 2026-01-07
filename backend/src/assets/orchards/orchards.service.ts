@@ -70,6 +70,12 @@ export class OrchardsService {
 
             await session.commitTransaction();
 
+            // Hydrate the return value to match findOne (Standardization)
+            await savedOrchard.populate([
+                { path: 'clientId', select: 'name recordId' },
+                { path: 'userIds', select: 'name recordId userType' }
+            ]);
+
             await this.auditsService.log(
                 Resource.ORCHARD,
                 savedOrchard._id.toString(),
@@ -93,8 +99,10 @@ export class OrchardsService {
         const queryBuilder = new OrchardQueryBuilder(query, requestingUser, this.clientResolverService);
         const filter = await queryBuilder.build();
         return this.orchardModel.find(filter)
-            .populate('clientId', 'name recordId')
-            .populate('userIds', 'name recordId userType') // Populate assigned users
+            .populate([
+                { path: 'clientId', select: 'name recordId' },
+                { path: 'userIds', select: 'name recordId userType' }
+            ])
             .exec();
     }
 
@@ -112,8 +120,10 @@ export class OrchardsService {
         const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(orchardId) }] };
 
         const orchard = await this.orchardModel.findOne(finalFilter)
-            .populate('clientId', 'name recordId')
-            .populate('userIds', 'name recordId userType') // Populate assigned users
+            .populate([
+                { path: 'clientId', select: 'name recordId' },
+                { path: 'userIds', select: 'name recordId userType' }
+            ])
             .exec();
         if (!orchard) {
             throw new NotFoundException(`Orchard with ID "${orchardId}" not found or you do not have permission to view it.`);
@@ -157,7 +167,12 @@ export class OrchardsService {
                 { _id: orchardId, __v: updateOrchardDto.__v },
                 { $set: updatePayload, $inc: { __v: 1 } },
                 { new: true, session }
-            ).exec();
+            )
+            .populate([
+                { path: 'clientId', select: 'name recordId' },
+                { path: 'userIds', select: 'name recordId userType' }
+            ])
+            .exec();
 
             if (!updatedOrchard) {
                 const exists = await this.orchardModel.exists({ _id: orchardId });

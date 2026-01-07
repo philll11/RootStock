@@ -74,6 +74,10 @@ export class UsersService {
     const userToCreate = new this.userModel(payload);
     try {
       const savedUser = await userToCreate.save();
+      await savedUser.populate([
+        { path: 'roleId', select: 'name recordId' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]);
 
       await this.auditsService.log(
         Resource.USER,
@@ -97,21 +101,30 @@ export class UsersService {
   async findAll(query: QueryUserDto, requestingUser: UserDocument): Promise<UserDocument[]> {
     const queryBuilder = new UserQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
-    return this.userModel.find(filter).exec();
+    return this.userModel.find(filter).populate([
+        { path: 'roleId', select: 'name recordId' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]).exec();
   }
 
   async findAllByClientId(clientId: string, queryDto: QueryUserDto, requestingUser: UserDocument): Promise<UserDocument[]> {
     const queryBuilder = new UserQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.clientIds = new Types.ObjectId(clientId);
-    return this.userModel.find(filter).exec();
+    return this.userModel.find(filter).populate([
+        { path: 'roleId', select: 'name recordId' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]).exec();
   }
 
   async findAllByRoleId(roleId: string, queryDto: QueryUserDto, requestingUser: UserDocument): Promise<UserDocument[]> {
     const queryBuilder = new UserQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.roleId = new Types.ObjectId(roleId);
-    return this.userModel.find(filter).exec();
+    return this.userModel.find(filter).populate([
+        { path: 'roleId', select: 'name recordId' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]).exec();
   }
 
   /**
@@ -127,7 +140,10 @@ export class UsersService {
 
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(userId) }] };
 
-    const targetUser = await this.userModel.findOne(finalFilter).populate('roleId clientIds').exec();
+    const targetUser = await this.userModel.findOne(finalFilter).populate([
+        { path: 'roleId', select: 'name recordId' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]).exec();
 
     if (!targetUser) {
       throw new NotFoundException(`User with ID "${userId}" not found or you do not have permission to view it.`);
@@ -186,7 +202,12 @@ export class UsersService {
       { _id: userId, __v: updateUserDto.__v },
       updateOp,
       { new: true }
-    ).exec();
+    )
+    .populate([
+        { path: 'roleId', select: 'name recordId' },
+        { path: 'clientIds', select: 'name recordId' }
+      ])
+    .exec();
 
     if (!updatedUser) {
       throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');

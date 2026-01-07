@@ -75,6 +75,12 @@ export class AssessmentsService {
 
     const savedDoc = await newAssessment.save();
 
+    // Hydrate the return value to match findOne structure (API Standardization)
+    await savedDoc.populate([
+      { path: 'blockId', select: 'name recordId' },
+      { path: 'varietyId', select: 'name recordId' }
+    ]);
+
     await this.auditsService.log(
       Resource.ASSESSMENT,
       savedDoc._id.toString(),
@@ -95,8 +101,10 @@ export class AssessmentsService {
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(assessmentId) }] };
 
     const assessment = await this.assessmentModel.findOne(finalFilter)
-        .populate('blockId', 'name recordId')
-        .populate('varietyId', 'name')
+        .populate([
+          { path: 'blockId', select: 'name recordId' },
+          { path: 'varietyId', select: 'name recordId' }
+        ])
         .exec();
 
     if (!assessment) {
@@ -110,7 +118,10 @@ export class AssessmentsService {
     const filter = await queryBuilder.build();
 
     return this.assessmentModel.find(filter)
-        .populate('blockId', 'name recordId')
+        .populate([
+          { path: 'blockId', select: 'name recordId' },
+          { path: 'varietyId', select: 'name recordId' }
+        ])
         .sort({ date: -1 })
         .exec();
   }
@@ -200,7 +211,12 @@ export class AssessmentsService {
         { _id: assessmentId, __v: existing.__v },
         updateOps,
         { new: true }
-    ).exec();
+    )
+    .populate([
+      { path: 'blockId', select: 'name recordId' },
+      { path: 'varietyId', select: 'name recordId' }
+    ])
+    .exec();
 
     if (!updatedAssessment) {
          throw new ConflictException('Data has been modified by another user. Please refresh and try again.');

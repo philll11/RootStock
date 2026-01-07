@@ -76,7 +76,7 @@ export function BlockForm({
     initialValues: {
       name: '',
       // Safe id extraction with fallback to orchardId prop
-      orchardId: (orchardId || null) as string | null,
+      orchardId: null as string | null,
       isActive: true,
       plantings: [{ varietyId: null as string | null, treeCount: 0 }],
       __v: 0,

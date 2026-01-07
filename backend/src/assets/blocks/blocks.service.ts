@@ -56,6 +56,12 @@ export class BlocksService {
     try {
       const savedBlock = await newBlock.save();
 
+      // Hydrate to match findOne structure (API Standardization)
+      await savedBlock.populate([
+        { path: 'orchardId', select: 'name recordId' },
+        { path: 'plantings.varietyId', select: 'name recordId' }
+      ]);
+      
       await this.auditsService.log(
         Resource.BLOCK,
         savedBlock._id.toString(),
@@ -80,8 +86,10 @@ export class BlocksService {
     const filter = await queryBuilder.build();
 
     return this.blockModel.find(filter)
-      .populate('orchardId', 'name')
-      .populate('plantings.varietyId', 'name') // Populate embedded reference
+      .populate([
+        { path: 'orchardId', select: 'name recordId' },
+        { path: 'plantings.varietyId', select: 'name recordId' }
+      ])
       .exec();
   }
 
@@ -99,8 +107,10 @@ export class BlocksService {
     };
 
     const block = await this.blockModel.findOne(finalFilter)
-      .populate('orchardId', 'name')
-      .populate('plantings.varietyId', 'name')
+      .populate([
+        { path: 'orchardId', select: 'name recordId' },
+        { path: 'plantings.varietyId', select: 'name recordId' }
+      ])
       .exec();
 
     if (!block) {
@@ -129,7 +139,12 @@ export class BlocksService {
       { _id: blockId, __v: updateBlockDto.__v },
       { $set: updatePayload, $inc: { __v: 1 } },
       { new: true } // Return the updated doc
-    ).populate('plantings.varietyId', 'name').exec();
+    )
+    .populate([
+      { path: 'orchardId', select: 'name recordId' },
+      { path: 'plantings.varietyId', select: 'name recordId' }
+    ])
+    .exec();
 
     if (!updatedBlock) {
       throw new ConflictException('The record has been modified by another user. Please refresh and try again.');

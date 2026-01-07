@@ -78,6 +78,7 @@ export function AssessmentForm({
       samples: [],
       status: AssessmentStatus.PENDING,
       changeReason: '',
+      isActive: true,
       __v: 0,
       ...initialValues,
     },
@@ -128,6 +129,7 @@ export function AssessmentForm({
         samples: assessment.samples,
         status: assessment.status,
         changeReason: '',
+        isActive: assessment.isActive,
         __v: assessment.__v,
       });
     } else if (isCreating && initialValues) {

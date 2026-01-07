@@ -52,6 +52,11 @@ export class ClientsService {
 
     const newClient = new this.clientModel({ ...createClientDto, recordId });
     const savedClient = await newClient.save();
+    
+    // Hydrate to match findOne (Standardization)
+    await savedClient.populate([
+      { path: 'subsidiaryId', select: 'name recordId' }
+    ]);
 
     await this.auditsService.log(
       Resource.CLIENT,
@@ -69,14 +74,22 @@ export class ClientsService {
   async findAll(query: QueryClientDto, requestingUser: UserDocument): Promise<ClientDocument[]> {
     const queryBuilder = new ClientQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
-    return this.clientModel.find(filter).exec();
+    return this.clientModel.find(filter)
+      .populate([
+        { path: 'subsidiaryId', select: 'name recordId' }
+      ])
+      .exec();
   }
 
   async findAllBySubsidiaryId(subsidiaryId: string, queryDto: QueryClientDto, requestingUser: UserDocument): Promise<ClientDocument[]> {
     const queryBuilder = new ClientQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.subsidiaryId = new Types.ObjectId(subsidiaryId);
-    return this.clientModel.find(filter).exec();
+    return this.clientModel.find(filter)
+      .populate([
+        { path: 'subsidiaryId', select: 'name recordId' }
+      ])
+      .exec();
   }
 
   /**
@@ -92,7 +105,11 @@ export class ClientsService {
 
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(clientId) }] };
 
-    const client = await this.clientModel.findOne(finalFilter).exec();
+    const client = await this.clientModel.findOne(finalFilter)
+      .populate([
+        { path: 'subsidiaryId', select: 'name recordId' }
+      ])
+      .exec();
     if (!client) {
       throw new NotFoundException(`Client with ID "${clientId}" not found or you do not have permission to view it.`);
     }
@@ -136,7 +153,11 @@ export class ClientsService {
       { _id: clientId, __v: updateClientDto.__v },
       { $set: updatePayload, $inc: { __v: 1 } },
       { new: true }
-    ).exec();
+    )
+    .populate([
+      { path: 'subsidiaryId', select: 'name recordId' }
+    ])
+    .exec();
 
     if (!updatedClient) {
       throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');

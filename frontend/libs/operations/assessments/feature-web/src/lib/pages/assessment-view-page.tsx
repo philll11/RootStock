@@ -8,13 +8,14 @@ import {
   AssessmentStatus,
 } from '@rootstock/operations/assessments/assessments-data-access';
 import { AssessmentForm } from '../assessment-form';
-import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
-import { Container, Paper, Alert, LoadingOverlay, ActionIcon, Tabs, Timeline, Text, Group, Button, Modal, Textarea } from '@mantine/core';
+import { PageHeader, ConfirmModal, useContextualNavigation, SubResourceTabs } from '@rootstock/ui/web';
+import { Container, Paper, Alert, LoadingOverlay, ActionIcon, Text, Group, Button, Modal, Textarea } from '@mantine/core';
 import { IconAlertCircle, IconTrash, IconLock, IconLockOpen, IconHistory } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
-import { palette, iconSizes, spacing } from '@rootstock/ui/theme';
+import { palette, iconSizes } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { AuditTable } from '@rootstock/system/audit/audit-feature-web';
 
 export function AssessmentViewPage() {
   const { id } = useParams<{ id: string }>();
@@ -114,45 +115,29 @@ export function AssessmentViewPage() {
       />
       
       <Paper p="md" withBorder>
-        <Tabs defaultValue="samples">
-          <Tabs.List mb="md">
-            <Tabs.Tab value="samples" leftSection={<IconLock size={iconSizes.sm} />}>
-              Samples
-            </Tabs.Tab>
-            <Tabs.Tab value="history" leftSection={<IconHistory size={iconSizes.sm} />}>
-              History
-            </Tabs.Tab>
-          </Tabs.List>
-
-          <Tabs.Panel value="samples">
-            <AssessmentForm
-              mode="view"
-              assessment={assessment}
-              onSubmit={() => {}}
-              onCancel={handleCancel}
-              onEdit={!isCompleted && can(PERMISSIONS.ASSESSMENT_EDIT) ? handleEdit : undefined}
-              isLoading={false}
-              fullHeight={false}
-              isLocked={isCompleted}
-            />
-          </Tabs.Panel>
-
-          <Tabs.Panel value="history">
-             {assessment.revisionHistory && assessment.revisionHistory.length > 0 ? (
-               <Timeline active={assessment.revisionHistory.length - 1} bulletSize={24} lineWidth={2}>
-                 {assessment.revisionHistory.map((log, index) => (
-                   <Timeline.Item key={index} title={log.action} bullet={<IconHistory size={12} />}>
-                     <Text c="dimmed" size="sm">{log.reason}</Text>
-                     <Text size="xs" mt={4}>{new Date(log.date).toLocaleString()}</Text>
-                   </Timeline.Item>
-                 ))}
-               </Timeline>
-             ) : (
-               <Text c="dimmed" ta="center" py="xl">No history available.</Text>
-             )}
-          </Tabs.Panel>
-        </Tabs>
+        <AssessmentForm
+          mode="view"
+          assessment={assessment}
+          onSubmit={() => {}}
+          onCancel={handleCancel}
+          onEdit={!isCompleted && can(PERMISSIONS.ASSESSMENT_EDIT) ? handleEdit : undefined}
+          isLoading={false}
+          fullHeight={false}
+          isLocked={isCompleted}
+        />
       </Paper>
+
+      <SubResourceTabs
+        title="Related Info"
+        tabs={[
+          ...(can(PERMISSIONS.AUDIT_VIEW) ? [{
+            value: 'audit',
+            label: 'Audit Trail',
+            icon: <IconHistory size={iconSizes.sm} />,
+            content: <AuditTable resource="Assessment" recordId={id!} />,
+          }] : []),
+        ]}
+      />
 
       <ConfirmModal
         opened={deleteModalOpened}
