@@ -126,8 +126,19 @@ export class ClientsService {
   async update(clientId: string, updateClientDto: UpdateClientDto, requestingUser: UserDocument): Promise<ClientDocument> {
     // The DTO and schema now prevent subsidiaryId from being changed. This check simplifies significantly.
     const clientToUpdate = await this.findOne(clientId, requestingUser, { includeInactive: true });
+    
+    // Optimistic Concurrency Check (In-Memory)
+    if (updateClientDto.__v !== undefined && clientToUpdate.__v !== updateClientDto.__v) {
+      throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+    }
 
-    if (updateClientDto.isActive === false) {
+    // Capture original state for auditing
+    const originalState = clientToUpdate.toObject();
+
+    const { isActive, __v, ...restOfDto } = updateClientDto;
+
+    // Apply Deactivation Checks only if status is actually changing to inactive
+    if (isActive === false && clientToUpdate.isActive === true) {
       const activeUserCount = await this.usersService.countActiveByClientId(clientId);
       if (activeUserCount > 0) {
         throw new ConflictException(`This client cannot be deactivated because it has ${activeUserCount} active user(s) assigned to it.`);
@@ -138,42 +149,45 @@ export class ClientsService {
       }
     }
 
-    const { isActive, __v, ...restOfDto } = updateClientDto;
-    const updatePayload: Partial<Client> = { ...restOfDto };
-
-    if (isActive !== undefined) {
+    // Apply Permission Checks only if status is actually changing
+    if (isActive !== undefined && isActive !== clientToUpdate.isActive) {
       const userPermissions = (requestingUser.roleId as any)?.permissions || [];
       if (!userPermissions.includes(PERMISSIONS.CLIENT_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
-      updatePayload.isActive = isActive;
+      clientToUpdate.isActive = isActive;
     }
 
-    const updatedClient = await this.clientModel.findOneAndUpdate(
-      { _id: clientId, __v: updateClientDto.__v },
-      { $set: updatePayload, $inc: { __v: 1 } },
-      { new: true }
-    )
-    .populate([
-      { path: 'subsidiaryId', select: 'name recordId' }
-    ])
-    .exec();
+    // Apply standard updates
+    Object.assign(clientToUpdate, restOfDto);
+    
+    clientToUpdate.increment();
+    try {
+      const updatedClient = await clientToUpdate.save();
 
-    if (!updatedClient) {
-      throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
+      // Populate reference fields on the saved document before returning
+      await updatedClient.populate([
+        { path: 'subsidiaryId', select: 'name recordId' }
+      ]);
+
+            await this.auditsService.log(
+        Resource.CLIENT,
+        updatedClient._id.toString(),
+        AuditAction.UPDATE,
+        originalState,
+        updatedClient.toObject(),
+        requestingUser._id.toString(),
+        'Client Updated'
+      );
+
+      return updatedClient;
+
+    } catch (error: any) {
+      if (error.versionError || error.name === 'VersionError') {
+        throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+      }
+      throw error;
     }
-
-    await this.auditsService.log(
-      Resource.CLIENT,
-      updatedClient._id.toString(),
-      AuditAction.UPDATE,
-      clientToUpdate.toObject(),
-      updatedClient.toObject(),
-      requestingUser._id.toString(),
-      'Client Updated'
-    );
-
-    return updatedClient;
   }
 
   /**
@@ -289,7 +303,8 @@ export class ClientsService {
     if (targetClient.subsidiaryId) {
       // CASE 1: The target client is IN a subsidiary.
       // The contact must already belong to at least one client in that SAME subsidiary.
-      const targetSubId = targetClient.subsidiaryId.toString();
+      const targetSubId = (targetClient.subsidiaryId as any)._id ? (targetClient.subsidiaryId as any)._id.toString() : targetClient.subsidiaryId.toString();
+
       const contactBelongsToTargetSub = contactCurrentClients.some(c => c.subsidiaryId?.toString() === targetSubId);
       if (!contactBelongsToTargetSub) {
         throw new BadRequestException(`Contact user ${contactUser.recordId} belongs to a different subsidiary and cannot be assigned to this client.`);

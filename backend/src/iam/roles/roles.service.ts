@@ -40,13 +40,13 @@ export class RolesService {
     return newRole.save();
   }
 
-  async findAll(query: QueryRoleDto, requestingUser: User): Promise<Role[]> {
+  async findAll(query: QueryRoleDto, requestingUser: User): Promise<RoleDocument[]> {
     const queryBuilder = new RoleQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     return await this.roleModel.find(filter).exec();
   }
 
-  async findOne(roleId: string, requestingUser: User, options: { includeInactive?: boolean } = {}): Promise<Role> {
+  async findOne(roleId: string, requestingUser: User, options: { includeInactive?: boolean } = {}): Promise<RoleDocument> {
     const queryDto = options.includeInactive ? { includeInactives: true } : {};
     const queryBuilder = new RoleQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
@@ -67,47 +67,47 @@ export class RolesService {
     return role;
   }
 
-  async update(roleId: string, updateRoleDto: UpdateRoleDto, requestingUser: User): Promise<Role> {
+  async update(roleId: string, updateRoleDto: UpdateRoleDto, requestingUser: User): Promise<RoleDocument> {
     // Layer 2 check to ensure requestingUser has permission to see the role they are trying to update.
-    const existingRole = await this.findOne(roleId, requestingUser, { includeInactive: true });
+    const existingRole = await this.findOne(roleId, requestingUser, { includeInactive: true }) as RoleDocument;
 
-    // Business Rule: Prevent deactivation of Roles that are assigned to users
-    if (updateRoleDto.isActive === false) {
-      const activeUserCount = await this.usersService.countActiveByRoleId(roleId);
-      if (activeUserCount > 0) {
-        throw new ConflictException(`This role cannot be deactivated because it has ${activeUserCount} active user(s) assigned to it. Please reassign the users first.`);
-      }
+    // Optimistic Concurrency Control
+    if (updateRoleDto.__v !== undefined && existingRole.__v !== undefined && updateRoleDto.__v !== existingRole.__v) {
+       throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
     }
 
     const { isActive, __v, ...restOfDto } = updateRoleDto;
-    const updatePayload: Partial<Role> = { ...restOfDto };
+    
+    // Direct properties
+    Object.assign(existingRole, restOfDto);
 
-    // System Constraint: Only roles with ROLE_MANAGE_INACTIVE permissions can change Role status.
-    if (updateRoleDto.isActive !== undefined) {
+    if (isActive !== undefined && isActive !== existingRole.isActive) {
       const userPermissions = (requestingUser.roleId as any)?.permissions || [];
       if (!userPermissions.includes(PERMISSIONS.ROLE_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status of a role.');
       }
-      updatePayload.isActive = updateRoleDto.isActive;
+      
+      if (isActive === false) {
+          const activeUserCount = await this.usersService.countActiveByRoleId(roleId);
+          if (activeUserCount > 0) {
+            throw new ConflictException(`This role cannot be deactivated because it has ${activeUserCount} active user(s) assigned to it. Please reassign the users first.`);
+          }
+      }
+      existingRole.isActive = isActive;
     }
 
-    // Atomically find the document by its ID and the version from the DTO, and update it.
-    // If the document has been updated since it was fetched, its version will have changed,
-    // and the find query will not find a match, resulting in a null return.
-    const updatedRole = await this.roleModel.findOneAndUpdate(
-      { _id: roleId, __v: updateRoleDto.__v },
-      { $set: updatePayload, $inc: { __v: 1 } },
-      { new: true }
-    ).exec();
-
-    if (!updatedRole) {
-      throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
+    existingRole.increment();
+    try {
+      return await existingRole.save();
+    } catch (error: any) {
+        if (error.versionError || error.name === 'VersionError') {
+             throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
+        }
+        throw error;
     }
-
-    return updatedRole;
   }
 
-  async remove(roleId: string, requestingUser: User): Promise<Role> {
+  async remove(roleId: string, requestingUser: User): Promise<RoleDocument> {
     await this.findOne(roleId, requestingUser); // Secure authorization check
 
     const activeUserCount = await this.userModel.countDocuments({ roleId: new Types.ObjectId(roleId), isDeleted: false });

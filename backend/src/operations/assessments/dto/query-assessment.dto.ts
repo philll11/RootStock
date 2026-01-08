@@ -28,4 +28,9 @@ export class QueryAssessmentDto {
     @IsDateString()
     @IsOptional()
     readonly updatedSince?: string;
+
+    @IsBoolean()
+    @IsOptional()
+    @Type(() => Boolean)
+    readonly includeInactives?: boolean;
 }

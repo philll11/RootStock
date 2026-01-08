@@ -179,6 +179,12 @@ export class UsersService {
     }
 
     const existingUser = await this.findOne(userId, requestingUser, { includeInactive: true }); // Layer 2 User Check
+    const originalSnapshot = existingUser.toObject();
+
+    // Optimistic Concurrency Control
+    if (updateUserDto.__v !== undefined && existingUser.__v !== undefined && updateUserDto.__v !== existingUser.__v) {
+      throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
+    }
 
     // === LAYER 2 & 3: SECURITY AND DATA SILO VALIDATION (for client changes) ===
     if (updateUserDto.clientIds) {
@@ -191,39 +197,70 @@ export class UsersService {
       }
     }
 
-    const updatePayload = await this._prepareUpdatePayload(updateUserDto, existingUser, requestingUser);
-    
-    const updateOp: any = { $set: updatePayload, $inc: { __v: 1 } };
-    if (updatePayload.password || updatePayload.roleId) {
-      updateOp.$inc.tokenVersion = 1;
+    // Apply updates
+    const { roleId, clientIds, isActive, password, preferences, firstName, lastName, ...restOfDto } = updateUserDto;
+
+    // Direct properties
+    Object.assign(existingUser, restOfDto);
+
+    if (firstName || lastName) {
+      existingUser.firstName = firstName || existingUser.firstName;
+      existingUser.lastName = lastName || existingUser.lastName;
+      existingUser.name = `${existingUser.firstName} ${existingUser.lastName}`;
     }
 
-    const updatedUser = await this.userModel.findOneAndUpdate(
-      { _id: userId, __v: updateUserDto.__v },
-      updateOp,
-      { new: true }
-    )
-    .populate([
+    if (roleId) {
+      existingUser.roleId = new Types.ObjectId(roleId) as any;
+      existingUser.tokenVersion = (existingUser.tokenVersion || 0) + 1;
+    }
+
+    if (clientIds) {
+      existingUser.clientIds = clientIds.map(id => new Types.ObjectId(id)) as any;
+    }
+
+    if (password) {
+      existingUser.password = await bcrypt.hash(password, 10);
+      existingUser.tokenVersion = (existingUser.tokenVersion || 0) + 1;
+    }
+
+    if (preferences) {
+      existingUser.preferences = {
+        theme: preferences.theme || 'auto'
+      };
+    }
+
+    if (isActive !== undefined && isActive !== existingUser.isActive) {
+      if (!((requestingUser.roleId as any)?.permissions || []).includes(PERMISSIONS.USER_MANAGE_INACTIVE)) {
+        throw new ForbiddenException('You do not have permission to change the isActive status.');
+      }
+      existingUser.isActive = isActive;
+    }
+
+    existingUser.increment();
+    try {
+      const updatedUser = await existingUser.save();
+      await updatedUser.populate([
         { path: 'roleId', select: 'name recordId permissions visibilityScope' },
         { path: 'clientIds', select: 'name recordId' }
-      ])
-    .exec();
+      ]);
 
-    if (!updatedUser) {
-      throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
+      await this.auditsService.log(
+        Resource.USER,
+        updatedUser._id.toString(),
+        AuditAction.UPDATE,
+        originalSnapshot,
+        updatedUser.toObject(),
+        requestingUser._id.toString(),
+        'User Updated'
+      );
+
+      return updatedUser;
+    } catch (error: any) {
+      if (error.versionError || error.name === 'VersionError') {
+        throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
+      }
+      throw error;
     }
-
-    await this.auditsService.log(
-      Resource.USER,
-      updatedUser._id.toString(),
-      AuditAction.UPDATE,
-      existingUser.toObject(),
-      updatedUser.toObject(),
-      requestingUser._id.toString(),
-      'User Updated'
-    );
-
-    return updatedUser;
   }
 
   /**
@@ -499,39 +536,5 @@ async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null>
     });
   }
 
-  /**
- * Prepares the payload for an EXISTING user update.
- * Handles partial updates, derived fields, and authorization for sensitive fields.
- * @private
- */
-  private async _prepareUpdatePayload(dto: UpdateUserDto, existingUser: UserDocument, loggedInUser: UserDocument): Promise<Partial<UserDocument>> {
-    const { roleId, clientIds, isActive, password, preferences, __v, ...restOfDto } = dto;
-    const payload: Partial<UserDocument> = { ...restOfDto };
 
-    if (payload.firstName || payload.lastName) {
-      payload.name = `${payload.firstName || existingUser.firstName} ${payload.lastName || existingUser.lastName}`;
-    }
-
-    if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
-    if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
-    if (password) { 
-      payload.password = await bcrypt.hash(password, 10);
-      // tokenVersion increment is handled in the update method via $inc
-    }
-    if (preferences) {
-      payload.preferences = {
-        theme: preferences.theme || 'auto'
-      };
-    }
-
-    // System Constraint: Only roles with CLIENT_MANAGE_INACTIVE permissions can change Client status.
-    // This prevents non-admin users from turning off key master data records
-    if (dto.isActive !== undefined) {
-      if (!((loggedInUser.roleId as any)?.permissions || []).includes(PERMISSIONS.USER_MANAGE_INACTIVE)) {
-        throw new ForbiddenException('You do not have permission to change the isActive status.');
-      }
-      payload.isActive = isActive;
-    }
-    return payload;
-  }
 }

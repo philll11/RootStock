@@ -94,8 +94,9 @@ export class AssessmentsService {
     return savedDoc;
   }
 
-  async findOne(assessmentId: string, requestingUser: UserDocument): Promise<AssessmentDocument> {
-    const queryBuilder = new AssessmentQueryBuilder({}, requestingUser, this.clientResolverService);
+  async findOne(assessmentId: string, requestingUser: UserDocument, options: { includeInactive?: boolean } = {}): Promise<AssessmentDocument> {
+    const queryDto = options.includeInactive ? { includeInactives: true } : {};
+    const queryBuilder = new AssessmentQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const securityFilter = await queryBuilder.build();
 
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(assessmentId) }] };
@@ -127,11 +128,15 @@ export class AssessmentsService {
   }
 
   async update(assessmentId: string, updateDto: UpdateAssessmentDto, requestingUser: UserDocument): Promise<AssessmentDocument> {
-    const existing = await this.findOne(assessmentId, requestingUser);
+    const existing = await this.findOne(assessmentId, requestingUser, { includeInactive: true }); // Layer 2 Check & Snapshot
 
-    // 1. Determine Expected Version
-    const updateOps: any = { $set: {}, $inc: {} };
-    let hasChanges = false;
+    // Optimistic Concurrency Check (Fail-Fast)
+    if (updateDto.__v !== undefined && existing.__v !== updateDto.__v) {
+      throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
+    }
+
+    // Capture original state for auditing
+    const originalState = existing.toObject();
 
     // 1. Compliance Check (The Lock)
     if (existing.status === AssessmentStatus.COMPLETED) {
@@ -139,13 +144,19 @@ export class AssessmentsService {
       if (updateDto.status !== AssessmentStatus.IN_PROGRESS) {
         throw new BadRequestException('Completed assessments are locked. You must reopen the assessment (set status to IN_PROGRESS) to make changes.');
       }
+      
+      // Strict Reopen: Prevent changing other fields simultaneously
+      if (updateDto.samples || updateDto.name || updateDto.date || updateDto.type) {
+         throw new BadRequestException('Cannot modify assessment data while reopening. Please reopen first, then make changes.');
+      }
+
       // If Reopening, ensure reason exists
       if (!updateDto.changeReason) {
         throw new BadRequestException('A changeReason is mandatory when reopening a Completed assessment.');
       }
     }
 
-    // 3. Calculate New State
+    // 2. Calculate New State & Business Logic
     let newStatus = updateDto.status || existing.status;
 
     if (updateDto.samples) {
@@ -153,14 +164,13 @@ export class AssessmentsService {
       const sanitizedSamples = this.calculator.reindexSamples(updateDto.samples);
       const newSummary = this.calculator.calculateStats(sanitizedSamples);
 
-      updateOps.$set.samples = sanitizedSamples;
-      updateOps.$set.summary = newSummary;
+      existing.samples = sanitizedSamples as any; // Cast if necessary, or let Mongoose handle embedded
+      existing.summary = newSummary;
 
       // Auto-Transition
       if (existing.status === AssessmentStatus.PENDING && sanitizedSamples.length > 0) {
         newStatus = AssessmentStatus.IN_PROGRESS;
       }
-      hasChanges = true;
     }
 
     // Validate Completion
@@ -173,73 +183,51 @@ export class AssessmentsService {
 
     // Apply Status Change
     if (newStatus !== existing.status) {
-      updateOps.$set.status = newStatus;
-      hasChanges = true;
+      existing.status = newStatus;
     }
 
-    if (updateDto.name) {
-      updateOps.$set.name = updateDto.name;
-      hasChanges = true;
-    }
+    if (updateDto.name) existing.name = updateDto.name;
+    if (updateDto.type) existing.type = updateDto.type;
+    if (updateDto.date) existing.date = updateDto.date;
+    if (updateDto.isActive !== undefined) existing.isActive = updateDto.isActive;
+    if (updateDto.changeReason) existing.changeReason = updateDto.changeReason;
 
-    if (updateDto.type) {
-      updateOps.$set.type = updateDto.type;
-      hasChanges = true;
-    }
+    existing.increment();
 
-    if (updateDto.date) {
-      updateOps.$set.date = updateDto.date;
-      hasChanges = true;
-    }
+    // 3. Save with Atomic Versioning
+    try {
+      const updatedAssessment = await existing.save();
 
-    if (updateDto.isActive !== undefined) {
-      updateOps.$set.isActive = updateDto.isActive;
-      hasChanges = true;
-    }
-
-    // 6. Execute Atomic Update
-    if (!hasChanges) return existing;
-
-    updateOps.$inc.__v = 1;
-
-    // OCC Check
-    if (updateDto.__v !== undefined && updateDto.__v !== existing.__v) {
-      throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
-    }
-
-    const updatedAssessment = await this.assessmentModel.findOneAndUpdate(
-      { _id: assessmentId, __v: existing.__v },
-      updateOps,
-      { new: true }
-    )
-      .populate([
+      await updatedAssessment.populate([
         { path: 'blockId', select: 'name recordId' },
         { path: 'varietyId', select: 'name recordId' }
-      ])
-      .exec();
+      ]);
 
-    if (!updatedAssessment) {
-      throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
+      // 4. Log Audit
+      const ignoredPaths = ['summary'];
+      const itemIdentityMap = { 'samples': 'rowNumber' };
+      const fieldDisplayNameMap = { 'blockId': 'Block', 'varietyId': 'Variety' };
+      await this.auditsService.log(
+        Resource.ASSESSMENT,
+        updatedAssessment._id.toString(),
+        AuditAction.UPDATE,
+        originalState,
+        updatedAssessment.toObject(),
+        requestingUser._id.toString(),
+        updateDto.changeReason || 'Assessment Updated',
+        ignoredPaths,
+        itemIdentityMap,
+        fieldDisplayNameMap
+      );
+
+      return updatedAssessment;
+
+    } catch (error: any) {
+      if (error.versionError || error.name === 'VersionError') {
+        throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
+      }
+      throw error;
     }
-
-    // 7. Log Audit
-    const ignoredPaths = ['summary'];
-    const itemIdentityMap = { 'samples': 'rowNumber' };
-    const fieldDisplayNameMap = { 'blockId': 'Block', 'varietyId': 'Variety' };
-    await this.auditsService.log(
-      Resource.ASSESSMENT,
-      updatedAssessment._id.toString(),
-      AuditAction.UPDATE,
-      existing.toObject(),
-      updatedAssessment.toObject(),
-      requestingUser._id.toString(),
-      updateDto.changeReason || 'Assessment Updated',
-      ignoredPaths,
-      itemIdentityMap,
-      fieldDisplayNameMap
-    );
-
-    return updatedAssessment;
   }
 
   async remove(assessmentId: string, requestingUser: UserDocument): Promise<AssessmentDocument> {

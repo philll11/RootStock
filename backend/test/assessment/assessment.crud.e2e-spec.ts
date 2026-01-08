@@ -108,7 +108,8 @@ describe('Assessments CRUD & Data Logic (e2e)', () => {
 
             expect(res.body.recordId).toMatch(/^ASM\d{4}$/);
             // Verify Snapshot Logic: The assessment must store the varietyId, NOT lookup dynamically
-            expect(res.body.varietyId).toBe((varietyGala as any)._id.toString());
+            expect(res.body.varietyId._id).toBe((varietyGala as any)._id.toString());
+            expect(res.body.varietyId.name).toBe('Gala');
             // Verify Default Status
             expect(res.body.status).toBe(AssessmentStatus.PENDING);
         });

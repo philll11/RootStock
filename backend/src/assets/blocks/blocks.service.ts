@@ -16,10 +16,8 @@ import { CountersService } from '../../system/counters/counters.service';
 import { ClientResolverService } from '../../iam/client-resolver/client-resolver.service';
 import { UserDocument } from '../../iam/users/schemas/user.schema';
 import { AssessmentsService } from '../../operations/assessments/assessments.service';
-import { AssessmentStatus } from '../../operations/assessments/schemas/assessment.schema';
 
 import { PERMISSIONS, Resource } from '../../common/constants/permissions.constants';
-import { log } from 'console';
 import { AuditsService } from '../../system/audits/audits.service';
 import { AuditAction } from '../../system/audits/schemas/audit.schema';
 
@@ -49,7 +47,7 @@ export class BlocksService {
       ...createBlockDto,
       recordId,
       orchardId: new Types.ObjectId(orchardId),
-      clientId: orchard.clientId,
+      clientId: (orchard.clientId as any)._id || orchard.clientId,
     });
 
     // Simple atomic save since Block has no children yet
@@ -121,34 +119,38 @@ export class BlocksService {
 
   async update(blockId: string, updateBlockDto: UpdateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {
     const blockToUpdate = await this.findOne(blockId, requestingUser, { includeInactive: true });
+    
+    // Optimistic Concurrency Check (In-Memory)
+    if (updateBlockDto.__v !== undefined && blockToUpdate.__v !== updateBlockDto.__v) {
+      throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+    }
+
+    // Capture original state for auditing
+    const originalState = blockToUpdate.toObject();
 
     const { isActive, __v, ...restOfDto } = updateBlockDto;
-    const updatePayload: any = { ...restOfDto };
-
 
     // System Constraint: Only roles with BLOCK_MANAGE_INACTIVE permissions can change Block status.
-    if (updateBlockDto.isActive !== undefined) {
+    if (isActive !== undefined && isActive !== blockToUpdate.isActive) {
       const userPermissions = (requestingUser.roleId as any)?.permissions || [];
       if (!userPermissions.includes(PERMISSIONS.BLOCK_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status of a block.');
       }
-      updatePayload.isActive = updateBlockDto.isActive;
+      blockToUpdate.isActive = isActive;
     }
 
-    const updatedBlock = await this.blockModel.findOneAndUpdate(
-      { _id: blockId, __v: updateBlockDto.__v },
-      { $set: updatePayload, $inc: { __v: 1 } },
-      { new: true } // Return the updated doc
-    )
-      .populate([
+    // Apply standard updates
+    Object.assign(blockToUpdate, restOfDto);
+
+    try {
+      blockToUpdate.increment();
+      const updatedBlock = await blockToUpdate.save();
+
+      await updatedBlock.populate([
         { path: 'orchardId', select: 'name recordId' },
         { path: 'plantings.varietyId', select: 'name recordId' }
-      ])
-      .exec();
+      ]);
 
-    if (!updatedBlock) {
-      throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
-    }
 
     const ignoredPaths = [];
     const itemIdentityMap = { 'plantings': '^varietyId.name' };
@@ -157,7 +159,7 @@ export class BlocksService {
       Resource.BLOCK,
       updatedBlock._id.toString(),
       AuditAction.UPDATE,
-      blockToUpdate.toObject(),
+      originalState,
       updatedBlock.toObject(),
       requestingUser._id.toString(),
       'Block Updated',
@@ -167,6 +169,13 @@ export class BlocksService {
     );
 
     return updatedBlock;
+
+    } catch (error: any) {
+      if (error.versionError || error.name === 'VersionError') {
+        throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+      }
+      throw error;
+    }
   }
 
   async remove(blockId: string, requestingUser: UserDocument): Promise<BlockDocument> {

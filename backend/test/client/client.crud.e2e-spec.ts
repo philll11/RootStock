@@ -82,7 +82,7 @@ describe('Clients CRUD & Business Logic (e2e)', () => {
             const noSubDto: CreateClientDto = { name: 'New Independent Client' };
 
             const res1 = await request(app.getHttpServer()).post('/clients').set('Authorization', `Bearer ${globalAdminToken}`).send(withSubDto).expect(201);
-            expect(res1.body.subsidiaryId).toBe(testSubsidiary._id.toString());
+            expect(res1.body.subsidiaryId._id).toBe(testSubsidiary._id.toString());
             expect(res1.body.recordId).toMatch(/^CLI\d{4}$/);
 
             const res2 = await request(app.getHttpServer()).post('/clients').set('Authorization', `Bearer ${globalAdminToken}`).send(noSubDto).expect(201);

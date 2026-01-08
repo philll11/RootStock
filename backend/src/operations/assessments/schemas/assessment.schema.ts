@@ -88,6 +88,9 @@ export class Assessment {
     @Prop({ required: true, enum: AssessmentStatus, default: AssessmentStatus.PENDING, index: true })
     status: AssessmentStatus;
 
+    @Prop({ required: false })
+    changeReason?: string;
+
     // -- EMBEDDED DATA --
 
     @Prop({ type: [AssessmentSampleSchema], default: [] })

@@ -259,10 +259,10 @@ describe('Blocks Audit Integration (e2e)', () => {
     expect(logs).toHaveLength(1);
     
     // Check for semantic key
-    const change = logs[0].changes.find(c => c.field.includes('plantings'));
+    const change = logs[0].changes.find(c => c.field.includes('Plantings'));
     expect(change).toBeDefined();
-    // Expected key: plantings[Test Variety].treeCount
-    expect(change!.field).toContain('plantings[Test Variety].treeCount');
+    // Expected key: Plantings - Test Variety.treeCount
+    expect(change!.field).toContain('Plantings - Test Variety.treeCount');
     expect(change!.oldValue).toBe(100);
     expect(change!.newValue).toBe(150);
   });

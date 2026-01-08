@@ -21,7 +21,7 @@ export class VarietiesService {
     private readonly clientResolverService: ClientResolverService,
   ) { }
 
-  async create(createVarietyDto: CreateVarietyDto, requestingUser: UserDocument): Promise<Variety> {
+  async create(createVarietyDto: CreateVarietyDto, requestingUser: UserDocument): Promise<VarietyDocument> {
     // Check for case-insensitive uniqueness
     const existingVariety = await this.varietyModel.findOne({
       name: { $regex: new RegExp(`^${createVarietyDto.name}$`, 'i') },
@@ -41,15 +41,15 @@ export class VarietiesService {
     return createdVariety.save();
   }
 
-  async findAll(query: VarietyQueryDto, requestingUser: UserDocument): Promise<Variety[]> {
+  async findAll(query: VarietyQueryDto, requestingUser: UserDocument): Promise<VarietyDocument[]> {
     const queryBuilder = new VarietyQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     return this.varietyModel.find(filter).sort({ name: 1 }).exec();
   }
 
-  async findOne(id: string, requestingUser: UserDocument): Promise<Variety> {
-    // Use the builder to ensure security scope is applied even for single fetches
-    const queryBuilder = new VarietyQueryBuilder({}, requestingUser, this.clientResolverService);
+  async findOne(id: string, requestingUser: UserDocument, options: { includeInactive?: boolean } = {}): Promise<VarietyDocument> {
+    const queryDto = options.includeInactive ? { includeInactives: true } : {};
+    const queryBuilder = new VarietyQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter._id = id;
 
@@ -60,8 +60,8 @@ export class VarietiesService {
     return variety;
   }
 
-  async update(id: string, updateVarietyDto: UpdateVarietyDto, requestingUser: UserDocument): Promise<Variety> {
-    const existingEntity = await this.findOne(id, requestingUser) as VarietyDocument;
+  async update(id: string, updateVarietyDto: UpdateVarietyDto, requestingUser: UserDocument): Promise<VarietyDocument> {
+    const existingEntity = await this.findOne(id, requestingUser, { includeInactive: true });
 
     // Optimistic Concurrency Check (In-Memory)
     if (existingEntity.__v !== updateVarietyDto.__v) {
@@ -94,6 +94,8 @@ export class VarietiesService {
       existingEntity.isActive = isActive;
     }
 
+    existingEntity.increment(); // Increment version for optimistic concurrency
+
     try {
       return await existingEntity.save();
     } catch (error: any) {
@@ -104,19 +106,21 @@ export class VarietiesService {
     }
   }
 
-  async remove(id: string, requestingUser: UserDocument): Promise<Variety> {
+  async remove(varietyId: string, requestingUser: UserDocument): Promise<VarietyDocument> {
+    const clientToDelete = await this.findOne(varietyId, requestingUser); // Layer 2 Client Check
+
     // Check if variety is used in any active Blocks before deleting
-    const activeBlockCount = await this.blocksService.countActiveByVarietyId(id);
+    const activeBlockCount = await this.blocksService.countActiveByVarietyId(varietyId);
     if (activeBlockCount > 0) {
       throw new ConflictException('Cannot delete Variety because it is referenced by one or more active Blocks.');
     }
 
     const deletedVariety = await this.varietyModel
-      .findByIdAndUpdate(id, { isDeleted: true, isActive: false }, { new: true })
+      .findByIdAndUpdate(varietyId, { isDeleted: true, isActive: false }, { new: true })
       .exec();
 
     if (!deletedVariety) {
-      throw new NotFoundException(`Variety with ID "${id}" not found`);
+      throw new NotFoundException(`Variety with ID "${varietyId}" not found`);
     }
     return deletedVariety;
   }

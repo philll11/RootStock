@@ -96,7 +96,7 @@ describe('Blocks CRUD & Business Logic (e2e)', () => {
             expect(res.body.name).toBe(createDto.name);
             expect(res.body.recordId).toMatch(/^BLK\d{3,4}$/); // Matches BLK + sequence
             expect(res.body.plantings).toHaveLength(2);
-            expect(res.body.clientId._id).toBe(testClient._id.toString()); // Verify Denormalization
+            expect(res.body.clientId).toBe(testClient._id.toString()); // Verify Denormalization
         });
 
         it('should reject creation with duplicate name in same orchard (Uniqueness)', async () => {
