@@ -185,6 +185,13 @@ export class OrchardsService {
 
             await session.commitTransaction();
 
+            const ignoredPaths = [];
+            const itemIdentityMap = {};
+            const fieldDisplayNameMap = {
+                'userIds': 'Assigned Users',
+                'clientId': 'Client'
+            };
+
             await this.auditsService.log(
                 Resource.ORCHARD,
                 updatedOrchard._id.toString(),
@@ -192,7 +199,10 @@ export class OrchardsService {
                 targetOrchard.toObject(),
                 updatedOrchard.toObject(),
                 requestingUser._id.toString(),
-                'Orchard Updated'
+                'Orchard Updated',
+                ignoredPaths,
+                itemIdentityMap,
+                fieldDisplayNameMap
             );
 
             return updatedOrchard;

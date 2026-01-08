@@ -53,7 +53,8 @@ export class AuditsService {
     userId: string,
     reason: string,
     ignoredPaths: string[] = [],
-    labelConfig: Record<string, string> = {},
+    itemIdentityMap: Record<string, string> = {},
+    fieldDisplayNameMap: Record<string, string> = {},
   ): Promise<AuditEntry | null> {
     try {
       // 1. Check Configuration
@@ -64,7 +65,7 @@ export class AuditsService {
       // 2. Compute Diffs
       let changes: AuditChange[] = [];
       if (action === AuditAction.UPDATE) {
-        changes = this.diffService.computeDiff(oldData, newData, '', ignoredPaths, labelConfig);
+        changes = this.diffService.computeDiff(oldData, newData, '', ignoredPaths, itemIdentityMap, fieldDisplayNameMap);
         if (changes.length === 0) {
           return null; // No actual changes detected
         }

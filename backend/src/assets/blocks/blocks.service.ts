@@ -61,7 +61,7 @@ export class BlocksService {
         { path: 'orchardId', select: 'name recordId' },
         { path: 'plantings.varietyId', select: 'name recordId' }
       ]);
-      
+
       await this.auditsService.log(
         Resource.BLOCK,
         savedBlock._id.toString(),
@@ -140,17 +140,19 @@ export class BlocksService {
       { $set: updatePayload, $inc: { __v: 1 } },
       { new: true } // Return the updated doc
     )
-    .populate([
-      { path: 'orchardId', select: 'name recordId' },
-      { path: 'plantings.varietyId', select: 'name recordId' }
-    ])
-    .exec();
+      .populate([
+        { path: 'orchardId', select: 'name recordId' },
+        { path: 'plantings.varietyId', select: 'name recordId' }
+      ])
+      .exec();
 
     if (!updatedBlock) {
       throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
     }
 
-    const labelConfig = { 'plantings': '^varietyId.name' };
+    const ignoredPaths = [];
+    const itemIdentityMap = { 'plantings': '^varietyId.name' };
+    const fieldDisplayNameMap = { 'orchardId': 'Orchard', 'plantings': 'Plantings' };
     await this.auditsService.log(
       Resource.BLOCK,
       updatedBlock._id.toString(),
@@ -159,8 +161,9 @@ export class BlocksService {
       updatedBlock.toObject(),
       requestingUser._id.toString(),
       'Block Updated',
-      [],
-      labelConfig
+      ignoredPaths,
+      itemIdentityMap,
+      fieldDisplayNameMap
     );
 
     return updatedBlock;

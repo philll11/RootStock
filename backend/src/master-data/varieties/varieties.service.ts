@@ -61,7 +61,15 @@ export class VarietiesService {
   }
 
   async update(id: string, updateVarietyDto: UpdateVarietyDto, requestingUser: UserDocument): Promise<Variety> {
-    if (updateVarietyDto.name) {
+    const existingEntity = await this.findOne(id, requestingUser) as VarietyDocument;
+
+    // Optimistic Concurrency Check (In-Memory)
+    if (existingEntity.__v !== updateVarietyDto.__v) {
+      throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+    }
+
+    // Check for case-insensitive uniqueness if name is being changed
+    if (updateVarietyDto.name && updateVarietyDto.name !== existingEntity.name) {
       const existingVariety = await this.varietyModel.findOne({
         name: { $regex: new RegExp(`^${updateVarietyDto.name}$`, 'i') },
         _id: { $ne: id }
@@ -73,34 +81,27 @@ export class VarietiesService {
     }
 
     const { isActive, __v, ...restOfDto } = updateVarietyDto;
-    const updatePayload: Partial<Variety> = { ...restOfDto };
+    
+    // Apply basic updates
+    Object.assign(existingEntity, restOfDto);
 
     // System Constraint: Only roles with VARIETY_MANAGE_INACTIVE permissions can change Variety status.
-    if (updateVarietyDto.isActive !== undefined) {
+    if (isActive !== undefined && isActive !== existingEntity.isActive) {
       const userPermissions = (requestingUser.roleId as any)?.permissions || [];
       if (!userPermissions.includes(PERMISSIONS.VARIETY_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status of a variety.');
       }
-      updatePayload.isActive = updateVarietyDto.isActive;
+      existingEntity.isActive = isActive;
     }
 
-    const updatedVariety = await this.varietyModel
-      .findOneAndUpdate(
-        { _id: id, __v: updateVarietyDto.__v },
-        { $set: updatePayload, $inc: { __v: 1 } },
-        { new: true }
-      )
-      .exec();
-
-    if (!updatedVariety) {
-      // If update fails, check if it was due to version mismatch or ID not found
-      const exists = await this.varietyModel.exists({ _id: id });
-      if (exists) {
-        throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+    try {
+      return await existingEntity.save();
+    } catch (error: any) {
+      if (error.versionError || error.name === 'VersionError') {
+         throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
       }
-      throw new NotFoundException(`Variety with ID "${id}" not found`);
+      throw error;
     }
-    return updatedVariety;
   }
 
   async remove(id: string, requestingUser: UserDocument): Promise<Variety> {

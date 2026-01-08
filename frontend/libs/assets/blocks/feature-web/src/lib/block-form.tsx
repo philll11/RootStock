@@ -83,14 +83,11 @@ export function BlockForm({
       ...initialValues,
     },
     validate: {
-      name: (value) =>
-        value.length < 2 ? 'Name must be at least 2 characters' : null,
-      orchardId: (value) =>
-        !value && !orchardId ? 'Orchard is required' : null,
+      name: (value) => value.length < 2 ? 'Name must be at least 2 characters' : null,
+      orchardId: (value) => !value && !orchardId ? 'Orchard is required' : null,
       plantings: {
         varietyId: (value) => (!value ? 'Variety is required' : null),
-        treeCount: (value) =>
-          value < 0 ? 'Tree count must be positive' : null,
+        treeCount: (value) => value < 0 ? 'Tree count must be positive' : null,
       },
     },
   });
@@ -145,13 +142,11 @@ export function BlockForm({
         name: block.name,
         orchardId: block.orchardId ? typeof block.orchardId === 'object' ? block.orchardId._id : block.orchardId : orchardId || null,
         isActive: block.isActive,
-        plantings:
-          block.plantings?.map((p) => ({
-            _id: p._id, // Add _id here to preserve stable identity
-            varietyId:
-              typeof p.varietyId === 'object' ? p.varietyId._id : p.varietyId,
-            treeCount: p.treeCount,
-          })) || [],
+        plantings: block.plantings?.map((p) => ({
+          _id: p._id, // Add _id here to preserve stable identity
+          varietyId: typeof p.varietyId === 'object' ? p.varietyId._id : p.varietyId,
+          treeCount: p.treeCount,
+        })) || [],
         __v: block.__v,
       });
     } else if (isCreating && initialValues) {
