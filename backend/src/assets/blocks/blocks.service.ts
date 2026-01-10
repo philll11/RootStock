@@ -16,10 +16,10 @@ import { CountersService } from '../../system/counters/counters.service';
 import { ClientResolverService } from '../../iam/client-resolver/client-resolver.service';
 import { UserDocument } from '../../iam/users/schemas/user.schema';
 import { AssessmentsService } from '../../operations/assessments/assessments.service';
-import { AssessmentStatus } from '../../operations/assessments/schemas/assessment.schema';
 
-import { PERMISSIONS } from '../../common/constants/permissions.constants';
-import { log } from 'console';
+import { PERMISSIONS, Resource } from '../../common/constants/permissions.constants';
+import { AuditsService } from '../../system/audits/audits.service';
+import { AuditAction } from '../../system/audits/schemas/audit.schema';
 
 @Injectable()
 export class BlocksService {
@@ -28,6 +28,7 @@ export class BlocksService {
     @InjectConnection() private connection: Connection,
     @Inject(forwardRef(() => OrchardsService)) private readonly orchardsService: OrchardsService,
     @Inject(forwardRef(() => AssessmentsService)) private readonly assessmentsService: AssessmentsService,
+    @Inject(forwardRef(() => AuditsService)) private readonly auditsService: AuditsService,
     private readonly countersService: CountersService,
     private readonly clientResolverService: ClientResolverService,
   ) { }
@@ -46,12 +47,30 @@ export class BlocksService {
       ...createBlockDto,
       recordId,
       orchardId: new Types.ObjectId(orchardId),
-      clientId: orchard.clientId,
+      clientId: (orchard.clientId as any)._id || orchard.clientId,
     });
 
     // Simple atomic save since Block has no children yet
     try {
-      return await newBlock.save();
+      const savedBlock = await newBlock.save();
+
+      // Hydrate to match findOne structure (API Standardization)
+      await savedBlock.populate([
+        { path: 'orchardId', select: 'name recordId' },
+        { path: 'plantings.varietyId', select: 'name recordId' }
+      ]);
+
+      await this.auditsService.log(
+        Resource.BLOCK,
+        savedBlock._id.toString(),
+        AuditAction.CREATE,
+        null,
+        savedBlock.toObject(),
+        requestingUser._id.toString(),
+        'Block Created'
+      );
+
+      return savedBlock;
     } catch (error) {
       if (error.code === 11000) {
         throw new ConflictException('Block name already exists in this orchard.');
@@ -65,8 +84,10 @@ export class BlocksService {
     const filter = await queryBuilder.build();
 
     return this.blockModel.find(filter)
-      .populate('orchardId', 'name')
-      .populate('plantings.varietyId', 'name') // Populate embedded reference
+      .populate([
+        { path: 'orchardId', select: 'name recordId' },
+        { path: 'plantings.varietyId', select: 'name recordId' }
+      ])
       .exec();
   }
 
@@ -84,8 +105,10 @@ export class BlocksService {
     };
 
     const block = await this.blockModel.findOne(finalFilter)
-      .populate('orchardId', 'name')
-      .populate('plantings.varietyId', 'name')
+      .populate([
+        { path: 'orchardId', select: 'name recordId' },
+        { path: 'plantings.varietyId', select: 'name recordId' }
+      ])
       .exec();
 
     if (!block) {
@@ -95,37 +118,69 @@ export class BlocksService {
   }
 
   async update(blockId: string, updateBlockDto: UpdateBlockDto, requestingUser: UserDocument): Promise<BlockDocument> {
-    await this.findOne(blockId, requestingUser, { includeInactive: true });
+    const blockToUpdate = await this.findOne(blockId, requestingUser, { includeInactive: true });
+    
+    // Optimistic Concurrency Check (In-Memory)
+    if (updateBlockDto.__v !== undefined && blockToUpdate.__v !== updateBlockDto.__v) {
+      throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+    }
+
+    // Capture original state for auditing
+    const originalState = blockToUpdate.toObject();
 
     const { isActive, __v, ...restOfDto } = updateBlockDto;
-    const updatePayload: any = { ...restOfDto };
-
 
     // System Constraint: Only roles with BLOCK_MANAGE_INACTIVE permissions can change Block status.
-    if (updateBlockDto.isActive !== undefined) {
+    if (isActive !== undefined && isActive !== blockToUpdate.isActive) {
       const userPermissions = (requestingUser.roleId as any)?.permissions || [];
       if (!userPermissions.includes(PERMISSIONS.BLOCK_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status of a block.');
       }
-      updatePayload.isActive = updateBlockDto.isActive;
+      blockToUpdate.isActive = isActive;
     }
 
-    const updatedBlock = await this.blockModel.findOneAndUpdate(
-      { _id: blockId, __v: updateBlockDto.__v },
-      { $set: updatePayload, $inc: { __v: 1 } },
-      { new: true } // Return the updated doc
-    ).populate('plantings.varietyId', 'name').exec();
+    // Apply standard updates
+    Object.assign(blockToUpdate, restOfDto);
 
-    if (!updatedBlock) {
-      throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
-    }
+    try {
+      blockToUpdate.increment();
+      const updatedBlock = await blockToUpdate.save();
+
+      await updatedBlock.populate([
+        { path: 'orchardId', select: 'name recordId' },
+        { path: 'plantings.varietyId', select: 'name recordId' }
+      ]);
+
+
+    const ignoredPaths = [];
+    const itemIdentityMap = { 'plantings': '^varietyId.name' };
+    const fieldDisplayNameMap = { 'orchardId': 'Orchard', 'plantings': 'Plantings' };
+    await this.auditsService.log(
+      Resource.BLOCK,
+      updatedBlock._id.toString(),
+      AuditAction.UPDATE,
+      originalState,
+      updatedBlock.toObject(),
+      requestingUser._id.toString(),
+      'Block Updated',
+      ignoredPaths,
+      itemIdentityMap,
+      fieldDisplayNameMap
+    );
 
     return updatedBlock;
+
+    } catch (error: any) {
+      if (error.versionError || error.name === 'VersionError') {
+        throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+      }
+      throw error;
+    }
   }
 
   async remove(blockId: string, requestingUser: UserDocument): Promise<BlockDocument> {
     // Validate access first
-    await this.findOne(blockId, requestingUser);
+    const blockToDelete = await this.findOne(blockId, requestingUser);
 
     // Check for active assessments
     const hasActiveAssessments = await this.assessmentsService.checkActiveAssessmentsForBlock(blockId);
@@ -144,6 +199,17 @@ export class BlocksService {
       );
 
       await session.commitTransaction();
+
+      await this.auditsService.log(
+        Resource.BLOCK,
+        blockId,
+        AuditAction.DELETE,
+        blockToDelete.toObject(),
+        null,
+        requestingUser._id.toString(),
+        'Block Deleted'
+      );
+
       return deletedBlock;
     } catch (error) {
       await session.abortTransaction();

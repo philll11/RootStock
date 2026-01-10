@@ -1,5 +1,5 @@
 {
-  "name": "@rootstock/orchards/orchards-feature-web",
+  "name": "@rootstock/assets/orchards/orchards-feature-web",
   "version": "0.0.1",
   "main": "./index.js",
   "types": "./index.d.ts",

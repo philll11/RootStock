@@ -1,5 +1,5 @@
 // frontend/libs/assets/orchards/feature-web/src/lib/orchard-form.tsx
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   TextInput,
   Switch,
@@ -12,30 +12,30 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { useClients } from '@rootstock/clients/clients-data-access';
-import { useUsers } from '@rootstock/users/users-data-access';
+import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
+import { useGetUsers } from '@rootstock/iam/users/users-data-access';
 import {
   Orchard,
-  CreateOrchardDto,
-  UpdateOrchardDto,
-} from '@rootstock/orchards/orchards-data-access';
+  OrchardFormData,
+} from '@rootstock/assets/orchards/orchards-data-access';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { iconSizes } from '@rootstock/ui/theme';
 import { FormLayout } from '@rootstock/ui/web';
 
+// ### Interfaces & Types ###
 export type OrchardFormMode = 'create' | 'edit' | 'view';
 
 interface OrchardFormProps {
   mode: OrchardFormMode;
   orchard?: Orchard | null;
-  initialValues?: Partial<CreateOrchardDto>;
-  onSubmit: (values: CreateOrchardDto | UpdateOrchardDto) => void;
+  initialValues?: Partial<OrchardFormData>;
+  onSubmit: (values: OrchardFormData) => void;
   isLoading: boolean;
   onCancel: () => void;
   onEdit?: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
-  onValuesChange?: (values: Partial<CreateOrchardDto>) => void;
+  onValuesChange?: (values: Partial<OrchardFormData>) => void;
   fullHeight?: boolean;
 }
 
@@ -51,15 +51,16 @@ export function OrchardForm({
   onDirtyChange,
   fullHeight = true,
 }: OrchardFormProps) {
+
+  // ### Form Modes, Permissions & State ###
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
-  const { clients, isLoading: isLoadingClients } = useClients();
-  const { users, isLoading: isLoadingUsers } = useUsers();
-  const { can } = usePermission();
 
+  const { can } = usePermission()
 
-  const form = useForm({
+  // ### Form Definition ###
+  const form = useForm<OrchardFormData>({
     initialValues: {
       name: '',
       clientId: null as string | null,
@@ -73,11 +74,29 @@ export function OrchardForm({
       clientId: (value) => (!value ? 'Client is required' : null),
     },
   });
+  ;
 
+  // ### Data Fetching & Options ###
+  const { data: clients = [], isLoading: isLoadingClients } = useGetClients();
+  const { data: users = [], isLoading: isLoadingUsers } = useGetUsers();
+
+  const clientOptions = useMemo(() => {
+    return (clients || []).map((c) => ({ value: c._id, label: c.name }));
+  }, [clients]);
+
+  const userOptions = useMemo(() => {
+    return (users || []).map((u) => ({
+      value: u._id,
+      label: `${u.firstName} ${u.lastName}`,
+    }));
+  }, [users]);
+
+
+  // ### Side Effects ###
   useEffect(() => {
     if (isCreating && onValuesChange) {
       const { isActive, ...rest } = form.values;
-      onValuesChange(rest as CreateOrchardDto);
+      onValuesChange(rest as OrchardFormData);
     }
   }, [form.values, isCreating, onValuesChange]);
 
@@ -105,18 +124,17 @@ export function OrchardForm({
     }
   }, [orchard, mode, isEditing, isViewing, isCreating]);
 
+  // ### Event Handlers ###
   const handleSubmit = (values: typeof form.values) => {
-    if (isCreating) {
-      const { isActive, __v, ...createValues } = values;
-      onSubmit(createValues as CreateOrchardDto);
-    } else {
-      const submissionData: UpdateOrchardDto = { ...values };
-      // Only send isActive if it has actually changed
-      if (orchard && orchard.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
-      onSubmit(submissionData);
+    const submissionData: any = { ...values };
+    if (isEditing) {
+      submissionData.__v = orchard!.__v;
     }
+    if (isCreating) {
+      delete submissionData.isActive;
+      delete submissionData.__v;
+    }
+    onSubmit(submissionData as OrchardFormData);
   };
 
   const handleValidationErrors = () => {
@@ -131,6 +149,7 @@ export function OrchardForm({
     });
   };
 
+  // ### Render ###
   return (
     <FormLayout
       mode={mode}
@@ -157,7 +176,7 @@ export function OrchardForm({
           <Select
             label="Client"
             placeholder="Select client"
-            data={clients?.map((c) => ({ value: c._id, label: c.name })) || []}
+            data={clientOptions}
             withAsterisk={!isViewing}
             disabled={isEditing}
             readOnly={isViewing}
@@ -175,12 +194,7 @@ export function OrchardForm({
         <MultiSelect
           label="Assign Users"
           placeholder="Select users"
-          data={
-            users?.map((u) => ({
-              value: u._id,
-              label: `${u.firstName} ${u.lastName}`,
-            })) || []
-          }
+          data={userOptions}
           searchable
           readOnly={isViewing}
           {...form.getInputProps('userIds')}
@@ -204,7 +218,7 @@ export function OrchardForm({
         <Switch
           label="Active"
           readOnly={isViewing}
-          disabled={isViewing}
+          style={{ pointerEvents: isViewing ? 'none' : 'auto' }}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
           mt="md"
         />

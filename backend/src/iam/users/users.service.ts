@@ -1,5 +1,5 @@
 // backend/src/users/users.service.ts
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
@@ -14,8 +14,10 @@ import { UserQueryBuilder } from './builders/user-query.builder';
 import { Client } from '../clients/schemas/client.schema';
 import { ClientResolverService } from '../client-resolver/client-resolver.service';
 
-import { PERMISSIONS } from '../../common/constants/permissions.constants';
+import { PERMISSIONS, Resource } from '../../common/constants/permissions.constants';
 import { CountersService } from '../../system/counters/counters.service';
+import { AuditsService } from '../../system/audits/audits.service';
+import { AuditAction } from '../../system/audits/schemas/audit.schema';
 
 @Injectable()
 export class UsersService {
@@ -23,6 +25,7 @@ export class UsersService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Client.name) private clientModel: Model<Client>,
     @InjectConnection() private connection: Connection,
+    @Inject(forwardRef(() => AuditsService)) private readonly auditsService: AuditsService,
     private readonly clientResolverService: ClientResolverService,
     private readonly countersService: CountersService,
   ) { }
@@ -70,7 +73,23 @@ export class UsersService {
 
     const userToCreate = new this.userModel(payload);
     try {
-      return await userToCreate.save();
+      const savedUser = await userToCreate.save();
+      await savedUser.populate([
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]);
+
+      await this.auditsService.log(
+        Resource.USER,
+        savedUser._id.toString(),
+        AuditAction.CREATE,
+        null,
+        savedUser.toObject(),
+        requestingUser._id.toString(),
+        'User Created'
+      );
+
+      return savedUser;
     } catch (error: any) {
       if (error.code === 11000) {
         throw new ConflictException('User with this email already exists.');
@@ -82,21 +101,30 @@ export class UsersService {
   async findAll(query: QueryUserDto, requestingUser: UserDocument): Promise<UserDocument[]> {
     const queryBuilder = new UserQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
-    return this.userModel.find(filter).exec();
+    return this.userModel.find(filter).populate([
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]).exec();
   }
 
   async findAllByClientId(clientId: string, queryDto: QueryUserDto, requestingUser: UserDocument): Promise<UserDocument[]> {
     const queryBuilder = new UserQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.clientIds = new Types.ObjectId(clientId);
-    return this.userModel.find(filter).exec();
+    return this.userModel.find(filter).populate([
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]).exec();
   }
 
   async findAllByRoleId(roleId: string, queryDto: QueryUserDto, requestingUser: UserDocument): Promise<UserDocument[]> {
     const queryBuilder = new UserQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.roleId = new Types.ObjectId(roleId);
-    return this.userModel.find(filter).exec();
+    return this.userModel.find(filter).populate([
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]).exec();
   }
 
   /**
@@ -112,7 +140,10 @@ export class UsersService {
 
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(userId) }] };
 
-    const targetUser = await this.userModel.findOne(finalFilter).populate('roleId').exec();
+    const targetUser = await this.userModel.findOne(finalFilter).populate([
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]).exec();
 
     if (!targetUser) {
       throw new NotFoundException(`User with ID "${userId}" not found or you do not have permission to view it.`);
@@ -137,7 +168,7 @@ export class UsersService {
     else {
       // If they DON'T have the general USER_EDIT permission, they are restricted to personal info.
       if (!hasEditPermission) {
-        const allowedFields = ['firstName', 'lastName', 'email', "password", 'preferences'];
+        const allowedFields = ['firstName', 'lastName', 'email', "password", 'preferences', '__v'];
         const attemptedFields = Object.keys(updateUserDto);
         const unauthorizedFields = attemptedFields.filter(field => !allowedFields.includes(field));
 
@@ -148,6 +179,12 @@ export class UsersService {
     }
 
     const existingUser = await this.findOne(userId, requestingUser, { includeInactive: true }); // Layer 2 User Check
+    const originalSnapshot = existingUser.toObject();
+
+    // Optimistic Concurrency Control
+    if (updateUserDto.__v !== undefined && existingUser.__v !== undefined && updateUserDto.__v !== existingUser.__v) {
+      throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
+    }
 
     // === LAYER 2 & 3: SECURITY AND DATA SILO VALIDATION (for client changes) ===
     if (updateUserDto.clientIds) {
@@ -160,23 +197,70 @@ export class UsersService {
       }
     }
 
-    const updatePayload = await this._prepareUpdatePayload(updateUserDto, existingUser, requestingUser);
-    
-    const updateOp: any = { $set: updatePayload, $inc: { __v: 1 } };
-    if (updatePayload.password) {
-      updateOp.$inc.tokenVersion = 1;
+    // Apply updates
+    const { roleId, clientIds, isActive, password, preferences, firstName, lastName, ...restOfDto } = updateUserDto;
+
+    // Direct properties
+    Object.assign(existingUser, restOfDto);
+
+    if (firstName || lastName) {
+      existingUser.firstName = firstName || existingUser.firstName;
+      existingUser.lastName = lastName || existingUser.lastName;
+      existingUser.name = `${existingUser.firstName} ${existingUser.lastName}`;
     }
 
-    const updatedUser = await this.userModel.findOneAndUpdate(
-      { _id: userId, __v: updateUserDto.__v },
-      updateOp,
-      { new: true }
-    ).exec();
-
-    if (!updatedUser) {
-      throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
+    if (roleId) {
+      existingUser.roleId = new Types.ObjectId(roleId) as any;
+      existingUser.tokenVersion = (existingUser.tokenVersion || 0) + 1;
     }
-    return updatedUser;
+
+    if (clientIds) {
+      existingUser.clientIds = clientIds.map(id => new Types.ObjectId(id)) as any;
+    }
+
+    if (password) {
+      existingUser.password = await bcrypt.hash(password, 10);
+      existingUser.tokenVersion = (existingUser.tokenVersion || 0) + 1;
+    }
+
+    if (preferences) {
+      existingUser.preferences = {
+        theme: preferences.theme || 'auto'
+      };
+    }
+
+    if (isActive !== undefined && isActive !== existingUser.isActive) {
+      if (!((requestingUser.roleId as any)?.permissions || []).includes(PERMISSIONS.USER_MANAGE_INACTIVE)) {
+        throw new ForbiddenException('You do not have permission to change the isActive status.');
+      }
+      existingUser.isActive = isActive;
+    }
+
+    existingUser.increment();
+    try {
+      const updatedUser = await existingUser.save();
+      await updatedUser.populate([
+        { path: 'roleId', select: 'name recordId permissions visibilityScope' },
+        { path: 'clientIds', select: 'name recordId' }
+      ]);
+
+      await this.auditsService.log(
+        Resource.USER,
+        updatedUser._id.toString(),
+        AuditAction.UPDATE,
+        originalSnapshot,
+        updatedUser.toObject(),
+        requestingUser._id.toString(),
+        'User Updated'
+      );
+
+      return updatedUser;
+    } catch (error: any) {
+      if (error.versionError || error.name === 'VersionError') {
+        throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
+      }
+      throw error;
+    }
   }
 
   /**
@@ -196,12 +280,22 @@ export class UsersService {
    */
   async remove(userId: string, requestingUser: UserDocument): Promise<UserDocument> {
     // === LAYER 2 VALIDATION: findOne serves as the authorization check ===
-    await this.findOne(userId, requestingUser);
+    const docToDelete = await this.findOne(userId, requestingUser);
 
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
       const deletedUser = await handleConcurrentSoftDelete<UserDocument>(this.userModel, userId, session, 'User');
+
+      await this.auditsService.log(
+        Resource.USER,
+        userId,
+        AuditAction.DELETE,
+        docToDelete.toObject(),
+        null,
+        requestingUser._id.toString(),
+        'User Deleted'
+      );
 
       await session.commitTransaction();
       return deletedUser;
@@ -349,6 +443,14 @@ export class UsersService {
   }
 
   /**
+   * Finds a user by their internal ObjectId.
+   * Internal use only (trusted).
+   */
+  async findOneById(id: string): Promise<UserDocument | null> {
+    return this.userModel.findById(id).exec();
+  }
+
+  /**
  * Validates that all user IDs in an array exist, are active and not deleted
  * @param userIds - An array of user IDs to validate.
  * @returns `true` if all IDs are valid users, `false` otherwise.
@@ -434,39 +536,5 @@ async findOneByEmailAndPopulateRole(email: string): Promise<UserDocument | null>
     });
   }
 
-  /**
- * Prepares the payload for an EXISTING user update.
- * Handles partial updates, derived fields, and authorization for sensitive fields.
- * @private
- */
-  private async _prepareUpdatePayload(dto: UpdateUserDto, existingUser: UserDocument, loggedInUser: UserDocument): Promise<Partial<UserDocument>> {
-    const { roleId, clientIds, isActive, password, preferences, __v, ...restOfDto } = dto;
-    const payload: Partial<UserDocument> = { ...restOfDto };
 
-    if (payload.firstName || payload.lastName) {
-      payload.name = `${payload.firstName || existingUser.firstName} ${payload.lastName || existingUser.lastName}`;
-    }
-
-    if (roleId) { payload.roleId = new Types.ObjectId(roleId); }
-    if (clientIds) { payload.clientIds = clientIds.map(id => new Types.ObjectId(id)); }
-    if (password) { 
-      payload.password = await bcrypt.hash(password, 10);
-      // tokenVersion increment is handled in the update method via $inc
-    }
-    if (preferences) {
-      payload.preferences = {
-        theme: preferences.theme || 'auto'
-      };
-    }
-
-    // System Constraint: Only roles with CLIENT_MANAGE_INACTIVE permissions can change Client status.
-    // This prevents non-admin users from turning off key master data records
-    if (dto.isActive !== undefined) {
-      if (!((loggedInUser.roleId as any)?.permissions || []).includes(PERMISSIONS.USER_MANAGE_INACTIVE)) {
-        throw new ForbiddenException('You do not have permission to change the isActive status.');
-      }
-      payload.isActive = isActive;
-    }
-    return payload;
-  }
 }

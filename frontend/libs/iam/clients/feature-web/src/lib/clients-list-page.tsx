@@ -18,25 +18,23 @@ import {
 } from '@rootstock/ui/web';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 import {
-  useClients,
+  useGetClients,
+  useCreateClient,
+  useUpdateClient,
+  useDeleteClient,
   Client,
-  CreateClientDto,
-  UpdateClientDto,
-} from '@rootstock/clients/clients-data-access';
+  ClientFormData,
+} from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm, ClientFormMode } from './client-form';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function ClientsListPage() {
-  const {
-    clients,
-    isLoading,
-    createClient,
-    updateClient,
-    deleteClient,
-    isCreating,
-    isUpdating,
-  } = useClients();
+  const { data: clients = [], isLoading } = useGetClients();
+  const { mutateAsync: createClient, isPending: isCreating } = useCreateClient();
+  const { mutateAsync: updateClient, isPending: isUpdating } = useUpdateClient();
+  const { mutateAsync: deleteClient } = useDeleteClient();
+  
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [
@@ -50,7 +48,7 @@ export function ClientsListPage() {
   const [mode, setMode] = useState<ClientFormMode>('create');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateClientDto>>({});
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<ClientFormData>>({});
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty && mode === 'edit');
@@ -120,16 +118,21 @@ export function ClientsListPage() {
     }
   };
 
-  const handleSubmit = async (values: CreateClientDto | UpdateClientDto) => {
+  const handleSubmit = async (values: ClientFormData) => {
     try {
       if (mode === 'create') {
-        await createClient(values as CreateClientDto);
+        const { isActive, __v, ...createData } = values;
+        await createClient(createData);
         setCreateFormDraft({});
       } else {
         if (selectedClient) {
+          const { subsidiaryId, ...updateData } = values;
           await updateClient({
             id: selectedClient._id,
-            data: values as UpdateClientDto,
+            data: {
+              ...updateData,
+              __v: selectedClient.__v
+            },
           });
         }
       }
@@ -159,7 +162,7 @@ export function ClientsListPage() {
       accessor: 'isActive',
       title: 'Status',
       render: (client) => (
-        <Badge color={client.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={client.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {client.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),
@@ -173,7 +176,7 @@ export function ClientsListPage() {
           {can(PERMISSIONS.CLIENT_VIEW) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.view}
+              color={palette.icons.view}
               onClick={(e) => handleViewPage(client._id, e)}
               title="View Page"
             >
@@ -184,7 +187,7 @@ export function ClientsListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(client._id, e)}
                 title="Edit Page"
               >
@@ -192,7 +195,7 @@ export function ClientsListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(client, e)}
                 title="Quick Edit"
               >
@@ -203,7 +206,7 @@ export function ClientsListPage() {
           {can(PERMISSIONS.CLIENT_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDeleteClick(client, e)}
               title="Delete Client"
             >
@@ -294,7 +297,7 @@ export function ClientsListPage() {
         title="Delete Client"
         message={`Are you sure you want to delete "${selectedClient?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

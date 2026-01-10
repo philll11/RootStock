@@ -20,7 +20,9 @@ import { CountersService } from '../../system/counters/counters.service';
 
 import { BlocksService } from '../blocks/blocks.service';
 
-import { PERMISSIONS } from '../../common/constants/permissions.constants';
+import { PERMISSIONS, Resource } from '../../common/constants/permissions.constants';
+import { AuditsService } from '../../system/audits/audits.service';
+import { AuditAction } from '../../system/audits/schemas/audit.schema';
 
 
 @Injectable()
@@ -28,11 +30,12 @@ export class OrchardsService {
     constructor(
         @InjectModel(Orchard.name) private orchardModel: Model<OrchardDocument>,
         @InjectConnection() private connection: Connection,
-        private readonly clientResolverService: ClientResolverService,
         @Inject(forwardRef(() => ClientsService)) private readonly clientsService: ClientsService,
         @Inject(forwardRef(() => BlocksService)) private readonly blocksService: BlocksService,
+        @Inject(forwardRef(() => UsersService)) private readonly usersService: UsersService,
+        @Inject(forwardRef(() => AuditsService)) private readonly auditsService: AuditsService,
+        private readonly clientResolverService: ClientResolverService,
         private readonly countersService: CountersService,
-        private readonly usersService: UsersService,
     ) { }
 
     async create(createOrchardDto: CreateOrchardDto, requestingUser: UserDocument): Promise<OrchardDocument> {
@@ -66,6 +69,23 @@ export class OrchardsService {
             }
 
             await session.commitTransaction();
+
+            // Hydrate the return value to match findOne (Standardization)
+            await savedOrchard.populate([
+                { path: 'clientId', select: 'name recordId' },
+                { path: 'userIds', select: 'name recordId userType' }
+            ]);
+
+            await this.auditsService.log(
+                Resource.ORCHARD,
+                savedOrchard._id.toString(),
+                AuditAction.CREATE,
+                null,
+                savedOrchard.toObject(),
+                requestingUser._id.toString(),
+                'Orchard Created'
+            );
+
             return savedOrchard;
         } catch (error) {
             await session.abortTransaction();
@@ -79,8 +99,10 @@ export class OrchardsService {
         const queryBuilder = new OrchardQueryBuilder(query, requestingUser, this.clientResolverService);
         const filter = await queryBuilder.build();
         return this.orchardModel.find(filter)
-            .populate('clientId', 'name recordId')
-            .populate('userIds', 'name recordId userType') // Populate assigned users
+            .populate([
+                { path: 'clientId', select: 'name recordId' },
+                { path: 'userIds', select: 'name recordId userType' }
+            ])
             .exec();
     }
 
@@ -98,8 +120,10 @@ export class OrchardsService {
         const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(orchardId) }] };
 
         const orchard = await this.orchardModel.findOne(finalFilter)
-            .populate('clientId', 'name recordId')
-            .populate('userIds', 'name recordId userType') // Populate assigned users
+            .populate([
+                { path: 'clientId', select: 'name recordId' },
+                { path: 'userIds', select: 'name recordId userType' }
+            ])
             .exec();
         if (!orchard) {
             throw new NotFoundException(`Orchard with ID "${orchardId}" not found or you do not have permission to view it.`);
@@ -111,16 +135,23 @@ export class OrchardsService {
         const targetOrchard = await this.findOne(orchardId, requestingUser, { includeInactive: true }); // Layer 2 Orchard Check and fetch target orchard
         const targetClientIdString = (targetOrchard.clientId as any)._id.toString();
 
-        const { userIds, isActive, __v, ...restOfDto } = updateOrchardDto;
-        const updatePayload: any = { ...restOfDto };
+        // Optimistic Concurrency Check (In-Memory)
+        if (updateOrchardDto.__v !== undefined && targetOrchard.__v !== updateOrchardDto.__v) {
+             throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+        }
 
+        // Capture original state for auditing
+        const originalState = targetOrchard.toObject();
+
+        const { userIds, isActive, __v, ...restOfDto } = updateOrchardDto;
+        
         // System Constraint: Only roles with ORCHARD_MANAGE_INACTIVE permissions can change Orchard status.
-        if (updateOrchardDto.isActive !== undefined) {
+        if (isActive !== undefined && isActive !== targetOrchard.isActive) {
             const userPermissions = (requestingUser.roleId as any)?.permissions || [];
             if (!userPermissions.includes(PERMISSIONS.ORCHARD_MANAGE_INACTIVE)) {
                 throw new ForbiddenException('You do not have permission to change the isActive status of an orchard.');
             }
-            updatePayload.isActive = updateOrchardDto.isActive;
+            targetOrchard.isActive = isActive;
         }
 
         if (userIds) {
@@ -128,36 +159,53 @@ export class OrchardsService {
             await Promise.all(userIds.map(uid => this.usersService.findOne(uid, requestingUser)));
         }
 
+        // Apply basic properties
+        Object.assign(targetOrchard, restOfDto);
+
         const session = await this.connection.startSession();
         session.startTransaction();
         try {
             if (userIds) {
                 await this._performUserAssignmentsInTransaction(targetClientIdString, userIds, session); // Smart Assignment: assign parent Client to incoming Users
+                targetOrchard.userIds = userIds.map(id => new Types.ObjectId(id));
             }
 
-            if (userIds) {
-                updatePayload.userIds = userIds.map(id => new Types.ObjectId(id));
-            }
-
-            const updatedOrchard = await this.orchardModel.findOneAndUpdate(
-                { _id: orchardId, __v: updateOrchardDto.__v },
-                { $set: updatePayload, $inc: { __v: 1 } },
-                { new: true, session }
-            ).exec();
-
-            if (!updatedOrchard) {
-                const exists = await this.orchardModel.exists({ _id: orchardId });
-                if (exists) {
-                    throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
-                } else {
-                    throw new NotFoundException(`Orchard with ID "${orchardId}" could not be updated.`);
-                }
-            }
+            targetOrchard.increment();
+            const updatedOrchard = await targetOrchard.save({ session });
+            
+            await updatedOrchard.populate([
+                { path: 'clientId', select: 'name recordId' },
+                { path: 'userIds', select: 'name recordId userType' }
+            ]);
 
             await session.commitTransaction();
+
+            const ignoredPaths = [];
+            const itemIdentityMap = {};
+            const fieldDisplayNameMap = {
+                'userIds': 'Assigned Users',
+                'clientId': 'Client'
+            };
+
+            await this.auditsService.log(
+                Resource.ORCHARD,
+                updatedOrchard._id.toString(),
+                AuditAction.UPDATE,
+                originalState,
+                updatedOrchard.toObject(),
+                requestingUser._id.toString(),
+                'Orchard Updated',
+                ignoredPaths,
+                itemIdentityMap,
+                fieldDisplayNameMap
+            );
+
             return updatedOrchard;
-        } catch (error) {
+        } catch (error: any) {
             await session.abortTransaction();
+            if (error.versionError || error.name === 'VersionError') {
+                throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+            }
             throw error;
         } finally {
             session.endSession();
@@ -165,7 +213,7 @@ export class OrchardsService {
     }
 
     async remove(orchardId: string, requestingUser: UserDocument): Promise<OrchardDocument> {
-        await this.findOne(orchardId, requestingUser); // Layer 2 Orchard Check
+        const orchardToDelete = await this.findOne(orchardId, requestingUser); // Layer 2 Orchard Check
 
         const activeBlockCount = await this.blocksService.countActiveByOrchardId(orchardId);
         if (activeBlockCount > 0) {
@@ -178,6 +226,17 @@ export class OrchardsService {
             const deletedOrchard = await handleConcurrentSoftDelete<OrchardDocument>(this.orchardModel, orchardId, session, "Orchard");
 
             await session.commitTransaction();
+
+            await this.auditsService.log(
+                Resource.ORCHARD,
+                orchardId,
+                AuditAction.DELETE,
+                orchardToDelete.toObject(),
+                null,
+                requestingUser._id.toString(),
+                'Orchard Deleted'
+            );
+
             return deletedOrchard;
         } catch (error) {
             await session.abortTransaction();

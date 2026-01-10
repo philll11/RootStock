@@ -5,11 +5,13 @@ import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
-  useUsers,
+  useGetUsers,
+  useCreateUser,
+  useUpdateUser,
+  useDeleteUser,
   User,
-  CreateUserDto,
-  UpdateUserDto,
-} from '@rootstock/users/users-data-access';
+  UserFormData,
+} from '@rootstock/iam/users/users-data-access';
 import { UserForm, UserFormMode } from './user-form';
 import {
   ConfirmDiscardModal,
@@ -22,20 +24,15 @@ import {
   ActionSplitButton,
   useContextualNavigation,
 } from '@rootstock/ui/web';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function UsersListPage() {
-  const {
-    users,
-    isLoading,
-    createUser,
-    updateUser,
-    deleteUser,
-    isCreating,
-    isUpdating,
-  } = useUsers();
+  const { data: users = [], isLoading, isError } = useGetUsers();
+  const { mutateAsync: createUser, isPending: isCreating } = useCreateUser();
+  const { mutateAsync: updateUser, isPending: isUpdating } = useUpdateUser();
+  const { mutateAsync: deleteUser } = useDeleteUser();
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [
@@ -51,7 +48,7 @@ export function UsersListPage() {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   const [createFormDraft, setCreateFormDraft] = useState<
-    Partial<CreateUserDto>
+    Partial<UserFormData>
   >({});
   const [isFormDirty, setIsFormDirty] = useState(false);
 
@@ -119,16 +116,16 @@ export function UsersListPage() {
     }
   };
 
-  const handleSubmit = async (values: CreateUserDto | UpdateUserDto) => {
+  const handleSubmit = async (values: UserFormData) => {
     try {
       if (mode === 'create') {
-        await createUser(values as CreateUserDto);
+        await createUser(values as any);
         setCreateFormDraft({});
       } else {
         if (selectedUser) {
           await updateUser({
             id: selectedUser._id,
-            data: values as UpdateUserDto,
+            data: values,
           });
         }
       }
@@ -169,7 +166,7 @@ export function UsersListPage() {
       accessor: 'isActive',
       title: 'Status',
       render: (user) => (
-        <Badge color={user.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={user.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {user.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),
@@ -183,7 +180,7 @@ export function UsersListPage() {
           {can(PERMISSIONS.USER_VIEW) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.view}
+              color={palette.icons.view}
               onClick={(e) => handleViewPage(user._id, e)}
               title="View Page"
             >
@@ -194,7 +191,7 @@ export function UsersListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(user._id, e)}
                 title="Edit Page"
               >
@@ -202,7 +199,7 @@ export function UsersListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(user, e)}
                 title="Quick Edit"
               >
@@ -213,7 +210,7 @@ export function UsersListPage() {
           {can(PERMISSIONS.USER_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDelete(user._id, e)}
               title="Delete User"
             >
@@ -304,7 +301,7 @@ export function UsersListPage() {
         title="Delete User"
         message={`Are you sure you want to delete "${selectedUser?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

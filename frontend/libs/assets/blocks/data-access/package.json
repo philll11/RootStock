@@ -1,5 +1,5 @@
 {
-  "name": "@rootstock/blocks/blocks-data-access",
+  "name": "@rootstock/assets/blocks/blocks-data-access",
   "version": "0.0.1",
   "main": "./index.js",
   "types": "./index.d.ts",

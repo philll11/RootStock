@@ -17,43 +17,40 @@ import {
 } from '@rootstock/ui/web';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 import {
-  useOrchards,
+  useGetOrchards,
+  useCreateOrchard,
+  useUpdateOrchard,
+  useDeleteOrchard,
   Orchard,
-  CreateOrchardDto,
-  UpdateOrchardDto,
-} from '@rootstock/orchards/orchards-data-access';
+  OrchardFormData,
+} from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm, OrchardFormMode } from './orchard-form';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function OrchardsListPage() {
-  const {
-    orchards,
-    isLoading,
-    deleteOrchard,
-    createOrchard,
-    updateOrchard,
-    isCreating,
-    isUpdating,
-  } = useOrchards();
+  const { data: orchards = [], isLoading } = useGetOrchards();
+  const { mutateAsync: createOrchard, isPending: isCreating } = useCreateOrchard();
+  const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
+  const { mutateAsync: deleteOrchard } = useDeleteOrchard();
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [
     deleteModalOpened,
     { open: openDeleteModal, close: closeDeleteModal },
   ] = useDisclosure(false);
-  
+
   const navigate = useNavigate();
   const { getLinkTo } = useContextualNavigation();
 
   const [mode, setMode] = useState<OrchardFormMode>('create');
   const [selectedOrchard, setSelectedOrchard] = useState<Orchard | null>(null);
 
-  const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateOrchardDto>>({});
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<OrchardFormData>>({});
   const [isFormDirty, setIsFormDirty] = useState(false);
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty && mode === 'edit');
-  
+
   const [sortState, setSortState] = useState<{
     accessor: string;
     direction: 'asc' | 'desc';
@@ -74,7 +71,7 @@ export function OrchardsListPage() {
     e?.stopPropagation();
     navigate(getLinkTo(`/orchards/${orchard._id}`));
   };
-  
+
   const handleEditPage = (orchard: Orchard, e?: React.MouseEvent) => {
     e?.stopPropagation();
     navigate(getLinkTo(`/orchards/${orchard._id}/edit`));
@@ -118,16 +115,25 @@ export function OrchardsListPage() {
     }
   };
 
-  const handleSubmit = async (values: CreateOrchardDto | UpdateOrchardDto) => {
+  const handleSubmit = async (values: OrchardFormData) => {
     try {
       if (mode === 'create') {
-        await createOrchard(values as CreateOrchardDto);
+        await createOrchard({
+          name: values.name,
+          clientId: values.clientId,
+          userIds: values.userIds,
+        });
         setCreateFormDraft({});
       } else {
         if (selectedOrchard) {
           await updateOrchard({
             id: selectedOrchard._id,
-            data: values as UpdateOrchardDto,
+            data: {
+              name: values.name,
+              userIds: values.userIds,
+              isActive: values.isActive,
+              __v: selectedOrchard.__v
+            },
           });
         }
       }
@@ -136,7 +142,7 @@ export function OrchardsListPage() {
       // Error handling is done in the hook via notify
     }
   };
-  
+
   const getDrawerTitle = () => {
     switch (mode) {
       case 'create':
@@ -163,7 +169,7 @@ export function OrchardsListPage() {
       accessor: 'isActive',
       title: 'Status',
       render: (orchard) => (
-        <Badge color={orchard.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={orchard.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {orchard.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),
@@ -175,20 +181,20 @@ export function OrchardsListPage() {
       render: (orchard) => (
         <Group gap={0} justify="flex-end">
           {can(PERMISSIONS.ORCHARD_VIEW) && (
-          <ActionIcon
-            variant="subtle"
-            color={palette.actions.view}
-            onClick={(e) => handleViewPage(orchard, e)}
-            title="View Page"
-          >
-            <IconEye size={iconSizes.md} />
-          </ActionIcon>
+            <ActionIcon
+              variant="subtle"
+              color={palette.icons.view}
+              onClick={(e) => handleViewPage(orchard, e)}
+              title="View Page"
+            >
+              <IconEye size={iconSizes.md} />
+            </ActionIcon>
           )}
           {can(PERMISSIONS.ORCHARD_EDIT) && (
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(orchard, e)}
                 title="Edit Page"
               >
@@ -196,7 +202,7 @@ export function OrchardsListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(orchard, e)}
                 title="Quick Edit"
               >
@@ -207,7 +213,7 @@ export function OrchardsListPage() {
           {can(PERMISSIONS.ORCHARD_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDeleteClick(orchard, e)}
             >
               <IconTrash size={iconSizes.md} />
@@ -220,28 +226,28 @@ export function OrchardsListPage() {
 
   const sortedOrchards = orchards
     ? [...orchards].sort((a, b) => {
-        const { accessor, direction } = sortState;
-        let aValue = (a as any)[accessor];
-        let bValue = (b as any)[accessor];
+      const { accessor, direction } = sortState;
+      let aValue = (a as any)[accessor];
+      let bValue = (b as any)[accessor];
 
-        if (accessor === 'clientId') {
-          aValue = typeof a.clientId === 'object' ? a.clientId.name : '';
-          bValue = typeof b.clientId === 'object' ? b.clientId.name : '';
-        }
+      if (accessor === 'clientId') {
+        aValue = typeof a.clientId === 'object' ? a.clientId.name : '';
+        bValue = typeof b.clientId === 'object' ? b.clientId.name : '';
+      }
 
-        aValue = aValue || '';
-        bValue = bValue || '';
+      aValue = aValue || '';
+      bValue = bValue || '';
 
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return direction === 'asc'
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
-        }
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
 
-        if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return direction === 'asc' ? 1 : -1;
-        return 0;
-      })
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    })
     : undefined;
 
   return (
@@ -287,12 +293,12 @@ export function OrchardsListPage() {
           key={opened ? 'opened' : 'closed'}
           mode={mode}
           orchard={selectedOrchard}
-          initialValues={createFormDraft}
           onSubmit={handleSubmit}
           isLoading={isCreating || isUpdating}
           onCancel={handleClose}
           onEdit={() => setMode('edit')}
           onValuesChange={setCreateFormDraft}
+          initialValues={createFormDraft}
           onDirtyChange={setIsFormDirty}
         />
       </FormDrawer>
@@ -306,7 +312,7 @@ export function OrchardsListPage() {
         title="Delete Orchard"
         message={`Are you sure you want to delete "${selectedOrchard?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

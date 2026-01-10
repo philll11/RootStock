@@ -1,5 +1,5 @@
 {
-  "name": "@rootstock/clients/clients-feature-web",
+  "name": "@rootstock/iam/clients/clients-feature-web",
   "version": "0.0.1",
   "main": "./index.js",
   "types": "./index.d.ts",

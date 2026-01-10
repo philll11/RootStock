@@ -1,22 +1,23 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  useUsers,
-  useUser
-} from '@rootstock/users/users-data-access';
+  useDeleteUser,
+  useGetUser
+} from '@rootstock/iam/users/users-data-access';
 import { UserForm } from '../user-form';
-import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
+import { PageHeader, ConfirmModal, useContextualNavigation, SubResourceTabs } from '@rootstock/ui/web';
 import { Container, Paper, Alert, ActionIcon, LoadingOverlay } from '@mantine/core';
-import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
+import { IconAlertCircle, IconTrash, IconHistory } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { AuditTable } from '@rootstock/system/audit/audit-feature-web';
 
 export function UserViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { deleteUser } = useUsers();
-  const { data: user, isLoading } = useUser(id);
+  const { mutateAsync: deleteUser } = useDeleteUser();
+  const { data: user, isLoading } = useGetUser(id!);
   const { getLinkTo, goBack } = useContextualNavigation('/users');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
@@ -34,6 +35,10 @@ export function UserViewPage() {
         console.error('Failed to delete user', error);
       }
     }
+  };
+  
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -58,7 +63,7 @@ export function UserViewPage() {
           can(PERMISSIONS.USER_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={openDeleteModal}
               title="Delete User"
             >
@@ -73,11 +78,23 @@ export function UserViewPage() {
           user={user}
           onSubmit={() => { }}
           isLoading={false}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
             onEdit={can(PERMISSIONS.USER_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />
       </Paper>
+      
+      <SubResourceTabs
+        tabs={[
+          ...(can(PERMISSIONS.AUDIT_VIEW) ? [{
+            value: 'audit',
+            label: 'Audit Trail',
+            icon: <IconHistory size={iconSizes.sm} />,
+            content: <AuditTable resource="User" recordId={id!} />,
+          }] : []),
+        ]}
+      />
+
       <ConfirmModal
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
@@ -85,7 +102,7 @@ export function UserViewPage() {
         title="Delete User"
         message={`Are you sure you want to delete user ${user?.name}? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </Container>
   );

@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
-import { useBlocks } from '@rootstock/blocks/blocks-data-access';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useGetBlocks } from '@rootstock/assets/blocks/blocks-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 
-export const BlocksListScreen = ({ navigation, route }: any) => {
-  const theme = useTheme() as AppTheme;
-  const { orchardId } = route.params || {};
-  const { blocks, isLoading } = useBlocks(orchardId);
+export const BlocksListScreen = () => {
+  const theme = useTheme<AppTheme>();
+  const router = useRouter();
+  const { orchardId } = useLocalSearchParams<{ orchardId: string }>();
+  const { data: blocks, isLoading } = useGetBlocks(orchardId);
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.BLOCK_CREATE);
 
@@ -32,41 +34,59 @@ export const BlocksListScreen = ({ navigation, route }: any) => {
       isEmpty={!isLoading && filteredBlocks.length === 0}
       onAdd={
         canCreate
-          ? () => navigation.navigate('BlockForm', { orchardId })
+          ? () =>
+              router.push(
+                orchardId
+                  ? `/assets/blocks/create?orchardId=${orchardId}`
+                  : '/assets/blocks/create'
+              )
           : undefined
       }
-      onBack={() => navigation.goBack()}
+      onBack={orchardId ? () => router.back() : undefined}
     >
       <FlatList
         data={filteredBlocks}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <List.Item
-            title={item.name}
-            description={`${item.recordId} • ${item.plantings.length} plantings`}
-            left={(props) => <List.Icon {...props} icon="grid" />}
-            right={(props) => (
-              <View style={styles.statusContainer}>
-                {!item.isActive && (
-                  <Text
-                    style={{
-                      color: theme.colors.error,
-                      marginRight: spacing.sm,
-                    }}
-                  >
-                    Inactive
-                  </Text>
-                )}
-                <List.Icon {...props} icon="chevron-right" />
-              </View>
-            )}
-            onPress={() =>
-              navigation.navigate('BlockForm', { orchardId, blockId: item._id })
-            }
-            style={styles.listItem}
-          />
-        )}
+        renderItem={({ item }) => {
+          const isOptimistic = (item as any).recordId === 'TEMP';
+          return (
+            <List.Item
+              title={item.name}
+              titleStyle={isOptimistic ? { opacity: 0.5 } : undefined}
+              description={
+                isOptimistic
+                  ? 'Syncing...'
+                  : `${item.recordId} • ${item.plantings.length} plantings`
+              }
+              descriptionStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
+              left={(props) => (
+                <List.Icon
+                  {...props}
+                  icon={isOptimistic ? 'cloud-upload' : 'grid'}
+                  color={isOptimistic ? theme.colors.outline : undefined}
+                />
+              )}
+              right={(props) => (
+                <View style={styles.statusContainer}>
+                  {!item.isActive && !isOptimistic && (
+                    <Text
+                      style={{
+                        color: theme.colors.error,
+                        marginRight: spacing.sm,
+                      }}
+                    >
+                      Inactive
+                    </Text>
+                  )}
+                  <List.Icon {...props} icon="chevron-right" />
+                </View>
+              )}
+              onPress={() => router.push(`/assets/blocks/${item._id}`)}
+              style={[styles.listItem, isOptimistic && { opacity: 0.7 }]}
+            />
+          );
+        }}
       />
     </ListLayout>
   );

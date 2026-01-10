@@ -1,6 +1,7 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  useVarieties,
+  useGetVariety,
+  useDeleteVariety,
 } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm } from '../variety-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
@@ -8,13 +9,14 @@ import { Container, Paper, Alert, ActionIcon, LoadingOverlay, Button, Group } fr
 import { IconAlertCircle, IconTrash, IconEdit } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function VarietyViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { variety, isLoading, deleteVariety } = useVarieties(id);
+  const { data: variety, isLoading } = useGetVariety(id!);
+  const { mutateAsync: deleteVariety } = useDeleteVariety();
   const { getLinkTo, goBack } = useContextualNavigation('/varieties');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
@@ -26,12 +28,16 @@ export function VarietyViewPage() {
   const handleDelete = async () => {
     if (id) {
       try {
-        await deleteVariety({ id });
+        await deleteVariety(id);
         goBack();
       } catch (error) {
         console.error('Failed to delete variety', error);
       }
     }
+  };
+  
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -56,7 +62,7 @@ export function VarietyViewPage() {
           can(PERMISSIONS.VARIETY_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={openDeleteModal}
               title="Delete Variety"
             >
@@ -71,7 +77,7 @@ export function VarietyViewPage() {
           initialValues={variety}
           onSubmit={() => { }}
           isLoading={false}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           onEdit={can(PERMISSIONS.VARIETY_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />
@@ -84,7 +90,7 @@ export function VarietyViewPage() {
         title="Delete Variety"
         message={`Are you sure you want to delete variety "${variety.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </Container>
   );

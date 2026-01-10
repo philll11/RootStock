@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
-import { useVarieties, Variety, CreateVarietyDto } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useGetVarieties, useCreateVariety, useUpdateVariety, useDeleteVariety, Variety, VarietyFormData } from '@rootstock/master-data/varieties/varieties-data-access';
 import { VarietyForm, VarietyFormMode } from './variety-form';
 import { 
   ConfirmModal, 
@@ -16,14 +16,18 @@ import {
   ActionSplitButton,
   useContextualNavigation,
 } from '@rootstock/ui/web';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function VarietiesListPage() {
   const navigate = useNavigate();
   const { getLinkTo } = useContextualNavigation();
-  const { varieties, isLoading: isVarietiesLoading, createVariety, updateVariety, deleteVariety, isCreating, isUpdating } = useVarieties();
+  const { data: varieties, isLoading: isVarietiesLoading } = useGetVarieties();
+  const { mutateAsync: createVariety, isPending: isCreating } = useCreateVariety();
+  const { mutateAsync: updateVariety, isPending: isUpdating } = useUpdateVariety();
+  const { mutateAsync: deleteVariety } = useDeleteVariety();
+
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
@@ -32,7 +36,7 @@ export function VarietiesListPage() {
   const [selectedVariety, setSelectedVariety] = useState<Variety | null>(null);
   const [varietyToDelete, setVarietyToDelete] = useState<Variety | null>(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
-  const [createFormDraft, setCreateFormDraft] = useState<Partial<CreateVarietyDto>>({});
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<VarietyFormData>>({});
 
   const { handleAction: handleCloseWithWarning, modalProps } = useDiscardWarning(isFormDirty && mode === 'edit');
   
@@ -82,22 +86,29 @@ export function VarietiesListPage() {
 
   const handleConfirmDelete = () => {
     if (varietyToDelete) {
-      deleteVariety({ id: varietyToDelete._id });
+      deleteVariety(varietyToDelete._id);
       closeDeleteModal();
       setVarietyToDelete(null);
     }
   };
 
-  const handleSubmit = (values: any) => {
+  const handleSubmit = (values: VarietyFormData) => {
     if (mode === 'create') {
-      createVariety(values, {
+      const { isActive, __v, ...createData } = values;
+      createVariety(createData, {
         onSuccess: () => {
           close();
           setCreateFormDraft({});
         },
       });
     } else if (mode === 'edit' && selectedVariety) {
-      updateVariety({ id: selectedVariety._id, data: values }, {
+      updateVariety({ 
+        id: selectedVariety._id, 
+        data: {
+          ...values,
+          __v: selectedVariety.__v
+        } 
+      }, {
         onSuccess: () => {
           close();
         },
@@ -128,7 +139,7 @@ export function VarietiesListPage() {
       accessor: 'isActive',
       title: 'Status',
       render: (variety) => (
-        <Badge color={variety.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={variety.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {variety.isActive ? 'Active' : 'Inactive'}
         </Badge>
       )
@@ -141,7 +152,7 @@ export function VarietiesListPage() {
         <Group gap={0} justify="flex-end">
           <ActionIcon
             variant="subtle"
-            color={palette.actions.view}
+            color={palette.icons.view}
             onClick={(e) => handleViewPage(variety, e)}
             title="View Page"
           >
@@ -151,7 +162,7 @@ export function VarietiesListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(variety, e)}
                 title="Edit Page"
               >
@@ -159,7 +170,7 @@ export function VarietiesListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(variety, e)}
                 title="Quick Edit"
               >
@@ -168,7 +179,7 @@ export function VarietiesListPage() {
             </>
           )}
           {can(PERMISSIONS.VARIETY_DELETE) && (
-            <ActionIcon variant="subtle" color={palette.actions.delete} onClick={(e) => handleDeleteClick(variety, e)}>
+            <ActionIcon variant="subtle" color={palette.icons.delete} onClick={(e) => handleDeleteClick(variety, e)}>
               <IconTrash size={iconSizes.md} />
             </ActionIcon>
           )}
@@ -240,7 +251,7 @@ export function VarietiesListPage() {
           isLoading={isCreating || isUpdating}
           onDirtyChange={setIsFormDirty}
           draftValues={createFormDraft}
-          onValuesChange={(values) => setCreateFormDraft(values as CreateVarietyDto)}
+          onValuesChange={(values) => setCreateFormDraft(values)}
         />
       </FormDrawer>
 
@@ -253,7 +264,7 @@ export function VarietiesListPage() {
         title="Delete Variety"
         message={`Are you sure you want to delete variety "${varietyToDelete?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

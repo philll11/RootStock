@@ -1,8 +1,11 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Appbar, FAB, Searchbar, ActivityIndicator, Text, useTheme } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDrawer } from '../drawer-context';
 import { spacing } from '@rootstock/ui/theme';
+import { AppTheme } from '../mobile-theme';
+import { SyncIndicator } from './sync-indicator';
 
 interface ListLayoutProps {
   title: string;
@@ -29,8 +32,9 @@ export const ListLayout = ({
   isEmpty,
   onBack
 }: ListLayoutProps) => {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const { toggleDrawer } = useDrawer();
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -41,6 +45,7 @@ export const ListLayout = ({
           <Appbar.Action icon="menu" onPress={toggleDrawer} />
         )}
         <Appbar.Content title={title} />
+        <SyncIndicator />
       </Appbar.Header>
 
       <View style={styles.content}>
@@ -71,7 +76,13 @@ export const ListLayout = ({
       {onAdd && (
         <FAB
           icon="plus"
-          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+          style={[
+            styles.fab, 
+            { 
+              backgroundColor: theme.colors.primary,
+              bottom: spacing.md + insets.bottom 
+            }
+          ]}
           color={theme.colors.onPrimary}
           onPress={onAdd}
         />
@@ -89,6 +100,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     margin: spacing.md,
     right: 0,
-    bottom: 0,
+    // bottom is handled inline
   },
 });

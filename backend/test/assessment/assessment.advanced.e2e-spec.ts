@@ -12,8 +12,10 @@ import { Role, RoleDocument, VisibilityScope } from '../../src/iam/roles/schemas
 import { User, UserDocument, UserType } from '../../src/iam/users/schemas/user.schema';
 import { Orchard, OrchardDocument } from '../../src/assets/orchards/schemas/orchard.schema';
 import { Block, BlockDocument } from '../../src/assets/blocks/schemas/block.schema';
-import { Assessment, AssessmentDocument, AssessmentStatus } from '../../src/operations/assessments/schemas/assessment.schema';
+import { Assessment, AssessmentDocument, AssessmentStatus, AssessmentType } from '../../src/operations/assessments/schemas/assessment.schema';
 import { Variety, VarietyDocument } from '../../src/master-data/varieties/schemas/variety.schema';
+import { AuditEntry, AuditEntryDocument } from '../../src/system/audits/schemas/audit.schema';
+import { SystemConfig, SystemConfigDocument } from '../../src/system/config/schemas/system-config.schema';
 import { PERMISSIONS } from '../../src/common/constants/permissions.constants';
 
 describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
@@ -26,6 +28,7 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
     let blockModel: Model<BlockDocument>;
     let orchardModel: Model<OrchardDocument>;
     let varietyModel: Model<VarietyDocument>;
+    let auditModel: Model<AuditEntryDocument>;
 
     // Tokens
     let adminToken: string;
@@ -44,9 +47,19 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
         blockModel = app.get<Model<BlockDocument>>(getModelToken(Block.name));
         orchardModel = app.get<Model<OrchardDocument>>(getModelToken(Orchard.name));
         varietyModel = app.get<Model<VarietyDocument>>(getModelToken(Variety.name));
+        auditModel = app.get<Model<AuditEntryDocument>>(getModelToken(AuditEntry.name));
+        const systemConfigModel = app.get<Model<SystemConfigDocument>>(getModelToken(SystemConfig.name));
         const clientModel = app.get<Model<ClientDocument>>(getModelToken(Client.name));
         const roleModel = app.get<Model<RoleDocument>>(getModelToken(Role.name));
         const userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
+
+        // 0. Enable Auditing
+        await systemConfigModel.create({
+            key: 'audit',
+            value: { enabled: true },
+            description: 'Global Audit Config',
+            isSystem: true,
+        });
 
         // 1. Setup Data
         variety = await varietyModel.create({ name: 'Cosmic Crisp', recordId: 'VAR_ADV' });
@@ -72,6 +85,8 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
             // Create a COMPLETED assessment
             completedAssessment = await assessmentModel.create({
                 recordId: 'ASM_LOCKED',
+                name: 'Locked Assessment',
+                type: AssessmentType.HAIL,
                 blockId: testBlock._id,
                 clientId: testClient._id,
                 varietyId: variety._id,
@@ -96,37 +111,74 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
         it('should ALLOW modification with changeReason and CREATE AUDIT ENTRY', async () => {
             const reason = 'Correction: Counted wrong row';
             
-            const res = await request(app.getHttpServer())
+            // 1. Reopen (Strict: Only Status + Reason)
+            await request(app.getHttpServer())
                 .patch(`/assessments/${completedAssessment._id}`)
                 .set('Authorization', `Bearer ${adminToken}`)
                 .send({
-                    samples: [{ rowNumber: 1, totalFruit: 100, damagedFruit: 20 }], // Change to 20%
+                    status: AssessmentStatus.IN_PROGRESS,
                     changeReason: reason,
                     __v: completedAssessment.__v
                 })
                 .expect(200);
 
-            // 1. Verify New Data
+            // Fetch to get new __v
+            const reopened = await assessmentModel.findById(completedAssessment._id);
+            expect(reopened!.changeReason).toBe(reason); // Verify persistence
+
+            // 2. Modify Data (Now allowed)
+            const res = await request(app.getHttpServer())
+                .patch(`/assessments/${completedAssessment._id}`)
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send({
+                    samples: [{ rowNumber: 1, totalFruit: 100, damagedFruit: 20 }], // Change to 20%
+                    __v: reopened!.__v
+                })
+                .expect(200);
+
+            // 3. Verify New Data
             expect(res.body.summary.averageDamagePercentage).toBe(20.0);
 
-            // 2. Verify Audit Log in DB
-            const updated = await assessmentModel.findById(completedAssessment._id);
-            expect(updated!.revisionHistory).toHaveLength(1);
+            // 4. Verify Audit Log in DB
+            // Should find logs for the UPDATE (Data Change)
+            const logs = await auditModel.find({ 
+                resource: 'Assessment', 
+                resourceId: completedAssessment._id, 
+                action: 'UPDATE',
+                reason: 'Assessment Updated' // Default reason for purely data updates
+            }).sort({ date: -1 }).exec();
+
+            // Find the log specifically for the data change (should contain samples diff, but NOT summary)
+            const dataLog = logs.find(log => log.changes.some(c => c.field.includes('samples')));
+            expect(dataLog).toBeDefined();
+
+            // 5. Verify Ignored Paths (Summary should NOT be logged)
+            const summaryChange = dataLog!.changes.find(c => c.field.startsWith('summary'));
+            expect(summaryChange).toBeUndefined();
+
+            // 6. Verify Sample Change (The source of truth)
+            // The audit system reports this as an object replacement for the row
+            const sampleUpdate = dataLog!.changes.find(c => 
+                c.field === 'samples[rowNumber=1]' && 
+                c.newValue && 
+                (c.newValue as any).damagedFruit === 20
+            );
+            expect(sampleUpdate).toBeDefined();
             
-            const entry = updated!.revisionHistory[0];
-            expect(entry.reason).toBe(reason);
-            expect(entry.action).toBe('UPDATE');
-            
-            // 3. Verify Historical Snapshot (The "Insurance Rule")
-            // The log should contain the OLD data (10%), not the new data (20%)
-            expect(entry.previousSummary.averageDamagePercentage).toBe(10.0);
+            // Verify the old value was correct (either in the same entry or a separate 'delete' entry for the same field)
+            const sampleOld = dataLog!.changes.find(c => 
+                c.field === 'samples[rowNumber=1]' && 
+                c.oldValue && 
+                (c.oldValue as any).damagedFruit === 10
+            );
+            expect(sampleOld).toBeDefined();
         });
     });
 
     describe('State Machine & Workflow', () => {
         it('should PREVENT completing an assessment with no samples', async () => {
             const pending = await assessmentModel.create({
-                recordId: 'ASM_EMPTY', blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
+                recordId: 'ASM_EMPTY', name: 'Empty Assessment', type: AssessmentType.HAIL, blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
                 status: AssessmentStatus.PENDING, samples: []
             });
 
@@ -139,7 +191,7 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
 
         it('should AUTO-TRANSITION from Pending to In_Progress when samples are added', async () => {
             const pending = await assessmentModel.create({
-                recordId: 'ASM_AUTO', blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
+                recordId: 'ASM_AUTO', name: 'Auto Assessment', type: AssessmentType.HAIL, blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
                 status: AssessmentStatus.PENDING, samples: []
             });
 
@@ -160,7 +212,7 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
         it('should filter records using updatedSince', async () => {
             // 1. Create Old Record
             const oldRecord = await assessmentModel.create({
-                recordId: 'ASM_OLD', blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
+                recordId: 'ASM_OLD', name: 'Old Assessment', type: AssessmentType.HAIL, blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
                 status: AssessmentStatus.PENDING
             });
 
@@ -168,7 +220,7 @@ describe('Assessments Advanced Logic - Compliance & Offline (e2e)', () => {
 
             // 2. Create Recent Record
             const recentRecord = await assessmentModel.create({
-                recordId: 'ASM_NEW', blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
+                recordId: 'ASM_NEW', name: 'New Assessment', type: AssessmentType.HAIL, blockId: testBlock._id, clientId: testClient._id, varietyId: variety._id, date: new Date(),
                 status: AssessmentStatus.PENDING
                 // updatedAt will be Now()
             });

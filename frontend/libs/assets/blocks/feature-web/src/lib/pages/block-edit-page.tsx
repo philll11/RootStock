@@ -1,9 +1,10 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
-  useBlocks,
-  UpdateBlockDto,
-} from '@rootstock/blocks/blocks-data-access';
+  useGetBlock,
+  useUpdateBlock,
+  BlockFormData,
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
@@ -13,22 +14,39 @@ export function BlockEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/blocks');
-  
-  const { block, isLoading, updateBlock, isUpdating } = useBlocks({ blockId: id });
+
+  const { data: block, isLoading } = useGetBlock(id!);
+  const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
 
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: any) => {
-    if (!id) return;
+  const handleSubmit = async (values: BlockFormData) => {
+    if (!id || !block) return;
     try {
-      await updateBlock({ id, data: values as UpdateBlockDto });
+      await updateBlock({
+        id,
+        data: {
+          name: values.name,
+          isActive: values.isActive,
+          plantings: values.plantings.map((p: any) => ({
+            _id: p._id,
+            varietyId: p.varietyId!,
+            treeCount: p.treeCount
+          })),
+          __v: block.__v
+        }
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/blocks/${id}`), 0);
     } catch (error) {
       console.error('Failed to update block', error);
     }
+  };
+
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -53,7 +71,7 @@ export function BlockEditPage() {
           mode="edit"
           block={block}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

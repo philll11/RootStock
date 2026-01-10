@@ -12,7 +12,7 @@ import {
   Box,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { AuthService } from '@rootstock/auth/auth-data-access';
+import { AuthService } from '@rootstock/iam/auth/auth-data-access';
 import { useState } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';

@@ -22,7 +22,7 @@ export function ConfirmDiscardModal({ opened, onClose, onConfirm }: ConfirmDisca
         <Button variant="default" onClick={onClose}>
           Keep Editing
         </Button>
-        <Button color={palette.actions.delete} onClick={onConfirm}>
+        <Button color={palette.icons.delete} onClick={onConfirm}>
           Discard Changes
         </Button>
       </Group>

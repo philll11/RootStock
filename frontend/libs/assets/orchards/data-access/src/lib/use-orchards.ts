@@ -8,133 +8,186 @@ import {
   UpdateOrchardDto,
 } from './orchard.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
+import { v4 as uuid } from 'uuid';
 
-export const ORCHARDS_QUERY_KEY = ['orchards'];
+export const ORCHARDS_KEYS = {
+  all: ['orchards'] as const,
+  lists: () => [...ORCHARDS_KEYS.all, 'list'] as const,
+  list: (filters: string) => [...ORCHARDS_KEYS.lists(), { filters }] as const,
+  details: () => [...ORCHARDS_KEYS.all, 'detail'] as const,
+  detail: (id: string) => [...ORCHARDS_KEYS.details(), id] as const,
+};
+
+// --- API Functions ---
+const BASE_URL = '/orchards';
+
+export const getOrchards = async (): Promise<Orchard[]> => {
+  const response = await apiClient.get<Orchard[]>(BASE_URL);
+  return response.data;
+};
+
+export const getOrchard = async (id: string): Promise<Orchard> => {
+  const response = await apiClient.get<Orchard>(`${BASE_URL}/${id}`);
+  return response.data;
+};
 
 // Helper for searching orchards (useful for dropdowns)
 export const searchOrchards = async (query: string): Promise<Orchard[]> => {
   const params = new URLSearchParams();
   if (query) params.append('name', query);
   const response = await apiClient.get<Orchard[]>(
-    `/orchards?${params.toString()}`
+    `${BASE_URL}?${params.toString()}`
   );
   return response.data;
 };
 
-export const getOrchard = async (id: string): Promise<Orchard> => {
-  const response = await apiClient.get<Orchard>(`/orchards/${id}`);
+export const createOrchard = async (data: CreateOrchardDto): Promise<Orchard> => {
+  const response = await apiClient.post<Orchard>(BASE_URL, data);
   return response.data;
 };
 
-export function useOrchards(orchardId?: string) {
-  const queryClient = useQueryClient();
+export const updateOrchard = async ({ id, data }: { id: string; data: UpdateOrchardDto }): Promise<Orchard> => {
+  const response = await apiClient.patch<Orchard>(`${BASE_URL}/${id}`, data);
+  return response.data;
+};
+
+export const deleteOrchard = async (id: string): Promise<void> => {
+  await apiClient.delete(`${BASE_URL}/${id}`);
+};
+
+export function useGetOrchards() {
   const { can } = usePermission();
   const isEnabled = can(PERMISSIONS.ORCHARD_VIEW);
 
-  const orchardsQuery = useQuery({
-    queryKey: ORCHARDS_QUERY_KEY,
-    queryFn: async () => {
-      const response = await apiClient.get<Orchard[]>('/orchards');
-      return response.data;
-    },
+  return useQuery({
+    queryKey: ORCHARDS_KEYS.lists(),
+    queryFn: getOrchards,
     enabled: isEnabled,
     staleTime: Infinity,
   });
+}
 
-  const orchardQuery = useQuery({
-    queryKey: [...ORCHARDS_QUERY_KEY, orchardId],
-    queryFn: async () => {
-      const response = await apiClient.get<Orchard>(`/orchards/${orchardId}`);
-      return response.data;
-    },
-    enabled: !!orchardId && isEnabled,
+export function useGetOrchard(id: string) {
+  const { can } = usePermission();
+  const isEnabled = can(PERMISSIONS.ORCHARD_VIEW) && !!id;
+
+  return useQuery({
+    queryKey: ORCHARDS_KEYS.detail(id),
+    queryFn: () => getOrchard(id),
+    enabled: isEnabled,
   });
+}
 
-  const createOrchardMutation = useMutation({
-    mutationFn: async (data: CreateOrchardDto) => {
-      const response = await apiClient.post<Orchard>('/orchards', data);
-      return response.data;
+export function useCreateOrchard() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createOrchard,
+    onMutate: async (newOrchard) => {
+      await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.lists() });
+      const previousOrchards = queryClient.getQueryData<Orchard[]>(ORCHARDS_KEYS.lists());
+
+      const tempOrchard: Orchard = {
+        ...newOrchard,
+        _id: uuid(),
+        recordId: 'TEMP',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as any;
+
+      if (previousOrchards) {
+        queryClient.setQueryData<Orchard[]>(ORCHARDS_KEYS.lists(), [
+          tempOrchard,
+          ...previousOrchards,
+        ]);
+      }
+
+      return { previousOrchards };
     },
-    onSuccess: (newOrchard) => {
-      queryClient.setQueryData<Orchard[]>(ORCHARDS_QUERY_KEY, (old) =>
-        old ? [...old, newOrchard] : [newOrchard]
-      );
+    onError: (err, newOrchard, context) => {
+      if (context?.previousOrchards) {
+        queryClient.setQueryData(ORCHARDS_KEYS.lists(), context.previousOrchards);
+      }
+      notify.error(err, 'Error Creating Orchard');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ORCHARDS_KEYS.lists() });
+    },
+    onSuccess: () => {
       notify.success(
         'The orchard has been successfully created.',
         'Orchard Created'
       );
     },
-    onError: (error: any) => {
-      notify.error(error, 'Error Creating Orchard');
-    },
   });
+}
 
-  const updateOrchardMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: UpdateOrchardDto;
-    }) => {
-      const response = await apiClient.patch<Orchard>(`/orchards/${id}`, data);
-      return response.data;
-    },
-    onSuccess: (updatedOrchard) => {
-      queryClient.setQueryData<Orchard[]>(ORCHARDS_QUERY_KEY, (old) =>
-        old
-          ? old.map((item) =>
-              item._id === updatedOrchard._id ? updatedOrchard : item
-            )
-          : []
-      );
-      queryClient.setQueryData(
-        [...ORCHARDS_QUERY_KEY, updatedOrchard._id],
-        updatedOrchard
-      );
-      queryClient.invalidateQueries({
-        queryKey: [...ORCHARDS_QUERY_KEY, updatedOrchard._id],
-      });
-      notify.success(
-        'The orchard details have been updated.',
-        'Orchard Updated'
-      );
-    },
-    onError: (error: any) => {
-      if (error.response?.status !== 409) {
-        notify.error(error, 'Error Updating Orchard');
+export function useUpdateOrchard() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateOrchard,
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.detail(id) });
+      await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.lists() });
+
+      const previousOrchard = queryClient.getQueryData<Orchard>(ORCHARDS_KEYS.detail(id));
+      const previousOrchards = queryClient.getQueryData<Orchard[]>(ORCHARDS_KEYS.lists());
+
+      if (previousOrchard) {
+        queryClient.setQueryData(ORCHARDS_KEYS.detail(id), {
+          ...previousOrchard,
+          ...data,
+        });
       }
+
+      if (previousOrchards) {
+        queryClient.setQueryData(
+          ORCHARDS_KEYS.lists(),
+          previousOrchards.map((orchard) =>
+            orchard._id === id ? { ...orchard, ...data } : orchard
+          )
+        );
+      }
+
+      return { previousOrchard, previousOrchards };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousOrchard) {
+        queryClient.setQueryData(
+          ORCHARDS_KEYS.detail(variables.id),
+          context.previousOrchard
+        );
+      }
+      if (context?.previousOrchards) {
+        queryClient.setQueryData(ORCHARDS_KEYS.lists(), context.previousOrchards);
+      }
+      notify.error(err, 'Error Updating Orchard');
+    },
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ORCHARDS_KEYS.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: ORCHARDS_KEYS.lists() });
+    },
+    onSuccess: () => {
+      notify.success('The orchard details have been updated.', 'Orchard Updated');
     },
   });
+}
 
-  const deleteOrchardMutation = useMutation({
+export function useDeleteOrchard() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationFn: async (id: string) => {
       await apiClient.delete(`/orchards/${id}`);
     },
-    onSuccess: (_, id) => {
-      queryClient.setQueryData<Orchard[]>(ORCHARDS_QUERY_KEY, (old) =>
-        old ? old.filter((item) => item._id !== id) : []
-      );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orchards'] });
       notify.success('The orchard has been removed.', 'Orchard Deleted');
     },
     onError: (error: any) => {
       notify.error(error, 'Error Deleting Orchard');
     },
   });
-
-  return {
-    orchards: orchardsQuery.data ?? [],
-    orchard: orchardQuery.data,
-    isLoading: orchardsQuery.isLoading || orchardQuery.isLoading,
-    isError: orchardsQuery.isError || orchardQuery.isError,
-    searchOrchards,
-    getOrchard,
-    createOrchard: createOrchardMutation.mutateAsync,
-    updateOrchard: updateOrchardMutation.mutateAsync,
-    deleteOrchard: deleteOrchardMutation.mutateAsync,
-    isCreating: createOrchardMutation.isPending,
-    isUpdating: updateOrchardMutation.isPending,
-    isDeleting: deleteOrchardMutation.isPending,
-  };
 }

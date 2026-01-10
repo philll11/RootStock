@@ -1,7 +1,11 @@
 // backend/src/operations/assessments/dto/assessment-sample.dto.ts
-import { IsNotEmpty, IsNumber, Min } from 'class-validator';
+import { IsMongoId, IsNotEmpty, IsNumber, IsOptional, Min } from 'class-validator';
 
 export class AssessmentSampleDto {
+    @IsMongoId()
+    @IsOptional()
+    readonly _id?: string;
+
     @IsNumber()
     @IsNotEmpty()
     readonly rowNumber: number;

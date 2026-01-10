@@ -4,31 +4,44 @@ import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNaviga
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { useState } from 'react';
 import {
-  useRoles,
-  useRole,
-  UpdateRoleDto
-} from '@rootstock/roles/roles-data-access';
+  useUpdateRole,
+  useGetRole,
+  RoleFormData
+} from '@rootstock/iam/roles/roles-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
 export function RoleEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation(`/roles/${id}`);
-  const { updateRole, isUpdating } = useRoles();
-  const { data: role, isLoading } = useRole(id);
+  const { mutateAsync: updateRole, isPending: isUpdating } = useUpdateRole();
+  const { data: role, isLoading } = useGetRole(id);
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: UpdateRoleDto) => {
+  const handleSubmit = async (values: RoleFormData) => {
     if (!id) return;
     try {
-      await updateRole({ id, data: values });
+      await updateRole({
+        id,
+        data: {
+          name: values.name,
+          description: values.description,
+          permissions: values.permissions,
+          isActive: values.isActive,
+          __v: values.__v,
+        },
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/roles/${id}`), 0);
     } catch (error) {
       console.error('Failed to update role', error);
     }
+  };
+  
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -53,7 +66,7 @@ export function RoleEditPage() {
           mode="edit"
           role={role}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

@@ -1,15 +1,15 @@
 // frontend/apps/web/src/app/components/theme-toggle.tsx
 import { ActionIcon, useMantineColorScheme, useComputedColorScheme, Menu } from '@mantine/core';
 import { IconSun, IconMoon, IconDeviceDesktop } from '@tabler/icons-react';
-import { useAuth } from '@rootstock/auth/auth-data-access';
-import { useUsers } from '@rootstock/users/users-data-access';
+import { useGetProfile } from '@rootstock/iam/auth/auth-data-access';
+import { useUpdateUser } from '@rootstock/iam/users/users-data-access';
 import { shadows, iconSizes } from '@rootstock/ui/theme';
 
 export function ThemeToggle() {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
-  const { user } = useAuth();
-  const { updateUser } = useUsers();
+  const { data: user } = useGetProfile();
+  const { mutateAsync: updateUser } = useUpdateUser();
 
   const handleThemeChange = async (scheme: 'light' | 'dark' | 'auto') => {
     setColorScheme(scheme);

@@ -1,10 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { 
-  useRoles,
-  CreateRoleDto,
-  UpdateRoleDto
-} from '@rootstock/roles/roles-data-access';
+  useCreateRole,
+  RoleFormData
+} from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm } from '../role-form';
 import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';
@@ -12,19 +11,24 @@ import { Container, Paper } from '@mantine/core';
 export function RoleCreatePage() {
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/roles');
-  const { createRole, isCreating } = useRoles();
+  const { mutateAsync: createRole, isPending: isCreating } = useCreateRole();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: CreateRoleDto | UpdateRoleDto) => {
+  const handleSubmit = async (values: RoleFormData) => {
     try {
-      const newRole = await createRole(values as CreateRoleDto);
+      const { isActive, __v, ...createData } = values;
+      const newRole = await createRole(createData);
       setIsDirty(false);
       setTimeout(() => transitionTo(`/roles/${newRole._id}`), 0);
     } catch (error) {
       console.error('Failed to create role', error);
     }
+  };
+  
+  const handleCancel = () => {
+    goBack();
   };
 
   return (
@@ -35,7 +39,7 @@ export function RoleCreatePage() {
           mode="create"
           onSubmit={handleSubmit}
           isLoading={isCreating}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           onDirtyChange={setIsDirty}
           fullHeight={false}
         />

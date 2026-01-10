@@ -3,7 +3,6 @@ import { useEffect, useMemo } from 'react';
 import {
   TextInput,
   Select,
-  Button,
   Text,
   Checkbox,
   SimpleGrid,
@@ -14,27 +13,26 @@ import {
 import { useForm } from '@mantine/form';
 import {
   Role,
-  CreateRoleDto,
-  UpdateRoleDto,
+  RoleFormData,
   VisibilityScope,
   PERMISSIONS,
-} from '@rootstock/roles/roles-data-access';
+} from '@rootstock/iam/roles/roles-data-access';
 import { notify, PERMISSIONS as SHARED_PERMISSIONS } from '@rootstock/shared/util';
-import { usePermission } from '@rootstock/auth/auth-data-access';
-import { palette } from '@rootstock/ui/theme';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { FormLayout } from '@rootstock/ui/web';
 
+// ### Interfaces & Types ###
 export type RoleFormMode = 'create' | 'edit' | 'view';
 
 interface RoleFormProps {
   mode: RoleFormMode;
   role?: Role | null;
-  initialValues?: Partial<CreateRoleDto>;
-  onSubmit: (values: CreateRoleDto | UpdateRoleDto) => void;
+  initialValues?: Partial<RoleFormData>;
+  onSubmit: (values: RoleFormData) => void;
   isLoading: boolean;
   onCancel: () => void;
   onEdit?: () => void;
-  onValuesChange?: (values: Partial<CreateRoleDto>) => void;
+  onValuesChange?: (values: Partial<RoleFormData>) => void;
   onDirtyChange?: (isDirty: boolean) => void;
   fullHeight?: boolean;
 }
@@ -51,12 +49,16 @@ export function RoleForm({
   onDirtyChange,
   fullHeight = true,
 }: RoleFormProps) {
+
+  // ### Form Modes, Permissions & State ###
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
+
   const { can } = usePermission();
 
-  const form = useForm({
+  // ### Form Definition ###
+  const form = useForm<RoleFormData>({
     initialValues: {
       name: '',
       description: '',
@@ -72,10 +74,24 @@ export function RoleForm({
     },
   });
 
+  // ### Data Fetching & Options ###
+  const groupedPermissions = useMemo(() => {
+    const groups: Record<string, string[]> = {};
+    Object.values(PERMISSIONS).forEach((perm) => {
+      const [resource] = perm.split(':');
+      if (!groups[resource]) {
+        groups[resource] = [];
+      }
+      groups[resource].push(perm);
+    });
+    return groups;
+  }, []);
+
+  // ### Side Effects ###
   useEffect(() => {
     if (isCreating && onValuesChange) {
       const { isActive, ...rest } = form.values;
-      onValuesChange(rest as any);
+      onValuesChange(rest as RoleFormData);
     }
   }, [form.values, isCreating, onValuesChange]);
 
@@ -105,18 +121,17 @@ export function RoleForm({
     }
   }, [role, mode, isEditing, isViewing, isCreating]);
 
+  // ### Event Handlers ###
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
+    if (isEditing) {
+      submissionData.__v = role!.__v;
+    }
     if (isCreating) {
       delete submissionData.isActive;
       delete submissionData.__v;
-    } else {
-      // Only send isActive if it has actually changed
-      if (role && role.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
     }
-    onSubmit(submissionData);
+    onSubmit(submissionData as RoleFormData);
   };
 
   const handleValidationErrors = () => {
@@ -128,25 +143,11 @@ export function RoleForm({
       name: '',
       description: '',
       visibilityScope: VisibilityScope.Client,
-      permissions: [],
-      isActive: true
+      permissions: []
     });
   };
 
-  const groupedPermissions = useMemo(() => {
-    const groups: Record<string, string[]> = {};
-    Object.values(PERMISSIONS).forEach((perm) => {
-      const [resource] = perm.split(':');
-      if (!groups[resource]) {
-        groups[resource] = [];
-      }
-      groups[resource].push(perm);
-    });
-    return groups;
-  }, []);
-
-  const isView = mode === 'view';
-
+  // ### Render ###
   return (
     <FormLayout
       mode={mode}
@@ -164,35 +165,35 @@ export function RoleForm({
         <TextInput
           label="Name"
           placeholder="Role Name"
-          withAsterisk={!isView}
-          readOnly={isView}
+          withAsterisk={!isViewing}
+          readOnly={isViewing}
           {...form.getInputProps('name')}
         />
         <TextInput
           label="Description"
           placeholder="Role Description"
-          readOnly={isView}
+          readOnly={isViewing}
           {...form.getInputProps('description')}
         />
       </Group>
 
       <Group grow>
         <Select
-          withAsterisk={!isView}
+          withAsterisk={!isViewing}
           label="Visibility Scope"
           data={[
             { value: VisibilityScope.Global, label: 'Global' },
             { value: VisibilityScope.Subsidiary, label: 'Subsidiary' },
             { value: VisibilityScope.Client, label: 'Client' },
           ]}
-          readOnly={isView}
+          readOnly={isViewing}
           {...form.getInputProps('visibilityScope')}
         />
-        {mode !== 'create' && can(SHARED_PERMISSIONS.ROLE_MANAGE_INACTIVE) && (
+        {!isCreating && can(SHARED_PERMISSIONS.ROLE_MANAGE_INACTIVE) && (
           <Switch
             label="Active"
-            disabled={isView}
-            checked={form.values.isActive}
+            readOnly={isViewing}
+            style={{ pointerEvents: isViewing ? 'none' : 'auto' }}
             {...form.getInputProps('isActive', { type: 'checkbox' })}
             mt={26} // Align with input
           />
@@ -211,11 +212,11 @@ export function RoleForm({
                   key={perm}
                   label={perm.split(':')[1]} // Show only the action part
                   value={perm}
-                  disabled={isView}
-                  checked={form.values.permissions.includes(perm)}
+                  disabled={isViewing}
+                  checked={form.values.permissions?.includes(perm)}
                   onChange={(event) => {
                     const checked = event.currentTarget.checked;
-                    const current = form.values.permissions;
+                    const current = form.values.permissions || [];
                     if (checked) {
                       form.setFieldValue('permissions', [...current, perm]);
                     } else {

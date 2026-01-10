@@ -1,5 +1,5 @@
-import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings, IconTree, IconLeaf } from '@tabler/icons-react';
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { IconHome, IconUsers, IconBuildingSkyscraper, IconShieldLock, IconSettings, IconTree, IconLeaf, IconClipboardCheck } from '@tabler/icons-react';
+import { PERMISSIONS, VisibilityScope } from '@rootstock/shared/util';
 
 export interface NavigationItem {
   label: string;
@@ -8,6 +8,7 @@ export interface NavigationItem {
   permission?: string | null;
   type?: 'link' | 'header';
   children?: NavigationItem[];
+  requiredScope?: VisibilityScope;
 }
 
 export const NAVIGATION_ITEMS: NavigationItem[] = [
@@ -47,6 +48,20 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     ]
   },
   {
+    label: 'Operations',
+    type: 'link',
+    icon: IconClipboardCheck,
+    children: [
+      {
+        label: 'Assessments',
+        path: '/assessments',
+        icon: IconClipboardCheck,
+        permission: PERMISSIONS.ASSESSMENT_VIEW,
+        type: 'link',
+      },
+    ]
+  },
+  {
     label: 'Lists',
     type: 'link',
     icon: IconLeaf,
@@ -78,12 +93,13 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
         icon: IconShieldLock,
         permission: PERMISSIONS.ROLE_VIEW,
         type: 'link',
+        requiredScope: VisibilityScope.GLOBAL,
       },
       {
         label: 'Settings',
         path: '/settings',
         icon: IconSettings,
-        permission: null,
+        permission: PERMISSIONS.SYSTEM_CONFIG_VIEW,
         type: 'link',
       },
     ]

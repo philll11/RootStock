@@ -1,29 +1,47 @@
 import { Alert } from 'react-native';
 import { getErrorMessage, NotificationAdapter } from '@rootstock/shared/util';
 
-export const mobileNotificationAdapter: NotificationAdapter = {
-  success: (message: string, title = 'Success') => {
-    Alert.alert(title, message);
-  },
+type NotificationListener = (type: 'success' | 'error' | 'info', message: string, title?: string) => void;
 
-  error: (error: any, title = 'Error') => {
+class MobileNotificationService implements NotificationAdapter {
+  private listener: NotificationListener | null = null;
+
+  setListener(listener: NotificationListener) {
+    this.listener = listener;
+  }
+
+  success(message: string, title = 'Success') {
+    if (this.listener) {
+      this.listener('success', message, title);
+    } else {
+      Alert.alert(title, message);
+    }
+  }
+
+  error(error: any, title = 'Error') {
     const message = getErrorMessage(error);
     Alert.alert(title, message);
-  },
+  }
 
-  errorWithAction: (error: any, actionLabel: string, onAction: () => void, title = 'Error') => {
+  errorWithAction(error: any, actionLabel: string, onAction: () => void, title = 'Error') {
     const message = getErrorMessage(error);
     Alert.alert(title, message, [
       { text: 'Cancel', style: 'cancel' },
       { text: actionLabel, onPress: onAction }
     ]);
-  },
-
-  validation: (message = 'Please check the highlighted fields for errors.') => {
-    Alert.alert('Validation Error', message);
-  },
-
-  info: (message: string, title = 'Information') => {
-    Alert.alert(title, message);
   }
-};
+
+  validation(message = 'Please check the highlighted fields for errors.') {
+    Alert.alert('Validation Error', message);
+  }
+
+  info(message: string, title = 'Information') {
+    if (this.listener) {
+      this.listener('info', message, title);
+    } else {
+      Alert.alert(title, message);
+    }
+  }
+}
+
+export const mobileNotificationAdapter = new MobileNotificationService();

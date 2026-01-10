@@ -14,10 +14,12 @@ import { UsersService } from '../users/users.service';
 import { User, UserDocument, UserType } from '../users/schemas/user.schema';
 import { OrchardsService } from '../../assets/orchards/orchards.service';
 
-import { PERMISSIONS } from '../../common/constants/permissions.constants';
+import { PERMISSIONS, Resource } from '../../common/constants/permissions.constants';
 import { CountersService } from '../../system/counters/counters.service';
 import { handleConcurrentSoftDelete } from '../../common/utils/concurrent-deletion.util';
 import { VisibilityScope } from '../roles/schemas/role.schema';
+import { AuditsService } from '../../system/audits/audits.service';
+import { AuditAction } from '../../system/audits/schemas/audit.schema';
 
 
 @Injectable()
@@ -26,9 +28,9 @@ export class ClientsService {
     @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectConnection() private connection: Connection,
-    private readonly usersService: UsersService,
-    @Inject(forwardRef(() => OrchardsService))
-    private readonly orchardsService: OrchardsService,
+    @Inject(forwardRef(() => AuditsService)) private readonly auditsService: AuditsService,
+    @Inject(forwardRef(() => UsersService)) private readonly usersService: UsersService,
+    @Inject(forwardRef(() => OrchardsService)) private readonly orchardsService: OrchardsService,
     private readonly clientResolverService: ClientResolverService,
     private readonly countersService: CountersService,
   ) { }
@@ -49,20 +51,45 @@ export class ClientsService {
     const recordId = `${prefix}${sequence_value.toString().padStart(4, '0')}`;
 
     const newClient = new this.clientModel({ ...createClientDto, recordId });
-    return newClient.save();
+    const savedClient = await newClient.save();
+    
+    // Hydrate to match findOne (Standardization)
+    await savedClient.populate([
+      { path: 'subsidiaryId', select: 'name recordId' }
+    ]);
+
+    await this.auditsService.log(
+      Resource.CLIENT,
+      savedClient._id.toString(),
+      AuditAction.CREATE,
+      null,
+      savedClient.toObject(),
+      requestingUser._id.toString(),
+      'Client Created'
+    );
+
+    return savedClient;
   }
 
   async findAll(query: QueryClientDto, requestingUser: UserDocument): Promise<ClientDocument[]> {
     const queryBuilder = new ClientQueryBuilder(query, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
-    return this.clientModel.find(filter).exec();
+    return this.clientModel.find(filter)
+      .populate([
+        { path: 'subsidiaryId', select: 'name recordId' }
+      ])
+      .exec();
   }
 
   async findAllBySubsidiaryId(subsidiaryId: string, queryDto: QueryClientDto, requestingUser: UserDocument): Promise<ClientDocument[]> {
     const queryBuilder = new ClientQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     filter.subsidiaryId = new Types.ObjectId(subsidiaryId);
-    return this.clientModel.find(filter).exec();
+    return this.clientModel.find(filter)
+      .populate([
+        { path: 'subsidiaryId', select: 'name recordId' }
+      ])
+      .exec();
   }
 
   /**
@@ -78,7 +105,11 @@ export class ClientsService {
 
     const finalFilter = { $and: [securityFilter, { _id: new Types.ObjectId(clientId) }] };
 
-    const client = await this.clientModel.findOne(finalFilter).exec();
+    const client = await this.clientModel.findOne(finalFilter)
+      .populate([
+        { path: 'subsidiaryId', select: 'name recordId' }
+      ])
+      .exec();
     if (!client) {
       throw new NotFoundException(`Client with ID "${clientId}" not found or you do not have permission to view it.`);
     }
@@ -95,8 +126,19 @@ export class ClientsService {
   async update(clientId: string, updateClientDto: UpdateClientDto, requestingUser: UserDocument): Promise<ClientDocument> {
     // The DTO and schema now prevent subsidiaryId from being changed. This check simplifies significantly.
     const clientToUpdate = await this.findOne(clientId, requestingUser, { includeInactive: true });
+    
+    // Optimistic Concurrency Check (In-Memory)
+    if (updateClientDto.__v !== undefined && clientToUpdate.__v !== updateClientDto.__v) {
+      throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+    }
 
-    if (updateClientDto.isActive === false) {
+    // Capture original state for auditing
+    const originalState = clientToUpdate.toObject();
+
+    const { isActive, __v, ...restOfDto } = updateClientDto;
+
+    // Apply Deactivation Checks only if status is actually changing to inactive
+    if (isActive === false && clientToUpdate.isActive === true) {
       const activeUserCount = await this.usersService.countActiveByClientId(clientId);
       if (activeUserCount > 0) {
         throw new ConflictException(`This client cannot be deactivated because it has ${activeUserCount} active user(s) assigned to it.`);
@@ -107,27 +149,45 @@ export class ClientsService {
       }
     }
 
-    const { isActive, __v, ...restOfDto } = updateClientDto;
-    const updatePayload: Partial<Client> = { ...restOfDto };
-
-    if (isActive !== undefined) {
+    // Apply Permission Checks only if status is actually changing
+    if (isActive !== undefined && isActive !== clientToUpdate.isActive) {
       const userPermissions = (requestingUser.roleId as any)?.permissions || [];
       if (!userPermissions.includes(PERMISSIONS.CLIENT_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
-      updatePayload.isActive = isActive;
+      clientToUpdate.isActive = isActive;
     }
 
-    const updatedClient = await this.clientModel.findOneAndUpdate(
-      { _id: clientId, __v: updateClientDto.__v },
-      { $set: updatePayload, $inc: { __v: 1 } },
-      { new: true }
-    ).exec();
+    // Apply standard updates
+    Object.assign(clientToUpdate, restOfDto);
+    
+    clientToUpdate.increment();
+    try {
+      const updatedClient = await clientToUpdate.save();
 
-    if (!updatedClient) {
-      throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
+      // Populate reference fields on the saved document before returning
+      await updatedClient.populate([
+        { path: 'subsidiaryId', select: 'name recordId' }
+      ]);
+
+            await this.auditsService.log(
+        Resource.CLIENT,
+        updatedClient._id.toString(),
+        AuditAction.UPDATE,
+        originalState,
+        updatedClient.toObject(),
+        requestingUser._id.toString(),
+        'Client Updated'
+      );
+
+      return updatedClient;
+
+    } catch (error: any) {
+      if (error.versionError || error.name === 'VersionError') {
+        throw new ConflictException('The record has been modified by another user. Please refresh and try again.');
+      }
+      throw error;
     }
-    return updatedClient;
   }
 
   /**
@@ -137,39 +197,53 @@ export class ClientsService {
   async assignUsers(clientId: string, userIdsToAssign: string[], requestingUser: UserDocument): Promise<void> {
     const client = await this.findOne(clientId, requestingUser); // Layer 2 check
 
+    // Fetch current assigned users for audit
+    const currentAssignedUsers = await this.userModel.find({ clientIds: clientId }).select('_id').exec();
+    const currentAssignedUserIds = currentAssignedUsers.map(u => u._id.toString());
+
     if (userIdsToAssign.length === 0) {
       // If clearing users, just remove this client from everyone.
       await this.userModel.updateMany({ clientIds: clientId }, { $pull: { clientIds: clientId } }).exec();
-      return;
-    }
+    } else {
+      const usersToAssign = await this.userModel.find({ _id: { $in: userIdsToAssign } }).select('userType clientIds recordId').exec();
+      if (usersToAssign.length !== userIdsToAssign.length) {
+        throw new BadRequestException('One or more user IDs provided are invalid.');
+      }
 
-    const usersToAssign = await this.userModel.find({ _id: { $in: userIdsToAssign } }).select('userType clientIds recordId').exec();
-    if (usersToAssign.length !== userIdsToAssign.length) {
-      throw new BadRequestException('One or more user IDs provided are invalid.');
-    }
-
-    // LAYER 3 VALIDATION: Enforce Subsidiary Containment for 'contact' users.
-    for (const user of usersToAssign) {
+      // LAYER 3 VALIDATION: Enforce Subsidiary Containment for 'contact' users.
+      for (const user of usersToAssign) {
         if (user.userType === UserType.CONTACT) {
-            await this._validateContactAssignmentRule(client, user);
+          await this._validateContactAssignmentRule(client, user);
         }
+      }
+
+      const session = await this.connection.startSession();
+      session.startTransaction();
+      try {
+        // Remove the client from users who are no longer in the list.
+        await this.userModel.updateMany({ clientIds: clientId, _id: { $nin: userIdsToAssign } }, { $pull: { clientIds: clientId } }, { session });
+        // Add the client to all users in the new list.
+        await this.userModel.updateMany({ _id: { $in: userIdsToAssign } }, { $addToSet: { clientIds: clientId } }, { session });
+
+        await session.commitTransaction();
+      } catch (error) {
+        await session.abortTransaction();
+        throw error;
+      } finally {
+        session.endSession();
+      }
     }
 
-    const session = await this.connection.startSession();
-    session.startTransaction();
-    try {
-      // Remove the client from users who are no longer in the list.
-      await this.userModel.updateMany({ clientIds: clientId, _id: { $nin: userIdsToAssign } }, { $pull: { clientIds: clientId } }, { session });
-      // Add the client to all users in the new list.
-      await this.userModel.updateMany({ _id: { $in: userIdsToAssign } }, { $addToSet: { clientIds: clientId } }, { session });
-
-      await session.commitTransaction();
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
+    // Audit Log
+    await this.auditsService.log(
+      Resource.CLIENT,
+      clientId,
+      AuditAction.UPDATE,
+      { ...client.toObject(), assignedUserIds: currentAssignedUserIds.sort() },
+      { ...client.toObject(), assignedUserIds: userIdsToAssign.sort() },
+      requestingUser._id.toString(),
+      'Client Users Assigned'
+    );
   }
 
   /**
@@ -179,7 +253,7 @@ export class ClientsService {
    * @returns The soft-deleted client document.
    */
   async remove(clientId: string, requestingUser: UserDocument): Promise<ClientDocument> {
-    await this.findOne(clientId, requestingUser); // Layer 2 Client Check
+    const clientToDelete = await this.findOne(clientId, requestingUser); // Layer 2 Client Check
 
     const session = await this.connection.startSession();
     session.startTransaction();
@@ -191,6 +265,17 @@ export class ClientsService {
       await this.orchardsService.softDeleteByClientId(clientId, session);
 
       await session.commitTransaction();
+
+      await this.auditsService.log(
+        Resource.CLIENT,
+        clientId,
+        AuditAction.DELETE,
+        clientToDelete.toObject(),
+        null,
+        requestingUser._id.toString(),
+        'Client Deleted'
+      );
+
       return deletedClient;
     } catch (error) {
       await session.abortTransaction();
@@ -218,7 +303,8 @@ export class ClientsService {
     if (targetClient.subsidiaryId) {
       // CASE 1: The target client is IN a subsidiary.
       // The contact must already belong to at least one client in that SAME subsidiary.
-      const targetSubId = targetClient.subsidiaryId.toString();
+      const targetSubId = (targetClient.subsidiaryId as any)._id ? (targetClient.subsidiaryId as any)._id.toString() : targetClient.subsidiaryId.toString();
+
       const contactBelongsToTargetSub = contactCurrentClients.some(c => c.subsidiaryId?.toString() === targetSubId);
       if (!contactBelongsToTargetSub) {
         throw new BadRequestException(`Contact user ${contactUser.recordId} belongs to a different subsidiary and cannot be assigned to this client.`);

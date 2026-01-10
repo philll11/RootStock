@@ -1,31 +1,29 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text, Avatar, Chip } from 'react-native-paper';
-import { useUsers } from '@rootstock/users/users-data-access';
+import { useRouter } from 'expo-router';
+import { useGetUsers, UserType } from '@rootstock/iam/users/users-data-access';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 
-export const UsersListScreen = ({ navigation }: any) => {
-  const theme = useTheme() as AppTheme;
-  const { users, isLoading } = useUsers();
+export const UsersListScreen = () => {
+  const theme = useTheme<AppTheme>();
+  const router = useRouter();
+  const { data: users = [], isLoading } = useGetUsers();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredUsers = users.filter(
     (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName[0]}${lastName[0]}`.toUpperCase();
   };
 
   return (
@@ -39,7 +37,7 @@ export const UsersListScreen = ({ navigation }: any) => {
       isEmpty={!isLoading && filteredUsers.length === 0}
       onAdd={
         can(PERMISSIONS.USER_CREATE)
-          ? () => navigation.navigate('UserForm')
+          ? () => router.push('/iam/users/create')
           : undefined
       }
     >
@@ -49,7 +47,7 @@ export const UsersListScreen = ({ navigation }: any) => {
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
           <List.Item
-            title={item.name}
+            title={`${item.firstName} ${item.lastName}`}
             description={() => (
               <View style={styles.itemDescription}>
                 <Text
@@ -71,7 +69,7 @@ export const UsersListScreen = ({ navigation }: any) => {
                     }}
                     style={{
                       backgroundColor:
-                        item.userType === 'employee'
+                        item.userType === UserType.Employee
                           ? theme.colors.primaryContainer
                           : theme.colors.surfaceVariant,
                       height: 24,
@@ -87,15 +85,13 @@ export const UsersListScreen = ({ navigation }: any) => {
               <Avatar.Text
                 {...props}
                 size={40}
-                label={getInitials(item.name)}
+                label={getInitials(item.firstName, item.lastName)}
                 style={{ backgroundColor: theme.colors.primaryContainer }}
                 color={theme.colors.onPrimaryContainer}
               />
             )}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() =>
-              navigation.navigate('UserForm', { userId: item._id })
-            }
+            onPress={() => router.push(`/iam/users/${item._id}`)}
             style={styles.listItem}
           />
         )}

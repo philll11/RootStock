@@ -1,10 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { 
-  useClients, 
-  CreateClientDto,
-  UpdateClientDto,
-} from '@rootstock/clients/clients-data-access';
+  useCreateClient, 
+  ClientFormData,
+} from '@rootstock/iam/clients/clients-data-access';
 import { ClientForm } from '../client-form';
 import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';
@@ -12,19 +11,24 @@ import { Container, Paper } from '@mantine/core';
 export function ClientCreatePage() {
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/clients');
-  const { createClient, isCreating } = useClients();
+  const { mutateAsync: createClient, isPending: isCreating } = useCreateClient();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: CreateClientDto | UpdateClientDto) => {
+  const handleSubmit = async (values: ClientFormData) => {
     try {
-    const newClient = await createClient(values as CreateClientDto);
+      const { isActive, __v, ...createData } = values;
+      const newClient = await createClient(createData);
       setIsDirty(false);
       setTimeout(() => transitionTo(`/clients/${newClient._id}`), 0);
     } catch (error) {
-      console.error('Failed to create variety', error);
+      console.error('Failed to create client', error);
     }
+  };
+  
+  const handleCancel = () => {
+    goBack();
   };
 
   return (
@@ -35,7 +39,7 @@ export function ClientCreatePage() {
           mode="create"
           onSubmit={handleSubmit}
           isLoading={isCreating}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           onDirtyChange={setIsDirty}
           fullHeight={false}
         />

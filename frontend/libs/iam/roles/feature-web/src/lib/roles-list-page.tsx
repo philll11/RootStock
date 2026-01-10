@@ -5,11 +5,13 @@ import { Group, ActionIcon, Badge, Text, Alert } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconAlertCircle, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
-  useRoles,
+  useGetRoles,
+  useCreateRole,
+  useUpdateRole,
+  useDeleteRole,
   Role,
-  CreateRoleDto,
-  UpdateRoleDto,
-} from '@rootstock/roles/roles-data-access';
+  RoleFormData,
+} from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm, RoleFormMode } from './role-form';
 import {
   ConfirmDiscardModal,
@@ -22,21 +24,15 @@ import {
   ActionSplitButton,
   useContextualNavigation,
 } from '@rootstock/ui/web';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function RolesListPage() {
-  const {
-    roles,
-    isLoading,
-    isError,
-    createRole,
-    updateRole,
-    deleteRole,
-    isCreating,
-    isUpdating,
-  } = useRoles();
+  const { data: roles = [], isLoading, isError } = useGetRoles();
+  const { mutateAsync: createRole, isPending: isCreating } = useCreateRole();
+  const { mutateAsync: updateRole, isPending: isUpdating } = useUpdateRole();
+  const { mutateAsync: deleteRole } = useDeleteRole();
   const { can } = usePermission();
   const [opened, { open, close }] = useDisclosure(false);
   const [
@@ -52,7 +48,7 @@ export function RolesListPage() {
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
 
   const [createFormDraft, setCreateFormDraft] = useState<
-    Partial<CreateRoleDto>
+    Partial<RoleFormData>
   >({});
   const [isFormDirty, setIsFormDirty] = useState(false);
 
@@ -121,15 +117,15 @@ export function RolesListPage() {
     }
   };
 
-  const handleSubmit = async (values: CreateRoleDto | UpdateRoleDto) => {
+  const handleSubmit = async (values: RoleFormData) => {
     try {
       if (mode === 'edit' && selectedRole) {
         await updateRole({
           id: selectedRole._id,
-          data: values as UpdateRoleDto,
+          data: values,
         });
       } else if (mode === 'create') {
-        await createRole(values as CreateRoleDto);
+        await createRole(values as any);
         setCreateFormDraft({});
       }
       close();
@@ -159,7 +155,7 @@ export function RolesListPage() {
       accessor: 'isActive',
       title: 'Status',
       render: (role) => (
-        <Badge color={role.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={role.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {role.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),
@@ -173,7 +169,7 @@ export function RolesListPage() {
           {can(PERMISSIONS.ROLE_VIEW) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.view}
+              color={palette.icons.view}
               onClick={(e) => handleViewPage(role._id, e)}
               title="View Page"
             >
@@ -184,7 +180,7 @@ export function RolesListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(role._id, e)}
                 title="Edit Page"
               >
@@ -192,7 +188,7 @@ export function RolesListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(role, e)}
                 title="Quick Edit"
               >
@@ -203,7 +199,7 @@ export function RolesListPage() {
           {can(PERMISSIONS.ROLE_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDelete(role._id, e)}
               title="Delete Role"
             >
@@ -307,7 +303,7 @@ export function RolesListPage() {
         title="Delete Role"
         message="Are you sure you want to delete this role? This action cannot be undone. Note: Roles assigned to users cannot be deleted."
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

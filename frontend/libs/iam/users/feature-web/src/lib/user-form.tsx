@@ -2,42 +2,40 @@
 import {
   TextInput,
   Select,
-  Button,
   PasswordInput,
   Text,
-  Checkbox,
   Group,
   Switch,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import {
   UserType,
-  CreateUserDto,
-  UpdateUserDto,
   User,
-} from '@rootstock/users/users-data-access';
-import { useRoles } from '@rootstock/roles/roles-data-access';
+  UserFormData,
+} from '@rootstock/iam/users/users-data-access';
+import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
 import { useEffect, useState } from 'react';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { SearchableMultiSelect, FormLayout } from '@rootstock/ui/web';
 import {
   searchClients,
   getClient,
-} from '@rootstock/clients/clients-data-access';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+} from '@rootstock/iam/clients/clients-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { palette } from '@rootstock/ui/theme';
 
+// ### Interfaces & Types ###
 export type UserFormMode = 'create' | 'edit' | 'view';
 
 interface UserFormProps {
   mode: UserFormMode;
   user?: User | null;
-  initialValues?: Partial<CreateUserDto>;
-  onSubmit: (values: CreateUserDto | UpdateUserDto) => void;
+  initialValues?: Partial<UserFormData>;
+  onSubmit: (values: UserFormData) => void;
   isLoading: boolean;
   onCancel: () => void;
   onEdit?: () => void;
-  onValuesChange?: (values: Partial<CreateUserDto>) => void;
+  onValuesChange?: (values: Partial<UserFormData>) => void;
   onDirtyChange?: (isDirty: boolean) => void;
   fullHeight?: boolean;
 }
@@ -54,26 +52,28 @@ export function UserForm({
   onDirtyChange,
   fullHeight = true,
 }: UserFormProps) {
+
+  // ### Form Modes, Permissions & State ###
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
-  const [initialClientOptions, setInitialClientOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const { roles } = useRoles();
+
   const { can } = usePermission();
 
-  const form = useForm({
+  const [initialClientOptions, setInitialClientOptions] = useState<{ value: string; label: string }[]>([]);
+
+  // ### Form Definition ###
+  const form = useForm<UserFormData>({
     initialValues: {
       firstName: '',
       lastName: '',
       email: '',
       userType: UserType.Employee,
-      roleId: null,
+      roleId: undefined,
       password: '',
       isActive: true,
       clientIds: [] as string[],
-      __v: user?.__v ?? 0,
+      __v: 0,
       ...initialValues,
     },
     validate: {
@@ -92,9 +92,23 @@ export function UserForm({
     },
   });
 
+  // ### Data Fetching & Options ###
+  const { data: roles = [] } = useGetRoles();
+
+  // ### Side Effects ###
   useEffect(() => {
     const loadClients = async () => {
-      const idsToFetch = user?.clientIds || initialValues?.clientIds;
+      // If we are editing, user.clientIds might already be populated objects
+      if (user?.clientIds && user.clientIds.length > 0 && typeof user.clientIds[0] === 'object') {
+        const populatedClients = user.clientIds as any[];
+        setInitialClientOptions(
+          populatedClients.map((c) => ({ value: c._id, label: c.name }))
+        );
+        return;
+      }
+
+      const rawIds = user?.clientIds || initialValues?.clientIds;
+      const idsToFetch = rawIds?.map((id) => (typeof id === 'object' ? id._id : id));
       // Avoid reloading if we already have options for these IDs
       // This prevents the infinite loop/freeze when typing in other fields
       // because initialValues changes on every keystroke.
@@ -120,7 +134,7 @@ export function UserForm({
   useEffect(() => {
     if (isCreating && onValuesChange) {
       const { isActive, ...rest } = form.values;
-      onValuesChange(rest as any);
+      onValuesChange(rest as UserFormData);
     }
   }, [form.values, isCreating, onValuesChange]);
 
@@ -137,10 +151,10 @@ export function UserForm({
         lastName: user.lastName,
         email: user.email,
         userType: user.userType,
-        roleId: (typeof user.roleId === 'object' ? user.roleId._id : user.roleId) || null,
+        roleId: (typeof user.roleId === 'object' ? user.roleId._id : user.roleId) || undefined,
         password: '',
         isActive: user.isActive,
-        clientIds: user.clientIds || [],
+        clientIds: (user.clientIds || []).map((c: any) => (typeof c === 'object' ? c._id : c)),
         __v: user.__v,
       });
     } else if (isCreating && initialValues) {
@@ -149,28 +163,25 @@ export function UserForm({
         lastName: initialValues.lastName || '',
         email: initialValues.email || '',
         userType: initialValues.userType || UserType.Employee,
-        roleId: initialValues.roleId || null,
+        roleId: initialValues.roleId || undefined,
         password: initialValues.password || '',
-        clientIds: initialValues.clientIds || [],
-        __v: 0,
+        clientIds: initialValues.clientIds || []
       });
     }
   }, [user, mode]);
 
+  // ### Event Handlers ###
   const handleSubmit = (values: typeof form.values) => {
     const submissionData: any = { ...values };
     if (isEditing) {
       delete submissionData.password;
-      // Only send isActive if it has actually changed
-      if (user && user.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
+      submissionData.__v = user!.__v;
     }
     if (isCreating) {
       delete submissionData.isActive;
       delete submissionData.__v;
     }
-    onSubmit(submissionData);
+    onSubmit(submissionData as UserFormData);
   };
 
   const handleValidationErrors = () => {
@@ -183,14 +194,13 @@ export function UserForm({
       lastName: '',
       email: '',
       userType: UserType.Employee,
-      roleId: null,
+      roleId: undefined,
       password: '',
       clientIds: []
     });
   };
 
-  const isView = mode === 'view';
-
+  // ### Render ###
   return (
     <FormLayout
       mode={mode}
@@ -206,52 +216,52 @@ export function UserForm({
     >
       <Group grow>
         <TextInput
-          withAsterisk={!isView}
+          withAsterisk={!isViewing}
           label="First Name"
           placeholder="First Name"
-          readOnly={isView}
+          readOnly={isViewing}
           {...form.getInputProps('firstName')}
         />
         <TextInput
-          withAsterisk={!isView}
+          withAsterisk={!isViewing}
           label="Last Name"
           placeholder="Last Name"
-          readOnly={isView}
+          readOnly={isViewing}
           {...form.getInputProps('lastName')}
         />
       </Group>
 
       <Group grow>
         <TextInput
-          withAsterisk={!isView}
+          withAsterisk={!isViewing}
           label="Email"
           placeholder="Email"
-          readOnly={isView}
+          readOnly={isViewing}
           {...form.getInputProps('email')}
         />
         <Select
-          withAsterisk={!isView}
+          withAsterisk={!isViewing}
           label="User Type"
           placeholder="Select User Type"
           data={[
             { value: UserType.Employee, label: 'Employee' },
             { value: UserType.Contact, label: 'Contact' },
           ]}
-          readOnly={isView}
+          readOnly={isViewing}
           {...form.getInputProps('userType')}
         />
       </Group>
 
       <Group grow>
         <Select
-          withAsterisk={!isView}
+          withAsterisk={!isViewing}
           label="Role"
           placeholder="Select Role"
           data={(roles || []).map((r) => ({ value: r._id, label: r.name }))}
-          readOnly={isView}
+          readOnly={isViewing}
           {...form.getInputProps('roleId')}
         />
-        {!isView ? (
+        {!isViewing ? (
           <PasswordInput
             withAsterisk={isCreating}
             label={isCreating ? 'Password' : 'New Password'}
@@ -263,7 +273,7 @@ export function UserForm({
         )}
       </Group>
 
-      {isView ? (
+      {isViewing ? (
         user?.clientIds &&
         user.clientIds.length > 0 && (
           <div>
@@ -292,8 +302,8 @@ export function UserForm({
       {mode !== 'create' && can(PERMISSIONS.USER_MANAGE_INACTIVE) && (
         <Switch
           label="Active"
-          disabled={isView}
-          checked={form.values.isActive}
+          readOnly={isViewing}
+          style={{ pointerEvents: isViewing ? 'none' : 'auto' }}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
           mt={26} // Align with input
         />

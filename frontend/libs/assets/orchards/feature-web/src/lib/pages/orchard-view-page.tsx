@@ -1,22 +1,25 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  useOrchards,
-} from '@rootstock/orchards/orchards-data-access';
+  useGetOrchard,
+  useDeleteOrchard,
+} from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
-import { BlocksList } from '@rootstock/blocks/blocks-feature-web';
+import { BlocksList } from '@rootstock/assets/blocks/blocks-feature-web';
 import { PageHeader, ConfirmModal, SubResourceTabs, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay, ActionIcon, Text } from '@mantine/core';
 import { IconAlertCircle, IconTrash, IconLayoutGrid, IconUsers, IconHistory } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { AuditTable } from '@rootstock/system/audit/audit-feature-web';
 
 export function OrchardViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getLinkTo, goBack } = useContextualNavigation('/orchards');
-  const { orchard, isLoading, deleteOrchard } = useOrchards(id);
+  const { data: orchard, isLoading } = useGetOrchard(id!);
+  const { mutateAsync: deleteOrchard } = useDeleteOrchard();
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
 
@@ -33,6 +36,10 @@ export function OrchardViewPage() {
         console.error('Failed to delete orchard', error);
       }
     }
+  };
+  
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -57,7 +64,7 @@ export function OrchardViewPage() {
           can(PERMISSIONS.ORCHARD_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={openDeleteModal}
             >
               <IconTrash size={iconSizes.md} />
@@ -70,7 +77,7 @@ export function OrchardViewPage() {
           mode="view"
           orchard={orchard}
           onSubmit={() => { }}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           onEdit={can(PERMISSIONS.ORCHARD_EDIT) ? handleEdit : undefined}
           isLoading={false}
           fullHeight={false}
@@ -78,7 +85,6 @@ export function OrchardViewPage() {
       </Paper>
 
       <SubResourceTabs
-        title="Orchard Details"
         tabs={[
           {
             value: 'blocks',
@@ -92,12 +98,12 @@ export function OrchardViewPage() {
             icon: <IconUsers size={iconSizes.sm} />,
             content: <Text p="md" c="dimmed">User assignment coming soon...</Text>,
           },
-          {
+          ...(can(PERMISSIONS.AUDIT_VIEW) ? [{
             value: 'audit',
             label: 'Audit Trail',
             icon: <IconHistory size={iconSizes.sm} />,
-            content: <Text p="md" c="dimmed">Audit trail coming soon...</Text>,
-          },
+            content: <AuditTable resource="Orchard" recordId={id!} />,
+          }] : []),
         ]}
       />
 
@@ -108,7 +114,7 @@ export function OrchardViewPage() {
         title="Delete Orchard"
         message={`Are you sure you want to delete orchard "${orchard.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </Container>
   );

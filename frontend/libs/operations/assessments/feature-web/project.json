@@ -1,0 +1,9 @@
+{
+  "name": "assessments-feature-web",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/operations/assessments/feature-web/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project assessments-feature-web --web",
+  "targets": {}
+}

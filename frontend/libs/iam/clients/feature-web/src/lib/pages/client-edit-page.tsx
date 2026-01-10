@@ -4,31 +4,42 @@ import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNaviga
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { useState } from 'react';
 import {
-  useClients,
-  useClient,
-  UpdateClientDto
-} from '@rootstock/clients/clients-data-access';
+  useUpdateClient,
+  useGetClient,
+  ClientFormData
+} from '@rootstock/iam/clients/clients-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
 export function ClientEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation(`/clients/${id}`);
-  const { updateClient, isUpdating } = useClients();
-  const { data: client, isLoading } = useClient(id);
+  const { mutateAsync: updateClient, isPending: isUpdating } = useUpdateClient();
+  const { data: client, isLoading } = useGetClient(id);
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: UpdateClientDto) => {
-    if (!id) return;
+  const handleSubmit = async (values: ClientFormData) => {
+    if (!id || !client) return;
     try {
-      await updateClient({ id, data: values });
+      const { subsidiaryId, ...updateData } = values;
+      await updateClient({ 
+        id, 
+        data: {
+          ...updateData,
+          __v: client.__v
+        } 
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/clients/${id}`), 0);
     } catch (error) {
       console.error('Failed to update client', error);
     }
+  };
+  
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -53,7 +64,7 @@ export function ClientEditPage() {
           mode="edit"
           client={client}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

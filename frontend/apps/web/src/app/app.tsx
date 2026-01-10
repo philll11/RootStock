@@ -5,9 +5,10 @@ import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import '@mantine/dates/styles.css';
 
 // Features
-import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '@rootstock/auth/auth-feature-web';
+import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '@rootstock/iam/auth/auth-feature-web';
 import { DashboardPage } from './pages/dashboard-page';
 import { 
   UsersListPage, 
@@ -15,37 +16,44 @@ import {
   UserCreatePage,
   UserEditPage,
   UserViewPage
-} from '@rootstock/users/users-feature-web';
+} from '@rootstock/iam/users/users-feature-web';
 import { 
   ClientsListPage,
   ClientCreatePage,
   ClientEditPage,
   ClientViewPage
-} from '@rootstock/clients/clients-feature-web';
+} from '@rootstock/iam/clients/clients-feature-web';
 import { 
   OrchardsListPage,
   OrchardCreatePage,
   OrchardEditPage,
   OrchardViewPage
-} from '@rootstock/orchards/orchards-feature-web';
+} from '@rootstock/assets/orchards/orchards-feature-web';
 import { 
   BlocksListPage,
   BlockCreatePage,
   BlockEditPage,
   BlockViewPage
-} from '@rootstock/blocks/blocks-feature-web';
+} from '@rootstock/assets/blocks/blocks-feature-web';
 import { 
   RolesListPage,
   RoleCreatePage,
   RoleEditPage,
   RoleViewPage
-} from '@rootstock/roles/roles-feature-web';
+} from '@rootstock/iam/roles/roles-feature-web';
 import { 
   VarietiesListPage,
   VarietyCreatePage,
   VarietyEditPage,
   VarietyViewPage
 } from '@rootstock/master-data/varieties/varieties-feature-web';
+import { 
+  AssessmentListPage,
+  AssessmentCreatePage,
+  AssessmentEditPage,
+  AssessmentViewPage
+} from '@rootstock/operations/assessments/assessments-feature-web';
+import { SystemSettingsPage } from '@rootstock/system/config/system-config-feature-web';
 
 // Layout & Components
 import { MainLayout } from './layouts/main-layout';
@@ -54,7 +62,7 @@ import { PermissionDeniedPage } from './pages/permission-denied-page';
 import { ThemeController } from './theme-controller';
 
 // Infrastructure
-import { useAuth, setupAuthInterceptor } from '@rootstock/auth/auth-data-access';
+import { useAuthSession, setupAuthInterceptor } from '@rootstock/iam/auth/auth-data-access';
 import { webTheme } from '@rootstock/ui/web';
 import { PERMISSIONS, notify } from '@rootstock/shared/util';
 import { zIndex } from '@rootstock/ui/theme';
@@ -67,7 +75,7 @@ setupAuthInterceptor(() => {
 const queryClient = new QueryClient();
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuthSession();
 
   if (isLoading) {
     return (
@@ -261,6 +269,40 @@ export function App() {
                 } 
               />
             </Route>
+            <Route path="assessments">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ASSESSMENT_VIEW}>
+                    <AssessmentListPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="new" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ASSESSMENT_CREATE}>
+                    <AssessmentCreatePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ASSESSMENT_VIEW}>
+                    <AssessmentViewPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path=":id/edit" 
+                element={
+                  <ProtectedRoute permission={PERMISSIONS.ASSESSMENT_EDIT}>
+                    <AssessmentEditPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
             <Route path="roles">
               <Route 
                 index 
@@ -329,6 +371,14 @@ export function App() {
                 } 
               />
             </Route>
+            <Route 
+              path="settings" 
+              element={
+                <ProtectedRoute permission={PERMISSIONS.SYSTEM_CONFIG_VIEW}>
+                  <SystemSettingsPage />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="profile" element={<UserProfilePage />} />
           </Route>
         </Routes>

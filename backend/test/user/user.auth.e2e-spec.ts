@@ -258,4 +258,105 @@ describe('Users Authorization & Security (e2e)', () => {
             });
         });
     });
+
+    // --- SESSION INVALIDATION RULES ---
+    describe('Session Invalidation Rules', () => {
+        let testUser: UserDocument;
+        let testUserToken: string;
+        let initialRole: RoleDocument;
+        let newRole: RoleDocument;
+
+        beforeAll(async () => {
+            // Create roles once for this block
+            initialRole = await roleModel.create({
+                recordId: 'ROLE_INITIAL',
+                name: 'Initial Role',
+                permissions: [PERMISSIONS.USER_VIEW],
+                visibilityScope: VisibilityScope.GLOBAL
+            });
+
+            newRole = await roleModel.create({
+                recordId: 'ROLE_NEW',
+                name: 'New Role',
+                permissions: [PERMISSIONS.USER_VIEW, PERMISSIONS.USER_EDIT],
+                visibilityScope: VisibilityScope.GLOBAL
+            });
+        });
+
+        beforeEach(async () => {
+            // Create user for each test
+            testUser = await userModel.create({
+                recordId: 'USR_SESSION_TEST',
+                name: 'Session Test User',
+                firstName: 'Session',
+                lastName: 'Test',
+                email: 'session@test.com',
+                userType: UserType.EMPLOYEE,
+                roleId: initialRole._id,
+                isActive: true,
+                tokenVersion: 0
+            });
+
+            // Generate initial token
+            testUserToken = jwtService.sign({ 
+                sub: testUser.recordId, 
+                tokenVersion: 0 
+            });
+        });
+
+        afterEach(async () => {
+            // Clean up user
+            if (testUser) {
+                await userModel.deleteOne({ _id: testUser._id });
+            }
+        });
+
+        it('should invalidate access token when user role is changed', async () => {
+            // 1. Verify initial token works
+            await request(app.getHttpServer())
+                .get(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${testUserToken}`)
+                .expect(200);
+
+            // 2. Admin updates the user's role
+            await request(app.getHttpServer())
+                .patch(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${platformAdminToken}`)
+                .send({
+                    roleId: newRole._id.toString(),
+                    __v: testUser.__v
+                })
+                .expect(200);
+
+            // 3. Verify old token is now rejected (401)
+            await request(app.getHttpServer())
+                .get(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${testUserToken}`)
+                .expect(401);
+        });
+
+        it('should invalidate access token when user password is changed', async () => {
+            // 1. Verify initial token works
+            await request(app.getHttpServer())
+                .get(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${testUserToken}`)
+                .expect(200);
+
+            // 2. Admin updates the user's password
+            await request(app.getHttpServer())
+                .patch(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${platformAdminToken}`)
+                .send({
+                    password: 'newPassword123!',
+                    __v: testUser.__v
+                })
+                .expect(200);
+
+            // 3. Verify old token is now rejected (401)
+            await request(app.getHttpServer())
+                .get(`/users/${testUser._id}`)
+                .set('Authorization', `Bearer ${testUserToken}`)
+                .expect(401);
+        });
+    });
 });

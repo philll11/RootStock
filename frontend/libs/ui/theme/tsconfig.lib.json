@@ -5,5 +5,5 @@
     "declaration": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "../mobile/src/lib/mobile-theme.ts", "../web/src/lib/theme/web-theme.ts"]
+  "include": ["src/**/*.ts"]
 }

@@ -1,113 +1,184 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
+import { v4 as uuidv4 } from 'uuid';
 import {
   Client,
-  ClientQuery,
   CreateClientDto,
   UpdateClientDto,
 } from './client.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
-export const CLIENTS_QUERY_KEY = ['clients'];
+export const CLIENTS_KEYS = {
+  all: ['clients'] as const,
+  lists: () => [...CLIENTS_KEYS.all, 'list'] as const,
+  list: (filters: string) => [...CLIENTS_KEYS.lists(), { filters }] as const,
+  details: () => [...CLIENTS_KEYS.all, 'detail'] as const,
+  detail: (id: string) => [...CLIENTS_KEYS.details(), id] as const,
+};
+
+// --- API Functions ---
+const BASE_URL = '/clients';
+
+export const getClients = async (): Promise<Client[]> => {
+  const response = await apiClient.get<Client[]>(BASE_URL);
+  return response.data;
+};
+
+export const getClient = async (id: string): Promise<Client> => {
+  const response = await apiClient.get<Client>(`${BASE_URL}/${id}`);
+  return response.data;
+};
 
 // Helper for searching clients (useful for dropdowns)
 export const searchClients = async (query: string): Promise<Client[]> => {
   const params = new URLSearchParams();
   if (query) params.append('name', query);
   const response = await apiClient.get<Client[]>(
-    `/clients?${params.toString()}`
+    `${BASE_URL}?${params.toString()}`
   );
   return response.data;
 };
 
-export const getClient = async (id: string): Promise<Client> => {
-  const response = await apiClient.get<Client>(`/clients/${id}`);
+
+export const createClient = async (data: CreateClientDto): Promise<Client> => {
+  const response = await apiClient.post<Client>(BASE_URL, data);
   return response.data;
 };
 
-export function useClient(id: string | undefined) {
+export const updateClient = async ({ id, data }: { id: string; data: UpdateClientDto }): Promise<Client> => {
+  const response = await apiClient.patch<Client>(`${BASE_URL}/${id}`, data);
+  return response.data;
+};
+
+export const deleteClient = async (id: string): Promise<void> => {
+  await apiClient.delete(`${BASE_URL}/${id}`);
+};
+
+// --- Hooks ---
+
+export function useGetClients(options?: { enabled?: boolean }) {
+  const { can } = usePermission();
+  const isEnabled = (options?.enabled ?? true) && can(PERMISSIONS.CLIENT_VIEW);
+
   return useQuery({
-    queryKey: [...CLIENTS_QUERY_KEY, id],
+    queryKey: CLIENTS_KEYS.lists(),
+    queryFn: getClients,
+    enabled: isEnabled,
+  });
+}
+
+export function useGetClient(id: string | undefined) {
+  return useQuery({
+    queryKey: CLIENTS_KEYS.detail(id!),
     queryFn: () => getClient(id!),
     enabled: !!id,
   });
 }
 
-export function useClients(options?: { enabled?: boolean }) {
+export function useCreateClient() {
   const queryClient = useQueryClient();
-  const { can } = usePermission();
-  const isEnabled = (options?.enabled ?? true) && can(PERMISSIONS.CLIENT_VIEW);
+  return useMutation({
+    mutationFn: createClient,
+    onMutate: async (newClient) => {
+      await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.lists() });
+      const previousClients = queryClient.getQueryData<Client[]>(CLIENTS_KEYS.lists());
 
-  const clientsQuery = useQuery({
-    queryKey: CLIENTS_QUERY_KEY,
-    queryFn: async () => {
-      const response = await apiClient.get<Client[]>('/clients');
-      return response.data;
+      const optimisticClient: Client & { isOptimistic?: boolean } = {
+        _id: uuidv4(),
+        recordId: 'TEMP',
+        isActive: true,
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        __v: 0,
+        ...newClient,
+        isOptimistic: true,
+      };
+
+      queryClient.setQueryData(CLIENTS_KEYS.lists(), (old: Client[] = []) => [
+        optimisticClient,
+        ...old,
+      ]);
+
+      return { previousClients };
     },
-    enabled: isEnabled,
-  });
-
-  const createClientMutation = useMutation({
-    mutationFn: async (data: CreateClientDto) => {
-      const response = await apiClient.post<Client>('/clients', data);
-      return response.data;
+    onError: (error: any, newClient, context) => {
+      queryClient.setQueryData(CLIENTS_KEYS.lists(), context?.previousClients);
+      notify.error(error, 'Error Creating Client');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CLIENTS_QUERY_KEY });
       notify.success(
         'The client has been successfully created.',
         'Client Created'
       );
     },
-    onError: (error: any) => {
-      notify.error(error, 'Error Creating Client');
-    },
   });
+}
 
-  const updateClientMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateClientDto }) => {
-      const response = await apiClient.patch<Client>(`/clients/${id}`, data);
-      return response.data;
+export function useUpdateClient() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateClient,
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.detail(id) });
+      await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.lists() });
+
+      const previousClient = queryClient.getQueryData<Client>(CLIENTS_KEYS.detail(id));
+      const previousClients = queryClient.getQueryData<Client[]>(CLIENTS_KEYS.lists());
+
+      if (previousClient) {
+        queryClient.setQueryData(CLIENTS_KEYS.detail(id), {
+          ...previousClient,
+          ...data,
+          isOptimistic: true,
+        });
+      }
+
+      if (previousClients) {
+        queryClient.setQueryData(CLIENTS_KEYS.lists(), (old: Client[] = []) =>
+          old.map((client) =>
+            client._id === id ? { ...client, ...data, isOptimistic: true } : client
+          )
+        );
+      }
+
+      return { previousClient, previousClients };
     },
-    onSuccess: (data, variables) => {
-      queryClient.setQueryData([...CLIENTS_QUERY_KEY, variables.id], data);
-      queryClient.invalidateQueries({ queryKey: CLIENTS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: [...CLIENTS_QUERY_KEY, variables.id] });
-      notify.success('The client details have been updated.', 'Client Updated');
-    },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      if (context?.previousClient) {
+        queryClient.setQueryData(CLIENTS_KEYS.detail(variables.id), context.previousClient);
+      }
+      if (context?.previousClients) {
+        queryClient.setQueryData(CLIENTS_KEYS.lists(), context.previousClients);
+      }
       if (error.response?.status !== 409) {
         notify.error(error, 'Error Updating Client');
       }
     },
-  });
-
-  const deleteClientMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiClient.delete(`/clients/${id}`);
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CLIENTS_QUERY_KEY });
+      notify.success('The client details have been updated.', 'Client Updated');
+    },
+  });
+}
+
+export function useDeleteClient() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
       notify.success('The client has been removed.', 'Client Deleted');
     },
     onError: (error: any) => {
       notify.error(error, 'Error Deleting Client');
     },
   });
-
-  return {
-    clients: clientsQuery.data ?? [],
-    client: clientsQuery.data,
-    isLoading: clientsQuery.isLoading,
-    isError: clientsQuery.isError,
-    searchClients,
-    getClient,
-    createClient: createClientMutation.mutateAsync,
-    updateClient: updateClientMutation.mutateAsync,
-    deleteClient: deleteClientMutation.mutateAsync,
-    isCreating: createClientMutation.isPending,
-    isUpdating: updateClientMutation.isPending,
-    isDeleting: deleteClientMutation.isPending,
-  };
 }

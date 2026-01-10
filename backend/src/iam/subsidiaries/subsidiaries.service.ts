@@ -29,7 +29,7 @@ export class SubsidiariesService {
     private readonly countersService: CountersService,
   ) { }
 
-  async create(createSubsidiaryDto: CreateSubsidiaryDto, requestingUser: UserDocument): Promise<Subsidiary> {
+  async create(createSubsidiaryDto: CreateSubsidiaryDto, requestingUser: UserDocument): Promise<SubsidiaryDocument> {
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('subsidiary', 'SUB');
     const paddedSequence = sequence_value.toString().padStart(4, '0');
     const recordId = `${prefix}${paddedSequence}`;
@@ -42,7 +42,7 @@ export class SubsidiariesService {
     return newSubsidiary.save();
   }
 
-  async findAll(queryDto: QuerySubsidiaryDto, requestingUser: UserDocument): Promise<Subsidiary[]> {
+  async findAll(queryDto: QuerySubsidiaryDto, requestingUser: UserDocument): Promise<SubsidiaryDocument[]> {
     const queryBuilder = new SubsidiaryQueryBuilder(queryDto, requestingUser, this.clientResolverService);
     const filter = await queryBuilder.build();
     return this.subsidiaryModel.find(filter).exec();
@@ -68,44 +68,48 @@ export class SubsidiariesService {
     return subsidiary;
   }
 
-  async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, requestingUser: UserDocument): Promise<Subsidiary> {
+  async update(subsidiaryId: string, updateSubsidiaryDto: UpdateSubsidiaryDto, requestingUser: UserDocument): Promise<SubsidiaryDocument> {
     // Layer 2 check to ensure requestingUser has permission to see the role they are trying to update.
-    await this.findOne(subsidiaryId, requestingUser, { includeInactive: true });
+    const existingSubsidiary = await this.findOne(subsidiaryId, requestingUser, { includeInactive: true }) as SubsidiaryDocument;
 
-    // Business Rule: Prevent deactivation of subsidiaries that have active clients assigned.
-    if (updateSubsidiaryDto.isActive === false) {
-      const activeClientCount = await this.clientsService.countActiveBySubsidiaryId(subsidiaryId);
-      if (activeClientCount > 0) {
-        throw new ConflictException(`This subsidiary cannot be deactivated because it has ${activeClientCount} active client(s) assigned to it. Please reassign or deactivate the clients first.`);
-      }
+    // Optimistic Concurrency Control
+    if (updateSubsidiaryDto.__v !== undefined && existingSubsidiary.__v !== undefined && updateSubsidiaryDto.__v !== existingSubsidiary.__v) {
+       throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
     }
-    
+
     const { isActive, __v, ...restOfDto } = updateSubsidiaryDto;
-    const updatePayload: Partial<Subsidiary> = { ...restOfDto };
     
-    // System Constraint: Only roles with SUBSIDIARY_MANAGE_INACTIVE permissions can change Subsidiary status.
-    if (updateSubsidiaryDto.isActive !== undefined) {
+    // Direct properties
+    Object.assign(existingSubsidiary, restOfDto);
+    
+    if (isActive !== undefined && isActive !== existingSubsidiary.isActive) {
       const userPermissions = (requestingUser.roleId as any)?.permissions || [];
       if (!userPermissions.includes(PERMISSIONS.SUBSIDIARY_MANAGE_INACTIVE)) {
         throw new ForbiddenException('You do not have permission to change the isActive status.');
       }
-      updatePayload.isActive = isActive;
+      
+      if (isActive === false) {
+          const activeClientCount = await this.clientsService.countActiveBySubsidiaryId(subsidiaryId);
+          if (activeClientCount > 0) {
+            throw new ConflictException(`This subsidiary cannot be deactivated because it has ${activeClientCount} active client(s) assigned to it. Please reassign or deactivate the clients first.`);
+          }
+      }
+      existingSubsidiary.isActive = isActive;
     }
 
-    const updatedSubsidiary = await this.subsidiaryModel.findOneAndUpdate(
-      { _id: subsidiaryId, __v: updateSubsidiaryDto.__v },
-      { $set: updatePayload, $inc: { __v: 1 } },
-      { new: true }
-    ).exec();
-
-    if (!updatedSubsidiary) {
-      throw new ConflictException('Update failed due to a version conflict. The record has been modified by another user. Please reload and try again.');
+    existingSubsidiary.increment();
+    try {
+        return await existingSubsidiary.save();
+    } catch (error: any) {
+        if (error.versionError || error.name === 'VersionError') {
+             throw new ConflictException('Data has been modified by another user. Please refresh and try again.');
+        }
+        throw error;
     }
-    return updatedSubsidiary;
   }
 
 
-  async remove(subsidiaryId: string, requestingUser: UserDocument): Promise<Subsidiary> {
+  async remove(subsidiaryId: string, requestingUser: UserDocument): Promise<SubsidiaryDocument> {
     await this.findOne(subsidiaryId, requestingUser);
 
     const session = await this.connection.startSession();

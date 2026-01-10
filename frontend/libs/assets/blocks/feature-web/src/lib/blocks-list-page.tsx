@@ -4,10 +4,14 @@ import { Group, ActionIcon, Badge } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
-  useBlocks,
+  useGetBlocks,
+  useCreateBlock,
+  useUpdateBlock,
+  useDeleteBlock,
   Block,
   CreateBlockDto,
-} from '@rootstock/blocks/blocks-data-access';
+  BlockFormData,
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm, BlockFormMode } from './block-form';
 import {
   ConfirmModal,
@@ -20,22 +24,18 @@ import {
   ActionSplitButton,
   useContextualNavigation,
 } from '@rootstock/ui/web';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
 export function BlocksListPage() {
   const navigate = useNavigate();
   const { getLinkTo } = useContextualNavigation();
-  const {
-    blocks,
-    isLoading,
-    createBlock,
-    updateBlock,
-    deleteBlock,
-    isCreating,
-    isUpdating,
-  } = useBlocks();
+  const { data: blocks, isLoading } = useGetBlocks();
+  const { mutateAsync: createBlock, isPending: isCreating } = useCreateBlock();
+  const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
+  const { mutateAsync: deleteBlock } = useDeleteBlock();
+
   const { can } = usePermission();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure(false);
@@ -48,19 +48,17 @@ export function BlocksListPage() {
     direction: 'asc' | 'desc';
   }>({ accessor: 'name', direction: 'asc' });
 
-  const [formMode, setFormMode] = useState<BlockFormMode>('create');
+  const [mode, setMode] = useState<BlockFormMode>('create');
   const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
   const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
-  const [createFormDraft, setCreateFormDraft] = useState<
-    Partial<CreateBlockDto>
-  >({});
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<BlockFormData>>({});
 
   const { handleAction: handleCloseWithWarning, modalProps } =
-    useDiscardWarning(isFormDirty && formMode === 'edit');
+    useDiscardWarning(isFormDirty && mode === 'edit');
 
   const handleCreate = () => {
-    setFormMode('create');
+    setMode('create');
     setSelectedBlock(null);
     setIsFormDirty(false);
     openDrawer();
@@ -71,7 +69,7 @@ export function BlocksListPage() {
   };
 
   const handleView = (block: Block) => {
-    setFormMode('view');
+    setMode('view');
     setSelectedBlock(block);
     setIsFormDirty(false);
     openDrawer();
@@ -84,7 +82,7 @@ export function BlocksListPage() {
 
   const handleEdit = (block: Block, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setFormMode('edit');
+    setMode('edit');
     setSelectedBlock(block);
     setIsFormDirty(false);
     openDrawer();
@@ -104,7 +102,7 @@ export function BlocksListPage() {
   const handleConfirmDelete = async () => {
     if (blockToDelete) {
       try {
-        await deleteBlock({ id: blockToDelete._id });
+        await deleteBlock(blockToDelete._id);
         closeDeleteModal();
         setBlockToDelete(null);
       } catch (error) {
@@ -113,16 +111,32 @@ export function BlocksListPage() {
     }
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: BlockFormData) => {
     try {
-      if (formMode === 'create') {
-        await createBlock({ data: values });
+      if (mode === 'create') {
+        await createBlock({
+          name: values.name,
+          orchardId: values.orchardId!,
+          plantings: values.plantings.map(p => ({
+            varietyId: p.varietyId!,
+            treeCount: p.treeCount
+          })),
+        });
         setCreateFormDraft({});
       } else {
         if (selectedBlock) {
           await updateBlock({
             id: selectedBlock._id,
-            data: values,
+            data: {
+              name: values.name,
+              isActive: values.isActive,
+              plantings: values.plantings.map(p => ({
+                _id: (p as any)._id,
+                varietyId: p.varietyId!,
+                treeCount: p.treeCount
+              })),
+              __v: selectedBlock.__v
+            },
           });
         }
       }
@@ -140,7 +154,7 @@ export function BlocksListPage() {
   };
 
   const getDrawerTitle = () => {
-    switch (formMode) {
+    switch (mode) {
       case 'create':
         return 'Create Block';
       case 'edit':
@@ -158,13 +172,13 @@ export function BlocksListPage() {
     {
       accessor: 'orchardId',
       title: 'Orchard',
-      render: (block) => typeof block.orchardId === 'object' ? block.orchardId.name : 'Unknown Orchard',
+      render: (block: Block) => typeof block.orchardId === 'object' ? block.orchardId.name : 'Unknown Orchard',
       sortable: true,
     },
     {
       accessor: 'plantings',
       title: 'Plantings',
-      render: (block) => (
+      render: (block: Block) => (
         <>
           {block.plantings.map((p, i) => (
             <div key={i}>
@@ -178,8 +192,8 @@ export function BlocksListPage() {
     {
       accessor: 'isActive',
       title: 'Status',
-      render: (block) => (
-        <Badge color={block.isActive ? 'brand' : 'neutral'} variant="light">
+      render: (block: Block) => (
+        <Badge color={block.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {block.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),
@@ -188,11 +202,11 @@ export function BlocksListPage() {
       accessor: 'actions',
       title: '',
       align: 'right',
-      render: (block) => (
+      render: (block: Block) => (
         <Group gap={0} justify="flex-end">
           <ActionIcon
             variant="subtle"
-            color={palette.actions.view}
+            color={palette.icons.view}
             onClick={(e) => handleViewPage(block, e)}
             title="View Page"
           >
@@ -202,7 +216,7 @@ export function BlocksListPage() {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(block, e)}
                 title="Edit Page"
               >
@@ -210,7 +224,7 @@ export function BlocksListPage() {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(block, e)}
                 title="Quick Edit"
               >
@@ -221,7 +235,7 @@ export function BlocksListPage() {
           {can(PERMISSIONS.BLOCK_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDeleteClick(block, e)}
             >
               <IconTrash size={iconSizes.md} />
@@ -299,11 +313,11 @@ export function BlocksListPage() {
       >
         <BlockForm
           key={drawerOpened ? 'opened' : 'closed'}
-          mode={formMode}
+          mode={mode}
           block={selectedBlock}
           onSubmit={handleSubmit}
           onCancel={handleClose}
-          onEdit={() => setFormMode('edit')}
+          onEdit={() => setMode('edit')}
           isLoading={isCreating || isUpdating}
           onDirtyChange={setIsFormDirty}
           initialValues={createFormDraft}
@@ -320,7 +334,7 @@ export function BlocksListPage() {
         title="Delete Block"
         message={`Are you sure you want to delete block "${blockToDelete?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

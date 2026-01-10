@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
 interface ProtectedRouteProps {
   permission: string;

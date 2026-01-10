@@ -12,7 +12,7 @@ import {
   Button,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useLogin } from '@rootstock/auth/auth-data-access';
+import { useLogin } from '@rootstock/iam/auth/auth-data-access';
 import { useNavigate } from 'react-router-dom';
 import { notify } from '@rootstock/shared/util';
 import { shadows } from '@rootstock/ui/theme';
@@ -46,22 +46,8 @@ export function LoginPage() {
 
   return (
     <Container size={420} my="xl">
-      <Title ta="center">Welcome back!</Title>
-      <Text c="dimmed" size="sm" ta="center" mt="xs">
-        Do not have an account yet?{' '}
-        <Anchor
-          size="sm"
-          component="button"
-          onClick={() =>
-            notify.info(
-              'Please contact your administrator.',
-              'Restricted Access'
-            )
-          }
-        >
-          Create account
-        </Anchor>
-      </Text>
+      <Title ta="center">RootStock</Title>
+      <Text c="dimmed" size="md" ta="center" mt="xs">Field Management</Text>
 
       <Paper withBorder shadow={shadows.card} p="xl" mt="xl" radius="md">
         <form onSubmit={form.onSubmit(handleSubmit)}>

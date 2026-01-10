@@ -3,7 +3,7 @@ import { StrictMode } from 'react';
 import { createBrowserRouter, RouterProvider, Route, createRoutesFromElements } from 'react-router-dom';
 import * as ReactDOM from 'react-dom/client';
 import App from './app/app';
-import { configureAuth } from '@rootstock/auth/auth-data-access';
+import { configureAuth } from '@rootstock/iam/auth/auth-data-access';
 import { notify, appControl } from '@rootstock/shared/util';
 import { webNotificationAdapter, webAppControl } from '@rootstock/ui/web';
 

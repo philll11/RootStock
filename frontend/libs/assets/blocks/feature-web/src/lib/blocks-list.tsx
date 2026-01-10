@@ -4,10 +4,14 @@ import { Group, ActionIcon, Badge, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash, IconEye, IconLayoutSidebarRight, IconPlus, IconFilePlus } from '@tabler/icons-react';
 import {
-  useBlocks,
+  useGetBlocks,
+  useCreateBlock,
+  useUpdateBlock,
+  useDeleteBlock,
   Block,
   CreateBlockDto,
-} from '@rootstock/blocks/blocks-data-access';
+  BlockFormData,
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm, BlockFormMode } from './block-form';
 import {
   ConfirmModal,
@@ -18,9 +22,9 @@ import {
   DataTable,
   FormDrawer,
   DataTableColumn,
-  ActionSplitButton, 
+  ActionSplitButton,
 } from '@rootstock/ui/web';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { palette, iconSizes, layout } from '@rootstock/ui/theme';
 
@@ -31,15 +35,11 @@ interface BlocksListProps {
 export function BlocksList({ orchardId }: BlocksListProps) {
   const navigate = useNavigate();
   const { getLinkTo } = useContextualNavigation();
-  const {
-    blocks,
-    isLoading,
-    createBlock,
-    updateBlock,
-    deleteBlock,
-    isCreating,
-    isUpdating,
-  } = useBlocks(orchardId);
+  const { data: blocks, isLoading } = useGetBlocks(orchardId);
+  const { mutateAsync: createBlock, isPending: isCreating } = useCreateBlock();
+  const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
+  const { mutateAsync: deleteBlock } = useDeleteBlock();
+
   const { can } = usePermission();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure(false);
@@ -56,9 +56,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
   const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
   const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
-  const [createFormDraft, setCreateFormDraft] = useState<
-    Partial<CreateBlockDto>
-  >({});
+  const [createFormDraft, setCreateFormDraft] = useState<Partial<BlockFormData>>({});
 
   const { handleAction: handleCloseWithWarning, modalProps } =
     useDiscardWarning(isFormDirty && formMode === 'edit');
@@ -109,7 +107,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
   const handleConfirmDelete = async () => {
     if (blockToDelete) {
       try {
-        await deleteBlock({ id: blockToDelete._id });
+        await deleteBlock(blockToDelete._id);
         closeDeleteModal();
         setBlockToDelete(null);
       } catch (error) {
@@ -118,16 +116,32 @@ export function BlocksList({ orchardId }: BlocksListProps) {
     }
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: BlockFormData) => {
     try {
       if (formMode === 'create') {
-        await createBlock({ data: values, orchardId });
+        await createBlock({
+          name: values.name,
+          orchardId: orchardId ?? values.orchardId!,
+          plantings: values.plantings.map(p => ({
+            varietyId: p.varietyId!,
+            treeCount: p.treeCount
+          })),
+        });
         setCreateFormDraft({});
       } else {
         if (selectedBlock) {
           await updateBlock({
             id: selectedBlock._id,
-            data: values,
+            data: {
+              name: values.name,
+              isActive: values.isActive,
+              plantings: values.plantings.map(p => ({
+                _id: (p as any)._id,
+                varietyId: p.varietyId!,
+                treeCount: p.treeCount
+              })),
+              __v: selectedBlock.__v
+            },
           });
         }
       }
@@ -178,7 +192,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
       accessor: 'isActive',
       title: 'Status',
       render: (block) => (
-        <Badge color={block.isActive ? 'brand' : 'neutral'} variant="light">
+        <Badge color={block.isActive ? palette.state.active : palette.state.inactive} variant="light">
           {block.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),
@@ -191,7 +205,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
         <Group gap={0} justify="flex-end">
           <ActionIcon
             variant="subtle"
-            color={palette.actions.view}
+            color={palette.icons.view}
             onClick={(e) => handleViewPage(block, e)}
             title="View Page"
           >
@@ -201,7 +215,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
             <>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEditPage(block, e)}
                 title="Edit Page"
               >
@@ -209,7 +223,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
               </ActionIcon>
               <ActionIcon
                 variant="subtle"
-                color={palette.actions.edit}
+                color={palette.icons.edit}
                 onClick={(e) => handleEdit(block, e)}
                 title="Quick Edit"
               >
@@ -220,7 +234,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
           {can(PERMISSIONS.BLOCK_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={(e) => handleDeleteClick(block, e)}
             >
               <IconTrash size={iconSizes.md} />
@@ -233,20 +247,20 @@ export function BlocksList({ orchardId }: BlocksListProps) {
 
   const sortedBlocks = blocks
     ? [...blocks].sort((a, b) => {
-        const { accessor, direction } = sortState;
-        const aValue = (a as any)[accessor] || '';
-        const bValue = (b as any)[accessor] || '';
+      const { accessor, direction } = sortState;
+      const aValue = (a as any)[accessor] || '';
+      const bValue = (b as any)[accessor] || '';
 
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return direction === 'asc'
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
-        }
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
 
-        if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return direction === 'asc' ? 1 : -1;
-        return 0;
-      })
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    })
     : undefined;
 
   const actionButton = can(PERMISSIONS.BLOCK_CREATE) ? (
@@ -307,7 +321,7 @@ export function BlocksList({ orchardId }: BlocksListProps) {
         title="Delete Block"
         message={`Are you sure you want to delete block "${blockToDelete?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </>
   );

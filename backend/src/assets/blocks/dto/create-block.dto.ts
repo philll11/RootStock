@@ -1,10 +1,14 @@
 // backend/src/assets/blocks/schemas/block.schema.ts
-import { IsArray, IsMongoId, IsNotEmpty, IsNumber, IsString, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { IsExistingVariety } from '../../../master-data/varieties/decorators/is-existing-variety.decorator';
 import { IsExistingOrchard } from '../../orchards/decorators/is-existing-orchard.decorator';
 
 class PlantingDto {
+  @IsOptional()
+  @IsMongoId()
+  readonly _id?: string;
+
   @IsMongoId()
   @IsNotEmpty()
   @IsExistingVariety()

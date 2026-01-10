@@ -9,14 +9,16 @@ import { UsersModule } from '../../iam/users/users.module';
 import { CountersModule } from '../../system/counters/counters.module';
 import { BlocksModule } from '../blocks/blocks.module';
 import { ClientResolverModule } from '../../iam/client-resolver/client-resolver.module';
+import { AuditsModule } from '../../system/audits/audits.module';
 
 @Module({
   imports: [
     forwardRef(() => ClientsModule),
     forwardRef(() => UsersModule),
     forwardRef(() => BlocksModule),
+    forwardRef(() => AuditsModule),
     CountersModule,
-    ClientResolverModule
+    ClientResolverModule,
   ],
   controllers: [OrchardsController],
   providers: [

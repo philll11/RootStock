@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
-import { List, useTheme, Text } from 'react-native-paper';
-import { useClients } from '@rootstock/clients/clients-data-access';
+import { useState } from 'react';
+import { FlatList, StyleSheet } from 'react-native';
+import { List, useTheme } from 'react-native-paper';
+import { useRouter } from 'expo-router';
+import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 
-export const ClientsListScreen = ({ navigation }: any) => {
-  const theme = useTheme() as AppTheme;
-  const { clients, isLoading } = useClients();
+export const ClientsListScreen = () => {
+  const router = useRouter();
+  const theme = useTheme<AppTheme>();
+  const { data: clients = [], isLoading } = useGetClients();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -28,7 +30,7 @@ export const ClientsListScreen = ({ navigation }: any) => {
       isEmpty={!isLoading && filteredClients.length === 0}
       onAdd={
         can(PERMISSIONS.CLIENT_CREATE)
-          ? () => navigation.navigate('ClientForm')
+          ? () => router.push('/iam/clients/create')
           : undefined
       }
     >
@@ -39,12 +41,13 @@ export const ClientsListScreen = ({ navigation }: any) => {
         renderItem={({ item }) => (
           <List.Item
             title={item.name}
-            left={(props) => <List.Icon {...props} icon="domain" />}
+            description={item.isOptimistic ? 'Syncing...' : undefined}
+            left={(props) => <List.Icon {...props} icon="domain" color={item.isOptimistic ? theme.colors.outline : props.color} />}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() =>
-              navigation.navigate('ClientForm', { clientId: item._id })
+              router.push(`/iam/clients/${item._id}`)
             }
-            style={styles.listItem}
+            style={[styles.listItem, item.isOptimistic && { opacity: 0.6 }]}
           />
         )}
       />

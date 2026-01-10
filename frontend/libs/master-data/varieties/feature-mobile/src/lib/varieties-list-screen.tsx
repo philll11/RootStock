@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
-import { useVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useRouter } from 'expo-router';
+import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
 import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 
-export const VarietiesListScreen = ({ navigation }: any) => {
-  const theme = useTheme() as AppTheme;
-  const { varieties, isLoading: isVarietiesLoading } = useVarieties();
+export const VarietiesListScreen = () => {
+  const router = useRouter();
+  const theme = useTheme<AppTheme>();
+  const { data: varieties, isLoading } = useGetVarieties();
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.VARIETY_CREATE);
 
@@ -22,33 +24,53 @@ export const VarietiesListScreen = ({ navigation }: any) => {
   return (
     <ListLayout
       title="Varieties"
-      isLoading={isVarietiesLoading}
+      isLoading={isLoading}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder="Search varieties"
       emptyText="No varieties found"
-      isEmpty={!isVarietiesLoading && filteredVarieties.length === 0}
-      onAdd={canCreate ? () => navigation.navigate('VarietyForm') : undefined}
+      isEmpty={!isLoading && filteredVarieties.length === 0}
+      onAdd={canCreate ? () => router.push('/master-data/varieties/create') : undefined}
     >
       <FlatList
         data={filteredVarieties}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <List.Item
-            title={item.name}
-            description={item.recordId}
-            left={props => <List.Icon {...props} icon="sprout" />}
-            right={props => (
-              <View style={styles.statusContainer}>
-                {!item.isActive && <Text style={{ color: theme.colors.error, marginRight: spacing.sm }}>Inactive</Text>}
-                <List.Icon {...props} icon="chevron-right" />
-              </View>
-            )}
-            onPress={() => navigation.navigate('VarietyForm', { varietyId: item._id })}
-            style={styles.listItem}
-          />
-        )}
+        renderItem={({ item }) => {
+          const isOptimistic = (item as any).recordId === 'TEMP';
+          return (
+            <List.Item
+              title={item.name}
+              titleStyle={isOptimistic ? { opacity: 0.5 } : undefined}
+              description={isOptimistic ? 'Syncing...' : item.recordId}
+              descriptionStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
+              left={(props) => (
+                <List.Icon
+                  {...props}
+                  icon={isOptimistic ? 'cloud-upload' : 'sprout'}
+                  color={isOptimistic ? theme.colors.outline : undefined}
+                />
+              )}
+              right={(props) => (
+                <View style={styles.statusContainer}>
+                  {!item.isActive && !isOptimistic && (
+                    <Text
+                      style={{
+                        color: theme.colors.error,
+                        marginRight: spacing.sm,
+                      }}
+                    >
+                      Inactive
+                    </Text>
+                  )}
+                  <List.Icon {...props} icon="chevron-right" />
+                </View>
+              )}
+              onPress={() => router.push(`/master-data/varieties/${item._id}`)}
+              style={[styles.listItem, isOptimistic && { opacity: 0.7 }]}
+            />
+          );
+        }}
       />
     </ListLayout>
   );

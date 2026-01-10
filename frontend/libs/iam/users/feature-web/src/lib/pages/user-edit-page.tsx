@@ -4,23 +4,23 @@ import { PageHeader, ConfirmDiscardModal, useDiscardWarning, useContextualNaviga
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
 import { useState } from 'react';
 import {
-  useUsers,
-  useUser,
-  UpdateUserDto
-} from '@rootstock/users/users-data-access';
+  useUpdateUser,
+  useGetUser,
+  UserFormData
+} from '@rootstock/iam/users/users-data-access';
 import { IconAlertCircle } from '@tabler/icons-react';
 
 export function UserEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation(`/users/${id}`);
-  const { updateUser, isUpdating } = useUsers();
-  const { data: user, isLoading } = useUser(id);
+  const { mutateAsync: updateUser, isPending: isUpdating } = useUpdateUser();
+  const { data: user, isLoading } = useGetUser(id!);
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: UpdateUserDto) => {
+  const handleSubmit = async (values: UserFormData) => {
     if (!id) return;
     try {
       await updateUser({ id, data: values });
@@ -29,6 +29,10 @@ export function UserEditPage() {
     } catch (error) {
       console.error('Failed to update user', error);
     }
+  };
+  
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -53,7 +57,7 @@ export function UserEditPage() {
           mode="edit"
           user={user}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

@@ -1,30 +1,43 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
-  useOrchards,
-  CreateOrchardDto,
-  UpdateOrchardDto,
-} from '@rootstock/orchards/orchards-data-access';
+  useCreateOrchard,
+  OrchardFormData,
+} from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper } from '@mantine/core';
 
 export function OrchardCreatePage() {
   const navigate = useNavigate();
-  const { goBack, transitionTo } = useContextualNavigation('/orchards');
-  const { createOrchard, isCreating } = useOrchards();
+  const [searchParams] = useSearchParams();
+  const clientId = searchParams.get('clientId') || undefined;
+  
+  // If we came from a client, return to that client. Otherwise return to orchard list.
+  const { goBack, transitionTo } = useContextualNavigation(clientId ? `/clients/${clientId}` : '/orchards');
+  const { mutateAsync: createOrchard, isPending: isCreating } = useCreateOrchard();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: CreateOrchardDto | UpdateOrchardDto) => {
+  const handleSubmit = async (values: OrchardFormData) => {
     try {
-      const newOrchard = await createOrchard(values as CreateOrchardDto);
+      const newOrchard = await createOrchard({
+        name: values.name,
+        clientId: values.clientId,
+        userIds: values.userIds,
+      });
       setIsDirty(false);
+      // Navigate to the view page of the new assessment, preserving the "returnTo" context
+      // so that "Back" from the View page goes back to where we started (Client or List).
       setTimeout(() => transitionTo(`/orchards/${newOrchard._id}`), 0);
     } catch (error) {
       console.error('Failed to create orchard', error);
     }
+  };
+
+  const handleCancel = () => {
+    goBack();
   };
 
   return (
@@ -34,7 +47,7 @@ export function OrchardCreatePage() {
         <OrchardForm
           mode="create"
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isCreating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

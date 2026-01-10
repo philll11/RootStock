@@ -1,7 +1,7 @@
 // frontend/apps/web/src/app/layouts/main-layout.tsx
 import { AppShell, Burger, Group, Title, Button, NavLink, Text, ActionIcon, ScrollArea, Tooltip, rem } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useAuth, usePermission } from '@rootstock/auth/auth-data-access';
+import { useLogout, usePermission, useGetProfile } from '@rootstock/iam/auth/auth-data-access';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { IconUser, IconChevronRight, IconChevronLeft } from '@tabler/icons-react';
 import { ThemeToggle } from '../components/theme-toggle';
@@ -11,8 +11,9 @@ import { layout, iconSizes } from '@rootstock/ui/theme';
 export function MainLayout() {
   const [opened, { toggle }] = useDisclosure();
   const [expanded, { toggle: toggleExpanded, open: expand }] = useDisclosure(true);
-  const { logout } = useAuth();
+  const { mutate: logout } = useLogout();
   const { hasPermission } = usePermission();
+  const { data: user } = useGetProfile();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -50,7 +51,7 @@ export function MainLayout() {
             >
               <IconUser size={iconSizes.lg} stroke={1.5} />
             </ActionIcon>
-            <Button variant="subtle" onClick={logout}>Logout</Button>
+            <Button variant="subtle" onClick={() => logout()}>Logout</Button>
           </Group>
         </Group>
       </AppShell.Header>
@@ -64,11 +65,30 @@ export function MainLayout() {
                 return null;
               }
 
+              // Check requiredScope
+              if (navItem.requiredScope) {
+                const userRole = user?.roleId;
+                // Ensure role is populated and matches scope
+                if (!userRole || typeof userRole !== 'object' || (userRole as any).visibilityScope !== navItem.requiredScope) {
+                  return null;
+                }
+              }
+
               // If it has children, check if user has permission for at least one child
               if (navItem.children && navItem.children.length > 0) {
-                const visibleChildren = navItem.children.filter((child: any) => 
-                  !child.permission || hasPermission(child.permission)
-                );
+                const visibleChildren = navItem.children.filter((child: any) => {
+                  // Check permission
+                  if (child.permission && !hasPermission(child.permission)) return false;
+                  
+                  // Check requiredScope
+                  if (child.requiredScope) {
+                    const userRole = user?.roleId;
+                    if (!userRole || typeof userRole !== 'object' || (userRole as any).visibilityScope !== child.requiredScope) {
+                      return false;
+                    }
+                  }
+                  return true;
+                });
                 
                 if (visibleChildren.length === 0) {
                   return null;

@@ -3,6 +3,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { RolesModule } from '../roles/roles.module';
+import { AuditsModule } from '../../system/audits/audits.module';
 
 import { ClientsModule } from '../clients/clients.module';
 
@@ -15,7 +16,8 @@ import { CountersModule } from '../../system/counters/counters.module';
   imports: [
     forwardRef(() => RolesModule),
     forwardRef(() => ClientsModule),
-    CountersModule
+    forwardRef(() => AuditsModule),
+    CountersModule,
   ],
   controllers: [UsersController],
   providers: [

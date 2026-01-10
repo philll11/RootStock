@@ -6,9 +6,11 @@ export interface AuthStorage {
 
 let storage: AuthStorage | null = null;
 let cachedToken: string | null = null;
+let cachedRefreshToken: string | null = null;
 let currentPlatform: 'web' | 'mobile' = 'web';
 
 export const AUTH_TOKEN_KEY = 'rootstock_auth_token';
+export const REFRESH_TOKEN_KEY = 'rootstock_refresh_token';
 
 type AuthListener = (token: string | null) => void;
 const listeners: AuthListener[] = [];
@@ -27,20 +29,21 @@ const notifyListeners = (token: string | null) => {
   listeners.forEach((listener) => listener(token));
 };
 
-export const configureAuth = (
-  storageImpl: AuthStorage,
-  platform: 'web' | 'mobile' = 'web'
-) => {
+export const configureAuth = ( storageImpl: AuthStorage, platform: 'web' | 'mobile' = 'web') => {
   storage = storageImpl;
   currentPlatform = platform;
 };
 
 export const getPlatform = () => currentPlatform;
 
-export const setToken = async (token: string) => {
+export const setToken = async (token: string, refreshToken?: string) => {
   cachedToken = token;
   if (storage) {
     await storage.setItem(AUTH_TOKEN_KEY, token);
+    if (refreshToken) {
+      cachedRefreshToken = refreshToken;
+      await storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
   }
   notifyListeners(token);
 };
@@ -61,10 +64,25 @@ export const getToken = async (): Promise<string | null> => {
   return null;
 };
 
+export const getRefreshToken = async (): Promise<string | null> => {
+  if (currentPlatform === 'web') return null;
+  if (cachedRefreshToken) return cachedRefreshToken;
+  if (storage) {
+    const token = await storage.getItem(REFRESH_TOKEN_KEY);
+    if (token) {
+      cachedRefreshToken = token;
+      return token;
+    }
+  }
+  return null;
+};
+
 export const clearToken = async () => {
   cachedToken = null;
+  cachedRefreshToken = null;
   if (storage) {
     await storage.removeItem(AUTH_TOKEN_KEY);
+    await storage.removeItem(REFRESH_TOKEN_KEY);
   }
   notifyListeners(null);
 };

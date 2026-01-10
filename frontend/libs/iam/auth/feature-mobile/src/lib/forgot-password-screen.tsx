@@ -16,14 +16,16 @@ import {
   useTheme,
   Appbar,
 } from 'react-native-paper';
-import { AuthService } from '@rootstock/auth/auth-data-access';
-import { spacing } from '@rootstock/ui/theme'; // NEW IMPORT
+import { useRouter } from 'expo-router';
+import { AuthService } from '@rootstock/iam/auth/auth-data-access';
+import { spacing } from '@rootstock/ui/theme';
 
-export const ForgotPasswordScreen = ({ navigation }: any) => {
+export const ForgotPasswordScreen = () => {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   const handleReset = async () => {
     setError(null);
@@ -42,7 +44,7 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
       Alert.alert(
         'Email Sent',
         'If an account exists with this email, you will receive password reset instructions.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ text: 'OK', onPress: () => router.back() }]
       );
     } catch (err: any) {
       console.error('Forgot Password Failed', err);
@@ -57,7 +59,7 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <Appbar.Header>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
+        <Appbar.BackAction onPress={() => router.back()} />
         <Appbar.Content title="Forgot Password" />
       </Appbar.Header>
 

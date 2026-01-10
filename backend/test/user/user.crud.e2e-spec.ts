@@ -74,7 +74,8 @@ describe('Users CRUD & Business Logic (e2e)', () => {
 
             const contactRes = await request(app.getHttpServer()).post('/users').set('Authorization', `Bearer ${globalAdminToken}`).send(contactDto).expect(201);
             expect(contactRes.body.name).toBe('New Contact');
-            expect(contactRes.body.clientIds).toContain(testClientA._id.toString());
+            const clientIds = contactRes.body.clientIds.map((c: any) => c._id || c);
+            expect(clientIds).toContain(testClientA._id.toString());
         });
 
         it('should reject creation with a duplicate email', async () => {
@@ -136,8 +137,13 @@ describe('Users CRUD & Business Logic (e2e)', () => {
             const updateDto: UpdateUserDto = { firstName: 'Patched', lastName: 'User', roleId: contactRole._id.toString(), clientIds: [testClientB._id.toString()], __v: current.body.__v };
             const res = await request(app.getHttpServer()).patch(`/users/${testUser._id}`).set('Authorization', `Bearer ${globalAdminToken}`).send(updateDto).expect(200);
             expect(res.body.name).toBe('Patched User');
-            expect(res.body.roleId).toBe(contactRole._id.toString());
-            expect(res.body.clientIds).toContain(testClientB._id.toString());
+            // Handle populated roleId
+            const roleId = res.body.roleId._id || res.body.roleId;
+            expect(roleId).toBe(contactRole._id.toString());
+            
+            // Handle populated clientIds
+            const clientIds = res.body.clientIds.map((c: any) => c._id || c);
+            expect(clientIds).toContain(testClientB._id.toString());
             expect(res.body.__v).toBe(current.body.__v + 1);
         });
 

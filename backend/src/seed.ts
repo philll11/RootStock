@@ -13,6 +13,7 @@ import { Client } from './iam/clients/schemas/client.schema';
 import { Orchard } from './assets/orchards/schemas/orchard.schema';
 import { Variety } from './master-data/varieties/schemas/variety.schema';
 import { Block } from './assets/blocks/schemas/block.schema';
+import { SystemConfig } from './system/config/schemas/system-config.schema';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -29,10 +30,29 @@ async function bootstrap() {
     const orchardModel = app.get(getModelToken(Orchard.name));
     const varietyModel = app.get(getModelToken(Variety.name));
     const blockModel = app.get(getModelToken(Block.name));
+    const systemConfigModel = app.get(getModelToken(SystemConfig.name));
 
     // ---------------------------------------------------------
     // 1. ESSENTIAL SYSTEM DATA (Runs in ALL Environments)
     // ---------------------------------------------------------
+
+    // --- System Configs ---
+    const seedConfigs = [
+      {
+        key: 'audit',
+        value: { enabled: true, retentionDays: 90 },
+        description: 'Global Audit Logging Settings',
+      },
+    ];
+
+    for (const config of seedConfigs) {
+      await systemConfigModel.findOneAndUpdate(
+        { key: config.key },
+        { $setOnInsert: { ...config, isActive: true, isDeleted: false } },
+        { upsert: true, new: true },
+      );
+    }
+    console.log('Verified System Configs.');
 
     // --- Counters ---
     const seedCounters = [
@@ -77,6 +97,7 @@ async function bootstrap() {
           PERMISSIONS.ASSESSMENT_VIEW,
           PERMISSIONS.ASSESSMENT_CREATE,
           PERMISSIONS.ASSESSMENT_EDIT,
+          PERMISSIONS.AUDIT_VIEW,
         ],
         isActive: true,
       },

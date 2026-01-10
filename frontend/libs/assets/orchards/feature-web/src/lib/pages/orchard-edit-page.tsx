@@ -1,9 +1,10 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
-  useOrchards,
-  UpdateOrchardDto,
-} from '@rootstock/orchards/orchards-data-access';
+  useGetOrchard,
+  useUpdateOrchard,
+  OrchardFormData,
+} from '@rootstock/assets/orchards/orchards-data-access';
 import { OrchardForm } from '../orchard-form';
 import { useDiscardWarning, PageHeader, ConfirmDiscardModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay } from '@mantine/core';
@@ -13,20 +14,33 @@ export function OrchardEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { goBack, transitionTo } = useContextualNavigation('/orchards');
-  const { orchard, isLoading, updateOrchard, isUpdating } = useOrchards(id);
+  const { data: orchard, isLoading } = useGetOrchard(id!);
+  const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
   const [isDirty, setIsDirty] = useState(false);
 
   const { modalProps } = useDiscardWarning(isDirty);
 
-  const handleSubmit = async (values: any) => {
-    if (!id) return;
+  const handleSubmit = async (values: OrchardFormData) => {
+    if (!id || !orchard) return;
     try {
-      await updateOrchard({ id, data: values as UpdateOrchardDto });
+      await updateOrchard({ 
+        id, 
+        data: {
+          name: values.name,
+          userIds: values.userIds,
+          isActive: values.isActive,
+          __v: orchard.__v
+        } 
+      });
       setIsDirty(false);
       setTimeout(() => transitionTo(`/orchards/${id}`), 0);
     } catch (error) {
       console.error('Failed to update orchard', error);
     }
+  };
+
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -51,7 +65,7 @@ export function OrchardEditPage() {
           mode="edit"
           orchard={orchard}
           onSubmit={handleSubmit}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
           isLoading={isUpdating}
           onDirtyChange={setIsDirty}
           fullHeight={false}

@@ -3,25 +3,25 @@ import { useEffect } from 'react';
 import { TextInput, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import {
-  CreateClientDto,
-  UpdateClientDto,
   Client,
-} from '@rootstock/clients/clients-data-access';
+  ClientFormData,
+} from '@rootstock/iam/clients/clients-data-access';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { FormLayout } from '@rootstock/ui/web';
 
+// ### Interfaces & Types ###
 export type ClientFormMode = 'create' | 'edit' | 'view';
 
 interface ClientFormProps {
   mode: ClientFormMode;
   client?: Client | null;
-  initialValues?: Partial<CreateClientDto>;
-  onSubmit: (values: CreateClientDto | UpdateClientDto) => void;
+  initialValues?: Partial<ClientFormData>;
+  onSubmit: (values: ClientFormData) => void;
   isLoading: boolean;
   onCancel: () => void;
   onEdit?: () => void;
-  onValuesChange?: (values: Partial<CreateClientDto>) => void;
+  onValuesChange?: (values: Partial<ClientFormData>) => void;
   onDirtyChange?: (isDirty: boolean) => void;
   fullHeight?: boolean;
 }
@@ -38,12 +38,16 @@ export function ClientForm({
   onDirtyChange,
   fullHeight = true,
 }: ClientFormProps) {
+
+  // ### Form Modes, Permissions & State ###
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
+
   const { can } = usePermission();
 
-  const form = useForm({
+  // ### Form Definition ###
+  const form = useForm<ClientFormData>({
     initialValues: {
       name: '',
       isActive: true,
@@ -55,10 +59,11 @@ export function ClientForm({
     },
   });
 
+  // ### Side Effects ###
   useEffect(() => {
     if (isCreating && onValuesChange) {
       const { isActive, ...rest } = form.values;
-      onValuesChange(rest as any);
+      onValuesChange(rest as ClientFormData);
     }
   }, [form.values, isCreating, onValuesChange]);
 
@@ -82,18 +87,17 @@ export function ClientForm({
     }
   }, [client, mode, isEditing, isViewing, isCreating]);
 
+  // ### Event Handlers ###
   const handleSubmit = (values: typeof form.values) => {
-    if (isCreating) {
-      const { isActive, __v, ...createValues } = values;
-      onSubmit(createValues);
-    } else {
-      const submissionData: any = { ...values };
-      // Only send isActive if it has actually changed
-      if (client && client.isActive === values.isActive) {
-        delete submissionData.isActive;
-      }
-      onSubmit(submissionData);
+    const submissionData: any = { ...values };
+    if (isEditing) {
+      submissionData.__v = client!.__v;
     }
+    if (isCreating) {
+      delete submissionData.isActive;
+      delete submissionData.__v;
+    }
+    onSubmit(submissionData as ClientFormData);
   };
 
   const handleValidationErrors = () => {
@@ -106,8 +110,7 @@ export function ClientForm({
     });
   };
 
-  const isView = mode === 'view';
-
+  // ### Render ###
   return (
     <FormLayout
       mode={mode}
@@ -124,18 +127,18 @@ export function ClientForm({
       <TextInput
         label="Name"
         placeholder="Client Name"
-        withAsterisk={!isView}
-        readOnly={isView}
+        withAsterisk={!isViewing}
+        readOnly={isViewing}
         {...form.getInputProps('name')}
       />
 
       {mode !== 'create' && can(PERMISSIONS.CLIENT_MANAGE_INACTIVE) && (
         <Switch
           label="Active"
-          disabled={isView}
-          checked={form.values.isActive}
+          readOnly={isViewing}
+          style={{ pointerEvents: isViewing ? 'none' : 'auto' }}
           {...form.getInputProps('isActive', { type: 'checkbox' })}
-            mt={26} // Align with input
+          mt={26} // Align with input
         />
       )}
     </FormLayout>

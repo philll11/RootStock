@@ -88,7 +88,7 @@ describe('Orchards CRUD & Business Logic (e2e)', () => {
             expect(res.body.name).toBe(createDto.name);
             expect(res.body.recordId).toMatch(/^ORC\d{4}$/);
             expect(res.body.userIds).toBeInstanceOf(Array);
-            expect(res.body.userIds).toContain(validContactUserA._id.toString());
+            expect(res.body.userIds.map(u => u._id)).toContain(validContactUserA._id.toString());
         });
 
         it('should reject creation with missing required fields (name, clientId)', async () => {
@@ -149,7 +149,7 @@ describe('Orchards CRUD & Business Logic (e2e)', () => {
                     __v: testOrchard.__v 
                 }).expect(200);
             expect(res.body.name).toBe('Updated Orchard Name');
-            expect(res.body.userIds).toEqual(
+            expect(res.body.userIds.map(u => u._id)).toEqual(
                 expect.arrayContaining([validContactUserA._id.toString(), employeeUser._id.toString()])
             );
             expect(res.body.__v).toBe(testOrchard.__v + 1);

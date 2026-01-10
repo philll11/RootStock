@@ -8,7 +8,7 @@ import {
   Button,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { AuthService } from '@rootstock/auth/auth-data-access';
+import { AuthService } from '@rootstock/iam/auth/auth-data-access';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { notify } from '@rootstock/shared/util';

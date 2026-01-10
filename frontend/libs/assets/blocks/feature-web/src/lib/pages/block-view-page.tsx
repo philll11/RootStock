@@ -1,21 +1,24 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  useBlocks,
-} from '@rootstock/blocks/blocks-data-access';
+  useGetBlock,
+  useDeleteBlock,
+} from '@rootstock/assets/blocks/blocks-data-access';
 import { BlockForm } from '../block-form';
-import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
+import { PageHeader, ConfirmModal, useContextualNavigation, SubResourceTabs } from '@rootstock/ui/web';
 import { Container, Paper, Alert, LoadingOverlay, ActionIcon } from '@mantine/core';
-import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
+import { IconAlertCircle, IconTrash, IconHistory } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
+import { AuditTable } from '@rootstock/system/audit/audit-feature-web';
 
 export function BlockViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getLinkTo, goBack } = useContextualNavigation('/blocks');
-  const { block, isLoading, deleteBlock } = useBlocks({ blockId: id });
+  const { data: block, isLoading } = useGetBlock(id!);
+  const { mutateAsync: deleteBlock } = useDeleteBlock();
 
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
@@ -28,9 +31,17 @@ export function BlockViewPage() {
 
   const handleDelete = async () => {
     if (id) {
-      await deleteBlock({ id });
-      goBack();
+      try {
+        await deleteBlock(id);
+        goBack();
+      } catch (error) {
+        console.error('Failed to delete block', error);
+      }
     }
+  };
+
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -49,13 +60,13 @@ export function BlockViewPage() {
 
   return (
     <Container size="xl">
-      <PageHeader 
+      <PageHeader
         title={block.name}
         action={
           can(PERMISSIONS.BLOCK_DELETE) && (
-            <ActionIcon 
-              variant="subtle" 
-              color={palette.actions.delete} 
+            <ActionIcon
+              variant="subtle"
+              color={palette.icons.delete}
               onClick={openDeleteModal}
             >
               <IconTrash size={iconSizes.md} />
@@ -67,13 +78,24 @@ export function BlockViewPage() {
         <BlockForm
           mode="view"
           block={block}
-          onSubmit={() => {}}
-          onCancel={() => goBack()}
+          onSubmit={() => { }}
+          onCancel={handleCancel}
           onEdit={can(PERMISSIONS.BLOCK_EDIT) ? handleEdit : undefined}
           isLoading={false}
           fullHeight={false}
         />
       </Paper>
+
+      <SubResourceTabs
+        tabs={[
+          ...(can(PERMISSIONS.AUDIT_VIEW) ? [{
+            value: 'audit',
+            label: 'Audit Trail',
+            icon: <IconHistory size={iconSizes.sm} />,
+            content: <AuditTable resource="Block" recordId={id!} />,
+          }] : []),
+        ]}
+      />
 
       <ConfirmModal
         opened={deleteModalOpened}
@@ -82,7 +104,7 @@ export function BlockViewPage() {
         title="Delete Block"
         message={`Are you sure you want to delete block "${block.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </Container>
   );

@@ -6,6 +6,18 @@ import { AssessmentSample, AssessmentSummary } from '../schemas/assessment.schem
 export class AssessmentCalculatorService {
 
     /**
+     * Enforces sequential row numbering (1, 2, 3...) regardless of input.
+     * This ensures the database always stores a clean visual index.
+     */
+    public reindexSamples(samples: AssessmentSample[]): AssessmentSample[] {
+        if (!samples) return [];
+        return samples.map((sample, index) => ({
+            ...sample,
+            rowNumber: index + 1
+        }));
+    }
+
+    /**
      * Pure function to calculate assessment statistics from raw samples.
      * This is the definitive Source of Truth for the application.
      */

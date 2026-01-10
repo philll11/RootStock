@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 
 interface CanProps {
   permission: string;

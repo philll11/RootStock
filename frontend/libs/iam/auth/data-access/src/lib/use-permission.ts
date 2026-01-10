@@ -1,8 +1,7 @@
-import { useAuth } from './use-auth';
-import { Role } from '@rootstock/users/users-data-access';
+import { useGetProfile } from './use-auth';
 
 export const usePermission = () => {
-  const { user } = useAuth();
+  const { data: user } = useGetProfile();
 
   const hasPermission = (permission: string): boolean => {
     if (!user || !user.roleId) return false;
@@ -13,8 +12,8 @@ export const usePermission = () => {
       return false;
     }
 
-    const role = user.roleId as Role;
-    return role.permissions.includes(permission);
+    // It's an object, so we access permissions safely
+    return user.roleId.permissions?.includes(permission) ?? false;
   };
 
   const can = (permission: string) => hasPermission(permission);

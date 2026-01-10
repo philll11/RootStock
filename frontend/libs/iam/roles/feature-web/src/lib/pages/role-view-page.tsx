@@ -1,22 +1,22 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  useRoles,
-  useRole
-} from '@rootstock/roles/roles-data-access';
+  useDeleteRole,
+  useGetRole
+} from '@rootstock/iam/roles/roles-data-access';
 import { RoleForm } from '../role-form';
 import { PageHeader, ConfirmModal, useContextualNavigation } from '@rootstock/ui/web';
 import { Container, Paper, Alert, ActionIcon, LoadingOverlay } from '@mantine/core';
 import { IconAlertCircle, IconTrash } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { palette, iconSizes } from '@rootstock/ui/theme';
-import { usePermission } from '@rootstock/auth/auth-data-access';
+import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
 export function RoleViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { deleteRole } = useRoles();
-  const { data: role, isLoading } = useRole(id);
+  const { mutateAsync: deleteRole } = useDeleteRole();
+  const { data: role, isLoading } = useGetRole(id);
   const { getLinkTo, goBack } = useContextualNavigation('/roles');
   const { can } = usePermission();
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
@@ -34,6 +34,10 @@ export function RoleViewPage() {
         console.error('Failed to delete role', error);
       }
     }
+  };
+  
+  const handleCancel = () => {
+    goBack();
   };
 
   if (isLoading) {
@@ -58,7 +62,7 @@ export function RoleViewPage() {
           can(PERMISSIONS.ROLE_DELETE) && (
             <ActionIcon
               variant="subtle"
-              color={palette.actions.delete}
+              color={palette.icons.delete}
               onClick={openDeleteModal}
               title="Delete Role"
             >
@@ -73,7 +77,7 @@ export function RoleViewPage() {
           role={role}
           onSubmit={() => { }}
           isLoading={false}
-          onCancel={() => goBack()}
+          onCancel={handleCancel}
             onEdit={can(PERMISSIONS.ROLE_EDIT) ? handleEdit : undefined}
           fullHeight={false}
         />
@@ -85,7 +89,7 @@ export function RoleViewPage() {
         title="Delete Role"
         message={`Are you sure you want to delete role "${role?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
-        confirmColor={palette.actions.delete}
+        confirmColor={palette.icons.delete}
       />
     </Container>
   );
