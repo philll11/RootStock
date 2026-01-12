@@ -34,10 +34,8 @@ export class AuditsService {
    * Checks if auditing is enabled for the given resource.
    */
   async shouldAudit(resource: string): Promise<boolean> {
-    const auditConfig = await this.configService.get<{ enabled: boolean }>('audit');
-    // Default to true if config is missing, or strictly follow config?
-    // Spec says "populate 'audit' key defaults", so it should exist.
-    return auditConfig?.enabled ?? false;
+    const auditConfig = await this.configService.get('audit');
+    return auditConfig?.value?.enabled ?? false;
   }
 
   /**

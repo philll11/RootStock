@@ -16,25 +16,25 @@ export class SystemConfigService implements OnModuleInit {
     // Optional: Preload critical configs here if needed
   }
 
-  async get<T>(key: string): Promise<T | null> {
+  async get(key: string): Promise<SystemConfig | null> {
     const now = Date.now();
     const cached = this.cache.get(key);
 
     if (cached && cached.expiry > now) {
-      return cached.value as T;
+      return cached.value as SystemConfig;
     }
 
     const config = await this.systemConfigModel.findOne({ key, isDeleted: false }).exec();
     if (config) {
-      this.cache.set(key, { value: config.value, expiry: now + this.TTL });
-      return config.value as T;
+      this.cache.set(key, { value: config, expiry: now + this.TTL });
+      return config;
     }
 
     return null;
   }
 
   async set(key: string, value: any, description?: string): Promise<void> {
-    await this.systemConfigModel.findOneAndUpdate(
+    const updatedConfig = await this.systemConfigModel.findOneAndUpdate(
       { key },
       { 
         key, 
@@ -46,7 +46,9 @@ export class SystemConfigService implements OnModuleInit {
     ).exec();
 
     // Invalidate cache or update it
-    this.cache.set(key, { value, expiry: Date.now() + this.TTL });
+    if (updatedConfig) {
+      this.cache.set(key, { value: updatedConfig, expiry: Date.now() + this.TTL });
+    }
   }
 
   async getAll(): Promise<SystemConfig[]> {

@@ -16,7 +16,7 @@ export function useSyncOfflineData() {
     try {
       setIsSyncing(true);
       
-      // Prefetch Clients (Pilot)
+      // Prefetch Clients
       await queryClient.prefetchQuery({ 
         queryKey: CLIENTS_KEYS.lists(), 
         queryFn: () => getClients() 
