@@ -8,10 +8,12 @@ import {
   Switch,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { zodResolver } from '@rootstock/ui/web';
 import {
   UserType,
   User,
   UserFormData,
+  userSchema,
 } from '@rootstock/iam/users/users-data-access';
 import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
 import { useEffect, useState } from 'react';
@@ -76,20 +78,7 @@ export function UserForm({
       __v: 0,
       ...initialValues,
     },
-    validate: {
-      firstName: (value) =>
-        value.trim().length < 1 ? 'First name is required' : null,
-      lastName: (value) =>
-        value.trim().length < 1 ? 'Last name is required' : null,
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Invalid email'),
-      userType: (value) => (value ? null : 'User type is required'),
-      password: (value, values) => {
-        if (isCreating && (!value || value.length < 1)) {
-          return 'Password is required for new users';
-        }
-        return null;
-      },
-    },
+    validate: zodResolver(userSchema),
   });
 
   // ### Data Fetching & Options ###

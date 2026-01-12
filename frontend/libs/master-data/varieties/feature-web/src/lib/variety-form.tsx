@@ -1,7 +1,8 @@
 import { TextInput, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { zodResolver } from '@rootstock/ui/web';
 import { useEffect } from 'react';
-import { Variety, VarietyFormData } from '@rootstock/master-data/varieties/varieties-data-access';
+import { Variety, VarietyFormData, varietySchema } from '@rootstock/master-data/varieties/varieties-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { FormLayout } from '@rootstock/ui/web';
@@ -50,9 +51,7 @@ export function VarietyForm({
       __v: 0,
       ...initialValues,
     },
-    validate: {
-      name: (value) => (value.length < 2 ? 'Name must be at least 2 characters' : null),
-    },
+    validate: zodResolver(varietySchema),
   });
 
   // ### Side Effects ###

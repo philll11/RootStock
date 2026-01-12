@@ -17,12 +17,14 @@ import {
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
+import { zodResolver } from '@rootstock/ui/web';
 import { useEffect, useMemo } from 'react';
 import {
   Assessment,
   AssessmentFormData,
   AssessmentStatus,
   AssessmentType,
+  assessmentSchema,
 } from '@rootstock/operations/assessments/assessments-data-access';
 import { useGetBlocks } from '@rootstock/assets/blocks/blocks-data-access';
 import { IconTrash, IconPlus, IconCalendar } from '@tabler/icons-react';
@@ -85,16 +87,7 @@ export function AssessmentForm({
       __v: 0,
       ...initialValues,
     },
-    validate: {
-      name: (value) => (value ? null : 'Name is required'),
-      blockId: (value) => (value ? null : 'Block is required'),
-      date: (value) => (value ? null : 'Date is required'),
-      samples: {
-        rowNumber: (value) => (value > 0 ? null : 'Row number is required'),
-        totalFruit: (value) => (value >= 0 ? null : 'Total fruit must be >= 0'),
-        damagedFruit: (value) => (value >= 0 ? null : 'Damaged fruit must be >= 0'),
-      },
-    },
+    validate: zodResolver(assessmentSchema),
   });
 
   // ### Data Fetching & Options ###

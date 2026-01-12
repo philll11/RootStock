@@ -11,9 +11,11 @@ import {
   Group,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { zodResolver } from '@rootstock/ui/web';
 import {
   Role,
   RoleFormData,
+  roleSchema,
   VisibilityScope,
   PERMISSIONS,
 } from '@rootstock/iam/roles/roles-data-access';
@@ -68,10 +70,7 @@ export function RoleForm({
       __v: 0,
       ...initialValues,
     },
-    validate: {
-      name: (value) => (value.trim().length < 1 ? 'Name is required' : null),
-      visibilityScope: (value) => value ? null : 'Visibility Scope is required',
-    },
+    validate: zodResolver(roleSchema),
   });
 
   // ### Data Fetching & Options ###

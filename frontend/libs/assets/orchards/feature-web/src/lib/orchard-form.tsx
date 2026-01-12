@@ -11,12 +11,14 @@ import {
   Group,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { zodResolver } from '@rootstock/ui/web';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
 import { useGetUsers } from '@rootstock/iam/users/users-data-access';
 import {
   Orchard,
   OrchardFormData,
+  orchardSchema,
 } from '@rootstock/assets/orchards/orchards-data-access';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
@@ -69,10 +71,7 @@ export function OrchardForm({
       __v: 0,
       ...initialValues,
     },
-    validate: {
-      name: (value) => (value.trim().length < 1 ? 'Name is required' : null),
-      clientId: (value) => (!value ? 'Client is required' : null),
-    },
+    validate: zodResolver(orchardSchema),
   });
   ;
 

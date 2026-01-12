@@ -2,9 +2,11 @@
 import { useEffect } from 'react';
 import { TextInput, Switch } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { zodResolver } from '@rootstock/ui/web';
 import {
   Client,
   ClientFormData,
+  clientSchema,
 } from '@rootstock/iam/clients/clients-data-access';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
@@ -54,9 +56,7 @@ export function ClientForm({
       __v: 0,
       ...initialValues,
     },
-    validate: {
-      name: (value) => (value.trim().length < 1 ? 'Name is required' : null),
-    },
+    validate: zodResolver(clientSchema),
   });
 
   // ### Side Effects ###

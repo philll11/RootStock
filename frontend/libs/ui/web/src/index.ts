@@ -15,3 +15,4 @@ export * from './lib/components/action-split-button/action-split-button';
 export * from './lib/components/sub-resource-tabs/sub-resource-tabs';
 export * from './lib/hooks/use-contextual-navigation';
 
+export * from './lib/services/zod-resolver';

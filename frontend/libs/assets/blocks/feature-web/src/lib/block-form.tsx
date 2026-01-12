@@ -13,11 +13,13 @@ import {
   Box,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { zodResolver } from '@rootstock/ui/web';
 import { useDisclosure } from '@mantine/hooks';
 import { useEffect, useState, useMemo } from 'react';
 import {
   Block,
   BlockFormData,
+  blockSchema,
 } from '@rootstock/assets/blocks/blocks-data-access';
 import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
 import { useGetOrchards } from '@rootstock/assets/orchards/orchards-data-access';
@@ -82,14 +84,7 @@ export function BlockForm({
       __v: 0,
       ...initialValues,
     },
-    validate: {
-      name: (value) => value.length < 2 ? 'Name must be at least 2 characters' : null,
-      orchardId: (value) => !value && !orchardId ? 'Orchard is required' : null,
-      plantings: {
-        varietyId: (value) => (!value ? 'Variety is required' : null),
-        treeCount: (value) => value < 0 ? 'Tree count must be positive' : null,
-      },
-    },
+    validate: zodResolver(blockSchema),
   });
 
   // ### Data Fetching & Options ###
