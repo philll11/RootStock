@@ -244,14 +244,14 @@ export function VarietiesListPage() {
         <VarietyForm
           key={opened ? 'opened' : 'closed'}
           mode={mode}
-          initialValues={selectedVariety}
+          variety={selectedVariety}
+          initialValues={createFormDraft}
           onSubmit={handleSubmit}
           onCancel={handleClose}
           onEdit={() => setMode('edit')}
           isLoading={isCreating || isUpdating}
           onDirtyChange={setIsFormDirty}
-          draftValues={createFormDraft}
-          onValuesChange={(values) => setCreateFormDraft(values)}
+          onValuesChange={setCreateFormDraft}
         />
       </FormDrawer>
 

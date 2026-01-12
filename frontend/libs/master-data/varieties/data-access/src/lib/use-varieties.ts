@@ -28,7 +28,11 @@ export const getVariety = async (id: string): Promise<Variety> => {
 };
 
 export const createVariety = async (data: CreateVarietyDto) => {
-  const response = await apiClient.post<Variety>(BASE_URL, data);
+  // We skip the global 409 handler because a 409 on create means "Duplicate" not "Version Conflict"
+  // and we handle the error notification explicitly in the mutation.
+  const response = await apiClient.post<Variety>(BASE_URL, data, {
+    skipGlobalErrorHandler: true
+  } as any);
   return response.data;
 };
 

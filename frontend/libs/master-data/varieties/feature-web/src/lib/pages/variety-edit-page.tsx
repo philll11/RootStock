@@ -61,7 +61,7 @@ export function VarietyEditPage() {
       <Paper p="md" withBorder>
         <VarietyForm
           mode="edit"
-          initialValues={variety}
+          variety={variety}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           isLoading={isUpdating}

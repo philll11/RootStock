@@ -35,6 +35,12 @@ interface AssessmentFormProps {
   onCancel: () => void;
   blockId?: string;
   isLocked?: boolean;
+  summary?: {
+    totalSamples: number;
+    totalFruit: number;
+    totalDamaged: number;
+    averageDamagePercentage: number;
+  };
 }
 
 export function AssessmentForm({
@@ -45,6 +51,7 @@ export function AssessmentForm({
   onCancel,
   blockId,
   isLocked,
+  summary,
 }: AssessmentFormProps) {
   const theme = useTheme<AppTheme>();
   const insets = useSafeAreaInsets();
@@ -301,6 +308,40 @@ export function AssessmentForm({
             )}
           </View>
 
+          {summary && (
+            <View style={styles.section}>
+              <Text variant="titleMedium" style={{ marginBottom: 8, color: theme.colors.outline }}>
+                Summary
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <View style={[styles.summaryItem, { backgroundColor: theme.colors.surfaceVariant }]}>
+                  <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Samples</Text>
+                  <Text variant="bodyMedium" style={{ fontWeight: 'bold' }}>{summary.totalSamples}</Text>
+                </View>
+                <View style={[styles.summaryItem, { backgroundColor: theme.colors.surfaceVariant }]}>
+                  <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Total Fruit</Text>
+                  <Text variant="bodyMedium" style={{ fontWeight: 'bold' }}>{summary.totalFruit}</Text>
+                </View>
+                <View style={[styles.summaryItem, { backgroundColor: theme.colors.surfaceVariant }]}>
+                  <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Damaged</Text>
+                  <Text variant="bodyMedium" style={{ fontWeight: 'bold' }}>{summary.totalDamaged}</Text>
+                </View>
+                <View style={[styles.summaryItem, { backgroundColor: theme.colors.surfaceVariant }]}>
+                  <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Damage %</Text>
+                  <Text 
+                    variant="bodyMedium" 
+                    style={{ 
+                      fontWeight: 'bold', 
+                      color: summary.averageDamagePercentage > 0 ? theme.colors.error : theme.colors.onSurface 
+                    }}
+                  >
+                    {summary.averageDamagePercentage.toFixed(1)}%
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text variant="titleMedium">Samples</Text>
@@ -547,5 +588,12 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     marginBottom: 16,
+  },
+  summaryItem: {
+    padding: 8, 
+    borderRadius: 8, 
+    flexGrow: 1, 
+    minWidth: '22%',
+    alignItems: 'center'
   },
 });

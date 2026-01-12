@@ -53,6 +53,7 @@ export function AssessmentEditScreen() {
             isSubmitting={isUpdating}
             blockId={typeof assessment.blockId === 'object' ? assessment.blockId._id : assessment.blockId}
             isLocked={assessment.status === AssessmentStatus.COMPLETED}
+            summary={assessment.summary}
           />
         </>
       )}

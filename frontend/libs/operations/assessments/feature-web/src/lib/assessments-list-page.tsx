@@ -10,6 +10,7 @@ import {
   useDeleteAssessment,
   Assessment,
   AssessmentFormData,
+  AssessmentStatus,
 } from '@rootstock/operations/assessments/assessments-data-access';
 import { AssessmentForm, AssessmentFormMode } from './assessment-form';
 import {
@@ -189,7 +190,7 @@ export function AssessmentListPage() {
       accessor: 'summary.averageDamagePercentage',
       title: 'Damage %',
       sortable: true,
-      render: (assessment: Assessment) => `${assessment.summary.averageDamagePercentage}%`
+      render: (assessment: Assessment) => `${assessment.summary.averageDamagePercentage.toFixed(1)}%`
     },
     {
       accessor: 'actions',
@@ -206,7 +207,7 @@ export function AssessmentListPage() {
               <IconEye size={iconSizes.md} />
             </ActionIcon>
           )}
-          {can(PERMISSIONS.ASSESSMENT_EDIT) && (
+          {assessment.status !== AssessmentStatus.COMPLETED && can(PERMISSIONS.ASSESSMENT_EDIT) && (
             <>
               <ActionIcon
                 variant="subtle"
@@ -226,7 +227,7 @@ export function AssessmentListPage() {
               </ActionIcon>
             </>
           )}
-          {can(PERMISSIONS.ASSESSMENT_DELETE) && (
+          {assessment.status !== AssessmentStatus.COMPLETED && can(PERMISSIONS.ASSESSMENT_DELETE) && (
             <ActionIcon
               variant="subtle"
               color={palette.icons.delete}

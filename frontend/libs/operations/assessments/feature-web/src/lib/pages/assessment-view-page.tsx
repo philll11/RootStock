@@ -101,7 +101,7 @@ export function AssessmentViewPage() {
                   Reopen
                 </Button>
              )}
-             {can(PERMISSIONS.ASSESSMENT_DELETE) && (
+             {!isCompleted && can(PERMISSIONS.ASSESSMENT_DELETE) && (
               <ActionIcon 
                 variant="subtle" 
                 color={palette.icons.delete} 

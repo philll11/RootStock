@@ -10,7 +10,10 @@ import {
   Table,
   Select,
   Loader,
-  Switch
+  Switch,
+  Paper,
+  SimpleGrid,
+  Group
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
@@ -209,63 +212,71 @@ export function AssessmentForm({
       fullHeight={fullHeight}
     >
       <Stack gap={spacing.md}>
-        <TextInput
-          label="Name"
-          placeholder="Assessment Name"
-          required
-          readOnly={isViewing}
-          disabled={isLocked}
-          {...form.getInputProps('name')}
-        />
-
-        <Select
-          label="Type"
-          placeholder="Select type"
-          data={Object.values(AssessmentType)}
-          required
-          readOnly={isViewing}
-          disabled={isLocked}
-          {...form.getInputProps('type')}
-        />
-
-        <Select
-          label="Block"
-          placeholder="Select block"
-          data={blockOptions}
-          required
-          searchable
-          readOnly={isViewing || !!blockId}
-          disabled={isLoadingBlocks || isLocked}
-          rightSection={isLoadingBlocks ? <Loader size="xs" /> : null}
-          {...form.getInputProps('blockId')}
-        />
-
-        <TextInput
-          label="Status"
-          readOnly
-          disabled
-          {...form.getInputProps('status')}
-        />
-
-        <DateInput
-          label="Assessment Date"
-          placeholder="Pick date"
-          required
-          readOnly={isViewing}
-          disabled={isLocked}
-          valueFormat="DD MMM YYYY"
-          leftSection={<IconCalendar size={iconSizes.sm} />}
-          {...form.getInputProps('date')}
-        />
-
-        {isEditing && assessment?.status === AssessmentStatus.COMPLETED && (
+        <Group grow>
           <TextInput
-            label="Reason for Change"
-            placeholder="Explain why you are modifying this locked record"
+            label="Name"
+            placeholder="Assessment Name"
             required
-            {...form.getInputProps('changeReason')}
+            readOnly={isViewing}
+            disabled={isLocked}
+            {...form.getInputProps('name')}
           />
-        )}
+
+          <Select
+            label="Type"
+            placeholder="Select type"
+            data={Object.values(AssessmentType)}
+            required
+            readOnly={isViewing}
+            disabled={isLocked}
+            {...form.getInputProps('type')}
+          />
+        </Group>
+
+        <Group grow>
+          <Select
+            label="Block"
+            placeholder="Select block"
+            data={blockOptions}
+            required
+            searchable
+            readOnly={isViewing || !!blockId}
+            disabled={isLoadingBlocks || isLocked}
+            rightSection={isLoadingBlocks ? <Loader size="xs" /> : null}
+            {...form.getInputProps('blockId')}
+          />
+
+          <DateInput
+            label="Assessment Date"
+            placeholder="Pick date"
+            required
+            readOnly={isViewing}
+            disabled={isLocked}
+            valueFormat="DD MMM YYYY"
+            leftSection={<IconCalendar size={iconSizes.sm} />}
+            {...form.getInputProps('date')}
+          />
+        </Group>
+
+        <Group grow>
+          <TextInput
+            label="Status"
+            readOnly
+            disabled
+            {...form.getInputProps('status')}
+          />
+
+          {isEditing && assessment?.status === AssessmentStatus.COMPLETED ? (
+            <TextInput
+              label="Reason for Change"
+              placeholder="Explain why you are modifying this locked record"
+              required
+              {...form.getInputProps('changeReason')}
+            />
+          ) : (
+             <div />
+          )}
+        </Group>
 
 
         {!isCreating && can(PERMISSIONS.ASSESSMENT_MANAGE_INACTIVE) && (
@@ -276,6 +287,32 @@ export function AssessmentForm({
             {...form.getInputProps('isActive', { type: 'checkbox' })}
             mt="md"
           />
+        )}
+
+        {assessment?.summary && (
+          <Paper withBorder p="md">
+            <Text fw={500} mb="xs" size="sm" c="dimmed">Assessment Summary</Text>
+            <SimpleGrid cols={4}>
+              <Stack gap={0}>
+                <Text size="xs" c="dimmed">Total Samples</Text>
+                <Text fw={500}>{assessment.summary.totalSamples ?? 0}</Text>
+              </Stack>
+              <Stack gap={0}>
+                <Text size="xs" c="dimmed">Total Fruit</Text>
+                <Text fw={500}>{assessment.summary.totalFruit ?? 0}</Text>
+              </Stack>
+              <Stack gap={0}>
+                <Text size="xs" c="dimmed">Total Damaged</Text>
+                <Text fw={500}>{assessment.summary.totalDamaged ?? 0}</Text>
+              </Stack>
+              <Stack gap={0}>
+                <Text size="xs" c="dimmed">Damage %</Text>
+                <Text fw={700} c={(assessment.summary.averageDamagePercentage ?? 0) > 0 ? "red" : undefined}>
+                  {(assessment.summary.averageDamagePercentage ?? 0).toFixed(1)}%
+                </Text>
+              </Stack>
+            </SimpleGrid>
+          </Paper>
         )}
 
         <Box>

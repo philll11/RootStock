@@ -181,7 +181,7 @@ export function AssessmentViewScreen() {
         error={!assessment}
         entityName="Assessment"
         onEdit={!isCompleted ? handleEdit : undefined}
-        onDelete={handleDelete}
+        onDelete={!isCompleted ? handleDelete : undefined}
         canEdit={can(PERMISSIONS.ASSESSMENT_EDIT)}
         canDelete={can(PERMISSIONS.ASSESSMENT_DELETE)}
       >
@@ -190,8 +190,40 @@ export function AssessmentViewScreen() {
         <DetailRow label="Date" value={assessment ? dayjs(assessment.date).format('MMM D, YYYY') : ''} />
         <DetailRow label="Block ID" value={blockId} />
         <DetailRow label="Status" value={assessment?.status} />
-        <DetailRow label="Total Samples" value={assessment?.summary?.totalSamples} />
-        <DetailRow label="Avg Damage" value={assessment ? `${assessment.summary.averageDamagePercentage}%` : ''} />
+        
+        {assessment?.summary && (
+          <View style={styles.section}>
+            <Text variant="titleMedium" style={{ marginBottom: 8, color: theme.colors.outline }}>
+              Summary
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <View style={[styles.summaryItem, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Samples</Text>
+                <Text variant="bodyMedium" style={{ fontWeight: 'bold' }}>{assessment.summary.totalSamples}</Text>
+              </View>
+              <View style={[styles.summaryItem, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Total Fruit</Text>
+                <Text variant="bodyMedium" style={{ fontWeight: 'bold' }}>{assessment.summary.totalFruit}</Text>
+              </View>
+              <View style={[styles.summaryItem, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Damaged</Text>
+                <Text variant="bodyMedium" style={{ fontWeight: 'bold' }}>{assessment.summary.totalDamaged}</Text>
+              </View>
+              <View style={[styles.summaryItem, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Damage %</Text>
+                <Text 
+                  variant="bodyMedium" 
+                  style={{ 
+                    fontWeight: 'bold', 
+                    color: assessment.summary.averageDamagePercentage > 0 ? theme.colors.error : theme.colors.onSurface 
+                  }}
+                >
+                  {assessment.summary.averageDamagePercentage.toFixed(1)}%
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         <View style={styles.sectionHeader}>
           <Text variant="titleMedium">Samples</Text>
@@ -280,5 +312,15 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-  }
+  },
+  section: {
+    marginTop: spacing.md,
+  },
+  summaryItem: {
+    padding: 8, 
+    borderRadius: 8, 
+    flexGrow: 1, 
+    minWidth: '22%',
+    alignItems: 'center'
+  },
 });

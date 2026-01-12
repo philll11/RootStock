@@ -144,10 +144,10 @@ export class AssessmentsService {
       if (updateDto.status !== AssessmentStatus.IN_PROGRESS) {
         throw new BadRequestException('Completed assessments are locked. You must reopen the assessment (set status to IN_PROGRESS) to make changes.');
       }
-      
+
       // Strict Reopen: Prevent changing other fields simultaneously
       if (updateDto.samples || updateDto.name || updateDto.date || updateDto.type) {
-         throw new BadRequestException('Cannot modify assessment data while reopening. Please reopen first, then make changes.');
+        throw new BadRequestException('Cannot modify assessment data while reopening. Please reopen first, then make changes.');
       }
 
       // If Reopening, ensure reason exists
@@ -232,6 +232,13 @@ export class AssessmentsService {
 
   async remove(assessmentId: string, requestingUser: UserDocument): Promise<AssessmentDocument> {
     const existing = await this.findOne(assessmentId, requestingUser); // Layer 2 Check & Snapshot
+
+    // Compliance Check: Prevent deletion of locked records
+    if (existing.status === AssessmentStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Cannot delete a Completed assessment.'
+      );
+    }
 
     const session = await this.connection.startSession();
     session.startTransaction();
