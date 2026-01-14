@@ -1,3 +1,4 @@
+// frontend/libs/shared/util/src/lib/notifications.ts
 export interface NotificationAdapter {
   success(message: string, title?: string): void;
   error(error: any, title?: string): void;
