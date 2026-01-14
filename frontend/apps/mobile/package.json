@@ -17,6 +17,7 @@
     "@tanstack/react-query": "*",
     "@tanstack/react-query-persist-client": "*",
     "@testing-library/react-native": "*",
+    "axios": "*",
     "expo": "*",
     "expo-build-properties": "*",
     "expo-constants": "*",
@@ -42,7 +43,8 @@
     "react-native-svg": "*",
     "react-native-svg-transformer": "*",
     "react-native-web": "*",
-    "uuid": "*"
+    "uuid": "*",
+    "zod": "*"
   },
   "devDependencies": {
     "@nx/expo": "22.3.3"
