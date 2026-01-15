@@ -65,12 +65,17 @@ export function useGetVarieties() {
 
 export function useGetVariety(id: string) {
   const { can } = usePermission();
+  const queryClient = useQueryClient();
   const isEnabled = can(PERMISSIONS.VARIETY_VIEW) && !!id;
 
   return useQuery({
     queryKey: VARIETIES_KEYS.detail(id),
     queryFn: () => getVariety(id),
     enabled: isEnabled,
+    initialData: () => {
+      const allVarieties = queryClient.getQueryData<Variety[]>(VARIETIES_KEYS.lists());
+      return allVarieties?.find((v) => v._id === id);
+    },
   });
 }
 

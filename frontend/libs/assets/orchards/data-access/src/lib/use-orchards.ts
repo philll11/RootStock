@@ -70,12 +70,17 @@ export function useGetOrchards() {
 
 export function useGetOrchard(id: string) {
   const { can } = usePermission();
+  const queryClient = useQueryClient();
   const isEnabled = can(PERMISSIONS.ORCHARD_VIEW) && !!id;
 
   return useQuery({
     queryKey: ORCHARDS_KEYS.detail(id),
     queryFn: () => getOrchard(id),
     enabled: isEnabled,
+    initialData: () => {
+      const allOrchards = queryClient.getQueryData<Orchard[]>(ORCHARDS_KEYS.lists());
+      return allOrchards?.find((o) => o._id === id);
+    },
   });
 }
 

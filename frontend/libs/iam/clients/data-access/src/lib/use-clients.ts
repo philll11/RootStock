@@ -69,10 +69,16 @@ export function useGetClients(options?: { enabled?: boolean }) {
 }
 
 export function useGetClient(id: string | undefined) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: CLIENTS_KEYS.detail(id!),
     queryFn: () => getClient(id!),
     enabled: !!id,
+    initialData: () => {
+      if (!id) return undefined;
+      const allClients = queryClient.getQueryData<Client[]>(CLIENTS_KEYS.lists());
+      return allClients?.find((c) => c._id === id);
+    },
   });
 }
 

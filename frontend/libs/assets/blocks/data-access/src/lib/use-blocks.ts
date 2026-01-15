@@ -59,12 +59,17 @@ export function useGetBlocks(orchardId?: string) {
 
 export function useGetBlock(id: string) {
   const { can } = usePermission();
+  const queryClient = useQueryClient();
   const isEnabled = can(PERMISSIONS.BLOCK_VIEW) && !!id;
 
   return useQuery({
     queryKey: BLOCKS_KEYS.detail(id),
     queryFn: () => getBlock(id),
     enabled: isEnabled,
+    initialData: () => {
+      const allBlocks = queryClient.getQueryData<Block[]>(BLOCKS_KEYS.list(undefined));
+      return allBlocks?.find((b) => b._id === id);
+    },
   });
 }
 
