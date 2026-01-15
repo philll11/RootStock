@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "rootstock",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -28,6 +28,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "./plugins/withAndroidLintOptions.js",
       [
         "expo-splash-screen",
         {

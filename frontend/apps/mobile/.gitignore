@@ -1,0 +1,7 @@
+
+# Native Project Folders
+android/
+ios/
+.expo/
+*.apk
+*.aab
