@@ -6,23 +6,35 @@ import { useGetBlock, useDeleteBlock } from '@rootstock/assets/blocks/blocks-dat
 import { DetailRow, ResourceViewLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { PERMISSIONS, notify } from '@rootstock/shared/util';
+import { useNetInfo } from '@react-native-community/netinfo';
 
 export function BlockViewScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { mutateAsync: deleteBlock } = useDeleteBlock();
+  const { mutate: deleteBlock, mutateAsync: deleteBlockAsync } = useDeleteBlock();
   const { data: block, isLoading } = useGetBlock(id!);
   const { can } = usePermission();
   const theme = useTheme<AppTheme>();
+  const { isConnected } = useNetInfo();
 
   const handleEdit = () => {
     router.push(`/assets/blocks/edit?id=${id}`);
   };
 
   const handleDelete = async () => {
-    await deleteBlock(id!);
-    router.back();
+    const isOnline = isConnected === true;
+    try {
+      if (isOnline) {
+        await deleteBlockAsync(id!);
+      } else {
+        deleteBlock(id!);
+        notify.success('Will sync when online', 'Deletion queued');
+      }
+      router.back();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const orchardName = typeof block?.orchardId === 'object' ? (block.orchardId as any).name : 'Unknown Orchard';

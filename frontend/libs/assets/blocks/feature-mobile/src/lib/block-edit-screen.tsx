@@ -3,12 +3,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useGetBlock, useUpdateBlock, BlockFormData } from '@rootstock/assets/blocks/blocks-data-access';
 import { ResourceEditLayout } from '@rootstock/ui/mobile';
 import { BlockForm } from './block-form';
+import { useNetInfo } from '@react-native-community/netinfo';
+import { notify } from '@rootstock/shared/util';
 
 export function BlockEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: block, isLoading, isError } = useGetBlock(id!);
-  const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
+  const { mutate: updateBlock, mutateAsync: updateBlockAsync, isPending: isUpdating } = useUpdateBlock();
+  const { isConnected } = useNetInfo();
 
   const defaultValues = block ? {
     name: block.name,
@@ -27,20 +30,33 @@ export function BlockEditScreen() {
 
   const handleSubmit = async (data: BlockFormData) => {
     if (!block) return;
-    await updateBlock({
-      id: id!,
-      data: {
-        name: data.name,
-        isActive: data.isActive,
-        plantings: data.plantings.map(p => ({
-          _id: (p as any)._id,
-          varietyId: p.varietyId!,
-          treeCount: p.treeCount
-        })),
-        __v: block.__v
+    const isOnline = isConnected === true;
+    
+    try {
+      const payload = {
+        id: id!,
+        data: {
+          name: data.name,
+          isActive: data.isActive,
+          plantings: data.plantings.map(p => ({
+            _id: (p as any)._id,
+            varietyId: p.varietyId!,
+            treeCount: p.treeCount
+          })),
+          __v: block.__v
+        }
+      };
+
+      if (isOnline) {
+        await updateBlockAsync(payload);
+      } else {
+        updateBlock(payload);
+        notify.success('Will sync when online', 'Changes queued');
       }
-    });
-    router.back();
+      router.back();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
