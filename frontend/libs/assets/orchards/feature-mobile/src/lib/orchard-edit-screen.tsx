@@ -3,12 +3,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useGetOrchard, useUpdateOrchard, OrchardFormData } from '@rootstock/assets/orchards/orchards-data-access';
 import { ResourceEditLayout } from '@rootstock/ui/mobile';
 import { OrchardForm } from './orchard-form';
+import { useNetInfo } from '@react-native-community/netinfo';
+import { notify } from '@rootstock/shared/util';
 
 export function OrchardEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: orchard, isLoading, isError } = useGetOrchard(id!);
-  const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
+  const { mutate: updateOrchard, mutateAsync: updateOrchardAsync, isPending: isUpdating } = useUpdateOrchard();
+  const { isConnected } = useNetInfo();
 
   const defaultValues = orchard ? {
     name: orchard.name,
@@ -23,7 +26,8 @@ export function OrchardEditScreen() {
 
   const handleSubmit = async (data: OrchardFormData) => {
     if (!orchard) return;
-    await updateOrchard({ 
+    const isOnline = isConnected === true;
+    const payload = { 
       id: id!, 
       data: {
         name: data.name,
@@ -31,8 +35,19 @@ export function OrchardEditScreen() {
         isActive: data.isActive,
         __v: orchard.__v
       } 
-    });
-    router.back();
+    };
+
+    try {
+      if (isOnline) {
+        await updateOrchardAsync(payload);
+      } else {
+        updateOrchard(payload);
+        notify.success('Will sync when online', 'Changes queued');
+      }
+      router.back();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (

@@ -6,23 +6,35 @@ import { useGetOrchard, useDeleteOrchard } from '@rootstock/assets/orchards/orch
 import { DetailRow, ResourceViewLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { PERMISSIONS, notify } from '@rootstock/shared/util';
+import { useNetInfo } from '@react-native-community/netinfo';
 
 export function OrchardViewScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { mutateAsync: deleteOrchard } = useDeleteOrchard();
+  const { mutate: deleteOrchard, mutateAsync: deleteOrchardAsync } = useDeleteOrchard();
   const { data: orchard, isLoading } = useGetOrchard(id!);
   const { can } = usePermission();
   const theme = useTheme<AppTheme>();
+  const { isConnected } = useNetInfo();
 
   const handleEdit = () => {
     router.push(`/assets/orchards/edit?id=${id}`);
   };
 
   const handleDelete = async () => {
-    await deleteOrchard(id!);
-    router.back();
+    const isOnline = isConnected === true;
+    try {
+      if (isOnline) {
+        await deleteOrchardAsync(id!);
+      } else {
+        deleteOrchard(id!);
+        notify.success('Will sync when online', 'Deletion queued');
+      }
+      router.back();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const clientName = typeof orchard?.clientId === 'object' ? (orchard.clientId as any).name : 'Unknown Client';

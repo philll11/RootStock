@@ -187,12 +187,31 @@ export function useDeleteOrchard() {
     mutationFn: async (id: string) => {
       await apiClient.delete(`/orchards/${id}`);
     },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.all });
+
+      const previousOrchards = queryClient.getQueryData<Orchard[]>(ORCHARDS_KEYS.lists());
+
+      if (previousOrchards) {
+        queryClient.setQueryData(
+          ORCHARDS_KEYS.lists(),
+          previousOrchards.filter((orchard) => orchard._id !== id)
+        );
+      }
+
+      return { previousOrchards };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orchards'] });
       notify.success('The orchard has been removed.', 'Orchard Deleted');
     },
-    onError: (error: any) => {
+    onError: (error: any, id, context) => {
+      if (context?.previousOrchards) {
+        queryClient.setQueryData(ORCHARDS_KEYS.lists(), context.previousOrchards);
+      }
       notify.error(error, 'Error Deleting Orchard');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ORCHARDS_KEYS.all });
     },
   });
 }

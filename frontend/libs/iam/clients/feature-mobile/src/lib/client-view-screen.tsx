@@ -3,22 +3,36 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useDeleteClient, useGetClient } from '@rootstock/iam/clients/clients-data-access';
 import { DetailRow, ResourceViewLayout } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { PERMISSIONS, notify } from '@rootstock/shared/util';
+import { useNetInfo } from '@react-native-community/netinfo';
 
 export const ClientViewScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { mutateAsync: deleteClient } = useDeleteClient();
+  const { mutate: deleteClient, mutateAsync: deleteClientAsync } = useDeleteClient();
   const { data: client, isLoading } = useGetClient(id);
   const { can } = usePermission();
+  const { isConnected } = useNetInfo();
 
   const handleEdit = () => {
     router.push(`/iam/clients/edit?id=${id}`);
   };
 
   const handleDelete = async () => {
-    await deleteClient(id!);
-    router.back();
+    if (!id) return;
+    const isOnline = isConnected === true;
+
+    try {
+      if (isOnline) {
+        await deleteClientAsync(id);
+      } else {
+        deleteClient(id);
+        notify.success('Will sync when online', 'Deletion queued');
+      }
+      router.back();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (

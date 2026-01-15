@@ -179,12 +179,31 @@ export function useDeleteClient() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteClient,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.all });
+
+      const previousClients = queryClient.getQueryData<Client[]>(CLIENTS_KEYS.lists());
+
+      if (previousClients) {
+        queryClient.setQueryData(
+          CLIENTS_KEYS.lists(),
+          previousClients.filter((client) => client._id !== id)
+        );
+      }
+
+      return { previousClients };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
       notify.success('The client has been removed.', 'Client Deleted');
     },
-    onError: (error: any) => {
+    onError: (error: any, id, context) => {
+      if (context?.previousClients) {
+        queryClient.setQueryData(CLIENTS_KEYS.lists(), context.previousClients);
+      }
       notify.error(error, 'Error Deleting Client');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.all });
     },
   });
 }

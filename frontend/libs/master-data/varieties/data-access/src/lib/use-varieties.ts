@@ -182,12 +182,34 @@ export function useDeleteVariety() {
 
   return useMutation({
     mutationFn: deleteVariety,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: VARIETIES_KEYS.all });
+
+      const previousVarieties = queryClient.getQueryData<Variety[]>(VARIETIES_KEYS.lists());
+
+      if (previousVarieties) {
+        queryClient.setQueryData(
+          VARIETIES_KEYS.lists(),
+          previousVarieties.filter((variety) => variety._id !== id)
+        );
+      }
+
+      return { previousVarieties };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: VARIETIES_KEYS.lists() });
       notify.success('The variety has been successfully deleted.', 'Variety Deleted');
     },
-    onError: (error: any) => {
+    onError: (error: any, id, context) => {
+      if (context?.previousVarieties) {
+        queryClient.setQueryData(
+          VARIETIES_KEYS.lists(),
+          context.previousVarieties
+        );
+      }
       notify.error(error, 'Error Deleting Variety');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: VARIETIES_KEYS.all });
     },
   });
 }

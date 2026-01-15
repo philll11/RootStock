@@ -1,9 +1,10 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, onlineManager } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import { ThemeProvider, DrawerProvider, NotificationProvider, useNetworkStatus } from '@rootstock/ui/mobile';
 import { AppDrawer } from '../src/components/AppDrawer';
 import { useAuthSession } from '@rootstock/iam/auth/auth-data-access';
@@ -16,6 +17,13 @@ import { apiClient } from '@rootstock/shared/api-client';
 // Initialize Auth System (Storage + Interceptors)
 initAuth();
 
+// Configure TanStack Query Online Manager
+onlineManager.setEventListener((setOnline) => {
+  return NetInfo.addEventListener((state) => {
+    setOnline(!!state.isConnected);
+  });
+});
+
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
@@ -26,7 +34,7 @@ const queryClient = new QueryClient({
       networkMode: 'offlineFirst',
     },
     mutations: {
-      networkMode: 'offlineFirst',
+      retry: 3,
     },
   },
 });
@@ -113,7 +121,21 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        dehydrateOptions: {
+          shouldDehydrateMutation: (mutation) => true,
+          shouldDehydrateQuery: (query) => {
+            const queryState = query.state;
+            if (queryState.data === undefined) return false;
+            // Persist as long as we have data, even if the last fetch failed (e.g. offline)
+            return true;
+          },
+        },
+      }}
+    >
       <ThemeProvider>
         <RootLayoutNav />
       </ThemeProvider>

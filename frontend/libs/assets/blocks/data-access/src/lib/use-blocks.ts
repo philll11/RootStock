@@ -188,12 +188,55 @@ export function useDeleteBlock() {
 
   return useMutation({
     mutationFn: deleteBlock,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: BLOCKS_KEYS.all });
+
+      const previousBlocksAll = queryClient.getQueryData<Block[]>(
+        BLOCKS_KEYS.list(undefined)
+      );
+
+      const block = previousBlocksAll?.find((b) => b._id === id);
+      const rawOrchardId = block?.orchardId;
+      const orchardId = typeof rawOrchardId === 'object' ? (rawOrchardId as any)._id : rawOrchardId;
+
+      const previousBlocksOrchard = block && orchardId ? queryClient.getQueryData<Block[]>(BLOCKS_KEYS.list(orchardId)) : undefined;
+
+      if (previousBlocksAll) {
+        queryClient.setQueryData(
+          BLOCKS_KEYS.list(undefined),
+          previousBlocksAll.filter((block) => block._id !== id)
+        );
+      }
+
+      if (previousBlocksOrchard && orchardId) {
+        queryClient.setQueryData(
+          BLOCKS_KEYS.list(orchardId),
+          previousBlocksOrchard.filter((block) => block._id !== id)
+        );
+      }
+
+      return { previousBlocksAll, previousBlocksOrchard, orchardId };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.lists() });
       notify.success('The block has been deleted.', 'Block Deleted');
     },
-    onError: (error: any) => {
+    onError: (error: any, id, context) => {
+      if (context?.previousBlocksAll) {
+        queryClient.setQueryData(
+          BLOCKS_KEYS.list(undefined),
+          context.previousBlocksAll
+        );
+      }
+      if (context?.previousBlocksOrchard && context.orchardId) {
+        queryClient.setQueryData(
+          BLOCKS_KEYS.list(context.orchardId),
+          context.previousBlocksOrchard
+        );
+      }
       notify.error(error, 'Error Deleting Block');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: BLOCKS_KEYS.all });
     },
   });
 }
