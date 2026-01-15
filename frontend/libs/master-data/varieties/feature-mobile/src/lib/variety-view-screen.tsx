@@ -3,22 +3,34 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGetVariety, useDeleteVariety } from '@rootstock/master-data/varieties/varieties-data-access';
 import { DetailRow, ResourceViewLayout } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { PERMISSIONS, notify } from '@rootstock/shared/util';
+import { useNetInfo } from '@react-native-community/netinfo';
 
 export const VarietyViewScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { mutateAsync: deleteVariety } = useDeleteVariety();
+  const { mutate: deleteVariety, mutateAsync: deleteVarietyAsync } = useDeleteVariety();
   const { data: variety, isLoading } = useGetVariety(id!);
   const { can } = usePermission();
+  const { isConnected } = useNetInfo();
 
   const handleEdit = () => {
     router.push(`/master-data/varieties/edit?id=${id}`);
   };
 
   const handleDelete = async () => {
-    await deleteVariety(id!);
-    router.back();
+    const isOnline = isConnected === true;
+    try {
+      if (isOnline) {
+        await deleteVarietyAsync(id!);
+      } else {
+        deleteVariety(id!);
+        notify.success('Will sync when online', 'Deletion queued');
+      }
+      router.back();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
