@@ -1,10 +1,4 @@
-import { BaseEntity } from '@rootstock/shared/util';
-
-export enum VisibilityScope {
-  Global = 'Global',
-  Subsidiary = 'Subsidiary',
-  Client = 'Client',
-}
+import { BaseEntity, VisibilityScope } from '@rootstock/shared/util';
 
 export interface Role extends BaseEntity {
   name: string;

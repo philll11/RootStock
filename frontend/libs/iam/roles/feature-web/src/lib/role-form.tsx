@@ -16,10 +16,8 @@ import {
   Role,
   RoleFormData,
   roleSchema,
-  VisibilityScope,
-  PERMISSIONS,
 } from '@rootstock/iam/roles/roles-data-access';
-import { notify, PERMISSIONS as SHARED_PERMISSIONS } from '@rootstock/shared/util';
+import { notify, VisibilityScope, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { FormLayout } from '@rootstock/ui/web';
 
@@ -64,7 +62,7 @@ export function RoleForm({
     initialValues: {
       name: '',
       description: '',
-      visibilityScope: VisibilityScope.Client,
+      visibilityScope: VisibilityScope.CLIENT,
       permissions: [] as string[],
       isActive: true,
       __v: 0,
@@ -114,7 +112,7 @@ export function RoleForm({
       form.setValues({
         name: initialValues.name || '',
         description: initialValues.description || '',
-        visibilityScope: initialValues.visibilityScope || VisibilityScope.Client,
+        visibilityScope: initialValues.visibilityScope || VisibilityScope.CLIENT,
         permissions: initialValues.permissions || [],
       });
     }
@@ -141,7 +139,7 @@ export function RoleForm({
     form.setValues({
       name: '',
       description: '',
-      visibilityScope: VisibilityScope.Client,
+      visibilityScope: VisibilityScope.CLIENT,
       permissions: []
     });
   };
@@ -155,7 +153,7 @@ export function RoleForm({
       onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
       onEdit={onEdit}
       onClear={isCreating ? handleClear : undefined}
-      canEdit={can(SHARED_PERMISSIONS.ROLE_EDIT)}
+      canEdit={can(PERMISSIONS.ROLE_EDIT)}
       submitLabel={isEditing ? 'Update Role' : 'Create Role'}
       isDirty={form.isDirty()}
       fullHeight={fullHeight}
@@ -181,14 +179,14 @@ export function RoleForm({
           withAsterisk={!isViewing}
           label="Visibility Scope"
           data={[
-            { value: VisibilityScope.Global, label: 'Global' },
-            { value: VisibilityScope.Subsidiary, label: 'Subsidiary' },
-            { value: VisibilityScope.Client, label: 'Client' },
+            { value: VisibilityScope.GLOBAL, label: 'Global' },
+            { value: VisibilityScope.SUBSIDIARY, label: 'Subsidiary' },
+            { value: VisibilityScope.CLIENT, label: 'Client' },
           ]}
           readOnly={isViewing}
           {...form.getInputProps('visibilityScope')}
         />
-        {!isCreating && can(SHARED_PERMISSIONS.ROLE_MANAGE_INACTIVE) && (
+        {!isCreating && can(PERMISSIONS.ROLE_MANAGE_INACTIVE) && (
           <Switch
             label="Active"
             readOnly={isViewing}

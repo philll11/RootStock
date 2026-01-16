@@ -3,8 +3,8 @@ import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 're
 import { TextInput, Button, HelperText, SegmentedButtons, Text, List, Checkbox, useTheme, Switch } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { VisibilityScope, RoleFormData, roleSchema } from '@rootstock/iam/roles/roles-data-access';
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { RoleFormData, roleSchema } from '@rootstock/iam/roles/roles-data-access';
+import { PERMISSIONS, VisibilityScope } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
 import { useMobileDiscardWarning, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
@@ -25,7 +25,7 @@ export const RoleForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }: 
     defaultValues: {
       name: '',
       description: '',
-      visibilityScope: VisibilityScope.Client,
+      visibilityScope: VisibilityScope.CLIENT,
       permissions: [],
       isActive: true,
       ...defaultValues,
@@ -140,9 +140,9 @@ export const RoleForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }: 
               value={value}
               onValueChange={onChange}
               buttons={[
-                { value: VisibilityScope.Global, label: 'Global' },
-                { value: VisibilityScope.Subsidiary, label: 'Subsidiary' },
-                { value: VisibilityScope.Client, label: 'Client' },
+                { value: VisibilityScope.GLOBAL, label: 'Global' },
+                { value: VisibilityScope.SUBSIDIARY, label: 'Subsidiary' },
+                { value: VisibilityScope.CLIENT, label: 'Client' },
               ]}
             />
           )}

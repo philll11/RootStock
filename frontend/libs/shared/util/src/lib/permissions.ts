@@ -81,4 +81,5 @@ export enum Resource {
   COUNTERS = 'Counters',
   SYSTEM_CONFIG = 'SystemConfig',
   VARIETY = 'Variety',
+  GLOBAL = 'Global',
 }

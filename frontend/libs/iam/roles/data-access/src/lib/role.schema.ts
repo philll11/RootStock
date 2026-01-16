@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { VisibilityScope } from './roles.types';
+import { VisibilityScope } from '@rootstock/shared/util';
 
 export const roleSchema = z.object({
   name: z.string().min(1, 'Name is required'),
