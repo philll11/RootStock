@@ -12,7 +12,7 @@ export function UserViewScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { mutateAsync: deleteUser } = useDeleteUser();
-  const { data: user, isLoading } = useGetUser(id!);
+  const { data: user, isLoading, refetch, isRefetching } = useGetUser(id!);
   const { can } = usePermission();
   const theme = useTheme<AppTheme>();
 
@@ -37,8 +37,8 @@ export function UserViewScreen() {
       onEdit={handleEdit}
       onDelete={handleDelete}
       canEdit={can(PERMISSIONS.USER_EDIT)}
-      canDelete={can(PERMISSIONS.USER_DELETE)}
-    >
+      canDelete={can(PERMISSIONS.USER_DELETE)}      onRefresh={refetch}
+      isRefreshing={isRefetching}    >
       <DetailRow label="First Name" value={user?.firstName} />
       <DetailRow label="Last Name" value={user?.lastName} />
       <DetailRow label="Email" value={user?.email} />

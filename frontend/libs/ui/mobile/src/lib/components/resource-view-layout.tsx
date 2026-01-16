@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, ScrollView, Alert, StyleSheet, RefreshControl } from 'react-native';
 import { Button, useTheme } from 'react-native-paper';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +19,8 @@ interface ResourceViewLayoutProps {
   canEdit?: boolean;
   canDelete?: boolean;
   children: React.ReactNode;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export function ResourceViewLayout({
@@ -31,6 +33,8 @@ export function ResourceViewLayout({
   canEdit = false,
   canDelete = false,
   children,
+  onRefresh,
+  isRefreshing = false,
 }: ResourceViewLayoutProps) {
   const theme = useTheme<AppTheme>();
   const insets = useSafeAreaInsets();
@@ -78,6 +82,11 @@ export function ResourceViewLayout({
       <ScrollView 
         style={{ backgroundColor: theme.colors.background }}
         contentContainerStyle={[styles.content, { paddingBottom: spacing.md + insets.bottom }]}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+          ) : undefined
+        }
       >
         {children}
 

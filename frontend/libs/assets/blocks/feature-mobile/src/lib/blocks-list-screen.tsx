@@ -5,14 +5,14 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGetBlocks } from '@rootstock/assets/blocks/blocks-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
+import { ResourceListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 
 export const BlocksListScreen = () => {
   const theme = useTheme<AppTheme>();
   const router = useRouter();
   const { orchardId } = useLocalSearchParams<{ orchardId: string }>();
-  const { data: blocks, isLoading } = useGetBlocks(orchardId);
+  const { data: blocks, isLoading, refetch, isRefetching } = useGetBlocks(orchardId);
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.BLOCK_CREATE);
 
@@ -24,7 +24,7 @@ export const BlocksListScreen = () => {
     ) || [];
 
   return (
-    <ListLayout
+    <ResourceListLayout
       title="Blocks"
       isLoading={isLoading}
       searchQuery={searchQuery}
@@ -43,10 +43,14 @@ export const BlocksListScreen = () => {
           : undefined
       }
       onBack={orchardId ? () => router.back() : undefined}
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <FlatList
         data={filteredBlocks}
         keyExtractor={(item) => item._id}
+        refreshing={isRefetching}
+        onRefresh={refetch}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const isOptimistic = (item as any).recordId === 'TEMP';
@@ -88,7 +92,7 @@ export const BlocksListScreen = () => {
           );
         }}
       />
-    </ListLayout>
+    </ResourceListLayout>
   );
 };
 

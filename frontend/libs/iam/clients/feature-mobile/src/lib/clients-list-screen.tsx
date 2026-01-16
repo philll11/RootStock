@@ -3,7 +3,7 @@ import { FlatList, StyleSheet } from 'react-native';
 import { List, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
-import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
+import { ResourceListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
@@ -11,7 +11,7 @@ import { spacing } from '@rootstock/ui/theme';
 export const ClientsListScreen = () => {
   const router = useRouter();
   const theme = useTheme<AppTheme>();
-  const { data: clients = [], isLoading } = useGetClients();
+  const { data: clients = [], isLoading, refetch, isRefetching } = useGetClients();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -20,7 +20,7 @@ export const ClientsListScreen = () => {
   );
 
   return (
-    <ListLayout
+    <ResourceListLayout
       title="Clients"
       isLoading={isLoading}
       searchQuery={searchQuery}
@@ -33,10 +33,14 @@ export const ClientsListScreen = () => {
           ? () => router.push('/iam/clients/create')
           : undefined
       }
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <FlatList
         data={filteredClients}
         keyExtractor={(item) => item._id}
+        refreshing={isRefetching}
+        onRefresh={refetch}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
           <List.Item
@@ -51,7 +55,7 @@ export const ClientsListScreen = () => {
           />
         )}
       />
-    </ListLayout>
+    </ResourceListLayout>
   );
 };
 

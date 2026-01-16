@@ -3,7 +3,7 @@ import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
-import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
+import { ResourceListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
@@ -11,7 +11,7 @@ import { spacing } from '@rootstock/ui/theme';
 export const VarietiesListScreen = () => {
   const router = useRouter();
   const theme = useTheme<AppTheme>();
-  const { data: varieties, isLoading } = useGetVarieties();
+  const { data: varieties, isLoading, refetch, isRefetching } = useGetVarieties();
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.VARIETY_CREATE);
 
@@ -22,7 +22,7 @@ export const VarietiesListScreen = () => {
   ) || [];
 
   return (
-    <ListLayout
+    <ResourceListLayout
       title="Varieties"
       isLoading={isLoading}
       searchQuery={searchQuery}
@@ -31,10 +31,14 @@ export const VarietiesListScreen = () => {
       emptyText="No varieties found"
       isEmpty={!isLoading && filteredVarieties.length === 0}
       onAdd={canCreate ? () => router.push('/master-data/varieties/create') : undefined}
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <FlatList
         data={filteredVarieties}
         keyExtractor={(item) => item._id}
+        refreshing={isRefetching}
+        onRefresh={refetch}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const isOptimistic = (item as any).recordId === 'TEMP';
@@ -72,7 +76,7 @@ export const VarietiesListScreen = () => {
           );
         }}
       />
-    </ListLayout>
+    </ResourceListLayout>
   );
 };
 

@@ -10,7 +10,7 @@ export const ClientViewScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { mutate: deleteClient, mutateAsync: deleteClientAsync } = useDeleteClient();
-  const { data: client, isLoading } = useGetClient(id);
+  const { data: client, isLoading, refetch, isRefetching } = useGetClient(id);
   const { can } = usePermission();
   const { isConnected } = useNetInfo();
 
@@ -45,6 +45,8 @@ export const ClientViewScreen = () => {
       onDelete={handleDelete}
       canEdit={can(PERMISSIONS.CLIENT_EDIT)}
       canDelete={can(PERMISSIONS.CLIENT_DELETE)}
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <DetailRow label="Name" value={client?.name} />
       <DetailRow label="Status" value={client?.isActive ? 'Active' : 'Inactive'} />

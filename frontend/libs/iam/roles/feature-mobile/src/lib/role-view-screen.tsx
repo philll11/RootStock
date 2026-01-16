@@ -11,7 +11,7 @@ export const RoleViewScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { mutateAsync: deleteRole } = useDeleteRole();
-  const { data: role, isLoading } = useGetRole(id);
+  const { data: role, isLoading, refetch, isRefetching } = useGetRole(id);
   const { can } = usePermission();
 
   const handleEdit = () => {
@@ -33,6 +33,8 @@ export const RoleViewScreen = () => {
       onDelete={handleDelete}
       canEdit={can(PERMISSIONS.ROLE_EDIT)}
       canDelete={can(PERMISSIONS.ROLE_DELETE)}
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <DetailRow label="Name" value={role?.name} />
       <DetailRow label="Description" value={role?.description} />

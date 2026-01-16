@@ -10,7 +10,7 @@ export const VarietyViewScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { mutate: deleteVariety, mutateAsync: deleteVarietyAsync } = useDeleteVariety();
-  const { data: variety, isLoading } = useGetVariety(id!);
+  const { data: variety, isLoading, refetch, isRefetching } = useGetVariety(id!);
   const { can } = usePermission();
   const { isConnected } = useNetInfo();
 
@@ -43,6 +43,8 @@ export const VarietyViewScreen = () => {
       onDelete={handleDelete}
       canEdit={can(PERMISSIONS.VARIETY_EDIT)}
       canDelete={can(PERMISSIONS.VARIETY_DELETE)}
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <DetailRow label="Name" value={variety?.name} />
       <DetailRow label="Status" value={variety?.isActive ? 'Active' : 'Inactive'} />

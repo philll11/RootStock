@@ -5,13 +5,13 @@ import { useRouter } from 'expo-router';
 import { useGetOrchards, Orchard } from '@rootstock/assets/orchards/orchards-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
+import { ResourceListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 
 export function OrchardsListScreen() {
   const theme = useTheme<AppTheme>();
   const router = useRouter();
-  const { data: orchards = [], isLoading } = useGetOrchards();
+  const { data: orchards = [], isLoading, refetch, isRefetching } = useGetOrchards();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -29,7 +29,7 @@ export function OrchardsListScreen() {
   };
 
   return (
-    <ListLayout
+    <ResourceListLayout
       title="Orchards"
       isLoading={isLoading}
       searchQuery={searchQuery}
@@ -42,12 +42,16 @@ export function OrchardsListScreen() {
           ? () => router.push('/assets/orchards/create')
           : undefined
       }
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <FlatList
         data={filteredOrchards}
         keyExtractor={(item) => item._id}
+        refreshing={isRefetching}
+        onRefresh={refetch}
         contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => {
+        renderItem={({ item }) => {
               const isOptimistic = (item as any).recordId === 'TEMP';
               return (
                 <List.Item
@@ -89,7 +93,7 @@ export function OrchardsListScreen() {
               );
             }}
           />
-        </ListLayout>
+        </ResourceListLayout>
       );
     }
 

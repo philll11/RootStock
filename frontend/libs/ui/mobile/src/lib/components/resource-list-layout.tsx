@@ -7,7 +7,7 @@ import { spacing } from '@rootstock/ui/theme';
 import { AppTheme } from '../mobile-theme';
 import { SyncIndicator } from './sync-indicator';
 
-interface ListLayoutProps {
+interface ResourceListLayoutProps {
   title: string;
   children: React.ReactNode;
   onAdd?: () => void;
@@ -22,7 +22,7 @@ interface ListLayoutProps {
   isRefreshing?: boolean;
 }
 
-export const ListLayout = ({
+export const ResourceListLayout = ({
   title,
   children,
   onAdd,
@@ -35,7 +35,7 @@ export const ListLayout = ({
   onBack,
   onRefresh,
   isRefreshing = false,
-}: ListLayoutProps) => {
+}: ResourceListLayoutProps) => {
   const theme = useTheme<AppTheme>();
   const { toggleDrawer } = useDrawer();
   const insets = useSafeAreaInsets();

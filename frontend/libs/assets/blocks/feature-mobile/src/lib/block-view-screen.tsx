@@ -13,7 +13,7 @@ export function BlockViewScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { mutate: deleteBlock, mutateAsync: deleteBlockAsync } = useDeleteBlock();
-  const { data: block, isLoading } = useGetBlock(id!);
+  const { data: block, isLoading, refetch, isRefetching } = useGetBlock(id!);
   const { can } = usePermission();
   const theme = useTheme<AppTheme>();
   const { isConnected } = useNetInfo();
@@ -49,6 +49,8 @@ export function BlockViewScreen() {
       onDelete={handleDelete}
       canEdit={can(PERMISSIONS.BLOCK_EDIT)}
       canDelete={can(PERMISSIONS.BLOCK_DELETE)}
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <DetailRow label="Name" value={block?.name} />
       <DetailRow label="Orchard" value={orchardName} />

@@ -3,7 +3,7 @@ import { FlatList, StyleSheet } from 'react-native';
 import { List, FAB, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useGetRoles } from '@rootstock/iam/roles/roles-data-access';
-import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
+import { ResourceListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
@@ -11,7 +11,7 @@ import { spacing } from '@rootstock/ui/theme';
 export const RolesListScreen = () => {
   const router = useRouter();
   const theme = useTheme<AppTheme>();
-  const { data: roles = [], isLoading } = useGetRoles();
+  const { data: roles = [], isLoading, refetch, isRefetching } = useGetRoles();
   const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -20,7 +20,7 @@ export const RolesListScreen = () => {
   );
 
   return (
-    <ListLayout
+    <ResourceListLayout
       title="Roles"
       isLoading={isLoading}
       searchQuery={searchQuery}
@@ -28,10 +28,14 @@ export const RolesListScreen = () => {
       searchPlaceholder="Search roles"
       emptyText="No roles found"
       isEmpty={!isLoading && filteredRoles.length === 0}
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <FlatList
         data={filteredRoles}
         keyExtractor={(item) => item._id}
+        refreshing={isRefetching}
+        onRefresh={refetch}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
           <List.Item
@@ -51,7 +55,7 @@ export const RolesListScreen = () => {
           onPress={() => router.push('/iam/roles/create')}
         />
       )}
-    </ListLayout>
+    </ResourceListLayout>
   );
 };
 

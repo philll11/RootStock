@@ -13,7 +13,7 @@ export function OrchardViewScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { mutate: deleteOrchard, mutateAsync: deleteOrchardAsync } = useDeleteOrchard();
-  const { data: orchard, isLoading } = useGetOrchard(id!);
+  const { data: orchard, isLoading, refetch, isRefetching } = useGetOrchard(id!);
   const { can } = usePermission();
   const theme = useTheme<AppTheme>();
   const { isConnected } = useNetInfo();
@@ -50,6 +50,8 @@ export function OrchardViewScreen() {
       onDelete={handleDelete}
       canEdit={can(PERMISSIONS.ORCHARD_EDIT)}
       canDelete={can(PERMISSIONS.ORCHARD_DELETE)}
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <DetailRow label="Name" value={orchard?.name} />
       <DetailRow label="Client" value={clientName} />

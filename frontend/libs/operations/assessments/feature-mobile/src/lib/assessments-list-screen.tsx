@@ -5,7 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGetAssessments, AssessmentStatus } from '@rootstock/operations/assessments/assessments-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { ListLayout, AppTheme } from '@rootstock/ui/mobile';
+import { ResourceListLayout, AppTheme } from '@rootstock/ui/mobile';
 import { spacing, palette } from '@rootstock/ui/theme';
 import dayjs from 'dayjs';
 
@@ -13,7 +13,7 @@ export function AssessmentListScreen() {
   const theme = useTheme<AppTheme>();
   const router = useRouter();
   const { blockId } = useLocalSearchParams<{ blockId: string }>();
-  const { data: assessments, isLoading } = useGetAssessments({ blockId });
+  const { data: assessments, isLoading, refetch, isRefetching } = useGetAssessments({ blockId });
   const { can } = usePermission();
   const canCreate = can(PERMISSIONS.ASSESSMENT_CREATE);
 
@@ -39,7 +39,7 @@ export function AssessmentListScreen() {
   };
 
   return (
-    <ListLayout
+    <ResourceListLayout
       title="Assessments"
       isLoading={isLoading}
       searchQuery={searchQuery}
@@ -58,10 +58,14 @@ export function AssessmentListScreen() {
           : undefined
       }
       onBack={blockId ? () => router.back() : undefined}
+      onRefresh={refetch}
+      isRefreshing={isRefetching}
     >
       <FlatList
         data={filteredAssessments}
         keyExtractor={(item) => item._id}
+        refreshing={isRefetching}
+        onRefresh={refetch}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const isOptimistic = (item as any).recordId === 'TEMP';
@@ -94,7 +98,7 @@ export function AssessmentListScreen() {
           );
         }}
       />
-    </ListLayout>
+    </ResourceListLayout>
   );
 }
 

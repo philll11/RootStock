@@ -12,7 +12,7 @@ import { spacing } from '@rootstock/ui/theme';
 export function AssessmentViewScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: assessment, isLoading } = useGetAssessment(id!);
+  const { data: assessment, isLoading, refetch, isRefetching } = useGetAssessment(id!);
   const { mutateAsync: deleteAssessment } = useDeleteAssessment();
   const { mutateAsync: updateAssessment } = useUpdateAssessment();
   const { reopenAssessment } = useReopenAssessment();
@@ -184,6 +184,8 @@ export function AssessmentViewScreen() {
         onDelete={!isCompleted ? handleDelete : undefined}
         canEdit={can(PERMISSIONS.ASSESSMENT_EDIT)}
         canDelete={can(PERMISSIONS.ASSESSMENT_DELETE)}
+        onRefresh={refetch}
+        isRefreshing={isRefetching}
       >
         <DetailRow label="Name" value={assessment?.name} />
         <DetailRow label="Type" value={assessment?.type} />
