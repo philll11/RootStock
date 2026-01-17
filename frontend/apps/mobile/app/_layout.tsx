@@ -16,6 +16,7 @@ import { apiClient, checkApiReachability } from '@rootstock/shared/api-client';
 import { BLOCKS_KEYS, createBlock, updateBlock, deleteBlock } from '@rootstock/assets/blocks/blocks-data-access';
 import { CLIENTS_KEYS, createClient, updateClient, deleteClient } from '@rootstock/iam/clients/clients-data-access';
 import { ORCHARDS_KEYS, createOrchard, updateOrchard, deleteOrchard } from '@rootstock/assets/orchards/orchards-data-access';
+import { VARIETIES_KEYS, createVariety, updateVariety, deleteVariety } from '@rootstock/master-data/varieties/varieties-data-access';
 
 // Initialize Auth System (Storage + Interceptors)
 initAuth();
@@ -66,6 +67,10 @@ queryClient.setMutationDefaults(CLIENTS_KEYS.mutations.delete, { mutationFn: del
 queryClient.setMutationDefaults(ORCHARDS_KEYS.mutations.create, { mutationFn: createOrchard });
 queryClient.setMutationDefaults(ORCHARDS_KEYS.mutations.update, { mutationFn: updateOrchard });
 queryClient.setMutationDefaults(ORCHARDS_KEYS.mutations.delete, { mutationFn: deleteOrchard });
+
+queryClient.setMutationDefaults(VARIETIES_KEYS.mutations.create, { mutationFn: createVariety });
+queryClient.setMutationDefaults(VARIETIES_KEYS.mutations.update, { mutationFn: updateVariety });
+queryClient.setMutationDefaults(VARIETIES_KEYS.mutations.delete, { mutationFn: deleteVariety });
 
 const persister = createAsyncStoragePersister({
   storage: AsyncStorage,

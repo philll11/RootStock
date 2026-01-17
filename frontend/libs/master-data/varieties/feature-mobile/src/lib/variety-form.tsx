@@ -20,7 +20,7 @@ export const VarietyForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode 
   const theme = useTheme<AppTheme>();
   const { can } = usePermission();
   const [isSaving, setIsSaving] = React.useState(false);
-  const { control, handleSubmit, formState: { errors, isDirty } } = useForm<VarietyFormData>({
+  const { control, handleSubmit, formState: { errors, isDirty }, reset } = useForm<VarietyFormData>({
     resolver: zodResolver(varietySchema),
     defaultValues: {
       name: '',
@@ -34,6 +34,7 @@ export const VarietyForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode 
   const handleFormSubmit = async (data: VarietyFormData) => {
     setIsSaving(true);
     try {
+      reset(data);
       await onSubmit(data);
     } catch (error) {
       setIsSaving(false);

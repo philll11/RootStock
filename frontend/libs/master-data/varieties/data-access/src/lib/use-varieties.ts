@@ -11,6 +11,11 @@ export const VARIETIES_KEYS = {
   list: (filters: string) => [...VARIETIES_KEYS.lists(), { filters }] as const,
   details: () => [...VARIETIES_KEYS.all, 'detail'] as const,
   detail: (id: string) => [...VARIETIES_KEYS.details(), id] as const,
+  mutations: {
+    create: ['varieties', 'create'] as const,
+    update: ['varieties', 'update'] as const,
+    delete: ['varieties', 'delete'] as const,
+  },
 };
 
 // --- API Functions ---
@@ -83,6 +88,7 @@ export function useCreateVariety() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: VARIETIES_KEYS.mutations.create,
     mutationFn: createVariety,
     onMutate: async (newVariety) => {
       await queryClient.cancelQueries({ queryKey: VARIETIES_KEYS.lists() });
@@ -130,6 +136,7 @@ export function useUpdateVariety() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: VARIETIES_KEYS.mutations.update,
     mutationFn: updateVariety,
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: VARIETIES_KEYS.detail(id) });
@@ -181,31 +188,17 @@ export function useDeleteVariety() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: VARIETIES_KEYS.mutations.delete,
     mutationFn: deleteVariety,
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: VARIETIES_KEYS.all });
 
-      const previousVarieties = queryClient.getQueryData<Variety[]>(VARIETIES_KEYS.lists());
-
-      if (previousVarieties) {
-        queryClient.setQueryData(
-          VARIETIES_KEYS.lists(),
-          previousVarieties.filter((variety) => variety._id !== id)
-        );
-      }
-
-      return { previousVarieties };
+      return { };
     },
     onSuccess: () => {
       notify.success('The variety has been successfully deleted.', 'Variety Deleted');
     },
     onError: (error: any, id, context) => {
-      if (context?.previousVarieties) {
-        queryClient.setQueryData(
-          VARIETIES_KEYS.lists(),
-          context.previousVarieties
-        );
-      }
       notify.error(error, 'Error Deleting Variety');
     },
     onSettled: () => {

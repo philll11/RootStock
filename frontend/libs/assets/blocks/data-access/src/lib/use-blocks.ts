@@ -201,7 +201,6 @@ export function useDeleteBlock() {
       notify.success('The block has been deleted.', 'Block Deleted');
     },
     onError: (error: any, id, context) => {
-      // No optimistic rollback needed since we didn't modify cache
       notify.error(error, 'Error Deleting Block');
     },
     onSettled: () => {

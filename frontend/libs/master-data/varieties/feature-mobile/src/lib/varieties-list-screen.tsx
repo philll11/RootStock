@@ -3,19 +3,79 @@ import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
-import { ResourceListLayout, AppTheme } from '@rootstock/ui/mobile';
+import { 
+  ResourceListLayout, 
+  AppTheme, 
+  OfflineItemWrapper, 
+  OfflineStatusIcon, 
+  useEntitySyncStatus, 
+  getOfflineStatusText, 
+  useNetworkStatus 
+} from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { PERMISSIONS, notify } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
+
+const VarietyListItem = React.memo(({ item, router, theme }: { item: any; router: any; theme: AppTheme }) => {
+  const syncStatus = useEntitySyncStatus(item);
+  const isOptimistic = syncStatus !== 'synced';
+
+  return (
+    <OfflineItemWrapper status={syncStatus}>
+      <List.Item
+        title={item.name}
+        titleStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
+        description={
+         isOptimistic
+            ? getOfflineStatusText(syncStatus)
+            : item.recordId
+        }
+        left={(props) => (
+          <List.Icon
+            {...props}
+            icon="sprout"
+          />
+        )}
+        right={(props) => (
+           <View style={styles.statusContainer}>
+            <OfflineStatusIcon status={syncStatus} />
+            {!item.isActive && !isOptimistic && (
+              <Text
+                style={{
+                  color: theme.colors.error,
+                  marginRight: spacing.sm,
+                }}
+              >
+                Inactive
+              </Text>
+            )}
+            <List.Icon {...props} icon="chevron-right" />
+          </View>
+        )}
+        onPress={() => router.push(`/master-data/varieties/${item._id}`)}
+        style={styles.listItem}
+      />
+    </OfflineItemWrapper>
+  );
+});
 
 export const VarietiesListScreen = () => {
   const router = useRouter();
   const theme = useTheme<AppTheme>();
   const { data: varieties, isLoading, refetch, isRefetching } = useGetVarieties();
   const { can } = usePermission();
+  const { isOnline } = useNetworkStatus();
   const canCreate = can(PERMISSIONS.VARIETY_CREATE);
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleRefresh = async () => {
+    if (!isOnline) {
+      notify.info('You are offline. Cannot refresh list.', 'Offline');
+      return;
+    }
+    await refetch();
+  };
 
   const filteredVarieties = varieties?.filter(v => 
     v.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -31,50 +91,16 @@ export const VarietiesListScreen = () => {
       emptyText="No varieties found"
       isEmpty={!isLoading && filteredVarieties.length === 0}
       onAdd={canCreate ? () => router.push('/master-data/varieties/create') : undefined}
-      onRefresh={refetch}
+      onRefresh={handleRefresh}
       isRefreshing={isRefetching}
     >
       <FlatList
         data={filteredVarieties}
         keyExtractor={(item) => item._id}
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={handleRefresh}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => {
-          const isOptimistic = (item as any).recordId === 'TEMP';
-          return (
-            <List.Item
-              title={item.name}
-              titleStyle={isOptimistic ? { opacity: 0.5 } : undefined}
-              description={isOptimistic ? 'Syncing...' : item.recordId}
-              descriptionStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
-              left={(props) => (
-                <List.Icon
-                  {...props}
-                  icon={isOptimistic ? 'cloud-upload' : 'sprout'}
-                  color={isOptimistic ? theme.colors.outline : undefined}
-                />
-              )}
-              right={(props) => (
-                <View style={styles.statusContainer}>
-                  {!item.isActive && !isOptimistic && (
-                    <Text
-                      style={{
-                        color: theme.colors.error,
-                        marginRight: spacing.sm,
-                      }}
-                    >
-                      Inactive
-                    </Text>
-                  )}
-                  <List.Icon {...props} icon="chevron-right" />
-                </View>
-              )}
-              onPress={() => router.push(`/master-data/varieties/${item._id}`)}
-              style={[styles.listItem, isOptimistic && { opacity: 0.7 }]}
-            />
-          );
-        }}
+        renderItem={({ item }) => <VarietyListItem item={item} router={router} theme={theme} />}
       />
     </ResourceListLayout>
   );
