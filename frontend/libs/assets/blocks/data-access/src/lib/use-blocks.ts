@@ -12,6 +12,11 @@ export const BLOCKS_KEYS = {
   list: (orchardId?: string) => [...BLOCKS_KEYS.lists(), { orchardId }] as const,
   details: () => [...BLOCKS_KEYS.all, 'detail'] as const,
   detail: (id: string) => [...BLOCKS_KEYS.details(), id] as const,
+  mutations: {
+    create: ['blocks', 'create'] as const,
+    update: ['blocks', 'update'] as const,
+    delete: ['blocks', 'delete'] as const,
+  },
 };
 
 // --- API Functions ---
@@ -77,6 +82,7 @@ export function useCreateBlock() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: BLOCKS_KEYS.mutations.create,
     mutationFn: createBlock,
     onMutate: async (newBlock) => {
       await queryClient.cancelQueries({ queryKey: BLOCKS_KEYS.all });
@@ -137,14 +143,12 @@ export function useUpdateBlock() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: BLOCKS_KEYS.mutations.update,
     mutationFn: updateBlock,
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: BLOCKS_KEYS.all });
 
       const previousBlock = queryClient.getQueryData<Block>(BLOCKS_KEYS.detail(id));
-      // We don't easily know which lists contain this block without searching, 
-      // but we can try to update the "All" list and maybe the specific orchard list if we knew it.
-      // For now, we'll update the detail and the "All" list if present.
       const previousBlocksAll = queryClient.getQueryData<Block[]>(BLOCKS_KEYS.list(undefined));
 
       if (previousBlock) {
@@ -187,52 +191,17 @@ export function useDeleteBlock() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: BLOCKS_KEYS.mutations.delete,
     mutationFn: deleteBlock,
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: BLOCKS_KEYS.all });
-
-      const previousBlocksAll = queryClient.getQueryData<Block[]>(
-        BLOCKS_KEYS.list(undefined)
-      );
-
-      const block = previousBlocksAll?.find((b) => b._id === id);
-      const rawOrchardId = block?.orchardId;
-      const orchardId = typeof rawOrchardId === 'object' ? (rawOrchardId as any)._id : rawOrchardId;
-
-      const previousBlocksOrchard = block && orchardId ? queryClient.getQueryData<Block[]>(BLOCKS_KEYS.list(orchardId)) : undefined;
-
-      if (previousBlocksAll) {
-        queryClient.setQueryData(
-          BLOCKS_KEYS.list(undefined),
-          previousBlocksAll.filter((block) => block._id !== id)
-        );
-      }
-
-      if (previousBlocksOrchard && orchardId) {
-        queryClient.setQueryData(
-          BLOCKS_KEYS.list(orchardId),
-          previousBlocksOrchard.filter((block) => block._id !== id)
-        );
-      }
-
-      return { previousBlocksAll, previousBlocksOrchard, orchardId };
+      return { };
     },
     onSuccess: () => {
       notify.success('The block has been deleted.', 'Block Deleted');
     },
     onError: (error: any, id, context) => {
-      if (context?.previousBlocksAll) {
-        queryClient.setQueryData(
-          BLOCKS_KEYS.list(undefined),
-          context.previousBlocksAll
-        );
-      }
-      if (context?.previousBlocksOrchard && context.orchardId) {
-        queryClient.setQueryData(
-          BLOCKS_KEYS.list(context.orchardId),
-          context.previousBlocksOrchard
-        );
-      }
+      // No optimistic rollback needed since we didn't modify cache
       notify.error(error, 'Error Deleting Block');
     },
     onSettled: () => {

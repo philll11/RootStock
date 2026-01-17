@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, onlineManager } from '@tanstack/react-query';
 import { CLIENTS_KEYS, getClients } from '@rootstock/iam/clients/clients-data-access';
 import { ORCHARDS_KEYS, getOrchards } from '@rootstock/assets/orchards/orchards-data-access';
 import { BLOCKS_KEYS, getBlocks } from '@rootstock/assets/blocks/blocks-data-access';
@@ -17,15 +17,52 @@ export function useSyncOfflineData() {
       setIsSyncing(true);
       
       // 1. PUSH: Resume and flush local mutations
+      // We explicitly resume to ensure any paused mutations due to offline state are processed
       await queryClient.resumePausedMutations();
 
-      // 2. WAIT: Ensure mutation queue is completely drained
-      // This prevents "Overwrite Race Condition" where we fetch old data before our writes are processed
-      while (queryClient.isMutating() > 0) {
-        await new Promise(resolve => setTimeout(resolve, 250));
+      // 2. WAIT: Stronger Drain Check
+      // We check specifically for 'pending' or 'paused' mutations in the cache.
+      const getQueueState = () => {
+        const mutations = queryClient.getMutationCache().getAll();
+        return {
+          hasPending: mutations.some((m) => m.state.status === 'pending'),
+          hasPaused: mutations.some((m) => m.state.isPaused),
+        };
+      };
+
+      // Wait for PENDING (active) mutations to finish.
+      // We do NOT wait indefinitely for PAUSED mutations (which implies network issues).
+      // Timeout after 15 seconds to prevent infinite hanging.
+      let attempts = 0;
+      while (getQueueState().hasPending && attempts < 30) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        attempts++;
+      }
+
+      // Final Queue Check
+      const finalState = getQueueState();
+
+      if (finalState.hasPending) {
+        // If still pending after timeout, likely stuck. Abort Pull to fail safe.
+        throw new Error('Sync timeout: Mutations stuck in pending state.');
+      }
+
+      if (finalState.hasPaused) {
+        // If mutations are paused, it means we couldn't push them (likely offline).
+        // ABORT PULL: Pulling now would overwrite our local optimistic changes with old server data.
+        console.warn('Sync aborted: Local changes are paused. Skipping pull to prevent data loss.');
+        // We do not throw an error here, just return early. It's a valid "Partial Sync" state.
+        return; 
       }
 
       // 3. PULL: Fetch latest data (staleTime: 0 forces refresh)
+      // CRITICAL CHECK: If we are offline, prefetchQuery will PAUSE indefinitely waiting for connection.
+      // We must abort here if onlineManager thinks we are offline.
+      if (!onlineManager.isOnline()) {
+        console.warn('Sync aborted: App is offline. Skipping pull to prevent hanging.');
+        return;
+      }
+
       const options = { staleTime: 0 };
 
       // Prefetch Clients
@@ -56,9 +93,11 @@ export function useSyncOfflineData() {
         ...options 
       });
       
+      // Notify success ONLY if we actually reached good state (no early return)
       notify.success('Offline data synchronized successfully.', 'Sync Complete');
     } catch (error) {
       console.error('Sync failed:', error);
+      // Only notify user of failure if it wasn't a silent abort
       notify.error('Failed to synchronize offline data.', 'Sync Failed');
     } finally {
       setIsSyncing(false);

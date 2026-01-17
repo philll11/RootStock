@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { QueryClient, onlineManager } from '@tanstack/react-query';
+import { QueryClient, onlineManager, useIsRestoring } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +13,7 @@ import { View, ActivityIndicator, AppState } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { initAuth } from '../src/config/auth';
 import { apiClient, checkApiReachability } from '@rootstock/shared/api-client';
+import { BLOCKS_KEYS, createBlock, updateBlock, deleteBlock } from '@rootstock/assets/blocks/blocks-data-access';
 
 // Initialize Auth System (Storage + Interceptors)
 initAuth();
@@ -50,6 +51,12 @@ const queryClient = new QueryClient({
   },
 });
 
+// Register Mutation Defaults for Offline Persistence
+// This ensures that when the app restarts, the restored mutations know which function to execute.
+queryClient.setMutationDefaults(BLOCKS_KEYS.mutations.create, { mutationFn: createBlock });
+queryClient.setMutationDefaults(BLOCKS_KEYS.mutations.update, { mutationFn: updateBlock });
+queryClient.setMutationDefaults(BLOCKS_KEYS.mutations.delete, { mutationFn: deleteBlock });
+
 const persister = createAsyncStoragePersister({
   storage: AsyncStorage,
 });
@@ -60,6 +67,7 @@ function RootLayoutNav() {
   const router = useRouter();
   const { isOnline } = useNetworkStatus();
   const { syncAll } = useSyncOfflineData();
+  const isRestoring = useIsRestoring();
   const lastSyncTime = useRef<number>(0);
 
   // App State Listener for Session Verification
@@ -79,8 +87,10 @@ function RootLayoutNav() {
   }, [isAuthenticated]);
 
   // Optimized Sync Logic
+  // Wait for restoration to complete before attempting to sync.
+  // Otherwise, we might overwrite pending offline mutations with stale server data.
   useEffect(() => {
-    if (isAuthenticated && isOnline) {
+    if (isAuthenticated && isOnline && !isRestoring) {
       const now = Date.now();
       // Sync if never synced or > 15 mins ago
       if (now - lastSyncTime.current > 15 * 60 * 1000) {
@@ -88,7 +98,7 @@ function RootLayoutNav() {
         lastSyncTime.current = now;
       }
     }
-  }, [isAuthenticated, isOnline, syncAll]);
+  }, [isAuthenticated, isOnline, isRestoring, syncAll]);
 
   const inAuthGroup = segments[0] === 'login' || segments[0] === 'forgot-password';
 

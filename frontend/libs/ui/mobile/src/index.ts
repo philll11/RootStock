@@ -12,6 +12,7 @@ export * from './lib/components/sync-indicator';
 export * from './lib/components/resource-edit-layout';
 export * from './lib/components/resource-create-layout';
 export * from './lib/components/notification-provider';
+export * from './lib/components/offline-item-wrapper';
 export * from './lib/services/notifications.mobile';
 export * from './lib/services/app-control.mobile';
 export * from './lib/hooks/use-network-status';

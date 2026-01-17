@@ -5,8 +5,52 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGetBlocks } from '@rootstock/assets/blocks/blocks-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { ResourceListLayout, AppTheme } from '@rootstock/ui/mobile';
+import { ResourceListLayout, AppTheme, OfflineItemWrapper, OfflineStatusIcon, useEntitySyncStatus, getOfflineStatusText, useNetworkStatus } from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
+import { notify } from '@rootstock/shared/util';
+
+const BlockListItem = React.memo(({ item, router, theme }: { item: any; router: any; theme: AppTheme }) => {
+  const syncStatus = useEntitySyncStatus(item);
+  const isOptimistic = syncStatus !== 'synced';
+
+  return (
+    <OfflineItemWrapper status={syncStatus}>
+      <List.Item
+        title={item.name}
+        titleStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
+        description={
+          isOptimistic
+            ? getOfflineStatusText(syncStatus)
+            : `${item.recordId} • ${item.plantings.length} plantings`
+        }
+        left={(props) => (
+          <List.Icon
+            {...props}
+            icon="grid"
+          />
+        )}
+        right={(props) => (
+          <View style={styles.statusContainer}>
+            <OfflineStatusIcon status={syncStatus} />
+            {!item.isActive && !isOptimistic && (
+              <Text
+                style={{
+                  color: theme.colors.error,
+                  marginRight: spacing.sm,
+                }}
+              >
+                Inactive
+              </Text>
+            )}
+            <List.Icon {...props} icon="chevron-right" />
+          </View>
+        )}
+        onPress={() => router.push(`/assets/blocks/${item._id}`)}
+        style={styles.listItem}
+      />
+    </OfflineItemWrapper>
+  );
+});
 
 export const BlocksListScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -14,9 +58,18 @@ export const BlocksListScreen = () => {
   const { orchardId } = useLocalSearchParams<{ orchardId: string }>();
   const { data: blocks, isLoading, refetch, isRefetching } = useGetBlocks(orchardId);
   const { can } = usePermission();
+  const { isOnline } = useNetworkStatus();
   const canCreate = can(PERMISSIONS.BLOCK_CREATE);
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleRefresh = async () => {
+    if (!isOnline) {
+      notify.info('You are offline. Cannot refresh list.', 'Offline');
+      return;
+    }
+    await refetch();
+  };
 
   const filteredBlocks =
     blocks?.filter((b) =>
@@ -43,54 +96,16 @@ export const BlocksListScreen = () => {
           : undefined
       }
       onBack={orchardId ? () => router.back() : undefined}
-      onRefresh={refetch}
+      onRefresh={handleRefresh}
       isRefreshing={isRefetching}
     >
       <FlatList
         data={filteredBlocks}
         keyExtractor={(item) => item._id}
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={handleRefresh}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => {
-          const isOptimistic = (item as any).recordId === 'TEMP';
-          return (
-            <List.Item
-              title={item.name}
-              titleStyle={isOptimistic ? { opacity: 0.5 } : undefined}
-              description={
-                isOptimistic
-                  ? 'Syncing...'
-                  : `${item.recordId} • ${item.plantings.length} plantings`
-              }
-              descriptionStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
-              left={(props) => (
-                <List.Icon
-                  {...props}
-                  icon={isOptimistic ? 'cloud-upload' : 'grid'}
-                  color={isOptimistic ? theme.colors.outline : undefined}
-                />
-              )}
-              right={(props) => (
-                <View style={styles.statusContainer}>
-                  {!item.isActive && !isOptimistic && (
-                    <Text
-                      style={{
-                        color: theme.colors.error,
-                        marginRight: spacing.sm,
-                      }}
-                    >
-                      Inactive
-                    </Text>
-                  )}
-                  <List.Icon {...props} icon="chevron-right" />
-                </View>
-              )}
-              onPress={() => router.push(`/assets/blocks/${item._id}`)}
-              style={[styles.listItem, isOptimistic && { opacity: 0.7 }]}
-            />
-          );
-        }}
+        renderItem={({ item }) => <BlockListItem item={item} router={router} theme={theme} />}
       />
     </ResourceListLayout>
   );

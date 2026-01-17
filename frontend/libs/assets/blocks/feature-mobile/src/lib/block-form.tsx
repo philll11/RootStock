@@ -54,6 +54,7 @@ export function BlockForm({
     formState: { errors, isDirty },
     setValue,
     watch,
+    reset,
   } = useForm<BlockFormData>({
     resolver: zodResolver(blockSchema) as any,
     defaultValues: {
@@ -91,6 +92,14 @@ export function BlockForm({
   );
 
   const canToggleActive = isEdit && can(PERMISSIONS.BLOCK_EDIT);
+
+  const onFormSubmit = async (data: BlockFormData) => {
+    // FIX: reset() must be called BEFORE onSubmit creates the navigation event (router.back).
+    // If called after, the navigation guard checks isDirty (true) before reset happens.
+    // Resetting with 'data' preserves the values but clears the dirty flag.
+    reset(data);
+    await onSubmit(data); 
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -248,7 +257,7 @@ export function BlockForm({
         {!isView && (
           <Button
             mode="contained"
-            onPress={handleSubmit(onSubmit)}
+            onPress={handleSubmit(onFormSubmit)}
             style={styles.button}
             loading={isSubmitting}
             disabled={isSubmitting}

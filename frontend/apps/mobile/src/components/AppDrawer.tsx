@@ -1,10 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, TouchableWithoutFeedback, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, Animated, TouchableWithoutFeedback, ScrollView, Platform, Alert } from 'react-native';
 import { Drawer, useTheme, Text, Avatar, Divider, List } from 'react-native-paper';
-import { useDrawer, AppTheme } from '@rootstock/ui/mobile';
+import { useDrawer, AppTheme, useNetworkStatus } from '@rootstock/ui/mobile';
 import { layout, zIndex, transitions, spacing } from '@rootstock/ui/theme';
 import { useLogout, useGetProfile, usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { useSyncOfflineData } from '@rootstock/system/sync/sync-data-access';
+import { useQueryClient } from '@tanstack/react-query';
+import { notify } from '@rootstock/shared/util';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, usePathname } from 'expo-router';
 import { NAVIGATION_ITEMS } from '../config/navigation';
@@ -42,6 +44,8 @@ export const AppDrawer = () => {
   const { data: user } = useGetProfile();
   const { hasPermission } = usePermission();
   const { syncAll, isSyncing } = useSyncOfflineData();
+  const { isOnline } = useNetworkStatus();
+  const queryClient = useQueryClient();
   const theme = useTheme<AppTheme>();
   const router = useRouter();
   const pathname = usePathname();
@@ -104,7 +108,39 @@ export const AppDrawer = () => {
     closeDrawer();
   };
 
+  const handleSync = async () => {
+    if (!isOnline) {
+      notify.info('You are offline. Cannot sync data.', 'Offline');
+      return;
+    }
+    await syncAll();
+  };
+
   const handleLogout = () => {
+    // Phase 2: The Airlock (Logout Protection)
+    const pendingMutations = queryClient.getMutationCache().getAll().filter(
+      (m) => m.state.status === 'pending'
+    );
+
+    if (pendingMutations.length > 0) {
+      Alert.alert(
+        'Unsaved Changes',
+        `You have ${pendingMutations.length} items waiting to sync. Logging out will PERMANENTLY DELETE them.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Logout & Delete', 
+            style: 'destructive',
+            onPress: () => {
+              closeDrawer();
+              logout();
+            }
+          }
+        ]
+      );
+      return;
+    }
+
     closeDrawer();
     logout();
   };
@@ -254,7 +290,7 @@ export const AppDrawer = () => {
             <Drawer.Item
               label={isSyncing ? 'Syncing...' : 'Sync Data'}
               icon={isSyncing ? 'loading' : 'sync'}
-              onPress={syncAll}
+              onPress={handleSync}
               disabled={isSyncing}
             />
             <Drawer.Item
