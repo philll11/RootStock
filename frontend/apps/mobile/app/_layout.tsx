@@ -14,6 +14,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { initAuth } from '../src/config/auth';
 import { apiClient, checkApiReachability } from '@rootstock/shared/api-client';
 import { BLOCKS_KEYS, createBlock, updateBlock, deleteBlock } from '@rootstock/assets/blocks/blocks-data-access';
+import { CLIENTS_KEYS, createClient, updateClient, deleteClient } from '@rootstock/iam/clients/clients-data-access';
 
 // Initialize Auth System (Storage + Interceptors)
 initAuth();
@@ -56,6 +57,10 @@ const queryClient = new QueryClient({
 queryClient.setMutationDefaults(BLOCKS_KEYS.mutations.create, { mutationFn: createBlock });
 queryClient.setMutationDefaults(BLOCKS_KEYS.mutations.update, { mutationFn: updateBlock });
 queryClient.setMutationDefaults(BLOCKS_KEYS.mutations.delete, { mutationFn: deleteBlock });
+
+queryClient.setMutationDefaults(CLIENTS_KEYS.mutations.create, { mutationFn: createClient });
+queryClient.setMutationDefaults(CLIENTS_KEYS.mutations.update, { mutationFn: updateClient });
+queryClient.setMutationDefaults(CLIENTS_KEYS.mutations.delete, { mutationFn: deleteClient });
 
 const persister = createAsyncStoragePersister({
   storage: AsyncStorage,

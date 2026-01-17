@@ -20,7 +20,7 @@ export const ClientForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }
   const theme = useTheme<AppTheme>();
   const { can } = usePermission();
   const [isSaving, setIsSaving] = React.useState(false);
-  const { control, handleSubmit, formState: { errors, isDirty } } = useForm<ClientFormData>({
+  const { control, handleSubmit, formState: { errors, isDirty }, reset } = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema) as any,
     defaultValues: {
       name: '',
@@ -34,6 +34,10 @@ export const ClientForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }
   const handleFormSubmit = async (data: ClientFormData) => {
     setIsSaving(true);
     try {
+      // FIX: reset() must be called BEFORE onSubmit creates the navigation event (router.back).
+      // If called after, the navigation guard checks isDirty (true) before reset happens.
+      // Resetting with 'data' preserves the values but clears the dirty flag.
+      reset(data);
       await onSubmit(data);
     } catch (error) {
       setIsSaving(false);

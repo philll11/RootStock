@@ -1,19 +1,71 @@
-import { useState } from 'react';
-import { FlatList, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { List, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useGetClients } from '@rootstock/iam/clients/clients-data-access';
-import { ResourceListLayout, AppTheme } from '@rootstock/ui/mobile';
+import { 
+  ResourceListLayout, 
+  AppTheme, 
+  OfflineItemWrapper, 
+  OfflineStatusIcon, 
+  useEntitySyncStatus, 
+  getOfflineStatusText, 
+  useNetworkStatus 
+} from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-import { PERMISSIONS } from '@rootstock/shared/util';
+import { PERMISSIONS, notify } from '@rootstock/shared/util';
 import { spacing } from '@rootstock/ui/theme';
+
+const ClientListItem = React.memo(({ item, router, theme }: { item: any; router: any; theme: AppTheme }) => {
+  const syncStatus = useEntitySyncStatus(item);
+  const isOptimistic = syncStatus !== 'synced';
+
+  return (
+    <OfflineItemWrapper status={syncStatus}>
+      <List.Item
+        title={item.name}
+        titleStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
+        description={
+          isOptimistic
+            ? getOfflineStatusText(syncStatus)
+            : item.code || 'Active'
+        }
+        left={(props) => (
+          <List.Icon 
+            {...props} 
+            icon="domain" 
+          />
+        )}
+        right={(props) => (
+          <View style={styles.statusContainer}>
+             <OfflineStatusIcon status={syncStatus} />
+             <List.Icon {...props} icon="chevron-right" />
+          </View>
+        )}
+        onPress={() =>
+          router.push(`/iam/clients/${item._id}`)
+        }
+        style={styles.listItem}
+      />
+    </OfflineItemWrapper>
+  );
+});
 
 export const ClientsListScreen = () => {
   const router = useRouter();
   const theme = useTheme<AppTheme>();
   const { data: clients = [], isLoading, refetch, isRefetching } = useGetClients();
   const { can } = usePermission();
+  const { isOnline } = useNetworkStatus();
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleRefresh = async () => {
+    if (!isOnline) {
+      notify.info('You are offline. Cannot refresh list.', 'Offline');
+      return;
+    }
+    await refetch();
+  };
 
   const filteredClients = clients.filter((client) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -33,27 +85,16 @@ export const ClientsListScreen = () => {
           ? () => router.push('/iam/clients/create')
           : undefined
       }
-      onRefresh={refetch}
+      onRefresh={handleRefresh}
       isRefreshing={isRefetching}
     >
       <FlatList
         data={filteredClients}
         keyExtractor={(item) => item._id}
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={handleRefresh}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <List.Item
-            title={item.name}
-            description={item.isOptimistic ? 'Syncing...' : undefined}
-            left={(props) => <List.Icon {...props} icon="domain" color={item.isOptimistic ? theme.colors.outline : props.color} />}
-            right={(props) => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() =>
-              router.push(`/iam/clients/${item._id}`)
-            }
-            style={[styles.listItem, item.isOptimistic && { opacity: 0.6 }]}
-          />
-        )}
+        renderItem={({ item }) => <ClientListItem item={item} router={router} theme={theme} />}
       />
     </ResourceListLayout>
   );
@@ -65,5 +106,9 @@ const styles = StyleSheet.create({
   },
   listItem: {
     paddingHorizontal: spacing.sm,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

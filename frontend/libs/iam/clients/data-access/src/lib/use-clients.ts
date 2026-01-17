@@ -15,6 +15,11 @@ export const CLIENTS_KEYS = {
   list: (filters: string) => [...CLIENTS_KEYS.lists(), { filters }] as const,
   details: () => [...CLIENTS_KEYS.all, 'detail'] as const,
   detail: (id: string) => [...CLIENTS_KEYS.details(), id] as const,
+  mutations: {
+    create: ['clients', 'create'] as const,
+    update: ['clients', 'update'] as const,
+    delete: ['clients', 'delete'] as const,
+  },
 };
 
 // --- API Functions ---
@@ -85,6 +90,7 @@ export function useGetClient(id: string | undefined) {
 export function useCreateClient() {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: CLIENTS_KEYS.mutations.create,
     mutationFn: createClient,
     onMutate: async (newClient) => {
       await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.lists() });
@@ -128,6 +134,7 @@ export function useCreateClient() {
 export function useUpdateClient() {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: CLIENTS_KEYS.mutations.update,
     mutationFn: updateClient,
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.detail(id) });
@@ -178,28 +185,18 @@ export function useUpdateClient() {
 export function useDeleteClient() {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: CLIENTS_KEYS.mutations.delete,
     mutationFn: deleteClient,
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: CLIENTS_KEYS.all });
 
-      const previousClients = queryClient.getQueryData<Client[]>(CLIENTS_KEYS.lists());
 
-      if (previousClients) {
-        queryClient.setQueryData(
-          CLIENTS_KEYS.lists(),
-          previousClients.filter((client) => client._id !== id)
-        );
-      }
-
-      return { previousClients };
+      return { };
     },
     onSuccess: () => {
       notify.success('The client has been removed.', 'Client Deleted');
     },
     onError: (error: any, id, context) => {
-      if (context?.previousClients) {
-        queryClient.setQueryData(CLIENTS_KEYS.lists(), context.previousClients);
-      }
       notify.error(error, 'Error Deleting Client');
     },
     onSettled: () => {

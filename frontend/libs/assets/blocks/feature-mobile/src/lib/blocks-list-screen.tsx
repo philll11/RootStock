@@ -5,7 +5,15 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGetBlocks } from '@rootstock/assets/blocks/blocks-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
-import { ResourceListLayout, AppTheme, OfflineItemWrapper, OfflineStatusIcon, useEntitySyncStatus, getOfflineStatusText, useNetworkStatus } from '@rootstock/ui/mobile';
+import { 
+  ResourceListLayout, 
+  AppTheme, 
+  OfflineItemWrapper, 
+  OfflineStatusIcon, 
+  useEntitySyncStatus, 
+  getOfflineStatusText, 
+  useNetworkStatus 
+} from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
 import { notify } from '@rootstock/shared/util';
 
@@ -88,11 +96,11 @@ export const BlocksListScreen = () => {
       onAdd={
         canCreate
           ? () =>
-              router.push(
-                orchardId
-                  ? `/assets/blocks/create?orchardId=${orchardId}`
-                  : '/assets/blocks/create'
-              )
+            router.push(
+              orchardId
+                ? `/assets/blocks/create?orchardId=${orchardId}`
+                : '/assets/blocks/create'
+            )
           : undefined
       }
       onBack={orchardId ? () => router.back() : undefined}
