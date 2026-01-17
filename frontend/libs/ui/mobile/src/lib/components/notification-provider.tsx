@@ -7,7 +7,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const theme = useTheme<AppTheme>();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState('');
-  const [type, setType] = useState<'success' | 'error' | 'info'>('success');
+  const [type, setType] = useState<'success' | 'error' | 'info' | 'warn'>('success');
 
   useEffect(() => {
     mobileNotificationAdapter.setListener((type, msg, title) => {
@@ -28,7 +28,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         onDismiss={onDismiss}
         duration={3000}
         style={{
-          backgroundColor: type === 'error' ? theme.colors.error : theme.colors.inverseSurface,
+          backgroundColor:
+            type === 'error' ? theme.colors.error :
+            type === 'warn' ? theme.colors.tertiary :
+            theme.colors.inverseSurface,
         }}
       >
         {message}

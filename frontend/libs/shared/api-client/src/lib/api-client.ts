@@ -31,3 +31,17 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * Checks if the API is reachable by pinging the status endpoint.
+ * This is a Tier 3 connectivity check.
+ */
+export const checkApiReachability = async (): Promise<boolean> => {
+  try {
+    // low timeout to prevent blocking "online" status for too long
+    await apiClient.head('/status/ready', { timeout: 3000 });
+    return true;
+  } catch (error) {
+    return false;
+  }
+};

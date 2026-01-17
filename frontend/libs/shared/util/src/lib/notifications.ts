@@ -4,6 +4,7 @@ export interface NotificationAdapter {
   error(error: any, title?: string): void;
   errorWithAction(error: any, actionLabel: string, onAction: () => void, title?: string): void;
   validation(message?: string): void;
+  warn(message: string, title?: string): void;
   info(message: string, title?: string): void;
 }
 
@@ -43,6 +44,14 @@ class NotificationService implements NotificationAdapter {
       this.adapter.validation(message);
     } else {
       console.warn('Notification (Validation):', message);
+    }
+  }
+
+  warn(message: string, title?: string) {
+    if (this.adapter) {
+      this.adapter.warn(message, title);
+    } else {
+      console.warn('Notification (Warn):', message);
     }
   }
 

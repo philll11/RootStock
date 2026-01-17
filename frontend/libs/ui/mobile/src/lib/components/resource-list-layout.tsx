@@ -6,6 +6,7 @@ import { useDrawer } from '../drawer-context';
 import { spacing } from '@rootstock/ui/theme';
 import { AppTheme } from '../mobile-theme';
 import { SyncIndicator } from './sync-indicator';
+import { useSafeRefetch } from '@rootstock/shared/util';
 
 interface ResourceListLayoutProps {
   title: string;
@@ -40,6 +41,14 @@ export const ResourceListLayout = ({
   const { toggleDrawer } = useDrawer();
   const insets = useSafeAreaInsets();
 
+  // Wrap the provided onRefresh with Safe Synchronization Logic (Push -> Wait -> Pull)
+  const { safeRefetch, isRefetching: isSafeRefetching } = useSafeRefetch(async () => {
+    if (onRefresh) await onRefresh();
+  });
+
+  const handleRefresh = onRefresh ? safeRefetch : undefined;
+  const isSafeRefreshing = isRefreshing || isSafeRefetching;
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header>
@@ -65,21 +74,30 @@ export const ResourceListLayout = ({
         {isLoading ? (
           <ScrollView 
             contentContainerStyle={styles.centerContainer}
-            refreshControl={onRefresh ? <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} /> : undefined}
+            refreshControl={handleRefresh ? <RefreshControl refreshing={isSafeRefreshing} onRefresh={handleRefresh} /> : undefined}
           >
             <ActivityIndicator animating={true} size="large" />
           </ScrollView>
         ) : isEmpty ? (
           <ScrollView 
             contentContainerStyle={styles.centerContainer}
-            refreshControl={onRefresh ? <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} /> : undefined}
+            refreshControl={handleRefresh ? <RefreshControl refreshing={isSafeRefreshing} onRefresh={handleRefresh} /> : undefined}
           >
             <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
               {emptyText}
             </Text>
           </ScrollView>
         ) : (
-          children
+          // Inject Safe Refresh into direct children (e.g. FlatList) to enforce transactional safety
+          React.Children.map(children, (child) => {
+            if (React.isValidElement(child) && (child.props as any).onRefresh) {
+              return React.cloneElement(child, {
+                onRefresh: handleRefresh,
+                refreshing: isSafeRefreshing,
+              } as any);
+            }
+            return child;
+          })
         )}
       </View>
 

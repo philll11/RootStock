@@ -1,7 +1,7 @@
 import { Alert } from 'react-native';
 import { getErrorMessage, NotificationAdapter } from '@rootstock/shared/util';
 
-type NotificationListener = (type: 'success' | 'error' | 'info', message: string, title?: string) => void;
+type NotificationListener = (type: 'success' | 'error' | 'info' | 'warn', message: string, title?: string) => void;
 
 class MobileNotificationService implements NotificationAdapter {
   private listener: NotificationListener | null = null;
@@ -33,6 +33,14 @@ class MobileNotificationService implements NotificationAdapter {
 
   validation(message = 'Please check the highlighted fields for errors.') {
     Alert.alert('Validation Error', message);
+  }
+
+  warn(message: string, title = 'Warning') {
+    if (this.listener) {
+      this.listener('warn', message, title);
+    } else {
+      Alert.alert(title, message);
+    }
   }
 
   info(message: string, title = 'Information') {

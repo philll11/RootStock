@@ -16,28 +16,44 @@ export function useSyncOfflineData() {
     try {
       setIsSyncing(true);
       
+      // 1. PUSH: Resume and flush local mutations
+      await queryClient.resumePausedMutations();
+
+      // 2. WAIT: Ensure mutation queue is completely drained
+      // This prevents "Overwrite Race Condition" where we fetch old data before our writes are processed
+      while (queryClient.isMutating() > 0) {
+        await new Promise(resolve => setTimeout(resolve, 250));
+      }
+
+      // 3. PULL: Fetch latest data (staleTime: 0 forces refresh)
+      const options = { staleTime: 0 };
+
       // Prefetch Clients
       await queryClient.prefetchQuery({ 
         queryKey: CLIENTS_KEYS.lists(), 
-        queryFn: () => getClients() 
+        queryFn: () => getClients(),
+        ...options 
       });
 
       // Prefetch Orchards
       await queryClient.prefetchQuery({ 
         queryKey: ORCHARDS_KEYS.lists(), 
-        queryFn: () => getOrchards() 
+        queryFn: () => getOrchards(),
+        ...options 
       });
 
       // Prefetch Blocks
       await queryClient.prefetchQuery({ 
         queryKey: BLOCKS_KEYS.list(undefined), 
-        queryFn: () => getBlocks() 
+        queryFn: () => getBlocks(),
+        ...options 
       });
 
       // Prefetch Varieties
       await queryClient.prefetchQuery({ 
         queryKey: VARIETIES_KEYS.lists(), 
-        queryFn: () => getVarieties() 
+        queryFn: () => getVarieties(),
+        ...options 
       });
       
       notify.success('Offline data synchronized successfully.', 'Sync Complete');

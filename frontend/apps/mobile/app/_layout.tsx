@@ -12,15 +12,27 @@ import { useSyncOfflineData } from '@rootstock/system/sync/sync-data-access';
 import { View, ActivityIndicator, AppState } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { initAuth } from '../src/config/auth';
-import { apiClient } from '@rootstock/shared/api-client';
+import { apiClient, checkApiReachability } from '@rootstock/shared/api-client';
 
 // Initialize Auth System (Storage + Interceptors)
 initAuth();
 
 // Configure TanStack Query Online Manager
 onlineManager.setEventListener((setOnline) => {
-  return NetInfo.addEventListener((state) => {
-    setOnline(!!state.isConnected);
+  return NetInfo.addEventListener(async (state) => {
+    // Tiered Connection Check
+    const hasConnection = !!state.isConnected;
+    const hasInternet = !!state.isInternetReachable;
+
+    // Fast Fail: If no physical connection or no internet, we are offline
+    if (!hasConnection || (state.isInternetReachable !== null && !hasInternet)) {
+      setOnline(false);
+      return;
+    }
+
+    // Tier 3: API Ping
+    const canReachApi = await checkApiReachability();
+    setOnline(canReachApi);
   });
 });
 
@@ -31,7 +43,6 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       gcTime: 1000 * 60 * 60 * 24, // 24 hours
-      networkMode: 'offlineFirst',
     },
     mutations: {
       retry: 3,
