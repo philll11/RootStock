@@ -34,9 +34,6 @@ export const ClientForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }
   const handleFormSubmit = async (data: ClientFormData) => {
     setIsSaving(true);
     try {
-      // FIX: reset() must be called BEFORE onSubmit creates the navigation event (router.back).
-      // If called after, the navigation guard checks isDirty (true) before reset happens.
-      // Resetting with 'data' preserves the values but clears the dirty flag.
       reset(data);
       await onSubmit(data);
     } catch (error) {

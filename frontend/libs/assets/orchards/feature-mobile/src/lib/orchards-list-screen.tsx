@@ -4,15 +4,68 @@ import { List, useTheme, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useGetOrchards, Orchard } from '@rootstock/assets/orchards/orchards-data-access';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
-import { PERMISSIONS } from '@rootstock/shared/util';
-import { ResourceListLayout, AppTheme } from '@rootstock/ui/mobile';
+import { PERMISSIONS, notify } from '@rootstock/shared/util';
+import { 
+  ResourceListLayout, 
+  AppTheme, 
+  OfflineItemWrapper, 
+  OfflineStatusIcon, 
+  useEntitySyncStatus, 
+  getOfflineStatusText, 
+  useNetworkStatus 
+} from '@rootstock/ui/mobile';
 import { spacing } from '@rootstock/ui/theme';
+
+const OrchardListItem = React.memo(({ item, router, theme, handlePress }: { item: any; router: any; theme: AppTheme; handlePress: (item: any) => void }) => {
+  const syncStatus = useEntitySyncStatus(item);
+  const isOptimistic = syncStatus !== 'synced';
+  const clientName = typeof item.clientId === 'object' ? item.clientId.name : 'Unknown Client';
+  
+  return (
+    <OfflineItemWrapper status={syncStatus}>
+      <List.Item
+        title={item.name}
+        titleStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
+        description={
+          isOptimistic
+            ? getOfflineStatusText(syncStatus)
+            : clientName
+        }
+        left={(props) => (
+          <List.Icon
+            {...props}
+            icon="tree"
+          />
+        )}
+        right={(props) => (
+          <View style={styles.statusContainer}>
+            <OfflineStatusIcon status={syncStatus} />
+            {!item.isActive && !isOptimistic && (
+              <Text
+                style={{
+                  color: theme.colors.error,
+                  marginRight: spacing.sm,
+                }}
+              >
+                Inactive
+              </Text>
+            )}
+            <List.Icon {...props} icon="chevron-right" />
+          </View>
+        )}
+        onPress={() => handlePress(item)}
+        style={styles.listItem}
+      />
+    </OfflineItemWrapper>
+  );
+});
 
 export function OrchardsListScreen() {
   const theme = useTheme<AppTheme>();
   const router = useRouter();
   const { data: orchards = [], isLoading, refetch, isRefetching } = useGetOrchards();
   const { can } = usePermission();
+  const { isOnline } = useNetworkStatus();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredOrchards = orchards.filter((orchard) => {
@@ -26,6 +79,14 @@ export function OrchardsListScreen() {
 
   const handlePress = (orchard: Orchard) => {
     router.push(`/assets/orchards/${orchard._id}`);
+  };
+
+  const handleRefresh = async () => {
+    if (!isOnline) {
+      notify.info('You are offline. Cannot refresh list.', 'Offline');
+      return;
+    }
+    await refetch();
   };
 
   return (
@@ -42,60 +103,20 @@ export function OrchardsListScreen() {
           ? () => router.push('/assets/orchards/create')
           : undefined
       }
-      onRefresh={refetch}
+      onRefresh={handleRefresh}
       isRefreshing={isRefetching}
     >
       <FlatList
         data={filteredOrchards}
         keyExtractor={(item) => item._id}
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={handleRefresh}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => {
-              const isOptimistic = (item as any).recordId === 'TEMP';
-              return (
-                <List.Item
-                  title={item.name}
-                  titleStyle={isOptimistic ? { opacity: 0.5 } : undefined}
-                  description={
-                    isOptimistic
-                      ? 'Syncing...'
-                      : typeof item.clientId === 'object'
-                      ? item.clientId.name
-                      : 'Unknown Client'
-                  }
-                  descriptionStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
-                  left={(props) => (
-                    <List.Icon
-                      {...props}
-                      icon={isOptimistic ? 'cloud-upload' : 'tree'}
-                      color={isOptimistic ? theme.colors.outline : undefined}
-                    />
-                  )}
-                  right={(props) => (
-                    <View style={styles.statusContainer}>
-                      {!item.isActive && !isOptimistic && (
-                        <Text
-                          style={{
-                            color: theme.colors.error,
-                            marginRight: spacing.sm,
-                          }}
-                        >
-                          Inactive
-                        </Text>
-                      )}
-                      <List.Icon {...props} icon="chevron-right" />
-                    </View>
-                  )}
-                  onPress={() => handlePress(item)}
-                  style={[styles.listItem, isOptimistic && { opacity: 0.7 }]}
-                />
-              );
-            }}
-          />
-        </ResourceListLayout>
-      );
-    }
+        renderItem={({ item }) => <OrchardListItem item={item} router={router} theme={theme} handlePress={handlePress} />}
+      />
+    </ResourceListLayout>
+  );
+}
 
 const styles = StyleSheet.create({
   listContent: {

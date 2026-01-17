@@ -17,6 +17,11 @@ export const ORCHARDS_KEYS = {
   list: (filters: string) => [...ORCHARDS_KEYS.lists(), { filters }] as const,
   details: () => [...ORCHARDS_KEYS.all, 'detail'] as const,
   detail: (id: string) => [...ORCHARDS_KEYS.details(), id] as const,
+  mutations: {
+    create: ['orchards', 'create'] as const,
+    update: ['orchards', 'update'] as const,
+    delete: ['orchards', 'delete'] as const,
+  },
 };
 
 // --- API Functions ---
@@ -88,6 +93,7 @@ export function useCreateOrchard() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ORCHARDS_KEYS.mutations.create,
     mutationFn: createOrchard,
     onMutate: async (newOrchard) => {
       await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.lists() });
@@ -132,6 +138,7 @@ export function useUpdateOrchard() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ORCHARDS_KEYS.mutations.update,
     mutationFn: updateOrchard,
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.detail(id) });
@@ -184,30 +191,18 @@ export function useDeleteOrchard() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ORCHARDS_KEYS.mutations.delete,
     mutationFn: async (id: string) => {
       await apiClient.delete(`/orchards/${id}`);
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.all });
-
-      const previousOrchards = queryClient.getQueryData<Orchard[]>(ORCHARDS_KEYS.lists());
-
-      if (previousOrchards) {
-        queryClient.setQueryData(
-          ORCHARDS_KEYS.lists(),
-          previousOrchards.filter((orchard) => orchard._id !== id)
-        );
-      }
-
-      return { previousOrchards };
+      return { };
     },
     onSuccess: () => {
       notify.success('The orchard has been removed.', 'Orchard Deleted');
     },
     onError: (error: any, id, context) => {
-      if (context?.previousOrchards) {
-        queryClient.setQueryData(ORCHARDS_KEYS.lists(), context.previousOrchards);
-      }
       notify.error(error, 'Error Deleting Orchard');
     },
     onSettled: () => {

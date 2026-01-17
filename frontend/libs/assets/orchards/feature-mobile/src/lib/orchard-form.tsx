@@ -55,6 +55,7 @@ export function OrchardForm({
     formState: { errors, isDirty },
     setValue,
     watch,
+    reset,
   } = useForm<OrchardFormData>({
     resolver: zodResolver(orchardSchema) as any,
     defaultValues: {
@@ -67,6 +68,11 @@ export function OrchardForm({
   });
 
   useMobileDiscardWarning(isDirty && !isSubmitting);
+
+  const handleFormSubmit = async (data: OrchardFormData) => {
+    reset(data);
+    await onSubmit(data);
+  };
 
   const [clientModalVisible, setClientModalVisible] = React.useState(false);
   const [userModalVisible, setUserModalVisible] = React.useState(false);
@@ -208,7 +214,7 @@ export function OrchardForm({
         {!isView && (
           <Button
             mode="contained"
-            onPress={handleSubmit(onSubmit)}
+            onPress={handleSubmit(handleFormSubmit)}
             style={styles.button}
             loading={isSubmitting}
             disabled={isSubmitting}
