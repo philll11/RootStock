@@ -18,11 +18,15 @@ export function SyncIndicator() {
   // Subscribe to Mutation Cache to track pending offline changes
   useEffect(() => {
     const updateCount = () => {
-      const allMutations = queryClient.getMutationCache().getAll();
-      const count = allMutations.filter(
-        (m) => m.state.status === 'pending'
-      ).length;
-      setPendingCount(count);
+      // Defer update to next tick to avoid "Cannot update while rendering" warning
+      // when navigating between screens that both access the QueryCache.
+      setTimeout(() => {
+        const allMutations = queryClient.getMutationCache().getAll();
+        const count = allMutations.filter(
+          (m) => m.state.status === 'pending'
+        ).length;
+        setPendingCount(count);
+      }, 0);
     };
 
     updateCount();

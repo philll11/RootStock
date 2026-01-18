@@ -8,6 +8,7 @@ import {
 } from './client.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
+import { patchDependencyId } from '@rootstock/system/sync/sync-data-access';
 
 export const CLIENTS_KEYS = {
   all: ['clients'] as const,
@@ -47,7 +48,9 @@ export const searchClients = async (query: string): Promise<Client[]> => {
 
 
 export const createClient = async (data: CreateClientDto): Promise<Client> => {
-  const response = await apiClient.post<Client>(BASE_URL, data);
+  // Strip _id (used for frontend scoping) before sending to backend
+  const { _id, ...payload } = data;
+  const response = await apiClient.post<Client>(BASE_URL, payload);
   return response.data;
 };
 
@@ -87,9 +90,10 @@ export function useGetClient(id: string | undefined) {
   });
 }
 
-export function useCreateClient() {
+export function useCreateClient(options?: { scope?: { id: string } }) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: options?.scope,
     mutationKey: CLIENTS_KEYS.mutations.create,
     mutationFn: createClient,
     onMutate: async (newClient) => {
@@ -97,7 +101,7 @@ export function useCreateClient() {
       const previousClients = queryClient.getQueryData<Client[]>(CLIENTS_KEYS.lists());
 
       const optimisticClient: Client & { isOptimistic?: boolean } = {
-        _id: uuidv4(),
+        _id: newClient._id || uuidv4(),
         recordId: 'TEMP',
         isActive: true,
         isDeleted: false,
@@ -113,7 +117,7 @@ export function useCreateClient() {
         ...old,
       ]);
 
-      return { previousClients };
+      return { previousClients, tempId: optimisticClient._id };
     },
     onError: (error: any, newClient, context) => {
       queryClient.setQueryData(CLIENTS_KEYS.lists(), context?.previousClients);
@@ -122,7 +126,11 @@ export function useCreateClient() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
     },
-    onSuccess: () => {
+    onSuccess: (data, variables, context) => {
+      if (context?.tempId) {
+        // Patch any pending mutations (e.g. CreateOrchard) that reference this tempId
+        patchDependencyId(queryClient, 'clientId', context.tempId, data._id);
+      }
       notify.success(
         'The client has been successfully created.',
         'Client Created'

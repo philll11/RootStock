@@ -5,6 +5,7 @@ export interface Variety extends BaseEntity {
 }
 
 export interface CreateVarietyDto {
+  _id?: string;
   name: string;
 }
 

@@ -11,6 +11,7 @@ import {
   NumberInput,
   Alert,
   Box,
+  Modal,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { zodResolver } from '@rootstock/ui/web';
@@ -21,7 +22,8 @@ import {
   BlockFormData,
   blockSchema,
 } from '@rootstock/assets/blocks/blocks-data-access';
-import { useGetVarieties } from '@rootstock/master-data/varieties/varieties-data-access';
+import { useGetVarieties, useCreateVariety } from '@rootstock/master-data/varieties/varieties-data-access';
+import { VarietyForm } from '@rootstock/master-data/varieties/varieties-feature-web';
 import { useGetOrchards } from '@rootstock/assets/orchards/orchards-data-access';
 import { IconTrash, IconPlus, IconAlertTriangle } from '@tabler/icons-react';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
@@ -72,6 +74,15 @@ export function BlockForm({
     confirmReplantOpened,
     { open: openConfirmReplant, close: closeConfirmReplant },
   ] = useDisclosure(false);
+
+  // Variety Creation State
+  const [
+    createVarietyOpened,
+    { open: openCreateVariety, close: closeCreateVariety },
+  ] = useDisclosure(false);
+  const [activePlantingIndex, setActivePlantingIndex] = useState<number | null>(null);
+
+  const { mutateAsync: createVarietyAsync, isPending: isCreatingVariety } = useCreateVariety();
 
   // 3. Form Definition
   const form = useForm<BlockFormData>({
@@ -189,6 +200,23 @@ export function BlockForm({
     });
   };
 
+  const handleVarietySubmit = async (data: any) => {
+    try {
+      // Removing isActive/version fields for creation
+      const { isActive, __v, ...payload } = data;
+      const newVariety = await createVarietyAsync(payload as any);
+      
+      closeCreateVariety();
+      
+      // Auto-select the newly created variety
+      if (activePlantingIndex !== null) {
+        form.setFieldValue(`plantings.${activePlantingIndex}.varietyId`, newVariety._id);
+      }
+    } catch (error) {
+      // Handled by mutation hook
+    }
+  };
+
   // ### Render ###
   return (
     <FormLayout
@@ -261,13 +289,29 @@ export function BlockForm({
         <Stack gap="sm">
           {form.values.plantings.map((item, index) => (
             <Group key={index} align="flex-start">
-              <Select
-                placeholder="Select Variety"
-                data={varietyOptions}
-                readOnly={isViewing}
-                style={{ flex: 1 }}
-                {...form.getInputProps(`plantings.${index}.varietyId`)}
-              />
+              <Group gap="xs" style={{ flex: 1 }}>
+                <Select
+                  placeholder="Select Variety"
+                  data={varietyOptions}
+                  readOnly={isViewing}
+                  style={{ flex: 1 }}
+                  searchable
+                  {...form.getInputProps(`plantings.${index}.varietyId`)}
+                />
+                {!isViewing && (
+                  <ActionIcon
+                    variant="default"
+                    size="lg"
+                    onClick={() => {
+                      setActivePlantingIndex(index);
+                      openCreateVariety();
+                    }}
+                    title="Create new Variety"
+                  >
+                    <IconPlus size={16} />
+                  </ActionIcon>
+                )}
+              </Group>
               <NumberInput
                 placeholder="Count"
                 min={0}
@@ -299,6 +343,22 @@ export function BlockForm({
           mt="md"
         />
       )}
+
+      {/* Create Variety Modal */}
+      <Modal
+        opened={createVarietyOpened}
+        onClose={closeCreateVariety}
+        title="Create New Variety"
+        size="lg"
+      >
+        <VarietyForm
+          mode="create"
+          onSubmit={handleVarietySubmit}
+          onCancel={closeCreateVariety}
+          isLoading={isCreatingVariety}
+          fullHeight={false}
+        />
+      </Modal>
 
       <ConfirmModal
         opened={confirmReplantOpened}

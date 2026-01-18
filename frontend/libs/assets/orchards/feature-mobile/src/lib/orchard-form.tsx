@@ -32,6 +32,7 @@ interface OrchardFormProps {
   isSubmitting?: boolean;
   mode: 'create' | 'edit' | 'view';
   onCancel: () => void;
+  onClientChange?: (clientId: string) => void;
 }
 
 export function OrchardForm({
@@ -40,6 +41,7 @@ export function OrchardForm({
   isSubmitting,
   mode,
   onCancel,
+  onClientChange,
 }: OrchardFormProps) {
   const theme = useTheme<AppTheme>();
   const { can } = usePermission();
@@ -80,6 +82,12 @@ export function OrchardForm({
 
   const selectedClientId = watch('clientId');
   const selectedUserIds = watch('userIds') || [];
+
+  React.useEffect(() => {
+    if (onClientChange && selectedClientId) {
+       onClientChange(selectedClientId);
+    }
+  }, [selectedClientId, onClientChange]);
 
   const selectedClient = clients.find((c) => c._id === selectedClientId);
   const selectedUsers = users.filter((u) => selectedUserIds.includes(u._id));

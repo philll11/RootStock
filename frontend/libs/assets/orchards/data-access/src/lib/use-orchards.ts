@@ -10,6 +10,7 @@ import {
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { v4 as uuid } from 'uuid';
+import { patchDependencyId } from '@rootstock/system/sync/sync-data-access';
 
 export const ORCHARDS_KEYS = {
   all: ['orchards'] as const,
@@ -48,7 +49,8 @@ export const searchOrchards = async (query: string): Promise<Orchard[]> => {
 };
 
 export const createOrchard = async (data: CreateOrchardDto): Promise<Orchard> => {
-  const response = await apiClient.post<Orchard>(BASE_URL, data);
+  const { _id, ...payload } = data;
+  const response = await apiClient.post<Orchard>(BASE_URL, payload);
   return response.data;
 };
 
@@ -89,10 +91,11 @@ export function useGetOrchard(id: string) {
   });
 }
 
-export function useCreateOrchard() {
+export function useCreateOrchard(options?: { scope?: { id: string } }) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    scope: options?.scope,
     mutationKey: ORCHARDS_KEYS.mutations.create,
     mutationFn: createOrchard,
     onMutate: async (newOrchard) => {
@@ -101,7 +104,7 @@ export function useCreateOrchard() {
 
       const tempOrchard: Orchard = {
         ...newOrchard,
-        _id: uuid(),
+        _id: newOrchard._id || uuid(),
         recordId: 'TEMP',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -114,7 +117,7 @@ export function useCreateOrchard() {
         ]);
       }
 
-      return { previousOrchards };
+      return { previousOrchards, tempId: tempOrchard._id };
     },
     onError: (err, newOrchard, context) => {
       if (context?.previousOrchards) {
@@ -125,7 +128,11 @@ export function useCreateOrchard() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ORCHARDS_KEYS.lists() });
     },
-    onSuccess: () => {
+    onSuccess: (data, variables, context) => {
+      if (context?.tempId) {
+        // Patch any pending mutations (e.g. CreateBlock) that reference this tempId
+        patchDependencyId(queryClient, 'orchardId', context.tempId, data._id);
+      }
       notify.success(
         'The orchard has been successfully created.',
         'Orchard Created'

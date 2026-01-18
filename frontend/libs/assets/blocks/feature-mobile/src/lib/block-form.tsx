@@ -25,12 +25,19 @@ import { useMobileDiscardWarning, AppTheme } from '@rootstock/ui/mobile';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { PERMISSIONS } from '@rootstock/shared/util';
 
+import { useRouter, useFocusEffect } from 'expo-router';
+import { v4 as uuid } from 'uuid';
+import { useQueryClient } from '@tanstack/react-query';
+import { VARIETIES_KEYS, Variety } from '@rootstock/master-data/varieties/varieties-data-access';
+
 interface BlockFormProps {
   defaultValues?: Partial<BlockFormData>;
   onSubmit: (data: BlockFormData) => Promise<void>;
   isSubmitting?: boolean;
   mode: 'create' | 'edit' | 'view';
   onCancel: () => void;
+  onOrchardChange?: (orchardId: string) => void;
+  scopeId?: string; // Scope for inline creation of dependencies (Varieties)
 }
 
 export function BlockForm({
@@ -39,9 +46,16 @@ export function BlockForm({
   isSubmitting,
   mode,
   onCancel,
+  onOrchardChange,
+  scopeId,
 }: BlockFormProps) {
   const theme = useTheme<AppTheme>();
+  const router = useRouter();
   const { can } = usePermission();
+  const queryClient = useQueryClient();
+  const pendingVarietyCreation = React.useRef<{ id: string; index: number } | null>(
+    null
+  );
   const isView = mode === 'view';
   const isEdit = mode === 'edit';
 
@@ -73,6 +87,33 @@ export function BlockForm({
 
   useMobileDiscardWarning(isDirty && !isSubmitting);
 
+  // Focus Effect to detect return from Variety Creation
+  useFocusEffect(
+    React.useCallback(() => {
+      const pendingBy = pendingVarietyCreation.current;
+      if (pendingBy) {
+        const { id, index } = pendingBy;
+        
+        // Check if the variety exists in cache (it should, created locally or online)
+        const allVarieties = queryClient.getQueryData<Variety[]>(VARIETIES_KEYS.lists());
+        const exists = allVarieties?.find(v => v._id === id);
+        
+        // Ideally we select it even if "pending" (optimistic), but ensuring cache presence is safer.
+        // If offline creation worked, it IS in the cache.
+        if (exists || true) { // We trust our forced ID
+           setValue(`plantings.${index}.varietyId`, id, { shouldDirty: true });
+           
+           // Clear active selection states
+           setActivePlantingIndex(null);
+           setVarietyModalVisible(false);
+        }
+        
+        // Reset pending state
+        pendingVarietyCreation.current = null;
+      }
+    }, [queryClient, setValue])
+  );
+
   const [orchardModalVisible, setOrchardModalVisible] = React.useState(false);
   const [varietyModalVisible, setVarietyModalVisible] = React.useState(false);
   const [activePlantingIndex, setActivePlantingIndex] = React.useState<
@@ -81,6 +122,13 @@ export function BlockForm({
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const selectedOrchardId = watch('orchardId');
+  
+  React.useEffect(() => {
+    if (onOrchardChange && selectedOrchardId) {
+      onOrchardChange(selectedOrchardId);
+    }
+  }, [selectedOrchardId, onOrchardChange]);
+
   const selectedOrchard = orchards.find((o) => o._id === selectedOrchardId);
 
   const filteredOrchards = orchards.filter((o) =>
@@ -319,6 +367,32 @@ export function BlockForm({
             style={styles.searchBar}
           />
           <ScrollView>
+            {!isView && (
+              <Button
+                mode="text"
+                icon="plus"
+                onPress={() => {
+                  if (activePlantingIndex !== null) {
+                    const newVarietyId = uuid();
+                    pendingVarietyCreation.current = { id: newVarietyId, index: activePlantingIndex };
+
+                    setVarietyModalVisible(false);
+                    // Pass scopeId to ensure the new Variety is created in the same queue
+                    // Pass forcedId so we know what to select on return
+                    router.push({
+                      pathname: '/master-data/varieties/create',
+                      params: { 
+                         scopeId: scopeId,
+                         forcedId: newVarietyId,
+                      },
+                    });
+                   }
+                }}
+                style={{ marginBottom: 8 }}
+              >
+                Create New Variety
+              </Button>
+            )}
             {filteredVarieties.map((variety) => (
               <List.Item
                 key={variety._id}

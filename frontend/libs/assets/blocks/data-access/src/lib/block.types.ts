@@ -9,11 +9,12 @@ export interface Planting {
 export interface Block extends BaseEntity {
   name: string;
   orchardId: string | { _id: string; name: string; recordId: string };
-  clientId: string;
+  clientId: string | { _id: string; name: string; recordId: string };
   plantings: Planting[];
 }
 
 export interface CreateBlockDto {
+  _id?: string;
   name: string;
   orchardId: string;
   plantings: {

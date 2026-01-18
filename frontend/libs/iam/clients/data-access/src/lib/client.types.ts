@@ -7,6 +7,7 @@ export interface Client extends BaseEntity {
 }
 
 export interface CreateClientDto {
+  _id?: string;
   name: string;
   subsidiaryId?: string;
 }

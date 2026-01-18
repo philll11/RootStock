@@ -1,26 +1,46 @@
 import React from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useCreateVariety, VarietyFormData } from '@rootstock/master-data/varieties/varieties-data-access';
 import { ResourceCreateLayout } from '@rootstock/ui/mobile';
 import { VarietyForm } from './variety-form';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { notify } from '@rootstock/shared/util';
+import 'react-native-get-random-values';
+import { v4 as uuid } from 'uuid';
 
 export const VarietyCreateScreen = () => {
   const router = useRouter();
-  const { mutate: createVariety, mutateAsync: createVarietyAsync, isPending: isCreating } = useCreateVariety();
+  // Check for injected scope (from Block Create flow)
+  const { scopeId, forcedId } = useLocalSearchParams<{ scopeId?: string; forcedId?: string }>();
+  
+  // Generate a stable ID for this screen session
+  // If forcedId is provided (by parent form), use it. Otherwise, separate UUID.
+  const tempId = React.useMemo(() => forcedId || uuid(), [forcedId]);
+  
+  const { mutate: createVariety, mutateAsync: createVarietyAsync, isPending: isCreating } = useCreateVariety({
+    scope: scopeId ? { id: scopeId } : undefined
+  });
   const { isConnected } = useNetInfo();
 
   const handleSubmit = async (data: VarietyFormData) => {
     const isOnline = isConnected === true;
+
     try {
       const { isActive, ...createData } = data;
       
+      const payload = { ...createData, _id: tempId };
+
       if (isOnline) {
-        const newVariety = await createVarietyAsync(createData);
-        router.replace(`/master-data/varieties/${newVariety._id}`);
+        const newVariety = await createVarietyAsync(payload);
+        
+        // If we are in a nested flow (implied by scopeId/forcedId), just go back to parent.
+        if (scopeId || forcedId) {
+             router.back();
+        } else {
+             router.replace(`/master-data/varieties/${newVariety._id}`);
+        }
       } else {
-        createVariety(createData);
+        createVariety(payload);
         notify.success('Will sync when online', 'Saved to Outbox');
         router.back();
       }

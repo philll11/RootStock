@@ -4,6 +4,7 @@ import { Variety, CreateVarietyDto, UpdateVarietyDto } from './variety.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { v4 as uuid } from 'uuid';
+import { patchDependencyId } from '@rootstock/system/sync/sync-data-access';
 
 export const VARIETIES_KEYS = {
   all: ['varieties'] as const,
@@ -35,7 +36,8 @@ export const getVariety = async (id: string): Promise<Variety> => {
 export const createVariety = async (data: CreateVarietyDto) => {
   // We skip the global 409 handler because a 409 on create means "Duplicate" not "Version Conflict"
   // and we handle the error notification explicitly in the mutation.
-  const response = await apiClient.post<Variety>(BASE_URL, data, {
+  const { _id, ...payload } = data;
+  const response = await apiClient.post<Variety>(BASE_URL, payload, {
     skipGlobalErrorHandler: true
   } as any);
   return response.data;
@@ -84,10 +86,11 @@ export function useGetVariety(id: string) {
   });
 }
 
-export function useCreateVariety() {
+export function useCreateVariety(options?: { scope?: { id: string } }) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    scope: options?.scope,
     mutationKey: VARIETIES_KEYS.mutations.create,
     mutationFn: createVariety,
     onMutate: async (newVariety) => {
@@ -96,7 +99,7 @@ export function useCreateVariety() {
 
       const tempVariety: Variety = {
         ...newVariety,
-        _id: uuid(),
+        _id: newVariety._id || uuid(),
         recordId: 'TEMP',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -112,7 +115,7 @@ export function useCreateVariety() {
         ]);
       }
 
-      return { previousVarieties };
+      return { previousVarieties, tempId: tempVariety._id };
     },
     onError: (err, newVariety, context) => {
       if (context?.previousVarieties) {
@@ -123,7 +126,11 @@ export function useCreateVariety() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: VARIETIES_KEYS.lists() });
     },
-    onSuccess: () => {
+    onSuccess: (data, variables, context) => {
+      if (context?.tempId) {
+        // Patch any pending mutations (e.g. CreateBlock) that reference this tempId
+        patchDependencyId(queryClient, 'varietyId', context.tempId, data._id);
+      }
       notify.success(
         'The variety has been successfully created.',
         'Variety Created'

@@ -8,7 +8,7 @@ export class Variety {
   @Prop({ required: true, unique: true })
   recordId: string;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   name: string;
 
   @Prop({ default: true })
@@ -20,5 +20,5 @@ export class Variety {
 
 export const VarietySchema = SchemaFactory.createForClass(Variety);
 
-// Enforce case-insensitive uniqueness on name
-VarietySchema.index({ name: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } });
+// Enforces name uniqueness on varieties that are not deleted
+VarietySchema.index({ name: 1 }, { unique: true, collation: { locale: 'en', strength: 2 }, partialFilterExpression: { isDeleted: false } });

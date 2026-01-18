@@ -36,7 +36,8 @@ export const getBlock = async (id: string): Promise<Block> => {
 };
 
 export const createBlock = async (data: CreateBlockDto): Promise<Block> => {
-  const response = await apiClient.post<Block>(BASE_URL, data);
+  const { _id, ...payload } = data;
+  const response = await apiClient.post<Block>(BASE_URL, payload);
   return response.data;
 };
 
@@ -78,10 +79,11 @@ export function useGetBlock(id: string) {
   });
 }
 
-export function useCreateBlock() {
+export function useCreateBlock(options?: { scope?: { id: string } }) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    scope: options?.scope,
     mutationKey: BLOCKS_KEYS.mutations.create,
     mutationFn: createBlock,
     onMutate: async (newBlock) => {
@@ -92,7 +94,7 @@ export function useCreateBlock() {
 
       const tempBlock: Block = {
         ...newBlock,
-        _id: uuid(),
+        _id: newBlock._id || uuid(),
         recordId: 'TEMP',
         clientId: 'PENDING', // Derived from Orchard on backend
         createdAt: new Date().toISOString(),

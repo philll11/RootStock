@@ -17,8 +17,21 @@ export function useSyncOfflineData() {
       setIsSyncing(true);
       
       // 1. PUSH: Resume and flush local mutations
-      // We explicitly resume to ensure any paused mutations due to offline state are processed
-      await queryClient.resumePausedMutations();
+      // We leverage TanStack Query v5 'resumePausedMutations' which respects mutation scopes.
+      // Mutations with distinct scopes (e.g. separate Client trees) will run in parallel.
+      // Mutations with shared scopes will run serially.
+      // 'resumePausedMutations' returns a promise that resolves when the resume process is *initiated*,
+      // but not necessarily when all mutations are settled. So we must use the Wait loop below.
+      
+      const mutationCache = queryClient.getMutationCache();
+      const pausedMutations = mutationCache
+        .getAll()
+        .filter((m) => m.state.isPaused);
+
+      if (pausedMutations.length > 0) {
+        notify.info(`Syncing ${pausedMutations.length} pending updates...`, 'Sync Started');
+        await queryClient.resumePausedMutations();
+      }
 
       // 2. WAIT: Stronger Drain Check
       // We check specifically for 'pending' or 'paused' mutations in the cache.

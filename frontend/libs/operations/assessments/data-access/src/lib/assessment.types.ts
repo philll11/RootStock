@@ -35,7 +35,7 @@ export interface Assessment extends BaseEntity {
   name: string;
   type: AssessmentType;
   blockId: string | { _id: string; name: string; recordId: string }; // Populated or ID
-  clientId: string;
+  clientId: string | { _id: string; name: string; recordId: string }; // Populated or ID
   varietyId: string | { _id: string; name: string; recordId: string }; // Populated or ID
   date: string; // ISO Date string
   status: AssessmentStatus;

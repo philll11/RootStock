@@ -25,10 +25,11 @@ export class VarietiesService {
     // Check for case-insensitive uniqueness
     const existingVariety = await this.varietyModel.findOne({
       name: { $regex: new RegExp(`^${createVarietyDto.name}$`, 'i') },
+      isDeleted: false,
     }).exec();
 
     if (existingVariety) {
-      throw new ConflictException(`Variety with name "${createVarietyDto.name}" already exists.`);
+      throw new ConflictException(`Variety with name "${createVarietyDto.name}" already exists or is inactive.`);
     }
 
     const { prefix, sequence_value } = await this.countersService.getNextSequenceValue('variety', 'VAR');

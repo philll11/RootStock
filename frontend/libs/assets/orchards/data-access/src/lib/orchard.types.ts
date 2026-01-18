@@ -7,6 +7,7 @@ export interface Orchard extends BaseEntity {
 }
 
 export interface CreateOrchardDto {
+  _id?: string;
   name: string;
   clientId: string;
   userIds?: string[];
