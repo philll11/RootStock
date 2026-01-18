@@ -107,8 +107,12 @@ export function BlockForm({
   }, [orchards]);
 
   const varietyOptions = useMemo(() => {
-    return (varieties || []).map((v) => ({ value: v._id, label: v.name }));
-  }, [varieties]);
+    const options = (varieties || []).map((v) => ({ value: v._id, label: v.name }));
+    if (!isViewing) {
+      options.push({ value: 'CREATE_NEW', label: '+ Create New Variety' });
+    }
+    return options;
+  }, [varieties, isViewing]);
 
   const isDataLoading = isLoading || isVarietiesLoading || isOrchardsLoading;
 
@@ -219,130 +223,133 @@ export function BlockForm({
 
   // ### Render ###
   return (
-    <FormLayout
-      mode={mode}
-      isDirty={form.isDirty()}
-      isLoading={isDataLoading}
-      onCancel={onCancel}
-      onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
-      onEdit={onEdit}
-      onClear={mode === 'create' ? handleClear : undefined}
-      canEdit={can(PERMISSIONS.BLOCK_EDIT)}
-      fullHeight={fullHeight}
-    >
-      <Group grow align="flex-start">
-        <TextInput
-          label="Name"
-          placeholder="Block Name"
-          required={!isViewing}
-          readOnly={isViewing}
-          {...form.getInputProps('name')}
-        />
-
-        {!orchardId && (
-          <Select
-            label="Orchard"
-            placeholder="Select Orchard"
-            data={orchardOptions}
+    <>
+      <FormLayout
+        mode={mode}
+        isDirty={form.isDirty()}
+        isLoading={isDataLoading}
+        onCancel={onCancel}
+        onSubmit={form.onSubmit(handleSubmit, handleValidationErrors)}
+        onEdit={onEdit}
+        onClear={mode === 'create' ? handleClear : undefined}
+        canEdit={can(PERMISSIONS.BLOCK_EDIT)}
+        fullHeight={fullHeight}
+      >
+        <Group grow align="flex-start">
+          <TextInput
+            label="Name"
+            placeholder="Block Name"
             required={!isViewing}
             readOnly={isViewing}
-            disabled={isEditing}
-            searchable
-            {...form.getInputProps('orchardId')}
+            {...form.getInputProps('name')}
           />
-        )}
-      </Group>
 
-      <Box mt="md">
-        <Group justify="space-between" mb="xs">
-          <Text fw={500} size="sm">
-            Plantings
-          </Text>
-          {!isViewing && (
-            <Button
-              variant="subtle"
-              size="xs"
-              leftSection={<IconPlus size={14} />}
-              onClick={() =>
-                form.insertListItem('plantings', {
-                  varietyId: null,
-                  treeCount: 0,
-                })
-              }
-            >
-              Add Planting
-            </Button>
+          {!orchardId && (
+            <Select
+              label="Orchard"
+              placeholder="Select Orchard"
+              data={orchardOptions}
+              required={!isViewing}
+              readOnly={isViewing}
+              disabled={isEditing}
+              searchable
+              {...form.getInputProps('orchardId')}
+            />
           )}
         </Group>
 
-        {showReplantingWarning && (
-          <Alert
-            icon={<IconAlertTriangle size={16} />}
-            title="Replanting Warning"
-            color="yellow"
-            mb="sm"
-          >
-            Changing variety will not update historical assessments.
-          </Alert>
-        )}
+        <Box mt="md">
+          <Group justify="space-between" mb="xs">
+            <Text fw={500} size="sm">
+              Plantings
+            </Text>
+            {!isViewing && (
+              <Button
+                variant="subtle"
+                size="xs"
+                leftSection={<IconPlus size={14} />}
+                onClick={() =>
+                  form.insertListItem('plantings', {
+                    varietyId: null,
+                    treeCount: 0,
+                  })
+                }
+              >
+                Add Planting
+              </Button>
+            )}
+          </Group>
 
-        <Stack gap="sm">
-          {form.values.plantings.map((item, index) => (
-            <Group key={index} align="flex-start">
-              <Group gap="xs" style={{ flex: 1 }}>
+          {showReplantingWarning && (
+            <Alert
+              icon={<IconAlertTriangle size={16} />}
+              title="Replanting Warning"
+              color="yellow"
+              mb="sm"
+            >
+              Changing variety will not update historical assessments.
+            </Alert>
+          )}
+
+          <Stack gap="sm">
+            {form.values.plantings.map((item, index) => (
+              <Group key={index} align="flex-start">
                 <Select
                   placeholder="Select Variety"
                   data={varietyOptions}
                   readOnly={isViewing}
                   style={{ flex: 1 }}
                   searchable
+                  renderOption={({ option }) => (
+                    <Text
+                      size="sm"
+                      c={ option.value === 'CREATE_NEW' ? palette.brand[500] : undefined }
+                    >
+                      {option.label}
+                    </Text>
+                  )}
                   {...form.getInputProps(`plantings.${index}.varietyId`)}
-                />
-                {!isViewing && (
-                  <ActionIcon
-                    variant="default"
-                    size="lg"
-                    onClick={() => {
+                  onChange={(val) => {
+                    if (val === 'CREATE_NEW') {
                       setActivePlantingIndex(index);
                       openCreateVariety();
-                    }}
-                    title="Create new Variety"
+                    } else {
+                      form.setFieldValue(`plantings.${index}.varietyId`, val);
+                    }
+                  }}
+                />
+                <NumberInput
+                  placeholder="Count"
+                  min={0}
+                  readOnly={isViewing}
+                  style={{ width: 100 }}
+                  {...form.getInputProps(`plantings.${index}.treeCount`)}
+                />
+                {!isViewing && form.values.plantings.length > 1 && (
+                  <ActionIcon
+                    color="red"
+                    variant="subtle"
+                    onClick={() => form.removeListItem('plantings', index)}
+                    mt={4}
                   >
-                    <IconPlus size={16} />
+                    <IconTrash size={16} />
                   </ActionIcon>
                 )}
               </Group>
-              <NumberInput
-                placeholder="Count"
-                min={0}
-                readOnly={isViewing}
-                style={{ width: 100 }}
-                {...form.getInputProps(`plantings.${index}.treeCount`)}
-              />
-              {!isViewing && form.values.plantings.length > 1 && (
-                <ActionIcon
-                  color="red"
-                  variant="subtle"
-                  onClick={() => form.removeListItem('plantings', index)}
-                  mt={4}
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
-              )}
-            </Group>
-          ))}
-        </Stack>
-      </Box>
+            ))}
+          </Stack>
+        </Box>
 
-      {mode !== 'create' && can(PERMISSIONS.BLOCK_MANAGE_INACTIVE) && (
-        <Switch
-          label="Active"
-          readOnly={isViewing}
-          style={{ pointerEvents: isViewing ? 'none' : 'auto' }}
-          {...form.getInputProps('isActive', { type: 'checkbox' })}
-          mt="md"
-        />
-      )}
+        {mode !== 'create' && can(PERMISSIONS.BLOCK_MANAGE_INACTIVE) && (
+          <Switch
+            label="Active"
+            readOnly={isViewing}
+            style={{ pointerEvents: isViewing ? 'none' : 'auto' }}
+            {...form.getInputProps('isActive', { type: 'checkbox' })}
+            mt="md"
+          />
+        )}
+      </FormLayout>
 
       {/* Create Variety Modal */}
       <Modal
@@ -372,6 +379,6 @@ export function BlockForm({
         confirmLabel="Confirm Change"
         confirmColor={palette.buttons.warning}
       />
-    </FormLayout>
+    </>
   );
 }
