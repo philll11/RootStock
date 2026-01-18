@@ -183,9 +183,17 @@ export class BlocksService {
     const blockToDelete = await this.findOne(blockId, requestingUser);
 
     // Check for active assessments
-    const hasActiveAssessments = await this.assessmentsService.checkActiveAssessmentsForBlock(blockId);
-    if (hasActiveAssessments) {
-      throw new ConflictException('Cannot delete block with active assessments.');
+    const blockingAssessments = await this.assessmentsService.findBlockingAssessmentsForBlock(blockId);
+    if (blockingAssessments.length > 0) {
+      throw new ConflictException({
+        message: `Cannot delete Block. Active Assessments exist.`,
+        blockingResources: blockingAssessments.map(a => ({
+            _id: a._id,
+            recordId: a.recordId,
+            name: a.name,
+            status: a.status
+        }))
+      });
     }
 
     const session = await this.connection.startSession();
@@ -251,6 +259,18 @@ export class BlocksService {
       isActive: true,
       isDeleted: false
     }).exec();
+  }
+
+  /**
+   * Finds active blocks for a specific orchard.
+   * Used by OrchardsService to report deletion blockers.
+   */
+  async findActiveByOrchardId(orchardId: string): Promise<{ _id: Types.ObjectId; name: string; recordId: string }[]> {
+    return this.blockModel.find({
+      orchardId: new Types.ObjectId(orchardId),
+      isActive: true,
+      isDeleted: false
+    }).select('name recordId').exec();
   }
 }
 

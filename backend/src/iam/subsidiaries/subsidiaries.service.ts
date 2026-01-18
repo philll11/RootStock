@@ -112,6 +112,23 @@ export class SubsidiariesService {
   async remove(subsidiaryId: string, requestingUser: UserDocument): Promise<SubsidiaryDocument> {
     await this.findOne(subsidiaryId, requestingUser);
 
+    const activeClients = await this.clientModel.find({ 
+        subsidiaryId: new Types.ObjectId(subsidiaryId),
+        isActive: true, 
+        isDeleted: false 
+    }).select('name recordId').exec();
+    
+    if (activeClients.length > 0) {
+        throw new ConflictException({
+            message: `Cannot delete Subsidiary. The following Clients are still attached.`,
+            blockingResources: activeClients.map(c => ({
+                _id: c._id,
+                recordId: c.recordId,
+                name: c.name
+            }))
+        });
+    }
+
     const session = await this.connection.startSession();
     session.startTransaction();
 
@@ -123,10 +140,6 @@ export class SubsidiariesService {
         session,
         'Subsidiary'
       );
-
-      // TODO: Evaluate whether disconnecting clients from a deleted subsidiary is necessary or whether a 409 Conflict should be returned
-      // If 409, return a list of clients that would be affected in the response.
-      await this.clientModel.updateMany({ subsidiaryId: subsidiaryId }, { $set: { subsidiaryId: null } }, { session }).exec();
 
       await session.commitTransaction();
       return deletedSubsidiary;

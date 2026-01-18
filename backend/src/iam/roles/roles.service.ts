@@ -110,9 +110,20 @@ export class RolesService {
   async remove(roleId: string, requestingUser: User): Promise<RoleDocument> {
     await this.findOne(roleId, requestingUser); // Secure authorization check
 
-    const activeUserCount = await this.userModel.countDocuments({ roleId: new Types.ObjectId(roleId), isDeleted: false });
-    if (activeUserCount > 0) {
-      throw new ConflictException('Cannot delete role as it is currently assigned to one or more users.');
+    const activeUsers = await this.userModel.find({ 
+        roleId: new Types.ObjectId(roleId), 
+        isDeleted: false 
+    }).select('firstName lastName recordId').exec();
+
+    if (activeUsers.length > 0) {
+      throw new ConflictException({
+        message: `Cannot delete role as it is currently assigned to the following users.`,
+        blockingResources: activeUsers.map(u => ({
+            _id: u._id,
+            recordId: u.recordId,
+            name: `${u.firstName} ${u.lastName}`
+        }))
+      });
     }
 
     const session = await this.connection.startSession();

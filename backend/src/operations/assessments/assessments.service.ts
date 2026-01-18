@@ -271,6 +271,20 @@ export class AssessmentsService {
     }
   }
 
+
+  /**
+   * Finds active assessments that would prevent a block from being deleted.
+   * Returns a lightweight list of recordIds and statuses.
+   */
+  async findBlockingAssessmentsForBlock(blockId: string): Promise<{ _id: Types.ObjectId; recordId: string; status: string; name: string }[]> {
+    return this.assessmentModel.find({
+      blockId: new Types.ObjectId(blockId),
+      isDeleted: false,
+      isActive: true,
+      status: { $in: [AssessmentStatus.PENDING, AssessmentStatus.IN_PROGRESS] }
+    }).select('recordId status name').exec();
+  }
+
   async checkActiveAssessmentsForBlock(blockId: string): Promise<boolean> {
     const count = await this.assessmentModel.countDocuments({
       blockId: new Types.ObjectId(blockId),

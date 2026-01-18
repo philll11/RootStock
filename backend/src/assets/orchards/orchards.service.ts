@@ -215,9 +215,16 @@ export class OrchardsService {
     async remove(orchardId: string, requestingUser: UserDocument): Promise<OrchardDocument> {
         const orchardToDelete = await this.findOne(orchardId, requestingUser); // Layer 2 Orchard Check
 
-        const activeBlockCount = await this.blocksService.countActiveByOrchardId(orchardId);
-        if (activeBlockCount > 0) {
-            throw new ConflictException(`Cannot delete orchard because it has ${activeBlockCount} active block(s).`);
+        const activeBlocks = await this.blocksService.findActiveByOrchardId(orchardId);
+        if (activeBlocks.length > 0) {
+            throw new ConflictException({
+                message: `Cannot delete Orchard. Please remove the following Blocks first.`,
+                blockingResources: activeBlocks.map(b => ({
+                    _id: b._id,
+                    recordId: b.recordId,
+                    name: b.name
+                }))
+            });
         }
 
         const session = await this.connection.startSession();
@@ -302,5 +309,17 @@ export class OrchardsService {
             { isDeleted: true, isActive: false },
             { session }
         ).exec();
+    }
+
+    /**
+     * Finds active orchards for a specific client.
+     * Used by ClientsService to report deletion blockers.
+     */
+    async findActiveByClientId(clientId: string): Promise<{ _id: Types.ObjectId; name: string; recordId: string }[]> {
+        return this.orchardModel.find({
+            clientId: new Types.ObjectId(clientId),
+            isActive: true,
+            isDeleted: false
+        }).select('name recordId').exec();
     }
 }

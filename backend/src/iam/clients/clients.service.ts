@@ -255,15 +255,43 @@ export class ClientsService {
   async remove(clientId: string, requestingUser: UserDocument): Promise<ClientDocument> {
     const clientToDelete = await this.findOne(clientId, requestingUser); // Layer 2 Client Check
 
+    // Check 1: Active Orchards
+    const activeOrchards = await this.orchardsService.findActiveByClientId(clientId);
+    if (activeOrchards.length > 0) {
+      throw new ConflictException({
+        message: `Cannot delete Client. Please remove the following Orchards first.`,
+        blockingResources: activeOrchards.map(o => ({
+            _id: o._id, // Handle potential type mismatch if raw result
+            recordId: o.recordId,
+            name: o.name
+        }))
+      });
+    }
+
+    // Check 2: Active Contact Users
+    const activeContactUsers = await this.userModel.find({
+      clientIds: clientId,
+      userType: UserType.CONTACT,
+      isActive: true,
+      isDeleted: false
+    }).select('firstName lastName recordId').exec();
+
+    if (activeContactUsers.length > 0) {
+      throw new ConflictException({
+        message: `Cannot delete Client. Please remove/reassign the following Contact Users first.`,
+        blockingResources: activeContactUsers.map(u => ({
+            _id: u._id,
+            recordId: u.recordId,
+            name: `${u.firstName} ${u.lastName}`
+        }))
+      });
+    }
+
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
       const deletedClient = await handleConcurrentSoftDelete<ClientDocument>(this.clientModel, clientId, session, 'Client');
-      await this.userModel.updateMany({ clientIds: clientId }, { $pull: { clientIds: clientId } }, { session }).exec();
-
-      // TODO: Evaluate whether we should soft-delete orchards as well or simply throw a 409 Conflict
-      await this.orchardsService.softDeleteByClientId(clientId, session);
-
+      
       await session.commitTransaction();
 
       await this.auditsService.log(
@@ -283,7 +311,6 @@ export class ClientsService {
     } finally {
       session.endSession();
     }
-
   }
 
 
