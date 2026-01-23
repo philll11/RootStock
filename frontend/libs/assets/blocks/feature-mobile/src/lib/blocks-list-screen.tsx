@@ -1,3 +1,4 @@
+// frontend/libs/assets/blocks/feature-mobile/src/lib/blocks-list-screen.tsx
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';

@@ -1,3 +1,4 @@
+// frontend/libs/assets/blocks/feature-web/src/lib/blocks-list-page.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Group, ActionIcon, Badge } from '@mantine/core';
