@@ -8,12 +8,13 @@ import {
     Divider,
     Tooltip,
     IconButton,
+    Stack
 } from '@mui/material';
 import {
     GridColDef,
     GridRenderCellParams,
 } from '@mui/x-data-grid';
-import { IconEdit, IconTrash, IconEye, IconPlus, IconExternalLink } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconEye, IconPlus, IconExternalLink, IconPencil } from '@tabler/icons-react';
 
 // Project Imports
 import { useGetRoles, useDeleteRole, useCreateRole, useUpdateRole } from 'hooks/iam/useRoles';
@@ -250,15 +251,29 @@ const RoleList = () => {
                             </Tooltip>
                         )}
                         {can(PERMISSIONS.ROLE_EDIT) && (
-                            <Tooltip title="Edit">
-                                <IconButton
-                                    color="secondary"
-                                    size="small"
-                                    onClick={(e) => handleEditPage(role._id, e)}
-                                >
-                                    <IconEdit size={18} />
-                                </IconButton>
-                            </Tooltip>
+                            <>
+                                <Tooltip title="Edit">
+                                    <IconButton
+                                        color="secondary"
+                                        size="small"
+                                        onClick={(e) => handleEditPage(role._id, e)}
+                                    >
+                                        <IconEdit size={18} />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Quick Edit">
+                                    <IconButton
+                                        color="orange"
+                                        size="small"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleOpenDrawer('edit', role);
+                                        }}
+                                    >
+                                        <IconPencil size={18} />
+                                    </IconButton>
+                                </Tooltip>
+                            </>
                         )}
                         {can(PERMISSIONS.ROLE_DELETE) && (
                             <Tooltip title="Delete">
@@ -316,12 +331,34 @@ const RoleList = () => {
                         <Typography variant="h4">
                             {mode === 'create' ? 'New Role' : mode === 'edit' ? 'Edit Role' : roleName(selectedRole)}
                         </Typography>
+                        {mode === 'view' && selectedRole && (
+                            <Stack direction="row" spacing={1}>
+                                {can(PERMISSIONS.ROLE_EDIT) && (
+                                    <Tooltip title="Edit">
+                                        <IconButton size="small" onClick={() => setMode('edit')} color="primary">
+                                            <IconEdit size={18} />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                                {can(PERMISSIONS.ROLE_DELETE) && (
+                                    <Tooltip title="Delete">
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => handleDeleteClick(selectedRole, e)}
+                                            color="error"
+                                        >
+                                            <IconTrash size={18} />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                            </Stack>
+                        )}
                     </Box>
 
                     <Divider sx={{ mb: 3 }} />
 
                     <RoleForm
-                        mode={mode === 'create' ? 'create' : 'edit'}
+                        mode={mode}
                         role={selectedRole}
                         initialValues={mode === 'create' ? createDraft : undefined}
                         onSubmit={handleFormSubmit}

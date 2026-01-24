@@ -7,10 +7,11 @@ import {
     Tooltip,
     IconButton,
     Chip,
-    Divider
+    Divider,
+    Stack
 } from '@mui/material';
 import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { IconEdit, IconTrash, IconEye, IconPlus, IconExternalLink } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconEye, IconPlus, IconExternalLink, IconPencil } from '@tabler/icons-react';
 
 // Project Imports
 import { useGetClients, useDeleteClient, useCreateClient, useUpdateClient } from 'hooks/iam/useClients';
@@ -221,15 +222,29 @@ const ClientList = () => {
                             </Tooltip>
                         )}
                         {can(PERMISSIONS.CLIENT_EDIT) && (
-                            <Tooltip title="Edit">
-                                <IconButton
-                                    color="secondary"
-                                    size="small"
-                                    onClick={(e) => handleEditPage(client._id, e)}
-                                >
-                                    <IconEdit size={18} />
-                                </IconButton>
-                            </Tooltip>
+                            <>
+                                <Tooltip title="Edit">
+                                    <IconButton
+                                        color="secondary"
+                                        size="small"
+                                        onClick={(e) => handleEditPage(client._id, e)}
+                                    >
+                                        <IconEdit size={18} />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Quick Edit">
+                                    <IconButton
+                                        color="orange"
+                                        size="small"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleOpenDrawer('edit', client);
+                                        }}
+                                    >
+                                        <IconPencil size={18} />
+                                    </IconButton>
+                                </Tooltip>
+                            </>
                         )}
                         {can(PERMISSIONS.CLIENT_DELETE) && (
                             <Tooltip title="Delete">
@@ -290,11 +305,33 @@ const ClientList = () => {
                         <Typography variant="h4">
                             {mode === 'create' ? 'New Client' : mode === 'edit' ? 'Edit Client' : clientName(selectedClient)}
                         </Typography>
+                        {mode === 'view' && selectedClient && (
+                            <Stack direction="row" spacing={1}>
+                                {can(PERMISSIONS.CLIENT_EDIT) && (
+                                    <Tooltip title="Edit">
+                                        <IconButton size="small" onClick={() => setMode('edit')} color="primary">
+                                            <IconEdit size={18} />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                                {can(PERMISSIONS.CLIENT_DELETE) && (
+                                    <Tooltip title="Delete">
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => handleDeleteClick(selectedClient, e)}
+                                            color="error"
+                                        >
+                                            <IconTrash size={18} />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                            </Stack>
+                        )}
                     </Box>
 
                     <Divider sx={{ mb: 3 }} />
                     <ClientForm
-                        mode={mode === 'create' ? 'create' : 'edit'}
+                        mode={mode}
                         initialValues={mode === 'create' ? createDraft : (selectedClient ? {
                             ...selectedClient,
                             subsidiaryId: typeof selectedClient.subsidiaryId === 'object'

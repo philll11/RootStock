@@ -352,14 +352,17 @@ const UserForm = ({
                                         }
                                     }}
                                     disabled={isViewing || isLoading}
-                                    renderOption={(props, option, { selected }) => (
-                                        <li {...props}>
-                                            {isMultiple && (
-                                                <Checkbox style={{ marginRight: 8 }} checked={selected} />
-                                            )}
-                                            {option.name}
-                                        </li>
-                                    )}
+                                    renderOption={(props, option, { selected }) => {
+                                        const { key, ...rest } = props;
+                                        return (
+                                            <li key={key} {...rest}>
+                                                {isMultiple && (
+                                                    <Checkbox style={{ marginRight: 8 }} checked={selected} />
+                                                )}
+                                                {option.name}
+                                            </li>
+                                        );
+                                    }}
                                     renderInput={(params) => (
                                         <TextField
                                             {...params}
