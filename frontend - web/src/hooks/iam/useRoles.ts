@@ -8,7 +8,7 @@ import {
 } from 'api/iam/roles';
 import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';
-import { CreateRoleDto, UpdateRoleDto, Role } from 'api/iam/roles.types';
+import { CreateRoleDto, UpdateRoleDto, Role } from 'types/iam/role.types';
 
 export const ROLES_KEYS = {
   all: ['roles'] as const,

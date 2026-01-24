@@ -1,5 +1,5 @@
 import axiosServices from 'utils/axios';
-import { User, UpdateUserDto, CreateUserDto } from './user.types';
+import { User, UpdateUserDto, CreateUserDto } from '../../types/iam/user.types';
 
 // --- API Functions ---
 

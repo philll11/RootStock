@@ -1,5 +1,5 @@
 import axiosServices from 'utils/axios';
-import { Client, CreateClientDto, UpdateClientDto } from './client.types';
+import { Client, CreateClientDto, UpdateClientDto } from '../../types/iam/client.types';
 
 const BASE_URL = '/clients';
 

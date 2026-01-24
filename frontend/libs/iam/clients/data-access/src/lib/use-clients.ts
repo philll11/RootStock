@@ -5,7 +5,7 @@ import {
   Client,
   CreateClientDto,
   UpdateClientDto,
-} from './client.types';
+} from '../../types/iam/client.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';
 import { patchDependencyId } from '@rootstock/system/sync/sync-data-access';

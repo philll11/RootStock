@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
-import { Role, CreateRoleDto, UpdateRoleDto } from './roles.types';
+import { Role, CreateRoleDto, UpdateRoleDto } from '../../types/iam/role.types';
 import { notify, PERMISSIONS } from '@rootstock/shared/util';
 import axios from 'axios';
 import { usePermission } from '@rootstock/iam/auth/auth-data-access';

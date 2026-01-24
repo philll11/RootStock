@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useCallback } from 'react';
 import { useAuthSession, useLogin, useLogout } from 'hooks/iam/useAuth';
-import { User } from 'api/iam/user.types';
+import { User } from 'types/iam/user.types';
 import Loader from 'ui-component/Loader';
 
 interface AuthContextType {

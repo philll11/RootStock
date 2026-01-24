@@ -19,7 +19,7 @@ import { IconEdit, IconTrash, IconEye, IconPlus, IconExternalLink, IconPencil } 
 
 // Project Imports
 import { useGetUsers, useDeleteUser, useCreateUser, useUpdateUser } from 'hooks/iam/useUsers';
-import { User, UserType } from 'api/iam/user.types';
+import { User, UserType } from 'types/iam/user.types';
 import { UserFormData } from 'api/iam/user.schema';
 import UserForm, { UserFormMode } from './UserForm';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
@@ -263,7 +263,7 @@ const UserList = () => {
                                 </Tooltip>
                                 <Tooltip title="Quick Edit">
                                     <IconButton
-                                        color="orange"
+                                        color="warning"
                                         size="small"
                                         onClick={(e) => {
                                             e.stopPropagation();

@@ -23,13 +23,13 @@ import {
 import { IconEye, IconEyeOff, IconHistory, IconLock } from '@tabler/icons-react';
 
 // Project Imports
-import { User, UserType } from 'api/iam/user.types';
+import { User, UserType } from 'types/iam/user.types';
 import { userSchema, UserFormData } from 'api/iam/user.schema';
 import { useGetRoles } from 'hooks/iam/useRoles';
 import { useGetClients } from 'hooks/iam/useClients';
 import ResourceRelatedTabs from 'ui-component/extended/ResourceRelatedTabs';
 import ResourceAuditTable from 'ui-component/extended/ResourceAuditTable';
-import { Client } from 'api/iam/client.types';
+import { Client } from 'types/iam/client.types';
 export type UserFormMode = 'create' | 'edit' | 'view';
 
 interface UserFormProps {

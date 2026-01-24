@@ -10,7 +10,7 @@ import {
 import { apiClient } from '@rootstock/shared/api-client';
 import { AuthService } from './auth.service';
 import { User } from '@rootstock/iam/users/users-data-access';
-import { LoginCredentials, AuthResponse } from './auth.schema';
+import { LoginCredentials, AuthResponse } from '../../types/iam/auth.schema';
 
 export const AUTH_KEYS = {
   all: ['auth'] as const,

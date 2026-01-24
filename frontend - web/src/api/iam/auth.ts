@@ -1,7 +1,7 @@
 // src/api/iam/auth.ts
 import axiosServices from 'utils/axios';
-import { LoginCredentials, AuthResponse, ResetPasswordRequest } from './auth.schema';
-import { User } from './user.types';
+import { LoginCredentials, AuthResponse, ResetPasswordRequest } from '../../types/iam/auth.schema';
+import { User } from '../../types/iam/user.types';
 
 const ENDPOINTS = {
     LOGIN: '/auth/local/login',

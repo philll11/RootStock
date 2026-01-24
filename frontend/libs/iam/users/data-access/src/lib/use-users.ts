@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@rootstock/shared/api-client';
-import { User, CreateUserDto, UpdateUserDto } from './user.types';
+import { User, CreateUserDto, UpdateUserDto } from '../../types/iam/user.types';
 import { notify } from '@rootstock/shared/util';
 
 export const USERS_KEYS = {

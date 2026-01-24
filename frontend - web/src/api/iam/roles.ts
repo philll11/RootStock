@@ -1,5 +1,5 @@
 import axiosServices from 'utils/axios';
-import { Role, CreateRoleDto, UpdateRoleDto } from './roles.types';
+import { Role, CreateRoleDto, UpdateRoleDto } from '../../types/iam/role.types';
 // --- API Functions ---
 
 const BASE_URL = '/roles';

@@ -30,7 +30,7 @@ import {
 import { IconChevronDown, IconSearch, IconInfoCircle } from '@tabler/icons-react';
 
 // Project Imports
-import { Role } from 'api/iam/roles.types';
+import { Role } from 'types/iam/role.types';
 import { roleSchema, RoleFormData } from 'api/iam/role.schema';
 import { VisibilityScope, DOMAIN_MAPPING } from 'constants/permissions';
 import { getGroupedPermissions, parsePermission } from 'utils/permission-helper';

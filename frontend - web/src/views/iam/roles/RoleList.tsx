@@ -18,7 +18,7 @@ import { IconEdit, IconTrash, IconEye, IconPlus, IconExternalLink, IconPencil } 
 
 // Project Imports
 import { useGetRoles, useDeleteRole, useCreateRole, useUpdateRole } from 'hooks/iam/useRoles';
-import { Role } from 'api/iam/roles.types';
+import { Role } from 'types/iam/role.types';
 import { RoleFormData } from 'api/iam/role.schema';
 import RoleForm, { RoleFormMode } from './RoleForm';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
@@ -263,7 +263,7 @@ const RoleList = () => {
                                 </Tooltip>
                                 <Tooltip title="Quick Edit">
                                     <IconButton
-                                        color="orange"
+                                        color="warning"
                                         size="small"
                                         onClick={(e) => {
                                             e.stopPropagation();

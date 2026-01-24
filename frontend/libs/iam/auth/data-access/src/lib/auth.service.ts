@@ -1,5 +1,5 @@
 import { apiClient } from '@rootstock/shared/api-client';
-import { AuthResponse, LoginCredentials } from './auth.schema';
+import { AuthResponse, LoginCredentials } from '../../types/iam/auth.schema';
 import { getPlatform } from './auth.store';
 
 export const AuthService = {

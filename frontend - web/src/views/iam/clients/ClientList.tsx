@@ -15,7 +15,7 @@ import { IconEdit, IconTrash, IconEye, IconPlus, IconExternalLink, IconPencil } 
 
 // Project Imports
 import { useGetClients, useDeleteClient, useCreateClient, useUpdateClient } from 'hooks/iam/useClients';
-import { Client } from 'api/iam/client.types';
+import { Client } from 'types/iam/client.types';
 import { ClientFormData } from 'api/iam/client.schema';
 import ClientForm, { ClientFormMode } from './ClientForm';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
@@ -234,7 +234,7 @@ const ClientList = () => {
                                 </Tooltip>
                                 <Tooltip title="Quick Edit">
                                     <IconButton
-                                        color="orange"
+                                        color="warning"
                                         size="small"
                                         onClick={(e) => {
                                             e.stopPropagation();

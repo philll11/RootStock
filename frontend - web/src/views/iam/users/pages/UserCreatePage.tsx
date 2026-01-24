@@ -6,7 +6,7 @@ import { useContextualNavigation } from 'hooks/useContextualNavigation';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
 import { UserFormData } from 'api/iam/user.schema';
-import { CreateUserDto } from 'api/iam/user.types';
+import { CreateUserDto } from 'types/iam/user.types';
 
 const UserCreatePage = () => {
     const { goBack, transitionTo } = useContextualNavigation('/users');

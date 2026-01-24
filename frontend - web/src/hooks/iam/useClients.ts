@@ -8,7 +8,7 @@ import {
 } from 'api/iam/clients';
 import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';
-import { CreateClientDto, UpdateClientDto, Client } from 'api/iam/client.types';
+import { CreateClientDto, UpdateClientDto, Client } from 'types/iam/client.types';
 
 export const CLIENTS_KEYS = {
   all: ['clients'] as const,

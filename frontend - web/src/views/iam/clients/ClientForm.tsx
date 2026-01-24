@@ -6,7 +6,7 @@ import { TextField, Button, FormControlLabel, Switch, Box, Grid, Typography } fr
 import { IconHistory, IconTrees } from '@tabler/icons-react';
 
 // Project Imports
-import { Client } from 'api/iam/client.types';
+import { Client } from 'types/iam/client.types';
 import { clientSchema, ClientFormData } from 'api/iam/client.schema';
 import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';

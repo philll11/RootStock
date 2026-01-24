@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CreateUserDto, UpdateUserDto, UserQuery } from 'api/iam/user.types';
+import { CreateUserDto, UpdateUserDto, UserQuery } from 'types/iam/user.types';
 import { getUsers, getUser, createUser, updateUser, deleteUser } from 'api/iam/users';
 import { useSnackbar } from 'contexts/SnackbarContext';
 import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';
-import { User } from 'api/iam/user.types';
+import { User } from 'types/iam/user.types';
 
 export const USERS_KEYS = {
     all: ['users'] as const,
