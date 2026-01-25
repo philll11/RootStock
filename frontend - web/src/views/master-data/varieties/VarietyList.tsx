@@ -199,7 +199,7 @@ const VarietyList = () => {
         renderCell: (params: GridRenderCellParams) => {
           const variety = params.row as Variety;
           return (
-            <Stack direction="row" justifyContent="flex-end" spacing={1}>
+            <>
               {can(PERMISSIONS.VARIETY_VIEW) && (
                 <Tooltip title="View Details">
                   <IconButton
@@ -247,7 +247,7 @@ const VarietyList = () => {
                   </IconButton>
                 </Tooltip>
               )}
-            </Stack>
+            </>
           );
         }
       }

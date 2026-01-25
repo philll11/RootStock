@@ -143,6 +143,7 @@ const BlockForm = ({
   const handleFormSubmit = (values: BlockFormData) => {
     const submissionData: any = { ...values };
     if (isEditing && block) {
+      delete submissionData.orchardId; // Orchard cannot be changed
       submissionData.__v = block.__v;
     }
     if (isCreating) {
