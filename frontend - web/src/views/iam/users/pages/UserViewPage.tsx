@@ -79,7 +79,7 @@ const UserViewPage = () => {
                 mode="view"
                 user={user}
                 onSubmit={() => { }} // No-op
-                isLoading={false}
+                isLoading={isLoading}
                 onCancel={() => goBack()}
             />
 

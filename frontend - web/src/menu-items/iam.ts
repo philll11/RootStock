@@ -17,14 +17,6 @@ const iam: NavItem = {
   type: 'group',
   children: [
     {
-      id: 'clients',
-      title: 'Clients',
-      type: 'item',
-      url: '/clients',
-      icon: icons.IconBuildingCommunity,
-      breadcrumbs: true
-    },
-    {
       id: 'users',
       title: 'Users',
       type: 'item',

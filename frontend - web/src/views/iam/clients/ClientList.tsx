@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Drawer,
@@ -16,7 +16,7 @@ import { IconEdit, IconTrash, IconEye, IconPlus, IconExternalLink, IconPencil } 
 // Project Imports
 import { useGetClients, useDeleteClient, useCreateClient, useUpdateClient } from 'hooks/iam/useClients';
 import { Client } from 'types/iam/client.types';
-import { ClientFormData } from 'api/iam/client.schema';
+import { ClientFormData } from 'types/iam/client.schema';
 import ClientForm, { ClientFormMode } from './ClientForm';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
@@ -26,6 +26,8 @@ import { PERMISSIONS } from 'constants/permissions';
 import { usePermission } from 'contexts/AuthContext';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
 import MainCard from 'ui-component/cards/MainCard';
+
+const clientName = (client: Client | null) => client ? client.name : 'Client Details';
 
 const ClientList = () => {
     const navigate = useNavigate();
@@ -173,7 +175,7 @@ const ClientList = () => {
     };
 
     // --- Column Configuration ---
-    const columns: GridColDef[] = [
+    const columns: GridColDef[] = useMemo(() => [
         {
             field: 'recordId',
             headerName: 'Client Code',
@@ -261,7 +263,7 @@ const ClientList = () => {
                 );
             }
         }
-    ];
+    ], [can, handleViewPage, handleEditPage, handleDeleteClick]);
 
     return (
 
@@ -364,7 +366,5 @@ const ClientList = () => {
         </MainCard>
     );
 };
-
-const clientName = (client: Client | null) => client ? client.name : 'Client Details';
 
 export default ClientList;

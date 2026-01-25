@@ -1,4 +1,4 @@
-// src/api/iam/auth.schema.ts
+// src/types/iam/auth.schema.ts
 import { z } from 'zod';
 
 export const loginSchema = z.object({

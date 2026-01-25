@@ -31,11 +31,15 @@ import { IconChevronDown, IconSearch, IconInfoCircle } from '@tabler/icons-react
 
 // Project Imports
 import { Role } from 'types/iam/role.types';
-import { roleSchema, RoleFormData } from 'api/iam/role.schema';
-import { VisibilityScope, DOMAIN_MAPPING } from 'constants/permissions';
-import { getGroupedPermissions, parsePermission } from 'utils/permission-helper';
+import { roleSchema, RoleFormData } from 'types/iam/role.schema';
+
+import { VisibilityScope, DOMAIN_MAPPING, PERMISSIONS } from 'constants/permissions';
+import { usePermission } from 'contexts/AuthContext';
+
 import ResourceRelatedTabs from 'ui-component/extended/ResourceRelatedTabs';
 import ResourceAuditTable from 'ui-component/extended/ResourceAuditTable';
+
+import { getGroupedPermissions, parsePermission } from 'utils/permission-helper';
 import { IconHistory, IconLockAccess } from '@tabler/icons-react';
 
 export type RoleFormMode = 'create' | 'edit' | 'view';
@@ -184,6 +188,8 @@ const RoleForm = ({
     const isCreating = mode === 'create';
     const isViewing = mode === 'view';
 
+    const { can } = usePermission();
+    
     const theme = useTheme();
 
     // Search state
@@ -425,8 +431,6 @@ const RoleForm = ({
 
     return (
         <form onSubmit={handleSubmit(handleFormSubmit)}>
-            <Grid container spacing={3}>
-                <Grid size={12}>
                     <Grid container spacing={2}>
                         <Grid size={12}>
                             <Controller
@@ -536,21 +540,22 @@ const RoleForm = ({
                                 )}
                             />
                         </Grid>
-                        <Grid size={12}>
-                            <Controller
-                                name="isActive"
-                                control={control}
-                                render={({ field }) => (
-                                    <FormControlLabel
-                                        control={<Switch {...field} checked={field.value} disabled={isViewing} />}
-                                        label="Active"
-                                    />
-                                )}
-                            />
-                        </Grid>
+                        {!isCreating && can(PERMISSIONS.ROLE_MANAGE_INACTIVE) && (
+                            <Grid size={12}>
+                                <Controller
+                                    name="isActive"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <FormControlLabel
+                                            control={<Switch {...field} checked={field.value} />}
+                                            label="Active"
+                                            disabled={isViewing}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+                        )}
                     </Grid>
-                </Grid>
-            </Grid>
 
             <Box sx={{ mt: 3 }}>
                 <ResourceRelatedTabs tabs={tabs} />

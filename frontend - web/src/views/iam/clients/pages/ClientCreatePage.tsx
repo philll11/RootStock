@@ -5,7 +5,8 @@ import MainCard from 'ui-component/cards/MainCard';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
-import { ClientFormData } from 'api/iam/client.schema';
+import { ClientFormData } from 'types/iam/client.schema';
+import { CreateClientDto } from 'types/iam/client.types';
 
 const ClientCreatePage = () => {
     const { goBack, transitionTo } = useContextualNavigation('/clients');
@@ -17,10 +18,9 @@ const ClientCreatePage = () => {
 
     const handleSubmit = async (values: ClientFormData) => {
         try {
-            const newClient = await createClient(values);
-            setIsDirty(false); // Clear dirty state before navigating
-            // Use setTimeout to ensure state update processes before navigation (sometimes safer with blockers)
-            setTimeout(() => transitionTo(`/clients/${newClient._id}`), 0); 
+            const newClient = await createClient(values as CreateClientDto);
+            setIsDirty(false);
+            setTimeout(() => transitionTo(`/clients/${newClient._id}`), 0);
         } catch (error) {
             console.error(error);
         }
@@ -35,7 +35,7 @@ const ClientCreatePage = () => {
                 onCancel={() => goBack()}
                 onDirtyChange={setIsDirty}
             />
-             <ConfirmDialog {...discardDialogProps} />
+            <ConfirmDialog {...discardDialogProps} />
         </MainCard>
     );
 };

@@ -18,7 +18,7 @@ import IconButton from '@mui/material/IconButton';
 // project imports
 import AnimateButton from 'ui-component/extended/AnimateButton';
 import { resetPassword } from 'api/iam/auth';
-import { resetPasswordSchema, ResetPasswordRequest } from 'api/iam/auth.schema';
+import { resetPasswordSchema, ResetPasswordRequest } from 'types/iam/auth.schema';
 
 // assets
 import Visibility from '@mui/icons-material/Visibility';

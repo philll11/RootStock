@@ -5,7 +5,8 @@ import { useCreateRole } from 'hooks/iam/useRoles';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
-import { RoleFormData } from 'api/iam/role.schema';
+import { RoleFormData } from 'types/iam/role.schema';
+import { CreateRoleDto } from 'types/iam/role.types';
 
 const RoleCreatePage = () => {
     const { goBack, transitionTo } = useContextualNavigation('/roles');
@@ -17,9 +18,8 @@ const RoleCreatePage = () => {
 
     const handleSubmit = async (values: RoleFormData) => {
         try {
-            const newRole = await createRole(values as any);
-            setIsDirty(false); // Clear dirty state before navigating
-                        // Use setTimeout to ensure state update processes before navigation (sometimes safer with blockers)
+            const newRole = await createRole(values as CreateRoleDto);
+            setIsDirty(false);
             setTimeout(() => transitionTo(`/roles/${newRole._id}`), 0);
         } catch (error) {
             console.error(error);

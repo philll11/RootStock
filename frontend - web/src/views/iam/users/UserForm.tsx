@@ -9,7 +9,6 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
-    Select,
     Autocomplete,
     Box,
     Checkbox,
@@ -18,18 +17,26 @@ import {
     OutlinedInput,
     FormHelperText,
     Typography,
-    useTheme,
+    FormControlLabel,
+    Switch,
 } from '@mui/material';
 import { IconEye, IconEyeOff, IconHistory, IconLock } from '@tabler/icons-react';
 
 // Project Imports
+import { Client } from 'types/iam/client.types';
 import { User, UserType } from 'types/iam/user.types';
-import { userSchema, UserFormData } from 'api/iam/user.schema';
-import { useGetRoles } from 'hooks/iam/useRoles';
-import { useGetClients } from 'hooks/iam/useClients';
+import { userSchema, UserFormData } from 'types/iam/user.schema';
+
+import { PERMISSIONS } from 'constants/permissions';
+import { usePermission } from 'contexts/AuthContext'
+    ;
 import ResourceRelatedTabs from 'ui-component/extended/ResourceRelatedTabs';
 import ResourceAuditTable from 'ui-component/extended/ResourceAuditTable';
-import { Client } from 'types/iam/client.types';
+
+import { useGetRoles } from 'hooks/iam/useRoles';
+import { useGetClients } from 'hooks/iam/useClients';
+
+
 export type UserFormMode = 'create' | 'edit' | 'view';
 
 interface UserFormProps {
@@ -57,7 +64,7 @@ const UserForm = ({
     const isCreating = mode === 'create';
     const isViewing = mode === 'view';
 
-    const theme = useTheme();
+    const { can } = usePermission();
 
     const [showPassword, setShowPassword] = useState(false);
     const [changePasswordMode, setChangePasswordMode] = useState(false);
@@ -88,7 +95,6 @@ const UserForm = ({
             ...initialValues,
         }
     });
-
 
     // Create a debounced version of the change handler
     const debouncedOnValuesChange = useMemo(
@@ -304,22 +310,26 @@ const UserForm = ({
                     <Controller
                         name="roleId"
                         control={control}
-                        render={({ field }) => (
-                            <TextField
-                                select
-                                label="Role"
-                                fullWidth
+                        render={({ field: { value, onChange, ...field } }) => (
+                            <Autocomplete
                                 {...field}
-                                error={!!errors.roleId}
-                                helperText={errors.roleId?.message}
+                                options={roles}
+                                getOptionLabel={(option) => typeof option === 'string' ? option : option.name}
+                                value={roles.find((r) => r._id === value) || null}
+                                onChange={(_, newValue) => {
+                                    onChange(newValue ? newValue._id : '');
+                                }}
                                 disabled={isViewing}
-                            >
-                                {roles.map((role: any) => (
-                                    <MenuItem key={role._id} value={role._id}>
-                                        {role.name}
-                                    </MenuItem>
-                                ))}
-                            </TextField>
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Role"
+                                        error={!!errors.roleId}
+                                        helperText={errors.roleId?.message}
+                                    />
+                                )}
+                                isOptionEqualToValue={(option, value) => option._id === value._id}
+                            />
                         )}
                     />
                 </Grid>
@@ -333,6 +343,7 @@ const UserForm = ({
                             return (
                                 <Autocomplete
                                     multiple={isMultiple}
+                                    limitTags={3}
                                     id="client-selector"
                                     options={clients}
                                     disableCloseOnSelect={isMultiple}
@@ -430,7 +441,23 @@ const UserForm = ({
                             )}
                         </FormControl>
                     )}
+
                 </Grid>
+                    {!isCreating && can(PERMISSIONS.USER_MANAGE_INACTIVE) && (
+                        <Grid size={12}>
+                            <Controller
+                                name="isActive"
+                                control={control}
+                                render={({ field }) => (
+                                    <FormControlLabel
+                                        control={<Switch {...field} checked={field.value} />}
+                                        label="Active"
+                                        disabled={isViewing}
+                                    />
+                                )}
+                            />
+                        </Grid>
+                    )}
             </Grid>
 
             <Box sx={{ mt: 3 }}>
@@ -463,7 +490,7 @@ const UserForm = ({
                                         color="primary"
                                         disabled={isSubmitDisabled}
                                     >
-                                        {isEditing ? 'Update Client' : 'Create Client'}
+                                        {isEditing ? 'Update User' : 'Create User'}
                                     </Button>
                                 </Box>
                             </Box>

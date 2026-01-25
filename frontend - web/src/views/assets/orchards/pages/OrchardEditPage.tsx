@@ -1,26 +1,26 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import MainCard from 'ui-component/cards/MainCard';
-import UserForm from '../UserForm';
-import { useGetUser, useUpdateUser } from 'hooks/iam/useUsers';
+import OrchardForm from '../OrchardForm';
+import { useGetOrchard, useUpdateOrchard } from 'hooks/assets/useOrchards';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
-import { UserFormData } from 'types/iam/user.schema';
+import { OrchardFormData } from 'types/assets/orchard.schema';
 
-const UserEditPage = () => {
+const OrchardEditPage = () => {
     const { id } = useParams();
-    const { goBack } = useContextualNavigation(`/users/${id}`);
-    const { data: user, isLoading, error } = useGetUser(id!);
-    const { mutateAsync: updateUser, isPending: isUpdating } = useUpdateUser();
+    const { goBack } = useContextualNavigation(`/orchards/${id}`);
+    const { data: orchard, isLoading, error } = useGetOrchard(id!);
+    const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
     const [isDirty, setIsDirty] = useState(false);
 
     const { discardDialogProps } = useDiscardWarning(isDirty);
 
-    const handleSubmit = async (values: UserFormData) => {
-        if (!user) return;
+    const handleSubmit = async (values: OrchardFormData) => {
+        if (!orchard) return;
         try {
-            await updateUser({ id: user._id, data: { ...values, __v: user.__v } });
+            await updateOrchard({ id: orchard._id, data: { ...values, __v: orchard.__v } });
             setIsDirty(false);
             setTimeout(() => goBack(), 0);
         } catch (error) {
@@ -29,14 +29,14 @@ const UserEditPage = () => {
     };
 
     if (isLoading) return <MainCard title="Loading...">Loading...</MainCard>;
-    if (!user) return <MainCard title="Error">User not found</MainCard>;
-    if (error) return <MainCard title="Error">Error loading user</MainCard>;
+    if (!orchard) return <MainCard title="Error">Orchard not found</MainCard>;
+    if (error) return <MainCard title="Error">Error loading orchard</MainCard>;
 
     return (
-        <MainCard title={`Edit User: ${user.firstName} ${user.lastName}`}>
-            <UserForm
+        <MainCard title={`Edit Orchard: ${orchard.name}`}>
+            <OrchardForm
                 mode="edit"
-                user={user}
+                orchard={orchard}
                 onSubmit={handleSubmit}
                 isLoading={isUpdating}
                 onCancel={() => goBack()}
@@ -47,4 +47,4 @@ const UserEditPage = () => {
     );
 };
 
-export default UserEditPage;
+export default OrchardEditPage;

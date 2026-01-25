@@ -21,7 +21,7 @@ import Alert from '@mui/material/Alert';
 // project imports
 import AnimateButton from 'ui-component/extended/AnimateButton';
 import { useAuth } from 'contexts/AuthContext';
-import { loginSchema, LoginCredentials } from 'api/iam/auth.schema';
+import { loginSchema, LoginCredentials } from 'types/iam/auth.schema';
 
 // assets
 import Visibility from '@mui/icons-material/Visibility';

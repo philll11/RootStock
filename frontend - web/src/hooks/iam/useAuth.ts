@@ -1,7 +1,7 @@
 // src/hooks/iam/useAuth.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { login, logout, getProfile } from 'api/iam/auth';
-import { LoginCredentials } from 'api/iam/auth.schema';
+import { LoginCredentials } from 'types/iam/auth.schema';
 
 export const AUTH_KEYS = {
     all: ['auth'] as const,

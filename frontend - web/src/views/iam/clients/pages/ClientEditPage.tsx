@@ -6,12 +6,12 @@ import MainCard from 'ui-component/cards/MainCard';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
-import { ClientFormData } from 'api/iam/client.schema';
+import { ClientFormData } from 'types/iam/client.schema';
 
 const ClientEditPage = () => {
-    const { id } = useParams<{ id: string }>();
-    const { goBack, transitionTo } = useContextualNavigation(`/clients/${id}`);
-    const { data: client, isLoading: isFetching, error } = useGetClient(id);
+    const { id } = useParams();
+    const { goBack } = useContextualNavigation(`/clients/${id}`);
+    const { data: client, isLoading, error } = useGetClient(id!);
     const { mutateAsync: updateClient, isPending: isUpdating } = useUpdateClient();
     const [isDirty, setIsDirty] = useState(false);
 
@@ -29,7 +29,7 @@ const ClientEditPage = () => {
         }
     };
 
-    if (isFetching) return <MainCard title="Loading...">Loading...</MainCard>;
+    if (isLoading) return <MainCard title="Loading...">Loading...</MainCard>;
     if (!client) return <MainCard title="Error">Client not found</MainCard>;
     if (error) return <MainCard title="Error">Error loading client</MainCard>;
 

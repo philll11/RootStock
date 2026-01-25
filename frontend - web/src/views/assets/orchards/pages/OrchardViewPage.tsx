@@ -1,32 +1,32 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useTheme, Tooltip, IconButton, Stack } from '@mui/material';
+import { useNavigate, useParams } from 'react-router-dom';
+import { IconButton, Stack, Tooltip, useTheme } from '@mui/material';
 import { IconEdit, IconTrash } from '@tabler/icons-react';
-
-// Project Imports
 import MainCard from 'ui-component/cards/MainCard';
-import RoleForm from '../RoleForm';
-import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
-import { useGetRole, useDeleteRole } from 'hooks/iam/useRoles';
+import OrchardForm from '../OrchardForm';
+import { useDeleteOrchard, useGetOrchard } from 'hooks/assets/useOrchards';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
 import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';
+import { useState } from 'react';
+import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
 
-const RoleViewPage = () => {
+const OrchardViewPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const theme = useTheme();
-
-    const { goBack, getLinkTo } = useContextualNavigation('/roles');
+    
+    // Navigation & Permissions
+    const { goBack, getLinkTo } = useContextualNavigation('/orchards');
     const { can } = usePermission();
 
     // Data Hooks
-    const { data: role, isLoading, error } = useGetRole(id!);
-    const { mutateAsync: deleteRole } = useDeleteRole();
+    const { data: orchard, isLoading, error } = useGetOrchard(id!);
+    const { mutateAsync: deleteOrchard } = useDeleteOrchard();
 
     // Local State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+    // Handlers
     const handleEdit = () => {
         if (!id) return;
         navigate(getLinkTo('edit', { strategy: 'stack' }));
@@ -35,26 +35,27 @@ const RoleViewPage = () => {
     const handleDelete = async () => {
         if (!id) return;
         try {
-            await deleteRole(id);
+            await deleteOrchard(id);
             setDeleteDialogOpen(false);
             goBack();
         } catch (error) {
-            console.error('Failed to delete role', error);
+            console.error('Failed to delete orchard', error);
         }
     };
 
     if (isLoading) return <MainCard title="Loading...">Loading...</MainCard>;
-    if (!role) return <MainCard title="Error">Role not found</MainCard>;
-    if (error) return <MainCard title="Error">Error loading role</MainCard>;
+    if (!orchard) return <MainCard title="Error">Orchard not found</MainCard>;
+    if (error) return <MainCard title="Error">Error loading orchard</MainCard>;
+
 
     return (
         <MainCard 
-            title={role.name}
+            title={orchard.name}
             secondary={
                 <Stack direction="row" spacing={1} alignItems="center">
-                    {can(PERMISSIONS.ROLE_EDIT) && (
-                        <Tooltip title="Edit Role">
-                            <IconButton 
+                    {can(PERMISSIONS.ORCHARD_EDIT) && (
+                            <Tooltip title="Edit Orchard">
+                                <IconButton 
                                 onClick={handleEdit}
                                 size="large"
                                 sx={{ color: theme.palette.primary.main }}
@@ -63,10 +64,10 @@ const RoleViewPage = () => {
                             </IconButton>
                         </Tooltip>
                     )}
-                    {can(PERMISSIONS.ROLE_DELETE) && (
-                        <Tooltip title="Delete Role">
+                    {can(PERMISSIONS.ORCHARD_DELETE) && (
+                        <Tooltip title="Delete Orchard">
                             <IconButton 
-                                onClick={() => setDeleteDialogOpen(true)} 
+                                onClick={() => setDeleteDialogOpen(true)}
                                 size="large"
                                 sx={{ color: theme.palette.error.main }}
                             >
@@ -77,25 +78,25 @@ const RoleViewPage = () => {
                 </Stack>
             }
         >
-            <RoleForm
+            <OrchardForm
                 mode="view"
-                role={role}
-                onSubmit={() => {}} 
+                orchard={orchard}
+                onSubmit={() => {}}
                 isLoading={isLoading}
-                onCancel={goBack}
+                onCancel={() => goBack()}
             />
-
-            <ConfirmDialog
-                open={deleteDialogOpen}
-                title="Delete Role"
-                content={`Are you sure you want to delete role "${role.name}"? This action cannot be undone.`}
-                onConfirm={handleDelete}
-                onCancel={() => setDeleteDialogOpen(false)}
-                confirmLabel="Delete"
-                confirmColor="error"
-            />
+        <ConfirmDialog
+            open={deleteDialogOpen}
+            title="Delete Orchard"
+            content={`Are you sure you want to delete orchard "${orchard.name}"? This action cannot be undone.`}
+            onConfirm={handleDelete}
+            onCancel={() => setDeleteDialogOpen(false)}
+            confirmLabel="Delete"
+            confirmColor="error"
+        />
         </MainCard>
+
     );
 };
 
-export default RoleViewPage;
+export default OrchardViewPage;

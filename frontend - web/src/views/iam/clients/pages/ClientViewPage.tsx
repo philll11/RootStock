@@ -14,7 +14,7 @@ import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';
 
 const ClientViewPage = () => {
-    const { id } = useParams<{ id: string }>();
+    const { id } = useParams();
     const navigate = useNavigate();
     const theme = useTheme();
     
@@ -23,7 +23,7 @@ const ClientViewPage = () => {
     const { can } = usePermission();
 
     // Data Hooks
-    const { data: client, isLoading: isFetching, error } = useGetClient(id);
+    const { data: client, isLoading, error } = useGetClient(id!);
     const { mutateAsync: deleteClient } = useDeleteClient();
 
     // Local State
@@ -46,7 +46,7 @@ const ClientViewPage = () => {
         }
     };
 
-    if (isFetching) return <MainCard title="Loading...">Loading...</MainCard>;
+    if (isLoading) return <MainCard title="Loading...">Loading...</MainCard>;
     if (!client) return <MainCard title="Error">Client not found</MainCard>;
     if (error) return <MainCard title="Error">Error loading client</MainCard>;
 
@@ -84,7 +84,7 @@ const ClientViewPage = () => {
                 mode="view"
                 client={client}
                 onSubmit={() => {}}
-                isLoading={false}
+                isLoading={isLoading}
                 onCancel={() => goBack()}
             />
         <ConfirmDialog

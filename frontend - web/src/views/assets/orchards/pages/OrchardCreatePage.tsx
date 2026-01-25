@@ -1,34 +1,34 @@
 import React, { useState } from 'react';
 import MainCard from 'ui-component/cards/MainCard';
-import UserForm from '../UserForm';
-import { useCreateUser } from 'hooks/iam/useUsers';
+import OrchardForm from '../OrchardForm';
+import { useCreateOrchard } from 'hooks/assets/useOrchards';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
-import { UserFormData } from 'types/iam/user.schema';
-import { CreateUserDto } from 'types/iam/user.types';
+import { OrchardFormData } from 'types/assets/orchard.schema';
+import { CreateOrchardDto } from 'types/assets/orchard.types';
 
-const UserCreatePage = () => {
-    const { goBack, transitionTo } = useContextualNavigation('/users');
-    const { mutateAsync: createUser, isPending } = useCreateUser();
+const OrchardCreatePage = () => {
+    const { goBack, transitionTo } = useContextualNavigation('/orchards');
+    const { mutateAsync: createOrchard, isPending } = useCreateOrchard();
     const [isDirty, setIsDirty] = useState(false);
 
     // Prompt before leaving if dirty
     const { discardDialogProps } = useDiscardWarning(isDirty);
 
-    const handleSubmit = async (values: UserFormData) => {
+    const handleSubmit = async (values: OrchardFormData) => {
         try {
-            const newUser = await createUser(values as CreateUserDto);
+            const newOrchard = await createOrchard(values as CreateOrchardDto);
             setIsDirty(false);
-            setTimeout(() => transitionTo(`/users/${newUser._id}`), 0);
+            setTimeout(() => transitionTo(`/orchards/${newOrchard._id}`), 0);
         } catch (error) {
             console.error(error);
         }
     };
 
     return (
-        <MainCard title="Create User">
-            <UserForm
+        <MainCard title="Create Orchard">
+            <OrchardForm
                 mode="create"
                 onSubmit={handleSubmit}
                 isLoading={isPending}
@@ -40,4 +40,4 @@ const UserCreatePage = () => {
     );
 };
 
-export default UserCreatePage;
+export default OrchardCreatePage;

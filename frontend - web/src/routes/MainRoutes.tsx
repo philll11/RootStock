@@ -28,6 +28,13 @@ const UserCreatePage = Loadable(lazy(() => import('views/iam/users/pages/UserCre
 const UserEditPage = Loadable(lazy(() => import('views/iam/users/pages/UserEditPage')));
 const UserViewPage = Loadable(lazy(() => import('views/iam/users/pages/UserViewPage')));
 
+// assets routing
+const OrchardList = Loadable(lazy(() => import('views/assets/orchards/OrchardList')));
+const OrchardCreatePage = Loadable(lazy(() => import('views/assets/orchards/pages/OrchardCreatePage')));
+const OrchardEditPage = Loadable(lazy(() => import('views/assets/orchards/pages/OrchardEditPage')));
+const OrchardViewPage = Loadable(lazy(() => import('views/assets/orchards/pages/OrchardViewPage')));
+
+
 // system routing
 const SystemSettingsPage = Loadable(lazy(() => import('views/system/config/SystemSettingsPage')));
 
@@ -124,6 +131,27 @@ const MainRoutes: RouteObject = {
         {
           path: ':id/edit',
           element: <UserEditPage />
+        }
+      ]
+    },
+    {
+      path: 'orchards',
+      children: [
+        {
+          path: '',
+          element: <OrchardList />
+        },
+        {
+          path: 'new',
+          element: <OrchardCreatePage />
+        },
+        {
+          path: ':id',
+          element: <OrchardViewPage />
+        },
+        {
+          path: ':id/edit',
+          element: <OrchardEditPage />
         }
       ]
     },

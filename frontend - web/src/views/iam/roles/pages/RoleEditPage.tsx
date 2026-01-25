@@ -6,13 +6,12 @@ import { useGetRole, useUpdateRole } from 'hooks/iam/useRoles';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
-import { RoleFormData } from 'api/iam/role.schema';
-import { Alert } from '@mui/material';
-
+import { RoleFormData } from 'types/iam/role.schema';
+    
 const RoleEditPage = () => {
-    const { id } = useParams<{ id: string }>();
+    const { id } = useParams();
     const { goBack } = useContextualNavigation(`/roles/${id}`);
-    const { data: role, isLoading: isFetching, error } = useGetRole(id);
+    const { data: role, isLoading, error } = useGetRole(id!);
     const { mutateAsync: updateRole, isPending: isUpdating } = useUpdateRole();
     const [isDirty, setIsDirty] = useState(false);
 
@@ -30,7 +29,7 @@ const RoleEditPage = () => {
         }
     };
 
-    if (isFetching) return <MainCard title="Loading...">Loading...</MainCard>;
+    if (isLoading) return <MainCard title="Loading...">Loading...</MainCard>;
     if (!role) return <MainCard title="Error">Role not found</MainCard>;
     if (error) return <MainCard title="Error">Error loading role</MainCard>;
 

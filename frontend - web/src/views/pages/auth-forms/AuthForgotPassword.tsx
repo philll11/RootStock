@@ -16,7 +16,7 @@ import Alert from '@mui/material/Alert';
 // project imports
 import AnimateButton from 'ui-component/extended/AnimateButton';
 import { forgotPassword } from 'api/iam/auth';
-import { forgotPasswordSchema, ForgotPasswordRequest } from 'api/iam/auth.schema';
+import { forgotPasswordSchema, ForgotPasswordRequest } from 'types/iam/auth.schema';
 
 // ============================|| AUTH - FORGOT PASSWORD ||============================ //
 

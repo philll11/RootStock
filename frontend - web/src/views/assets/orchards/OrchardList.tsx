@@ -1,36 +1,38 @@
-import { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Drawer,
     Box,
     Typography,
     Chip,
-    Divider,
-    Tooltip,
+    AvatarGroup,
+    Avatar,
     IconButton,
-    Stack
+    Tooltip,
+    Stack,
+    Button,
+    Divider,
+    Drawer
 } from '@mui/material';
 import {
     GridColDef,
     GridRenderCellParams,
 } from '@mui/x-data-grid';
-import { IconEdit, IconTrash, IconEye, IconPlus, IconExternalLink, IconPencil } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconEye, IconPlus, IconPencil, IconExternalLink } from '@tabler/icons-react';
 
-// Project Imports
-import { useGetRoles, useDeleteRole, useCreateRole, useUpdateRole } from 'hooks/iam/useRoles';
-import { Role } from 'types/iam/role.types';
-import { RoleFormData } from 'types/iam/role.schema';
-import RoleForm, { RoleFormMode } from './RoleForm';
+import MainCard from 'ui-component/cards/MainCard';
+import DataGridWrapper from 'ui-component/extended/DataGridWrapper';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
-import DataGridWrapper from 'ui-component/extended/DataGridWrapper';
-import SplitActionButton from 'ui-component/extended/SplitActionButton';
-import { PERMISSIONS, VisibilityScope } from 'constants/permissions';
+import { useGetOrchards, useDeleteOrchard, useCreateOrchard, useUpdateOrchard } from 'hooks/assets/useOrchards';
 import { usePermission } from 'contexts/AuthContext';
+import { PERMISSIONS } from 'constants/permissions';
+import OrchardForm, { OrchardFormMode } from './OrchardForm';
+import { OrchardFormData } from 'types/assets/orchard.schema';
+import { Orchard } from 'types/assets/orchard.types';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
-import MainCard from 'ui-component/cards/MainCard';
+import SplitActionButton from 'ui-component/extended/SplitActionButton';
 
-// Helper for Status Chip
+
 const getStatusChip = (isActive?: boolean) => {
     return isActive ? (
         <Chip label="Active" color="success" size="small" variant="outlined" />
@@ -39,67 +41,47 @@ const getStatusChip = (isActive?: boolean) => {
     );
 };
 
-// Helper for Scope Chip
-const getScopeChip = (scope: VisibilityScope) => {
-    let color: 'success' | 'warning' | 'info' | 'default' = 'default';
-    switch (scope) {
-        case VisibilityScope.GLOBAL:
-            color = 'success';
-            break;
-        case VisibilityScope.SUBSIDIARY:
-            color = 'info';
-            break;
-        case VisibilityScope.CLIENT:
-            color = 'warning';
-            break;
-    }
-    return <Chip label={scope} color={color} size="small" />;
-};
+const orchardName = (orchard: Orchard | null) => orchard ? orchard.name : 'Orchard Details';
 
-const RoleList = () => {
+const OrchardList = () => {
     const navigate = useNavigate();
-    const { getLinkTo } = useContextualNavigation('/roles');
+    const { getLinkTo } = useContextualNavigation('/orchards');
     const { can } = usePermission();
 
     // Queries & Mutations
-    const { data: roles = [], isLoading } = useGetRoles();
-    const { mutateAsync: deleteRole } = useDeleteRole();
-    const { mutateAsync: createRole, isPending: isCreating } = useCreateRole();
-    const { mutateAsync: updateRole, isPending: isUpdating } = useUpdateRole();
+    const { data: orchards = [], isLoading } = useGetOrchards();
+    const { mutateAsync: deleteOrchard } = useDeleteOrchard();
+    const { mutateAsync: createOrchard, isPending: isCreating } = useCreateOrchard();
+    const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
+
 
     // Drawer State
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [mode, setMode] = useState<RoleFormMode>('create');
-    const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-    const [createDraft, setCreateDraft] = useState<Partial<RoleFormData>>({});
+    const [mode, setMode] = useState<OrchardFormMode>('create');
+    const [selectedOrchard, setSelectedOrchard] = useState<Orchard | null>(null);
+    const [createDraft, setCreateDraft] = useState<Partial<OrchardFormData>>({});
 
     // Dirty State for drawer
     const [isFormDirty, setIsFormDirty] = useState(false);
 
-    // Discard Dialog Hook
+    // Discard Dialog
     const { discardDialogProps, trigger } = useDiscardWarning(
-        // Only warn on navigation if drawer is open and dirty (Edit Mode)
-        // or potentially other criteria. For now, matching standard pattern.
         (drawerOpen && isFormDirty && mode === 'edit'),
         'You have unsaved changes. Are you sure you want to discard them?'
     );
 
-    const handleOpenDrawer = (newMode: RoleFormMode, role: Role | null = null) => {
-        const performOpen = () => {
-            setMode(newMode);
-            setSelectedRole(role);
-            setIsFormDirty(false);
-            setDrawerOpen(true);
-        };
-
-        performOpen();
+    const handleOpenDrawer = (newMode: OrchardFormMode, orchard: Orchard | null = null) => {
+        setMode(newMode);
+        setSelectedOrchard(orchard);
+        setIsFormDirty(false);
+        setDrawerOpen(true);
     };
 
     const handleCloseDrawer = (event?: {}, reason?: "backdropClick" | "escapeKeyDown") => {
         const performClose = () => {
             setDrawerOpen(false);
             setIsFormDirty(false);
-            setSelectedRole(null);
+            setSelectedOrchard(null);
         };
 
         // If Closing via Backdrop/Escape (Persistence Check)
@@ -126,14 +108,14 @@ const RoleList = () => {
             if (isCreating) setCreateDraft({});
             setDrawerOpen(false);
             setIsFormDirty(false);
-            setSelectedRole(null);
+            setSelectedOrchard(null);
         };
 
         // Explicit Cancel Button Click
         if (isCreating) {
             // For create, Cancel means discard draft
             if (Object.keys(createDraft).length > 0 || isFormDirty) {
-                trigger(performCancel, 'Discard new role draft? This cannot be undone.');
+                trigger(performCancel, 'Discard new orchard draft? This cannot be undone.');
                 return;
             }
         } else if (mode === 'edit') {
@@ -146,85 +128,89 @@ const RoleList = () => {
         performCancel();
     };
 
-    const handleFormValuesChange = useCallback((values: Partial<RoleFormData>) => {
+    const handleFormValuesChange = useCallback((values: Partial<OrchardFormData>) => {
         if (mode === 'create') {
             setCreateDraft(prev => ({ ...prev, ...values }));
         }
     }, [mode]);
 
-    const handleFormSubmit = async (values: RoleFormData) => {
+    // Form Submit Handler
+    const handleFormSubmit = async (values: OrchardFormData) => {
         try {
             if (mode === 'create') {
                 const { isActive, __v, ...createData } = values;
-                await createRole(createData);
-                setCreateDraft({}); // Clear draft on success
-            } else if (mode === 'edit' && selectedRole) {
-                await updateRole({ id: selectedRole._id, data: { ...values, __v: selectedRole.__v } });
+                await createOrchard(createData);
+            } else if (mode === 'edit' && selectedOrchard) {
+                await updateOrchard({ id: selectedOrchard._id, data: { ...values, __v: selectedOrchard.__v } });
             }
-            // Success closes drawer
             setDrawerOpen(false);
-            setIsFormDirty(false);
+            setCreateDraft({});
         } catch (error) {
-            console.error('Operation failed', error);
+            // Error is handled by hook notifications
         }
     };
 
+
     // --- Actions ---
-    const handleCreatePage = () => navigate(getLinkTo('/roles/create'));
+    const handleCreatePage = () => navigate(getLinkTo('/orchards/new'));
     const handleViewPage = (id: string, e?: React.MouseEvent) => {
-        e?.stopPropagation(); // Prevent row click
-        navigate(getLinkTo(`/roles/${id}`));
+        e?.stopPropagation();
+        navigate(getLinkTo(`/orchards/${id}`));
     };
     const handleEditPage = (id: string, e?: React.MouseEvent) => {
         e?.stopPropagation();
-        navigate(getLinkTo(`/roles/${id}/edit`));
+        navigate(getLinkTo(`/orchards/${id}/edit`));
     };
 
     // Delete State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
+    const [orchardToDelete, setOrchardToDelete] = useState<Orchard | null>(null);
 
-    const handleDeleteClick = (role: Role, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setRoleToDelete(role);
+    const handleDeleteClick = (orchard: Orchard, e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        setOrchardToDelete(orchard);
         setDeleteDialogOpen(true);
     };
 
     const handleConfirmDelete = async () => {
-        if (roleToDelete) {
-            await deleteRole(roleToDelete._id);
+        if (orchardToDelete) {
+            await deleteOrchard(orchardToDelete._id);
             setDeleteDialogOpen(false);
-            setRoleToDelete(null);
+            setOrchardToDelete(null);
         }
     };
 
-    // --- Column Configuration ---
     const columns: GridColDef[] = useMemo(() => [
         {
             field: 'recordId',
-            headerName: 'Role Code',
+            headerName: 'Orchard ID',
             flex: 0.5,
             minWidth: 100
         },
         {
             field: 'name',
-            headerName: 'Role Name',
+            headerName: 'Orchard Name',
             flex: 1.5,
             minWidth: 200
         },
         {
-            field: 'visibilityScope',
-            headerName: 'Scope',
-            flex: 0.8,
-            minWidth: 150,
-            renderCell: (params: GridRenderCellParams) => getScopeChip(params.value as VisibilityScope)
+            field: 'clientId',
+            headerName: 'Client',
+            flex: 1,
+            renderCell: (params: GridRenderCellParams<any, Orchard>) => {
+                const clientName = typeof params.row.clientId === 'object' ? params.row.clientId.name : params.row.clientId;
+                return (
+                    <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
+                        <Typography variant="body2">{clientName}</Typography>
+                    </Stack>
+                );
+            },
         },
         {
             field: 'isActive',
             headerName: 'Status',
-            flex: 0.5,
-            minWidth: 100,
-            renderCell: (params: GridRenderCellParams) => getStatusChip(params.value as boolean)
+            width: 120,
+            renderCell: (params: GridRenderCellParams) => getStatusChip(params.row.isActive),
         },
         {
             field: 'actions',
@@ -236,27 +222,27 @@ const RoleList = () => {
             align: 'right',
             headerAlign: 'right',
             renderCell: (params: GridRenderCellParams) => {
-                const role = params.row as Role;
+                const orchard = params.row as Orchard;
                 return (
                     <>
-                        {can(PERMISSIONS.ROLE_VIEW) && (
+                        {can(PERMISSIONS.ORCHARD_VIEW) && (
                             <Tooltip title="View Details">
                                 <IconButton
                                     color="primary"
                                     size="small"
-                                    onClick={(e) => handleViewPage(role._id, e)}
+                                    onClick={(e) => handleViewPage(orchard._id, e)}
                                 >
                                     <IconEye size={18} />
                                 </IconButton>
                             </Tooltip>
                         )}
-                        {can(PERMISSIONS.ROLE_EDIT) && (
+                        {can(PERMISSIONS.ORCHARD_EDIT) && (
                             <>
                                 <Tooltip title="Edit">
                                     <IconButton
                                         color="secondary"
                                         size="small"
-                                        onClick={(e) => handleEditPage(role._id, e)}
+                                        onClick={(e) => handleEditPage(orchard._id, e)}
                                     >
                                         <IconEdit size={18} />
                                     </IconButton>
@@ -267,7 +253,7 @@ const RoleList = () => {
                                         size="small"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleOpenDrawer('edit', role);
+                                            handleOpenDrawer('edit', orchard);
                                         }}
                                     >
                                         <IconPencil size={18} />
@@ -275,12 +261,12 @@ const RoleList = () => {
                                 </Tooltip>
                             </>
                         )}
-                        {can(PERMISSIONS.ROLE_DELETE) && (
+                        {can(PERMISSIONS.ORCHARD_DELETE) && (
                             <Tooltip title="Delete">
                                 <IconButton
                                     color="error"
                                     size="small"
-                                    onClick={(e) => handleDeleteClick(role, e)}
+                                    onClick={(e) => handleDeleteClick(orchard, e)}
                                 >
                                     <IconTrash size={18} />
                                 </IconButton>
@@ -294,11 +280,11 @@ const RoleList = () => {
 
     return (
         <MainCard
-            title="Roles"
+            title="Orchards"
             secondary={
-                can(PERMISSIONS.ROLE_CREATE) && (
+                can(PERMISSIONS.ORCHARD_CREATE) && (
                     <SplitActionButton
-                        primaryLabel="Create Role"
+                        primaryLabel="Create Orchard"
                         primaryStartIcon={<IconPlus size={18} />}
                         primaryAction={() => handleOpenDrawer('create')}
                         options={[
@@ -313,10 +299,10 @@ const RoleList = () => {
             }
         >
             <DataGridWrapper
-                rows={roles}
+                rows={orchards}
                 columns={columns}
                 loading={isLoading}
-                onRowClick={(params) => handleOpenDrawer('view', params.row as Role)}
+                onRowClick={(params) => handleOpenDrawer('view', params.row as Orchard)}
                 getRowId={(row) => row._id}
             />
             {/* Quick View / Create / Edit Drawer */}
@@ -329,22 +315,22 @@ const RoleList = () => {
                 <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="h4">
-                            {mode === 'create' ? 'New Role' : mode === 'edit' ? 'Edit Role' : roleName(selectedRole)}
+                            {mode === 'create' ? 'New Orchard' : mode === 'edit' ? 'Edit Orchard' : orchardName(selectedOrchard)}
                         </Typography>
-                        {mode === 'view' && selectedRole && (
+                        {mode === 'view' && selectedOrchard && (
                             <Stack direction="row" spacing={1}>
-                                {can(PERMISSIONS.ROLE_EDIT) && (
+                                {can(PERMISSIONS.ORCHARD_EDIT) && (
                                     <Tooltip title="Edit">
                                         <IconButton size="small" onClick={() => setMode('edit')} color="primary">
                                             <IconEdit size={18} />
                                         </IconButton>
                                     </Tooltip>
                                 )}
-                                {can(PERMISSIONS.ROLE_DELETE) && (
+                                {can(PERMISSIONS.ORCHARD_DELETE) && (
                                     <Tooltip title="Delete">
                                         <IconButton
                                             size="small"
-                                            onClick={(e) => handleDeleteClick(selectedRole, e)}
+                                            onClick={(e) => handleDeleteClick(selectedOrchard, e)}
                                             color="error"
                                         >
                                             <IconTrash size={18} />
@@ -357,9 +343,9 @@ const RoleList = () => {
 
                     <Divider sx={{ mb: 3 }} />
 
-                    <RoleForm
+                    <OrchardForm
                         mode={mode}
-                        role={selectedRole}
+                        orchard={selectedOrchard}
                         initialValues={mode === 'create' ? createDraft : undefined}
                         onSubmit={handleFormSubmit}
                         onCancel={handleCancelForm}
@@ -376,8 +362,8 @@ const RoleList = () => {
             {/* Delete Confirmation */}
             <ConfirmDialog
                 open={deleteDialogOpen}
-                title="Delete Role"
-                content={`Are you sure you want to delete ${roleToDelete?.name}? This action cannot be undone.`}
+                title="Delete Orchard"
+                content={`Are you sure you want to delete ${orchardName(selectedOrchard)}? This action cannot be undone.`}
                 onConfirm={handleConfirmDelete}
                 onCancel={() => setDeleteDialogOpen(false)}
                 confirmLabel="Delete"
@@ -389,6 +375,4 @@ const RoleList = () => {
     );
 };
 
-const roleName = (role: Role | null) => role ? role.name : 'Role Details';
-
-export default RoleList;
+export default OrchardList;

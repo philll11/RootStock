@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -20,7 +20,7 @@ import { IconEdit, IconTrash, IconEye, IconPlus, IconExternalLink, IconPencil } 
 // Project Imports
 import { useGetUsers, useDeleteUser, useCreateUser, useUpdateUser } from 'hooks/iam/useUsers';
 import { User, UserType } from 'types/iam/user.types';
-import { UserFormData } from 'api/iam/user.schema';
+import { UserFormData } from 'types/iam/user.schema';
 import UserForm, { UserFormMode } from './UserForm';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
@@ -43,6 +43,11 @@ const getStatusChip = (isActive?: boolean) => {
 const getInitials = (first: string, last: string) => {
     return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
 };
+
+const userName = (user: User | null) => {
+    if (!user) return 'User Details';
+    return `${user.firstName} ${user.lastName}`;
+}
 
 const UserList = () => {
     const navigate = useNavigate();
@@ -180,7 +185,7 @@ const UserList = () => {
         }
     };
     // --- Column Configuration ---
-    const columns: GridColDef[] = [
+    const columns: GridColDef[] = useMemo(() => [
         {
             field: 'recordId',
             headerName: 'User Code',
@@ -239,7 +244,7 @@ const UserList = () => {
                 const user = params.row as User;
                 return (
                     <>
-                        {can(PERMISSIONS.ROLE_VIEW) && (
+                        {can(PERMISSIONS.USER_VIEW) && (
                             <Tooltip title="View Details">
                                 <IconButton
                                     color="primary"
@@ -250,7 +255,7 @@ const UserList = () => {
                                 </IconButton>
                             </Tooltip>
                         )}
-                        {can(PERMISSIONS.ROLE_EDIT) && (
+                        {can(PERMISSIONS.USER_EDIT) && (
                             <>
                                 <Tooltip title="Edit">
                                     <IconButton
@@ -275,7 +280,7 @@ const UserList = () => {
                                 </Tooltip>
                             </>
                         )}
-                        {can(PERMISSIONS.ROLE_DELETE) && (
+                        {can(PERMISSIONS.USER_DELETE) && (
                             <Tooltip title="Delete">
                                 <IconButton
                                     color="error"
@@ -290,7 +295,7 @@ const UserList = () => {
                 );
             }
         }
-    ];
+    ], [can, handleViewPage, handleEditPage, handleDeleteClick]);
 
     return (
         <MainCard
@@ -389,9 +394,5 @@ const UserList = () => {
     );
 };
 
-const userName = (user: User | null) => {
-    if (!user) return 'User Details';
-    return `${user.firstName} ${user.lastName}`;
-}
 
 export default UserList;
