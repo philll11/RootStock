@@ -1,12 +1,11 @@
 import axiosServices from 'utils/axios';
-import { Block, CreateBlockDto, UpdateBlockDto } from '../../types/assets/block.types';
+import { Block, CreateBlockDto, UpdateBlockDto, BlockQuery } from '../../types/assets/block.types';
 
 const BASE_URL = '/blocks';
 
-export const getBlocks = async (orchardId?: string): Promise<Block[]> => {
-  const queryParams = orchardId ? { orchardId } : {};
+export const getBlocks = async (params?: BlockQuery): Promise<Block[]> => {
   const response = await axiosServices.get<Block[]>(BASE_URL, {
-    params: queryParams
+    params
   });
   return response.data;
 };

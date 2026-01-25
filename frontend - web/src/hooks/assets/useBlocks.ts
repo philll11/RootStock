@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getBlocks, getBlock, createBlock, updateBlock, deleteBlock } from 'api/assets/blocks';
-import { Block } from 'types/assets/block.types';
+import { Block, BlockQuery } from 'types/assets/block.types';
 import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';
 
 export const BLOCKS_KEYS = {
   all: ['blocks'] as const,
   lists: () => [...BLOCKS_KEYS.all, 'list'] as const,
-  list: (orchardId?: string) => [...BLOCKS_KEYS.lists(), { orchardId }] as const,
+  list: (params?: BlockQuery) => [...BLOCKS_KEYS.lists(), { params }] as const,
   details: () => [...BLOCKS_KEYS.all, 'detail'] as const,
   detail: (id: string) => [...BLOCKS_KEYS.details(), id] as const,
   mutations: {
@@ -17,14 +17,14 @@ export const BLOCKS_KEYS = {
   }
 };
 
-export function useGetBlocks(orchardId?: string) {
+export function useGetBlocks(params?: BlockQuery) {
   const { can } = usePermission();
   // Assuming BLOCK_VIEW covers listing. Adjust if there's a specific LIST permission.
   const isEnabled = can(PERMISSIONS.BLOCK_VIEW);
 
   return useQuery({
-    queryKey: BLOCKS_KEYS.list(orchardId),
-    queryFn: () => getBlocks(orchardId),
+    queryKey: BLOCKS_KEYS.list(params),
+    queryFn: () => getBlocks(params),
     enabled: isEnabled
   });
 }

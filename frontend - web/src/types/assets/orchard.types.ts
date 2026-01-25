@@ -22,4 +22,5 @@ export interface UpdateOrchardDto {
 export interface OrchardQuery {
     name?: string;
     includeInactives?: boolean;
+    clientId?: string;
 }

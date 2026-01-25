@@ -95,8 +95,8 @@ export const ResourceAuditTable = ({ resource, resourceId }: ResourceAuditTableP
             width: 200,
             renderCell: (params: GridRenderCellParams) => (
                 <Stack>
-                     <Typography variant="body2">{new Date(params.value).toLocaleDateString()}</Typography>
-                     <Typography variant="caption" color="textSecondary">{new Date(params.value).toLocaleTimeString()}</Typography>
+                    <Typography variant="body2">{new Date(params.value).toLocaleDateString()}</Typography>
+                    <Typography variant="caption" color="textSecondary">{new Date(params.value).toLocaleTimeString()}</Typography>
                 </Stack>
             )
         },
@@ -105,11 +105,11 @@ export const ResourceAuditTable = ({ resource, resourceId }: ResourceAuditTableP
             headerName: 'Action',
             width: 120,
             renderCell: (params: GridRenderCellParams) => (
-                <Chip 
-                    label={params.value} 
-                    color={getActionColor(params.value as AuditAction)} 
-                    variant="outlined" 
-                    size="small" 
+                <Chip
+                    label={params.value}
+                    color={getActionColor(params.value as AuditAction)}
+                    variant="outlined"
+                    size="small"
                     sx={{ fontWeight: 'bold' }}
                 />
             )
@@ -123,9 +123,9 @@ export const ResourceAuditTable = ({ resource, resourceId }: ResourceAuditTableP
                 const userName = typeof user === 'object' && user ? `${user.firstName} ${user.lastName}` : 'Unknown User';
                 return (
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ height: '100%' }}>
-                         <UserAvatar 
-                            alt={userName} 
-                            sx={{ width: 24, height: 24, fontSize: '0.75rem' }} 
+                        <UserAvatar
+                            alt={userName}
+                            sx={{ width: 24, height: 24, fontSize: '0.75rem' }}
                             color="primary"
                         >
                             {/* Fallback initials if no image - MUI Avatar handles this with 'alt' or children */}
@@ -134,7 +134,6 @@ export const ResourceAuditTable = ({ resource, resourceId }: ResourceAuditTableP
                         <Typography variant="body2">{userName}</Typography>
                     </Stack>
                 );
-
             }
         },
         {
@@ -158,10 +157,10 @@ export const ResourceAuditTable = ({ resource, resourceId }: ResourceAuditTableP
 
                 return (
                     <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
-                         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                             {params.value !== '-' ? params.value.replace(/([A-Z])/g, ' $1').trim() : '-'}
-                         </Typography>
-                         {badge}
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                            {params.value !== '-' ? params.value.replace(/([A-Z])/g, ' $1').trim() : '-'}
+                        </Typography>
+                        {badge}
                     </Stack>
                 );
             }
@@ -171,8 +170,8 @@ export const ResourceAuditTable = ({ resource, resourceId }: ResourceAuditTableP
             headerName: 'Old Value',
             width: 200,
             renderCell: (params: GridRenderCellParams) => (
-                <Box sx={{ 
-                    color: theme.palette.text.secondary, 
+                <Box sx={{
+                    color: theme.palette.text.secondary,
                     textDecoration: 'line-through',
                     fontFamily: 'monospace',
                     fontSize: '0.875rem'
@@ -186,8 +185,8 @@ export const ResourceAuditTable = ({ resource, resourceId }: ResourceAuditTableP
             headerName: 'New Value',
             width: 200,
             renderCell: (params: GridRenderCellParams) => (
-                <Box sx={{ 
-                    color: theme.palette.text.primary, 
+                <Box sx={{
+                    color: theme.palette.text.primary,
                     fontFamily: 'monospace',
                     fontSize: '0.875rem',
                     fontWeight: 500
@@ -200,7 +199,7 @@ export const ResourceAuditTable = ({ resource, resourceId }: ResourceAuditTableP
 
     return (
         <Box sx={{ width: '100%', bgcolor: 'background.paper' }}>
-             <DataGridWrapper
+            <DataGridWrapper
                 title="" // No title needed inside tabs
                 rows={flatEntries}
                 columns={columns}

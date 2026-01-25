@@ -3,7 +3,7 @@ import { debounce } from 'lodash-es';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { TextField, Grid, Autocomplete, Button, Box, Typography, Alert, IconButton, Paper, FormControlLabel, Switch } from '@mui/material';
-import { IconTrash, IconPlus, IconHistory } from '@tabler/icons-react';
+import { IconTrash, IconPlus, IconHistory, IconClipboardCheck } from '@tabler/icons-react';
 
 import { Block } from 'types/assets/block.types';
 import { blockSchema, BlockFormData } from 'types/assets/block.schema';
@@ -164,6 +164,13 @@ const BlockForm = ({
 
   const tabs = useMemo(
     () => [
+      {
+        label: 'Assessments',
+        value: 'assessments',
+        icon: <IconClipboardCheck size="1.3rem" />,
+        disabled: isCreating,
+        component: <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>Assessments will be listed here.</Typography>
+      },
       {
         label: 'Audit Trail',
         value: 'audit',

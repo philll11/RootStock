@@ -14,6 +14,7 @@ import { PERMISSIONS } from 'constants/permissions';
 
 import ResourceRelatedTabs from 'ui-component/extended/ResourceRelatedTabs';
 import ResourceAuditTable from 'ui-component/extended/ResourceAuditTable';
+import OrchardList from 'views/assets/orchards/OrchardList';
 
 export type ClientFormMode = 'create' | 'edit' | 'view';
 
@@ -125,7 +126,8 @@ const ClientForm = ({ mode, client, initialValues, onSubmit, isLoading, onCancel
         label: 'Orchards',
         value: 'orchards',
         icon: <IconTrees size="1.3rem" />,
-        component: <div>Orchards related to this client will be displayed here.</div>
+        disabled: isCreating,
+        component: client?._id ? <OrchardList clientId={client._id} clientName={client.name} /> : null
       },
       {
         label: 'Audit Trail',

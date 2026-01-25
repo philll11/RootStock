@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Chip, IconButton, Tooltip, Stack, Divider, Drawer } from '@mui/material';
+import { Box, Typography, Chip, IconButton, Tooltip, Stack, Divider, Drawer, Button } from '@mui/material';
 import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { IconEdit, IconTrash, IconEye, IconPlus, IconPencil, IconExternalLink } from '@tabler/icons-react';
 
@@ -27,13 +27,27 @@ const getStatusChip = (isActive?: boolean) => {
 
 const orchardName = (orchard: Orchard | null) => (orchard ? orchard.name : 'Orchard Details');
 
-const OrchardList = () => {
+interface OrchardListProps {
+  clientId?: string;
+  clientName?: string;
+}
+
+const OrchardList = ({ clientId, clientName }: OrchardListProps) => {
   const navigate = useNavigate();
   const { getLinkTo } = useContextualNavigation('/orchards');
   const { can } = usePermission();
 
   // Queries & Mutations
-  const { data: orchards = [], isLoading } = useGetOrchards();
+  // If embedded in a Client detail, filter by clientId
+  const queryParams = useMemo(() => (clientId ? { clientId } : undefined), [clientId]);
+  const { data: allOrchards = [], isLoading } = useGetOrchards(queryParams);
+
+  const orchards = useMemo(() => {
+    if (!clientId) return allOrchards;
+    // Client-side filter to be safe/responsive if the API returns mixed results or is cached
+    return allOrchards.filter((o) => (typeof o.clientId === 'object' ? o.clientId._id : o.clientId) === clientId);
+  }, [allOrchards, clientId]);
+
   const { mutateAsync: deleteOrchard } = useDeleteOrchard();
   const { mutateAsync: createOrchard, isPending: isCreating } = useCreateOrchard();
   const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
@@ -57,6 +71,12 @@ const OrchardList = () => {
     setMode(newMode);
     setSelectedOrchard(orchard);
     setIsFormDirty(false);
+
+    // If creating in embedded mode, pre-fill the client
+    if (newMode === 'create' && clientId) {
+      setCreateDraft((prev) => ({ ...prev, clientId }));
+    }
+
     setDrawerOpen(true);
   };
 
@@ -127,7 +147,13 @@ const OrchardList = () => {
         const { isActive, __v, ...createData } = values;
         await createOrchard(createData);
       } else if (mode === 'edit' && selectedOrchard) {
-        await updateOrchard({ id: selectedOrchard._id, data: { ...values, __v: selectedOrchard.__v } });
+        await updateOrchard({
+          id: selectedOrchard._id,
+          data: {
+            ...values,
+            __v: selectedOrchard.__v
+          }
+        });
       }
       setDrawerOpen(false);
       setCreateDraft({});
@@ -138,14 +164,37 @@ const OrchardList = () => {
   };
 
   // --- Actions ---
-  const handleCreatePage = () => navigate(getLinkTo('/orchards/new'));
+  const handleCreatePage = () => {
+    navigate(getLinkTo('/orchards/new'), {
+      state: clientId ? {
+        parent: {
+          title: clientName || 'Client',
+          to: `/clients/${clientId}`
+        }
+      } : undefined
+    });
+  };
   const handleViewPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(getLinkTo(`/orchards/${id}`));
+    navigate(getLinkTo(`/orchards/${id}`), {
+      state: clientId ? {
+        parent: {
+          title: clientName || 'Client',
+          to: `/clients/${clientId}`
+        }
+      } : undefined
+    });
   };
   const handleEditPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(getLinkTo(`/orchards/${id}/edit`));
+    navigate(getLinkTo(`/orchards/${id}/edit`), {
+      state: clientId ? {
+        parent: {
+          title: clientName || 'Client',
+          to: `/clients/${clientId}`
+        }
+      } : undefined
+    });
   };
 
   // Delete State
@@ -255,26 +304,8 @@ const OrchardList = () => {
     [can, handleViewPage, handleEditPage, handleDeleteClick]
   );
 
-  return (
-    <MainCard
-      title="Orchards"
-      secondary={
-        can(PERMISSIONS.ORCHARD_CREATE) && (
-          <SplitActionButton
-            primaryLabel="Create Orchard"
-            primaryStartIcon={<IconPlus size={18} />}
-            primaryAction={() => handleOpenDrawer('create')}
-            options={[
-              {
-                label: 'Create in New Page',
-                icon: <IconExternalLink size={18} />,
-                onClick: handleCreatePage
-              }
-            ]}
-          />
-        )
-      }
-    >
+  const content = (
+    <>
       <DataGridWrapper
         rows={orchards}
         columns={columns}
@@ -319,7 +350,7 @@ const OrchardList = () => {
           <OrchardForm
             mode={mode}
             orchard={selectedOrchard}
-            initialValues={mode === 'create' ? createDraft : undefined}
+            initialValues={mode === 'create' && clientId ? { ...createDraft, clientId } : (mode === 'create' ? createDraft : undefined)}
             onSubmit={handleFormSubmit}
             onCancel={handleCancelForm}
             isLoading={isCreating || isUpdating}
@@ -328,7 +359,63 @@ const OrchardList = () => {
           />
         </Box>
       </Drawer>
+    </>
+  );
 
+  if (clientId) {
+    return (
+      <Box>
+        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
+          {can(PERMISSIONS.ORCHARD_CREATE) && (
+            <Button
+              variant="contained"
+              startIcon={<IconPlus size={18} />}
+              onClick={() => handleOpenDrawer('create')}
+            >
+              Add Orchard
+            </Button>
+          )}
+        </Stack>
+        {content}
+        {/* Discard Warning Dialog */}
+        <ConfirmDialog {...discardDialogProps} />
+
+        {/* Delete Confirmation */}
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          title="Delete Orchard"
+          content={`Are you sure you want to delete ${orchardName(selectedOrchard)}? This action cannot be undone.`}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteDialogOpen(false)}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          confirmColor="error"
+        />
+      </Box>
+    );
+  }
+
+  return (
+    <MainCard
+      title="Orchards"
+      secondary={
+        can(PERMISSIONS.ORCHARD_CREATE) && (
+          <SplitActionButton
+            primaryLabel="Create Orchard"
+            primaryStartIcon={<IconPlus size={18} />}
+            primaryAction={() => handleOpenDrawer('create')}
+            options={[
+              {
+                label: 'Create in New Page',
+                icon: <IconExternalLink size={18} />,
+                onClick: handleCreatePage
+              }
+            ]}
+          />
+        )
+      }
+    >
+      {content}
       {/* Discard Warning Dialog */}
       <ConfirmDialog {...discardDialogProps} />
 

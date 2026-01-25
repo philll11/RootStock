@@ -22,10 +22,11 @@ import { PERMISSIONS } from 'constants/permissions';
 
 import ResourceRelatedTabs from 'ui-component/extended/ResourceRelatedTabs';
 import ResourceAuditTable from 'ui-component/extended/ResourceAuditTable';
+import BlockList from 'views/assets/blocks/BlockList';
 
 import { useGetClients } from 'hooks/iam/useClients';
 import { useGetUsers } from 'hooks/iam/useUsers';
-import { IconHistory } from '@tabler/icons-react';
+import { IconHistory, IconBuildingEstate } from '@tabler/icons-react';
 
 export type OrchardFormMode = 'create' | 'edit' | 'view';
 
@@ -132,6 +133,7 @@ const OrchardForm = ({
     const handleFormSubmit = (values: OrchardFormData) => {
         const submissionData: any = { ...values };
         if (isEditing && orchard) {
+            delete submissionData.clientId; // ClientId is not editable
             submissionData.__v = orchard.__v;
         }
         if (isCreating) {
@@ -151,6 +153,13 @@ const OrchardForm = ({
 
     // Define tabs
     const tabs = useMemo(() => [
+        {
+            label: 'Blocks',
+            value: 'blocks',
+            icon: <IconBuildingEstate size="1.3rem" />,
+            disabled: isCreating,
+            component: orchard?._id ? <BlockList orchardId={orchard._id} orchardName={orchard.name} /> : null
+        },
         {
             label: 'Audit Trail',
             value: 'audit',
@@ -253,21 +262,21 @@ const OrchardForm = ({
                     />
 
                 </Grid>
-                    {!isCreating && can(PERMISSIONS.ORCHARD_MANAGE_INACTIVE) && (
-                        <Grid size={12}>
-                            <Controller
-                                name="isActive"
-                                control={control}
-                                render={({ field }) => (
-                                    <FormControlLabel
-                                        control={<Switch {...field} checked={field.value} />}
-                                        label="Active"
-                                        disabled={isViewing}
-                                    />
-                                )}
-                            />
-                        </Grid>
-                    )}
+                {!isCreating && can(PERMISSIONS.ORCHARD_MANAGE_INACTIVE) && (
+                    <Grid size={12}>
+                        <Controller
+                            name="isActive"
+                            control={control}
+                            render={({ field }) => (
+                                <FormControlLabel
+                                    control={<Switch {...field} checked={field.value} />}
+                                    label="Active"
+                                    disabled={isViewing}
+                                />
+                            )}
+                        />
+                    </Grid>
+                )}
             </Grid>
 
             <Box sx={{ mt: 3 }}>

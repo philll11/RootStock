@@ -38,4 +38,5 @@ export interface UpdateBlockDto {
 export interface BlockQuery {
   name?: string;
   includeInactives?: boolean;
+  orchardId?: string;
 }

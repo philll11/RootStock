@@ -26,13 +26,25 @@ const getStatusChip = (isActive?: boolean) => {
 };
 const blockName = (block: Block | null) => (block ? block.name : 'Block Details');
 
-const BlockList = () => {
+interface BlockListProps {
+  orchardId?: string;
+  orchardName?: string;
+}
+
+const BlockList = ({ orchardId, orchardName }: BlockListProps) => {
   const navigate = useNavigate();
   const { getLinkTo } = useContextualNavigation('/blocks');
   const { can } = usePermission();
 
   // Queries & Mutations
-  const { data: blocks = [], isLoading } = useGetBlocks();
+  const queryParams = useMemo(() => (orchardId ? { orchardId } : undefined), [orchardId]);
+  const { data: allBlocks = [], isLoading } = useGetBlocks(queryParams);
+
+  const blocks = useMemo(() => {
+    if (!orchardId) return allBlocks;
+    return allBlocks.filter((b) => (typeof b.orchardId === 'object' ? b.orchardId._id : b.orchardId) === orchardId);
+  }, [allBlocks, orchardId]);
+
   const { mutateAsync: deleteBlock } = useDeleteBlock();
   const { mutateAsync: createBlock, isPending: isCreating } = useCreateBlock();
   const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
@@ -56,6 +68,12 @@ const BlockList = () => {
     setMode(newMode);
     setSelectedBlock(block);
     setIsFormDirty(false);
+
+    // If creating in embedded mode, pre-fill the orchard
+    if (newMode === 'create' && orchardId) {
+      setCreateDraft((prev) => ({ ...prev, orchardId }));
+    }
+
     setDrawerOpen(true);
   };
 
@@ -131,14 +149,37 @@ const BlockList = () => {
   };
 
   // --- Actions ---
-  const handleCreatePage = () => navigate(getLinkTo('/blocks/new'));
+  const handleCreatePage = () => {
+    navigate(getLinkTo('/blocks/new'), {
+      state: orchardId ? {
+        parent: {
+          title: orchardName || 'Orchard',
+          to: `/orchards/${orchardId}`
+        }
+      } : undefined
+    });
+  };
   const handleViewPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(getLinkTo(`/blocks/${id}`));
+    navigate(getLinkTo(`/blocks/${id}`), {
+      state: orchardId ? {
+        parent: {
+          title: orchardName || 'Orchard',
+          to: `/orchards/${orchardId}`
+        }
+      } : undefined
+    });
   };
   const handleEditPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(getLinkTo(`/blocks/${id}/edit`));
+    navigate(getLinkTo(`/blocks/${id}/edit`), {
+      state: orchardId ? {
+        parent: {
+          title: orchardName || 'Orchard',
+          to: `/orchards/${orchardId}`
+        }
+      } : undefined
+    });
   };
 
   // Delete State
