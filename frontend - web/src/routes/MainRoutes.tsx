@@ -9,9 +9,6 @@ import AuthGuard from 'utils/route-guard/AuthGuard';
 // dashboard routing
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard')));
 
-// sample page routing
-const SamplePage = Loadable(lazy(() => import('views/sample-page')));
-
 // iam routing
 const ClientList = Loadable(lazy(() => import('views/iam/clients/ClientList')));
 const ClientCreatePage = Loadable(lazy(() => import('views/iam/clients/pages/ClientCreatePage')));
@@ -34,6 +31,16 @@ const OrchardCreatePage = Loadable(lazy(() => import('views/assets/orchards/page
 const OrchardEditPage = Loadable(lazy(() => import('views/assets/orchards/pages/OrchardEditPage')));
 const OrchardViewPage = Loadable(lazy(() => import('views/assets/orchards/pages/OrchardViewPage')));
 
+const BlockList = Loadable(lazy(() => import('views/assets/blocks/BlockList')));
+const BlockCreatePage = Loadable(lazy(() => import('views/assets/blocks/pages/BlockCreatePage')));
+const BlockEditPage = Loadable(lazy(() => import('views/assets/blocks/pages/BlockEditPage')));
+const BlockViewPage = Loadable(lazy(() => import('views/assets/blocks/pages/BlockViewPage')));
+
+// master-data routing
+const VarietyList = Loadable(lazy(() => import('views/master-data/varieties/VarietyList')));
+const VarietyCreatePage = Loadable(lazy(() => import('views/master-data/varieties/pages/VarietyCreatePage')));
+const VarietyEditPage = Loadable(lazy(() => import('views/master-data/varieties/pages/VarietyEditPage')));
+const VarietyViewPage = Loadable(lazy(() => import('views/master-data/varieties/pages/VarietyViewPage')));
 
 // system routing
 const SystemSettingsPage = Loadable(lazy(() => import('views/system/config/SystemSettingsPage')));
@@ -68,9 +75,6 @@ const MainRoutes: RouteObject = {
         }
       ]
     },
-    {
-      path: '/sample-page',
-      element: <SamplePage />    },
     {
       path: 'clients',
       children: [
@@ -152,6 +156,48 @@ const MainRoutes: RouteObject = {
         {
           path: ':id/edit',
           element: <OrchardEditPage />
+        }
+      ]
+    },
+    {
+      path: 'blocks',
+      children: [
+        {
+          path: '',
+          element: <BlockList />
+        },
+        {
+          path: 'new',
+          element: <BlockCreatePage />
+        },
+        {
+          path: ':id',
+          element: <BlockViewPage />
+        },
+        {
+          path: ':id/edit',
+          element: <BlockEditPage />
+        }
+      ]
+    },
+    {
+      path: 'varieties',
+      children: [
+        {
+          path: '',
+          element: <VarietyList />
+        },
+        {
+          path: 'new',
+          element: <VarietyCreatePage />
+        },
+        {
+          path: ':id',
+          element: <VarietyViewPage />
+        },
+        {
+          path: ':id/edit',
+          element: <VarietyEditPage />
         }
       ]
     },

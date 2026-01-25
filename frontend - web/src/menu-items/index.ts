@@ -1,14 +1,14 @@
 import dashboard from './dashboard';
-import pages from './pages';
 import entities from './entities';
 import iam from './iam';
 import system from './system';
 import { MenuItem } from './types';
+import lists from './lists';
 
 // ==============================|| MENU ITEMS ||============================== //
 
 const menuItems: MenuItem = {
-  items: [dashboard, pages, entities, iam, system]
+  items: [dashboard, entities, lists, iam, system]
 };
 
 export default menuItems;

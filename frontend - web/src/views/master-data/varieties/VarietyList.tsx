@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Chip, IconButton, Tooltip, Stack, Divider, Drawer } from '@mui/material';
+import { Box, Typography, Chip, IconButton, Tooltip, Stack, Button, Drawer, Divider } from '@mui/material';
 import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { IconEdit, IconTrash, IconEye, IconPlus, IconPencil, IconExternalLink } from '@tabler/icons-react';
 
@@ -8,12 +8,12 @@ import MainCard from 'ui-component/cards/MainCard';
 import DataGridWrapper from 'ui-component/extended/DataGridWrapper';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
-import { useGetOrchards, useDeleteOrchard, useCreateOrchard, useUpdateOrchard } from 'hooks/assets/useOrchards';
+import { useGetVarieties, useDeleteVariety, useCreateVariety, useUpdateVariety } from 'hooks/master-data/useVarieties';
 import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';
-import OrchardForm, { OrchardFormMode } from './OrchardForm';
-import { OrchardFormData } from 'types/assets/orchard.schema';
-import { Orchard } from 'types/assets/orchard.types';
+import VarietyForm, { VarietyFormMode } from './VarietyForm';
+import { VarietyFormData } from 'types/master-data/variety.schema';
+import { Variety } from 'types/master-data/variety.types';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
 import SplitActionButton from 'ui-component/extended/SplitActionButton';
 
@@ -25,24 +25,24 @@ const getStatusChip = (isActive?: boolean) => {
   );
 };
 
-const orchardName = (orchard: Orchard | null) => (orchard ? orchard.name : 'Orchard Details');
+const varietyName = (variety: Variety | null) => (variety ? variety.name : 'Variety Details');
 
-const OrchardList = () => {
+const VarietyList = () => {
   const navigate = useNavigate();
-  const { getLinkTo } = useContextualNavigation('/orchards');
+  const { getLinkTo } = useContextualNavigation('/varieties');
   const { can } = usePermission();
 
   // Queries & Mutations
-  const { data: orchards = [], isLoading } = useGetOrchards();
-  const { mutateAsync: deleteOrchard } = useDeleteOrchard();
-  const { mutateAsync: createOrchard, isPending: isCreating } = useCreateOrchard();
-  const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
+  const { data: varieties = [], isLoading } = useGetVarieties();
+  const { mutateAsync: deleteVariety } = useDeleteVariety();
+  const { mutateAsync: createVariety, isPending: isCreating } = useCreateVariety();
+  const { mutateAsync: updateVariety, isPending: isUpdating } = useUpdateVariety();
 
   // Drawer State
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [mode, setMode] = useState<OrchardFormMode>('create');
-  const [selectedOrchard, setSelectedOrchard] = useState<Orchard | null>(null);
-  const [createDraft, setCreateDraft] = useState<Partial<OrchardFormData>>({});
+  const [mode, setMode] = useState<VarietyFormMode>('create');
+  const [selectedVariety, setSelectedVariety] = useState<Variety | null>(null);
+  const [createDraft, setCreateDraft] = useState<Partial<VarietyFormData>>({});
 
   // Dirty State for drawer
   const [isFormDirty, setIsFormDirty] = useState(false);
@@ -53,9 +53,9 @@ const OrchardList = () => {
     'You have unsaved changes. Are you sure you want to discard them?'
   );
 
-  const handleOpenDrawer = (newMode: OrchardFormMode, orchard: Orchard | null = null) => {
+  const handleOpenDrawer = (newMode: VarietyFormMode, variety: Variety | null = null) => {
     setMode(newMode);
-    setSelectedOrchard(orchard);
+    setSelectedVariety(variety);
     setIsFormDirty(false);
     setDrawerOpen(true);
   };
@@ -64,7 +64,7 @@ const OrchardList = () => {
     const performClose = () => {
       setDrawerOpen(false);
       setIsFormDirty(false);
-      setSelectedOrchard(null);
+      setSelectedVariety(null);
     };
 
     // If Closing via Backdrop/Escape (Persistence Check)
@@ -91,14 +91,14 @@ const OrchardList = () => {
       if (isCreating) setCreateDraft({});
       setDrawerOpen(false);
       setIsFormDirty(false);
-      setSelectedOrchard(null);
+      setSelectedVariety(null);
     };
 
     // Explicit Cancel Button Click
     if (isCreating) {
       // For create, Cancel means discard draft
       if (Object.keys(createDraft).length > 0 || isFormDirty) {
-        trigger(performCancel, 'Discard new orchard draft? This cannot be undone.');
+        trigger(performCancel, 'Discard new variety draft? This cannot be undone.');
         return;
       }
     } else if (mode === 'edit') {
@@ -112,7 +112,7 @@ const OrchardList = () => {
   };
 
   const handleFormValuesChange = useCallback(
-    (values: Partial<OrchardFormData>) => {
+    (values: Partial<VarietyFormData>) => {
       if (mode === 'create') {
         setCreateDraft((prev) => ({ ...prev, ...values }));
       }
@@ -120,14 +120,14 @@ const OrchardList = () => {
     [mode]
   );
 
-  // Form Submit Handler
-  const handleFormSubmit = async (values: OrchardFormData) => {
+  // Form Submission (Drawer)
+  const handleFormSubmit = async (values: VarietyFormData) => {
     try {
       if (mode === 'create') {
         const { isActive, __v, ...createData } = values;
-        await createOrchard(createData);
-      } else if (mode === 'edit' && selectedOrchard) {
-        await updateOrchard({ id: selectedOrchard._id, data: { ...values, __v: selectedOrchard.__v } });
+        await createVariety(createData);
+      } else if (mode === 'edit' && selectedVariety) {
+        await updateVariety({ id: selectedVariety._id, data: { ...values, __v: selectedVariety.__v } });
       }
       setDrawerOpen(false);
       setCreateDraft({});
@@ -138,31 +138,31 @@ const OrchardList = () => {
   };
 
   // --- Actions ---
-  const handleCreatePage = () => navigate(getLinkTo('/orchards/new'));
+  const handleCreatePage = () => navigate(getLinkTo('/varieties/new'));
   const handleViewPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(getLinkTo(`/orchards/${id}`));
+    navigate(getLinkTo(`/varieties/${id}`));
   };
   const handleEditPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(getLinkTo(`/orchards/${id}/edit`));
+    navigate(getLinkTo(`/varieties/${id}/edit`));
   };
 
   // Delete State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [orchardToDelete, setOrchardToDelete] = useState<Orchard | null>(null);
+  const [varietyToDelete, setVarietyToDelete] = useState<Variety | null>(null);
 
-  const handleDeleteClick = (orchard: Orchard, e?: React.MouseEvent) => {
+  const handleDeleteClick = (variety: Variety, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setOrchardToDelete(orchard);
+    setVarietyToDelete(variety);
     setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (orchardToDelete) {
-      await deleteOrchard(orchardToDelete._id);
+    if (varietyToDelete) {
+      await deleteVariety(varietyToDelete._id);
       setDeleteDialogOpen(false);
-      setOrchardToDelete(null);
+      setVarietyToDelete(null);
     }
   };
 
@@ -177,52 +177,48 @@ const OrchardList = () => {
       {
         field: 'name',
         headerName: 'Name',
-        flex: 1.5,
-        minWidth: 200
-      },
-      {
-        field: 'clientId',
-        headerName: 'Client',
         flex: 1,
-        renderCell: (params: GridRenderCellParams<any, Orchard>) => {
-          const clientName = typeof params.row.clientId === 'object' ? params.row.clientId.name : params.row.clientId;
-          return (
-            <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
-              <Typography variant="body2">{clientName}</Typography>
-            </Stack>
-          );
-        }
+        minWidth: 200
       },
       {
         field: 'isActive',
         headerName: 'Status',
-        width: 120,
+        flex: 0.5,
+        minWidth: 120,
         renderCell: (params: GridRenderCellParams) => getStatusChip(params.row.isActive)
       },
       {
         field: 'actions',
         headerName: 'Actions',
         flex: 0.8,
-        minWidth: 180,
+        minWidth: 150,
         sortable: false,
         filterable: false,
         align: 'right',
         headerAlign: 'right',
         renderCell: (params: GridRenderCellParams) => {
-          const orchard = params.row as Orchard;
+          const variety = params.row as Variety;
           return (
-            <>
-              {can(PERMISSIONS.ORCHARD_VIEW) && (
+            <Stack direction="row" justifyContent="flex-end" spacing={1}>
+              {can(PERMISSIONS.VARIETY_VIEW) && (
                 <Tooltip title="View Details">
-                  <IconButton color="primary" size="small" onClick={(e) => handleViewPage(orchard._id, e)}>
+                  <IconButton
+                    color="primary"
+                    size="small"
+                    onClick={(e) => handleViewPage(variety._id, e)}
+                  >
                     <IconEye size={18} />
                   </IconButton>
                 </Tooltip>
               )}
-              {can(PERMISSIONS.ORCHARD_EDIT) && (
+              {can(PERMISSIONS.VARIETY_EDIT) && (
                 <>
                   <Tooltip title="Edit">
-                    <IconButton color="secondary" size="small" onClick={(e) => handleEditPage(orchard._id, e)}>
+                    <IconButton
+                      color="secondary"
+                      size="small"
+                      onClick={(e) => handleEditPage(variety._id, e)}
+                    >
                       <IconEdit size={18} />
                     </IconButton>
                   </Tooltip>
@@ -232,7 +228,7 @@ const OrchardList = () => {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleOpenDrawer('edit', orchard);
+                        handleOpenDrawer('edit', variety);
                       }}
                     >
                       <IconPencil size={18} />
@@ -240,28 +236,32 @@ const OrchardList = () => {
                   </Tooltip>
                 </>
               )}
-              {can(PERMISSIONS.ORCHARD_DELETE) && (
+              {can(PERMISSIONS.VARIETY_DELETE) && (
                 <Tooltip title="Delete">
-                  <IconButton color="error" size="small" onClick={(e) => handleDeleteClick(orchard, e)}>
+                  <IconButton
+                    color="error"
+                    size="small"
+                    onClick={(e) => handleDeleteClick(variety, e)}
+                  >
                     <IconTrash size={18} />
                   </IconButton>
                 </Tooltip>
               )}
-            </>
+            </Stack>
           );
         }
       }
     ],
-    [can, handleViewPage, handleEditPage, handleDeleteClick]
+    [can]
   );
 
   return (
     <MainCard
-      title="Orchards"
+      title="Varieties"
       secondary={
-        can(PERMISSIONS.ORCHARD_CREATE) && (
+        can(PERMISSIONS.VARIETY_CREATE) && (
           <SplitActionButton
-            primaryLabel="Create Orchard"
+            primaryLabel="Create Variety"
             primaryStartIcon={<IconPlus size={18} />}
             primaryAction={() => handleOpenDrawer('create')}
             options={[
@@ -276,13 +276,14 @@ const OrchardList = () => {
       }
     >
       <DataGridWrapper
-        rows={orchards}
+        title='Varieties'
+        rows={varieties}
         columns={columns}
         loading={isLoading}
-        onRowClick={(params) => handleOpenDrawer('view', params.row as Orchard)}
+        onRowClick={(params) => handleViewPage(params.row._id)}
         getRowId={(row) => row._id}
       />
-      {/* Quick View / Create / Edit Drawer */}
+      {/* Quick View / Edit / Create Drawer */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -292,20 +293,24 @@ const OrchardList = () => {
         <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h4">
-              {mode === 'create' ? 'New Orchard' : mode === 'edit' ? 'Edit Orchard' : orchardName(selectedOrchard)}
+              {mode === 'create' ? 'New Variety' : mode === 'edit' ? 'Edit Variety' : varietyName(selectedVariety)}
             </Typography>
-            {mode === 'view' && selectedOrchard && (
+            {mode === 'view' && selectedVariety && (
               <Stack direction="row" spacing={1}>
-                {can(PERMISSIONS.ORCHARD_EDIT) && (
+                {can(PERMISSIONS.VARIETY_EDIT) && (
                   <Tooltip title="Edit">
                     <IconButton size="small" onClick={() => setMode('edit')} color="primary">
                       <IconEdit size={18} />
                     </IconButton>
                   </Tooltip>
                 )}
-                {can(PERMISSIONS.ORCHARD_DELETE) && (
+                {can(PERMISSIONS.VARIETY_DELETE) && (
                   <Tooltip title="Delete">
-                    <IconButton size="small" onClick={(e) => handleDeleteClick(selectedOrchard, e)} color="error">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleDeleteClick(selectedVariety, e)}
+                      color="error"
+                    >
                       <IconTrash size={18} />
                     </IconButton>
                   </Tooltip>
@@ -315,11 +320,9 @@ const OrchardList = () => {
           </Box>
 
           <Divider sx={{ mb: 3 }} />
-
-          <OrchardForm
+          <VarietyForm
             mode={mode}
-            orchard={selectedOrchard}
-            initialValues={mode === 'create' ? createDraft : undefined}
+            initialValues={mode === 'create' ? createDraft : selectedVariety || undefined}
             onSubmit={handleFormSubmit}
             onCancel={handleCancelForm}
             isLoading={isCreating || isUpdating}
@@ -335,8 +338,8 @@ const OrchardList = () => {
       {/* Delete Confirmation */}
       <ConfirmDialog
         open={deleteDialogOpen}
-        title="Delete Orchard"
-        content={`Are you sure you want to delete ${orchardName(selectedOrchard)}? This action cannot be undone.`}
+        title="Delete Variety"
+        content={`Are you sure you want to delete ${varietyToDelete?.name}? This action cannot be undone.`}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteDialogOpen(false)}
         confirmLabel="Delete"
@@ -347,4 +350,4 @@ const OrchardList = () => {
   );
 };
 
-export default OrchardList;
+export default VarietyList;

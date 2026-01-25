@@ -150,6 +150,7 @@ const UserList = () => {
             }
             setDrawerOpen(false);
             setCreateDraft({});
+            setIsFormDirty(false);
         } catch (error) {
             // Error is handled by hook notifications
         }
@@ -188,7 +189,7 @@ const UserList = () => {
     const columns: GridColDef[] = useMemo(() => [
         {
             field: 'recordId',
-            headerName: 'User Code',
+            headerName: 'Record ID',
             flex: 0.5,
             minWidth: 100
         },

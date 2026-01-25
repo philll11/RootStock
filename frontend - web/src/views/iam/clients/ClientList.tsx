@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Drawer,
@@ -26,6 +26,14 @@ import { PERMISSIONS } from 'constants/permissions';
 import { usePermission } from 'contexts/AuthContext';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
 import MainCard from 'ui-component/cards/MainCard';
+
+const getStatusChip = (isActive?: boolean) => {
+    return isActive ? (
+        <Chip label="Active" color="success" size="small" variant="outlined" />
+    ) : (
+        <Chip label="Inactive" color="error" size="small" variant="outlined" />
+    );
+};
 
 const clientName = (client: Client | null) => client ? client.name : 'Client Details';
 
@@ -139,6 +147,7 @@ const ClientList = () => {
                 await updateClient({ id: selectedClient._id, data: { ...updateData, __v: selectedClient.__v } });
             }
             setDrawerOpen(false);
+            setCreateDraft({});
             setIsFormDirty(false);
         } catch (error) {
             console.error('Operation failed', error);
@@ -178,13 +187,13 @@ const ClientList = () => {
     const columns: GridColDef[] = useMemo(() => [
         {
             field: 'recordId',
-            headerName: 'Client Code',
+            headerName: 'Record ID',
             flex: 0.5,
             minWidth: 100
         },
         {
             field: 'name',
-            headerName: 'Client Name',
+            headerName: 'Name',
             flex: 1.5,
             minWidth: 200
         },
@@ -193,11 +202,7 @@ const ClientList = () => {
             headerName: 'Status',
             flex: 0.5,
             minWidth: 100,
-            renderCell: (params: GridRenderCellParams) => (
-                params.value ?
-                    <Chip label="Active" size="small" color="success" variant="outlined" /> :
-                    <Chip label="Inactive" size="small" color="error" variant="outlined" />
-            )
+            renderCell: (params: GridRenderCellParams) => getStatusChip(params.row.isActive)
         },
         {
             field: 'actions',

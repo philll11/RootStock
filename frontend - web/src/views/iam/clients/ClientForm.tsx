@@ -8,8 +8,10 @@ import { IconHistory, IconTrees } from '@tabler/icons-react';
 // Project Imports
 import { Client } from 'types/iam/client.types';
 import { clientSchema, ClientFormData } from 'types/iam/client.schema';
+
 import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';
+
 import ResourceRelatedTabs from 'ui-component/extended/ResourceRelatedTabs';
 import ResourceAuditTable from 'ui-component/extended/ResourceAuditTable';
 
@@ -26,16 +28,7 @@ interface ClientFormProps {
   onValuesChange?: (values: Partial<ClientFormData>) => void;
 }
 
-const ClientForm = ({
-  mode,
-  client,
-  initialValues,
-  onSubmit,
-  isLoading,
-  onCancel,
-  onDirtyChange,
-  onValuesChange,
-}: ClientFormProps) => {
+const ClientForm = ({ mode, client, initialValues, onSubmit, isLoading, onCancel, onDirtyChange, onValuesChange }: ClientFormProps) => {
   const isEditing = mode === 'edit';
   const isCreating = mode === 'create';
   const isViewing = mode === 'view';
@@ -47,15 +40,15 @@ const ClientForm = ({
     handleSubmit,
     reset,
     watch,
-    formState: { isDirty, errors },
+    formState: { isDirty, errors }
   } = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
       name: '',
       isActive: true,
       __v: 0,
-      ...initialValues,
-    },
+      ...initialValues
+    }
   });
 
   // Create a debounced version of the change handler
@@ -94,10 +87,10 @@ const ClientForm = ({
       reset({
         name: client.name,
         isActive: client.isActive,
-        __v: client.__v,
+        __v: client.__v
       });
     } else if (isCreating) {
-      // Only reset to initialValues when mode switches to create, 
+      // Only reset to initialValues when mode switches to create,
       // ignoring ongoing updates to initialValues (draft state)
       reset({
         name: initialValues?.name || '',
@@ -125,32 +118,35 @@ const ClientForm = ({
     reset({ name: '', isActive: true, __v: 0 });
   };
 
-  const isSubmitDisabled = isLoading || (!isDirty && !isCreating) || isViewing;
-
   // Define tabs
-  const tabs = useMemo(() => [
-    {
-      label: 'Orchards',
-      value: 'orchards',
-      icon: <IconTrees size="1.3rem" />,
-      component: <div>Orchards related to this client will be displayed here.</div>
-    },
-    {
-      label: 'Audit Trail',
-      value: 'audit',
-      icon: <IconHistory size="1.3rem" />,
-      disabled: isCreating,
-      component: (
-        <Box sx={{ mt: 2 }}>
-          {client?._id ? (
-            <ResourceAuditTable resource="Client" resourceId={client._id} />
-          ) : (
-            <Typography color="textSecondary">Audit trail is only available for existing records.</Typography>
-          )}
-        </Box>
-      )
-    }
-  ], [client, isCreating]);
+  const tabs = useMemo(
+    () => [
+      {
+        label: 'Orchards',
+        value: 'orchards',
+        icon: <IconTrees size="1.3rem" />,
+        component: <div>Orchards related to this client will be displayed here.</div>
+      },
+      {
+        label: 'Audit Trail',
+        value: 'audit',
+        icon: <IconHistory size="1.3rem" />,
+        disabled: isCreating,
+        component: (
+          <Box sx={{ mt: 2 }}>
+            {client?._id ? (
+              <ResourceAuditTable resource="Client" resourceId={client._id} />
+            ) : (
+              <Typography color="textSecondary">Audit trail is only available for existing records.</Typography>
+            )}
+          </Box>
+        )
+      }
+    ],
+    [client, isCreating]
+  );
+
+  const isSubmitDisabled = isLoading || (!isDirty && !isCreating) || isViewing;
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} noValidate>
@@ -172,23 +168,21 @@ const ClientForm = ({
           />
         </Grid>
 
+        {/* Active Switch - Only show in Edit/View mode if permitted */}
         {!isCreating && can(PERMISSIONS.CLIENT_MANAGE_INACTIVE) && (
           <Grid size={12}>
             <Controller
               name="isActive"
               control={control}
               render={({ field }) => (
-                <FormControlLabel
-                  control={<Switch {...field} checked={field.value} />}
-                  label="Active"
-                  disabled={isViewing}
-                />
+                <FormControlLabel control={<Switch {...field} checked={field.value} />} label="Active" disabled={isViewing} />
               )}
             />
           </Grid>
         )}
       </Grid>
 
+      {/* Related Data / Audit Trail */}
       <Box sx={{ mt: 3 }}>
         <ResourceRelatedTabs tabs={tabs} />
       </Box>
@@ -200,25 +194,18 @@ const ClientForm = ({
             <Grid size={12}>
               <Box display="flex" justifyContent="space-between" alignItems="center">
                 {isCreating ? (
-                  <Button
-                    variant="text"
-                    color="error"
-                    onClick={handleClear}
-                  >
+                  <Button variant="text" color="error" onClick={handleClear}>
                     Clear
                   </Button>
-                ) : <Box />}
+                ) : (
+                  <Box />
+                )}
 
                 <Box display="flex" gap={2}>
                   <Button variant="outlined" color="primary" onClick={onCancel} disabled={isLoading}>
                     Cancel
                   </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    disabled={isSubmitDisabled}
-                  >
+                  <Button type="submit" variant="contained" color="primary" disabled={isSubmitDisabled}>
                     {isEditing ? 'Update Client' : 'Create Client'}
                   </Button>
                 </Box>
@@ -232,4 +219,3 @@ const ClientForm = ({
 };
 
 export default ClientForm;
-

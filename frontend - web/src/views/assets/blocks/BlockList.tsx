@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Chip, IconButton, Tooltip, Stack, Divider, Drawer } from '@mui/material';
+import { Box, Typography, Chip, IconButton, Tooltip, Divider, Drawer, Stack } from '@mui/material';
 import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { IconEdit, IconTrash, IconEye, IconPlus, IconPencil, IconExternalLink } from '@tabler/icons-react';
 
@@ -8,12 +8,12 @@ import MainCard from 'ui-component/cards/MainCard';
 import DataGridWrapper from 'ui-component/extended/DataGridWrapper';
 import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
 import { useContextualNavigation } from 'hooks/useContextualNavigation';
-import { useGetOrchards, useDeleteOrchard, useCreateOrchard, useUpdateOrchard } from 'hooks/assets/useOrchards';
+import { useGetBlocks, useDeleteBlock, useCreateBlock, useUpdateBlock } from 'hooks/assets/useBlocks';
 import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';
-import OrchardForm, { OrchardFormMode } from './OrchardForm';
-import { OrchardFormData } from 'types/assets/orchard.schema';
-import { Orchard } from 'types/assets/orchard.types';
+import BlockForm, { BlockFormMode } from './BlockForm';
+import { BlockFormData } from 'types/assets/block.schema';
+import { Block, Planting } from 'types/assets/block.types';
 import { useDiscardWarning } from 'hooks/useDiscardWarning';
 import SplitActionButton from 'ui-component/extended/SplitActionButton';
 
@@ -24,25 +24,24 @@ const getStatusChip = (isActive?: boolean) => {
     <Chip label="Inactive" color="error" size="small" variant="outlined" />
   );
 };
+const blockName = (block: Block | null) => (block ? block.name : 'Block Details');
 
-const orchardName = (orchard: Orchard | null) => (orchard ? orchard.name : 'Orchard Details');
-
-const OrchardList = () => {
+const BlockList = () => {
   const navigate = useNavigate();
-  const { getLinkTo } = useContextualNavigation('/orchards');
+  const { getLinkTo } = useContextualNavigation('/blocks');
   const { can } = usePermission();
 
   // Queries & Mutations
-  const { data: orchards = [], isLoading } = useGetOrchards();
-  const { mutateAsync: deleteOrchard } = useDeleteOrchard();
-  const { mutateAsync: createOrchard, isPending: isCreating } = useCreateOrchard();
-  const { mutateAsync: updateOrchard, isPending: isUpdating } = useUpdateOrchard();
+  const { data: blocks = [], isLoading } = useGetBlocks();
+  const { mutateAsync: deleteBlock } = useDeleteBlock();
+  const { mutateAsync: createBlock, isPending: isCreating } = useCreateBlock();
+  const { mutateAsync: updateBlock, isPending: isUpdating } = useUpdateBlock();
 
   // Drawer State
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [mode, setMode] = useState<OrchardFormMode>('create');
-  const [selectedOrchard, setSelectedOrchard] = useState<Orchard | null>(null);
-  const [createDraft, setCreateDraft] = useState<Partial<OrchardFormData>>({});
+  const [mode, setMode] = useState<BlockFormMode>('create');
+  const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
+  const [createDraft, setCreateDraft] = useState<Partial<BlockFormData>>({});
 
   // Dirty State for drawer
   const [isFormDirty, setIsFormDirty] = useState(false);
@@ -53,9 +52,9 @@ const OrchardList = () => {
     'You have unsaved changes. Are you sure you want to discard them?'
   );
 
-  const handleOpenDrawer = (newMode: OrchardFormMode, orchard: Orchard | null = null) => {
+  const handleOpenDrawer = (newMode: BlockFormMode, block: Block | null = null) => {
     setMode(newMode);
-    setSelectedOrchard(orchard);
+    setSelectedBlock(block);
     setIsFormDirty(false);
     setDrawerOpen(true);
   };
@@ -64,25 +63,20 @@ const OrchardList = () => {
     const performClose = () => {
       setDrawerOpen(false);
       setIsFormDirty(false);
-      setSelectedOrchard(null);
+      setSelectedBlock(null);
     };
 
-    // If Closing via Backdrop/Escape (Persistence Check)
     if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
       if (mode === 'edit' && isFormDirty) {
         trigger(performClose);
         return;
       }
-      // Create mode stashes automatically
-    }
-    // If called manually (fallback)
-    else {
+    } else {
       if (isFormDirty) {
         trigger(performClose);
         return;
       }
     }
-
     performClose();
   };
 
@@ -91,14 +85,14 @@ const OrchardList = () => {
       if (isCreating) setCreateDraft({});
       setDrawerOpen(false);
       setIsFormDirty(false);
-      setSelectedOrchard(null);
+      setSelectedBlock(null);
     };
 
     // Explicit Cancel Button Click
     if (isCreating) {
       // For create, Cancel means discard draft
       if (Object.keys(createDraft).length > 0 || isFormDirty) {
-        trigger(performCancel, 'Discard new orchard draft? This cannot be undone.');
+        trigger(performCancel, 'Discard new block draft? This cannot be undone.');
         return;
       }
     } else if (mode === 'edit') {
@@ -112,7 +106,7 @@ const OrchardList = () => {
   };
 
   const handleFormValuesChange = useCallback(
-    (values: Partial<OrchardFormData>) => {
+    (values: Partial<BlockFormData>) => {
       if (mode === 'create') {
         setCreateDraft((prev) => ({ ...prev, ...values }));
       }
@@ -120,49 +114,48 @@ const OrchardList = () => {
     [mode]
   );
 
-  // Form Submit Handler
-  const handleFormSubmit = async (values: OrchardFormData) => {
+  const handleFormSubmit = async (values: BlockFormData) => {
     try {
       if (mode === 'create') {
         const { isActive, __v, ...createData } = values;
-        await createOrchard(createData);
-      } else if (mode === 'edit' && selectedOrchard) {
-        await updateOrchard({ id: selectedOrchard._id, data: { ...values, __v: selectedOrchard.__v } });
+        await createBlock(createData);
+      } else if (mode === 'edit' && selectedBlock) {
+        await updateBlock({ id: selectedBlock._id, data: { ...values, __v: selectedBlock.__v } });
       }
       setDrawerOpen(false);
       setCreateDraft({});
       setIsFormDirty(false);
     } catch (error) {
-      // Error is handled by hook notifications
+      console.error(error);
     }
   };
 
   // --- Actions ---
-  const handleCreatePage = () => navigate(getLinkTo('/orchards/new'));
+  const handleCreatePage = () => navigate(getLinkTo('/blocks/new'));
   const handleViewPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(getLinkTo(`/orchards/${id}`));
+    navigate(getLinkTo(`/blocks/${id}`));
   };
   const handleEditPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(getLinkTo(`/orchards/${id}/edit`));
+    navigate(getLinkTo(`/blocks/${id}/edit`));
   };
 
   // Delete State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [orchardToDelete, setOrchardToDelete] = useState<Orchard | null>(null);
+  const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
 
-  const handleDeleteClick = (orchard: Orchard, e?: React.MouseEvent) => {
+  const handleDeleteClick = (block: Block, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setOrchardToDelete(orchard);
+    setBlockToDelete(block);
     setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (orchardToDelete) {
-      await deleteOrchard(orchardToDelete._id);
+    if (blockToDelete) {
+      await deleteBlock(blockToDelete._id);
       setDeleteDialogOpen(false);
-      setOrchardToDelete(null);
+      setBlockToDelete(null);
     }
   };
 
@@ -178,19 +171,51 @@ const OrchardList = () => {
         field: 'name',
         headerName: 'Name',
         flex: 1.5,
-        minWidth: 200
+        minWidth: 150
       },
       {
-        field: 'clientId',
-        headerName: 'Client',
+        field: 'orchardId',
+        headerName: 'Orchard',
         flex: 1,
-        renderCell: (params: GridRenderCellParams<any, Orchard>) => {
-          const clientName = typeof params.row.clientId === 'object' ? params.row.clientId.name : params.row.clientId;
+        minWidth: 150,
+        renderCell: (params: GridRenderCellParams<any, Block>) => {
+          const orchardName = typeof params.row.orchardId === 'object' ? params.row.orchardId.name : 'Unknown';
           return (
             <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
-              <Typography variant="body2">{clientName}</Typography>
+              <Typography variant="body2">{orchardName}</Typography>
             </Stack>
           );
+        }
+      },
+      {
+        field: 'varieties',
+        headerName: 'Varieties',
+        flex: 1.5,
+        sortable: false,
+        renderCell: (params: GridRenderCellParams<any, Block>) => {
+          const varieties = params.row.plantings
+            .map((p: Planting) => (typeof p.varietyId === 'object' ? p.varietyId.name : ''))
+            .filter(Boolean)
+            .join(', ');
+          return (
+            <Tooltip title={varieties}>
+              <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
+                <Typography variant="body2" noWrap>
+                  {varieties}
+                </Typography>
+              </Stack>
+            </Tooltip>
+          );
+        }
+      },
+      {
+        field: 'treeCount',
+        headerName: 'Trees',
+        width: 100,
+        align: 'right',
+        headerAlign: 'right',
+        valueGetter: (value: any, row: Block) => {
+          return row.plantings.reduce((sum: number, p: Planting) => sum + (Number(p.treeCount) || 0), 0);
         }
       },
       {
@@ -209,20 +234,20 @@ const OrchardList = () => {
         align: 'right',
         headerAlign: 'right',
         renderCell: (params: GridRenderCellParams) => {
-          const orchard = params.row as Orchard;
+          const block = params.row as Block;
           return (
             <>
-              {can(PERMISSIONS.ORCHARD_VIEW) && (
+              {can(PERMISSIONS.BLOCK_VIEW) && (
                 <Tooltip title="View Details">
-                  <IconButton color="primary" size="small" onClick={(e) => handleViewPage(orchard._id, e)}>
+                  <IconButton color="primary" size="small" onClick={(e) => handleViewPage(block._id, e)}>
                     <IconEye size={18} />
                   </IconButton>
                 </Tooltip>
               )}
-              {can(PERMISSIONS.ORCHARD_EDIT) && (
+              {can(PERMISSIONS.BLOCK_EDIT) && (
                 <>
                   <Tooltip title="Edit">
-                    <IconButton color="secondary" size="small" onClick={(e) => handleEditPage(orchard._id, e)}>
+                    <IconButton color="secondary" size="small" onClick={(e) => handleEditPage(block._id, e)}>
                       <IconEdit size={18} />
                     </IconButton>
                   </Tooltip>
@@ -232,7 +257,7 @@ const OrchardList = () => {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleOpenDrawer('edit', orchard);
+                        handleOpenDrawer('edit', block);
                       }}
                     >
                       <IconPencil size={18} />
@@ -240,9 +265,9 @@ const OrchardList = () => {
                   </Tooltip>
                 </>
               )}
-              {can(PERMISSIONS.ORCHARD_DELETE) && (
+              {can(PERMISSIONS.BLOCK_DELETE) && (
                 <Tooltip title="Delete">
-                  <IconButton color="error" size="small" onClick={(e) => handleDeleteClick(orchard, e)}>
+                  <IconButton color="error" size="small" onClick={(e) => handleDeleteClick(block, e)}>
                     <IconTrash size={18} />
                   </IconButton>
                 </Tooltip>
@@ -252,16 +277,16 @@ const OrchardList = () => {
         }
       }
     ],
-    [can, handleViewPage, handleEditPage, handleDeleteClick]
+    [can, handleViewPage, handleEditPage, handleDeleteClick, handleOpenDrawer]
   );
 
   return (
     <MainCard
-      title="Orchards"
+      title="Blocks"
       secondary={
-        can(PERMISSIONS.ORCHARD_CREATE) && (
+        can(PERMISSIONS.BLOCK_CREATE) && (
           <SplitActionButton
-            primaryLabel="Create Orchard"
+            primaryLabel="Create Block"
             primaryStartIcon={<IconPlus size={18} />}
             primaryAction={() => handleOpenDrawer('create')}
             options={[
@@ -276,13 +301,13 @@ const OrchardList = () => {
       }
     >
       <DataGridWrapper
-        rows={orchards}
+        rows={blocks}
         columns={columns}
         loading={isLoading}
-        onRowClick={(params) => handleOpenDrawer('view', params.row as Orchard)}
+        onRowClick={(params) => can(PERMISSIONS.BLOCK_VIEW) && handleViewPage(params.row._id)}
         getRowId={(row) => row._id}
       />
-      {/* Quick View / Create / Edit Drawer */}
+
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -292,20 +317,20 @@ const OrchardList = () => {
         <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h4">
-              {mode === 'create' ? 'New Orchard' : mode === 'edit' ? 'Edit Orchard' : orchardName(selectedOrchard)}
+              {mode === 'create' ? 'New Block' : mode === 'edit' ? 'Edit Block' : blockName(selectedBlock)}
             </Typography>
-            {mode === 'view' && selectedOrchard && (
+            {mode === 'view' && selectedBlock && (
               <Stack direction="row" spacing={1}>
-                {can(PERMISSIONS.ORCHARD_EDIT) && (
+                {can(PERMISSIONS.BLOCK_EDIT) && (
                   <Tooltip title="Edit">
                     <IconButton size="small" onClick={() => setMode('edit')} color="primary">
                       <IconEdit size={18} />
                     </IconButton>
                   </Tooltip>
                 )}
-                {can(PERMISSIONS.ORCHARD_DELETE) && (
+                {can(PERMISSIONS.BLOCK_DELETE) && (
                   <Tooltip title="Delete">
-                    <IconButton size="small" onClick={(e) => handleDeleteClick(selectedOrchard, e)} color="error">
+                    <IconButton size="small" onClick={(e) => handleDeleteClick(selectedBlock, e)} color="error">
                       <IconTrash size={18} />
                     </IconButton>
                   </Tooltip>
@@ -316,9 +341,9 @@ const OrchardList = () => {
 
           <Divider sx={{ mb: 3 }} />
 
-          <OrchardForm
+          <BlockForm
             mode={mode}
-            orchard={selectedOrchard}
+            block={selectedBlock}
             initialValues={mode === 'create' ? createDraft : undefined}
             onSubmit={handleFormSubmit}
             onCancel={handleCancelForm}
@@ -335,8 +360,8 @@ const OrchardList = () => {
       {/* Delete Confirmation */}
       <ConfirmDialog
         open={deleteDialogOpen}
-        title="Delete Orchard"
-        content={`Are you sure you want to delete ${orchardName(selectedOrchard)}? This action cannot be undone.`}
+        title="Delete Block"
+        content={`Are you sure you want to delete ${blockName(selectedBlock)}? This action cannot be undone.`}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteDialogOpen(false)}
         confirmLabel="Delete"
@@ -347,4 +372,4 @@ const OrchardList = () => {
   );
 };
 
-export default OrchardList;
+export default BlockList;

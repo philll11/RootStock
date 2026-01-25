@@ -1,11 +1,12 @@
 // assets
-import { IconBuildingCommunity, IconTrees } from '@tabler/icons-react';
+import { IconBuildingCommunity, IconTrees, IconTree } from '@tabler/icons-react';
 import { NavItem } from './types';
 
 // constant
 const icons = {
     IconBuildingCommunity,
-    IconTrees
+    IconTrees,
+    IconTree
 };
 
 // ==============================|| ENTITIES MENU ITEMS ||============================== //
@@ -31,6 +32,14 @@ const entities: NavItem = {
             icon: icons.IconTrees,
             breadcrumbs: true
         },
+        {
+            id: 'blocks',
+            title: 'Blocks',
+            type: 'item',
+            url: '/blocks',
+            icon: icons.IconTree,
+            breadcrumbs: true
+        }
 
     ]
 };

@@ -1,14 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  getClients,
-  getClient,
-  createClient,
-  updateClient,
-  deleteClient,
-} from 'api/iam/clients';
+import { getClients, getClient, createClient, updateClient, deleteClient } from 'api/iam/clients';
 import { usePermission } from 'contexts/AuthContext';
 import { PERMISSIONS } from 'constants/permissions';
-import { CreateClientDto, UpdateClientDto, Client } from 'types/iam/client.types';
+import { Client } from 'types/iam/client.types';
 
 export const CLIENTS_KEYS = {
   all: ['clients'] as const,
@@ -19,8 +13,8 @@ export const CLIENTS_KEYS = {
   mutations: {
     create: ['clients', 'create'] as const,
     update: ['clients', 'update'] as const,
-    delete: ['clients', 'delete'] as const,
-  },
+    delete: ['clients', 'delete'] as const
+  }
 };
 
 export function useGetClients(options?: { enabled?: boolean }) {
@@ -30,21 +24,21 @@ export function useGetClients(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: CLIENTS_KEYS.lists(),
     queryFn: getClients,
-    enabled: isEnabled,
+    enabled: isEnabled
   });
 }
 
-export function useGetClient(id: string | undefined) {
+export function useGetClient(id: string) {
   const queryClient = useQueryClient();
   return useQuery({
-    queryKey: CLIENTS_KEYS.detail(id!),
-    queryFn: () => getClient(id!),
+    queryKey: CLIENTS_KEYS.detail(id),
+    queryFn: () => getClient(id),
     enabled: !!id,
     initialData: () => {
       if (!id) return undefined;
       const allClients = queryClient.getQueryData<Client[]>(CLIENTS_KEYS.lists());
       return allClients?.find((c) => c._id === id);
-    },
+    }
   });
 }
 
@@ -55,7 +49,7 @@ export function useCreateClient() {
     mutationFn: createClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
-    },
+    }
   });
 }
 
@@ -67,7 +61,7 @@ export function useUpdateClient() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
       queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.detail(data._id) });
-    },
+    }
   });
 }
 
@@ -78,6 +72,6 @@ export function useDeleteClient() {
     mutationFn: deleteClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CLIENTS_KEYS.lists() });
-    },
+    }
   });
 }

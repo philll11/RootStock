@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Drawer,
@@ -163,6 +163,7 @@ const RoleList = () => {
             }
             // Success closes drawer
             setDrawerOpen(false);
+            setCreateDraft({});
             setIsFormDirty(false);
         } catch (error) {
             console.error('Operation failed', error);
@@ -202,13 +203,13 @@ const RoleList = () => {
     const columns: GridColDef[] = useMemo(() => [
         {
             field: 'recordId',
-            headerName: 'Role Code',
+            headerName: 'Record ID',
             flex: 0.5,
             minWidth: 100
         },
         {
             field: 'name',
-            headerName: 'Role Name',
+            headerName: 'Name',
             flex: 1.5,
             minWidth: 200
         },
