@@ -53,7 +53,7 @@ const AssessmentViewPage = () => {
             title={assessment.name}
             secondary={
                 <Stack direction="row" spacing={1} alignItems="center">
-                    {can(PERMISSIONS.ORCHARD_EDIT) && (
+                    {can(PERMISSIONS.ASSESSMENT_EDIT) && (
                         <Tooltip title="Edit Assessment">
                             <IconButton
                                 onClick={handleEdit}
@@ -64,7 +64,7 @@ const AssessmentViewPage = () => {
                             </IconButton>
                         </Tooltip>
                     )}
-                    {can(PERMISSIONS.ORCHARD_DELETE) && (
+                    {can(PERMISSIONS.ASSESSMENT_DELETE) && (
                         <Tooltip title="Delete Assessment">
                             <IconButton
                                 onClick={() => setDeleteDialogOpen(true)}

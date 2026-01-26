@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { debounce } from 'lodash-es';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -96,15 +96,22 @@ const UserForm = ({
         }
     });
 
+    // Keep a stable ref to the callback to avoid breaking debounce if prop changes referentially
+    const onValuesChangeRef = useRef(onValuesChange);
+    useEffect(() => {
+        onValuesChangeRef.current = onValuesChange;
+    }, [onValuesChange]);
+
+
     // Create a debounced version of the change handler
     const debouncedOnValuesChange = useMemo(
         () =>
             debounce((val: Partial<UserFormData>) => {
-                if (onValuesChange) {
-                    onValuesChange(val);
+                if (onValuesChangeRef.current) {
+                    onValuesChangeRef.current(val);
                 }
             }, 500),
-        [onValuesChange]
+        []
     );
 
     // Watch for changes and notify parent
@@ -165,15 +172,7 @@ const UserForm = ({
     }, [user, mode, isEditing, isViewing, isCreating, reset]);
 
     const handleFormSubmit = (values: UserFormData) => {
-        const submissionData: any = { ...values };
-        if (isEditing && user) {
-            submissionData.__v = user.__v;
-        }
-        if (isCreating) {
-            delete submissionData.isActive;
-            delete submissionData.__v;
-        }
-        onSubmit(submissionData as UserFormData);
+        onSubmit(values);
     };
 
     const handleClear = () => {
@@ -443,21 +442,21 @@ const UserForm = ({
                     )}
 
                 </Grid>
-                    {!isCreating && can(PERMISSIONS.USER_MANAGE_INACTIVE) && (
-                        <Grid size={12}>
-                            <Controller
-                                name="isActive"
-                                control={control}
-                                render={({ field }) => (
-                                    <FormControlLabel
-                                        control={<Switch {...field} checked={field.value} />}
-                                        label="Active"
-                                        disabled={isViewing}
-                                    />
-                                )}
-                            />
-                        </Grid>
-                    )}
+                {!isCreating && can(PERMISSIONS.USER_MANAGE_INACTIVE) && (
+                    <Grid size={12}>
+                        <Controller
+                            name="isActive"
+                            control={control}
+                            render={({ field }) => (
+                                <FormControlLabel
+                                    control={<Switch {...field} checked={field.value} />}
+                                    label="Active"
+                                    disabled={isViewing}
+                                />
+                            )}
+                        />
+                    </Grid>
+                )}
             </Grid>
 
             <Box sx={{ mt: 3 }}>

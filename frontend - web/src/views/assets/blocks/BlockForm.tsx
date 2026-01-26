@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { debounce } from 'lodash-es';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +17,7 @@ import SubCard from 'ui-component/cards/SubCard';
 
 import { useGetOrchards } from 'hooks/assets/useOrchards';
 import { useGetVarieties } from 'hooks/master-data/useVarieties';
+import AssessmentList from 'views/operations/AssessmentList';
 
 export type BlockFormMode = 'create' | 'edit' | 'view';
 
@@ -77,14 +78,21 @@ const BlockForm = ({
     name: 'plantings'
   });
 
+  // Keep a stable ref to the callback to avoid breaking debounce if prop changes referentially
+  const onValuesChangeRef = useRef(onValuesChange);
+  useEffect(() => {
+    onValuesChangeRef.current = onValuesChange;
+  }, [onValuesChange]);
+
+
   const debouncedOnValuesChange = useMemo(
     () =>
       debounce((val: Partial<BlockFormData>) => {
-        if (onValuesChange) {
-          onValuesChange(val);
+        if (onValuesChangeRef.current) {
+          onValuesChangeRef.current(val);
         }
       }, 500),
-    [onValuesChange]
+    []
   );
 
   const watchedValues = watch();
@@ -141,16 +149,7 @@ const BlockForm = ({
   }, [block, mode, isEditing, isViewing, isCreating, orchardId, reset]);
 
   const handleFormSubmit = (values: BlockFormData) => {
-    const submissionData: any = { ...values };
-    if (isEditing && block) {
-      delete submissionData.orchardId; // Orchard cannot be changed
-      submissionData.__v = block.__v;
-    }
-    if (isCreating) {
-      delete submissionData.isActive;
-      delete submissionData.__v;
-    }
-    onSubmit(submissionData as BlockFormData);
+    onSubmit(values);
   };
 
   const handleClear = () => {
@@ -170,7 +169,7 @@ const BlockForm = ({
         value: 'assessments',
         icon: <IconClipboardCheck size="1.3rem" />,
         disabled: isCreating,
-        component: <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>Assessments will be listed here.</Typography>
+        component: block?._id ? <AssessmentList blockId={block._id} blockName={block.name} /> : null
       },
       {
         label: 'Audit Trail',

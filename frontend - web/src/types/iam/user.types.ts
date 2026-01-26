@@ -15,8 +15,8 @@ export interface User extends BaseEntity {
   name: string;
   email: string;
   userType: UserType;
-  roleId?: string | { _id: string; name: string; recordId: string; permissions: string[]; visibilityScope: string };
-  clientIds?: string[] | { _id: string; name: string; recordId: string }[];
+  roleId?: { _id: string; name: string; recordId: string; permissions: string[]; visibilityScope: string };
+  clientIds?: { _id: string; name: string; recordId: string }[];
   preferences?: UserPreferences;
 }
 
@@ -26,8 +26,8 @@ export interface CreateUserDto {
   email: string;
   password?: string;
   userType: UserType;
-  roleId?: string | { _id: string; name: string; recordId: string; permissions: string[]; visibilityScope: string };
-  clientIds?: string[] | { _id: string; name: string; recordId: string }[];
+  roleId?: string ;
+  clientIds?: string[];
   preferences?: UserPreferences;
 }
 
@@ -38,8 +38,8 @@ export interface UpdateUserDto {
   password?: string;
   userType?: UserType;
   __v?: number;
-  roleId?: string | { _id: string; name: string; recordId: string; permissions: string[]; visibilityScope: string };
-  clientIds?: string[] | { _id: string; name: string; recordId: string }[];
+  roleId?: string;
+  clientIds?: string[];
   isActive?: boolean;
   preferences?: UserPreferences;
 }

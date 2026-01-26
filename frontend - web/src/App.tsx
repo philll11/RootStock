@@ -1,5 +1,7 @@
 import { RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // routing
 import router from 'routes';
@@ -26,20 +28,22 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeCustomization>
-        <MenuProvider>
-          <AuthProvider>
-            <SnackbarProvider>
-              <NavigationScroll>
-                <>
-                  <RouterProvider router={router} />
-                </>
-              </NavigationScroll>
-            </SnackbarProvider>
-          </AuthProvider>
-        </MenuProvider>
-      </ThemeCustomization>
-    </QueryClientProvider>
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeCustomization>
+          <MenuProvider>
+            <AuthProvider>
+              <SnackbarProvider>
+                <NavigationScroll>
+                  <>
+                    <RouterProvider router={router} />
+                  </>
+                </NavigationScroll>
+              </SnackbarProvider>
+            </AuthProvider>
+          </MenuProvider>
+        </ThemeCustomization>
+      </QueryClientProvider>
+    </LocalizationProvider>
   );
 }

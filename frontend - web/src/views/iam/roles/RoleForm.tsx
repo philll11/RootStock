@@ -1,4 +1,4 @@
-import { useEffect, useMemo, memo, useState, SyntheticEvent } from 'react';
+import { useEffect, useMemo, memo, useState, SyntheticEvent, useRef } from 'react';
 import { debounce } from 'lodash-es';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -189,7 +189,7 @@ const RoleForm = ({
     const isViewing = mode === 'view';
 
     const { can } = usePermission();
-    
+
     const theme = useTheme();
 
     // Search state
@@ -214,15 +214,22 @@ const RoleForm = ({
         },
     });
 
+    // Keep a stable ref to the callback to avoid breaking debounce if prop changes referentially
+    const onValuesChangeRef = useRef(onValuesChange);
+    useEffect(() => {
+        onValuesChangeRef.current = onValuesChange;
+    }, [onValuesChange]);
+
+
     // Create a debounced version of the change handler
     const debouncedOnValuesChange = useMemo(
         () =>
             debounce((val: Partial<RoleFormData>) => {
-                if (onValuesChange) {
-                    onValuesChange(val);
+                if (onValuesChangeRef.current) {
+                    onValuesChangeRef.current(val);
                 }
             }, 500),
-        [onValuesChange]
+        []
     );
 
     // Watch for changes and notify parent
@@ -269,15 +276,7 @@ const RoleForm = ({
     }, [role, mode, isEditing, isViewing, isCreating, reset]);
 
     const handleFormSubmit = (values: RoleFormData) => {
-        const submissionData: any = { ...values };
-        if (isEditing && role) {
-            submissionData.__v = role.__v;
-        }
-        if (isCreating) {
-            delete submissionData.isActive;
-            delete submissionData.__v;
-        }
-        onSubmit(submissionData as RoleFormData);
+        onSubmit(values);
     };
 
     const handleClear = () => {
@@ -431,131 +430,131 @@ const RoleForm = ({
 
     return (
         <form onSubmit={handleSubmit(handleFormSubmit)}>
-                    <Grid container spacing={2}>
-                        <Grid size={12}>
-                            <Controller
-                                name="name"
-                                control={control}
-                                render={({ field }) => (
-                                    <TextField
-                                        {...field}
-                                        label="Role Name"
-                                        fullWidth
-                                        error={!!errors.name}
-                                        helperText={errors.name?.message}
-                                        disabled={isViewing}
-                                    />
-                                )}
+            <Grid container spacing={2}>
+                <Grid size={12}>
+                    <Controller
+                        name="name"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                label="Role Name"
+                                fullWidth
+                                error={!!errors.name}
+                                helperText={errors.name?.message}
+                                disabled={isViewing}
                             />
-                        </Grid>
-                        <Grid size={12}>
-                            <Controller
-                                name="visibilityScope"
-                                control={control}
-                                render={({ field }) => (
-                                    <TextField
-                                        {...field}
-                                        select
-                                        label="Visibility Scope"
-                                        fullWidth
-                                        error={!!errors.visibilityScope}
-                                        helperText={errors.visibilityScope?.message}
-                                        disabled={isViewing}
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <Tooltip
-                                                        title={
-                                                            <Box sx={{ p: 1 }}>
-                                                                <Typography
-                                                                    variant="subtitle2"
-                                                                    sx={{
-                                                                        mb: 1,
-                                                                        fontWeight: 600,
-                                                                        color: theme.palette.mode === 'dark' ? 'common.black' : 'common.white'
-                                                                    }}
-                                                                >
-                                                                    Scope Definitions
-                                                                </Typography>
-                                                                <Stack spacing={0.5}>
-                                                                    <Typography
-                                                                        variant="caption"
-                                                                        display="block"
-                                                                        sx={{ color: theme.palette.mode === 'dark' ? 'common.black' : 'common.white' }}
-                                                                    >
-                                                                        • <strong>Global:</strong> Visible across all subsidiaries.
-                                                                    </Typography>
-                                                                    <Typography
-                                                                        variant="caption"
-                                                                        display="block"
-                                                                        sx={{ color: theme.palette.mode === 'dark' ? 'common.black' : 'common.white' }}
-                                                                    >
-                                                                        • <strong>Subsidiary:</strong> Restricted to current subsidiary.
-                                                                    </Typography>
-                                                                    <Typography
-                                                                        variant="caption"
-                                                                        display="block"
-                                                                        sx={{ color: theme.palette.mode === 'dark' ? 'common.black' : 'common.white' }}
-                                                                    >
-                                                                        • <strong>Client:</strong> Limited to specific client context.
-                                                                    </Typography>
-                                                                </Stack>
-                                                            </Box>
-                                                        }
-                                                        arrow
-                                                        placement="right"
-                                                    >
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
-                                                            <IconInfoCircle size="1.2rem" />
-                                                        </Box>
-                                                    </Tooltip>
-                                                </InputAdornment>
-                                            )
-                                        }}
-                                    >
-                                        {Object.values(VisibilityScope).map((scope) => (
-                                            <MenuItem key={scope} value={scope}>
-                                                {scope}
-                                            </MenuItem>
-                                        ))}
-                                    </TextField>
-                                )}
-                            />
-                        </Grid>
-                        <Grid size={12}>
-                            <Controller
-                                name="description"
-                                control={control}
-                                render={({ field }) => (
-                                    <TextField
-                                        {...field}
-                                        label="Description"
-                                        fullWidth
-                                        multiline
-                                        rows={2}
-                                        error={!!errors.description}
-                                        helperText={errors.description?.message}
-                                        disabled={isViewing}
-                                    />
-                                )}
-                            />
-                        </Grid>
-                        {!isCreating && can(PERMISSIONS.ROLE_MANAGE_INACTIVE) && (
-                            <Grid size={12}>
-                                <Controller
-                                    name="isActive"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <FormControlLabel
-                                            control={<Switch {...field} checked={field.value} />}
-                                            label="Active"
-                                            disabled={isViewing}
-                                        />
-                                    )}
-                                />
-                            </Grid>
                         )}
+                    />
+                </Grid>
+                <Grid size={12}>
+                    <Controller
+                        name="visibilityScope"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                select
+                                label="Visibility Scope"
+                                fullWidth
+                                error={!!errors.visibilityScope}
+                                helperText={errors.visibilityScope?.message}
+                                disabled={isViewing}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <Tooltip
+                                                title={
+                                                    <Box sx={{ p: 1 }}>
+                                                        <Typography
+                                                            variant="subtitle2"
+                                                            sx={{
+                                                                mb: 1,
+                                                                fontWeight: 600,
+                                                                color: theme.palette.mode === 'dark' ? 'common.black' : 'common.white'
+                                                            }}
+                                                        >
+                                                            Scope Definitions
+                                                        </Typography>
+                                                        <Stack spacing={0.5}>
+                                                            <Typography
+                                                                variant="caption"
+                                                                display="block"
+                                                                sx={{ color: theme.palette.mode === 'dark' ? 'common.black' : 'common.white' }}
+                                                            >
+                                                                • <strong>Global:</strong> Visible across all subsidiaries.
+                                                            </Typography>
+                                                            <Typography
+                                                                variant="caption"
+                                                                display="block"
+                                                                sx={{ color: theme.palette.mode === 'dark' ? 'common.black' : 'common.white' }}
+                                                            >
+                                                                • <strong>Subsidiary:</strong> Restricted to current subsidiary.
+                                                            </Typography>
+                                                            <Typography
+                                                                variant="caption"
+                                                                display="block"
+                                                                sx={{ color: theme.palette.mode === 'dark' ? 'common.black' : 'common.white' }}
+                                                            >
+                                                                • <strong>Client:</strong> Limited to specific client context.
+                                                            </Typography>
+                                                        </Stack>
+                                                    </Box>
+                                                }
+                                                arrow
+                                                placement="right"
+                                            >
+                                                <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
+                                                    <IconInfoCircle size="1.2rem" />
+                                                </Box>
+                                            </Tooltip>
+                                        </InputAdornment>
+                                    )
+                                }}
+                            >
+                                {Object.values(VisibilityScope).map((scope) => (
+                                    <MenuItem key={scope} value={scope}>
+                                        {scope}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        )}
+                    />
+                </Grid>
+                <Grid size={12}>
+                    <Controller
+                        name="description"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                label="Description"
+                                fullWidth
+                                multiline
+                                rows={2}
+                                error={!!errors.description}
+                                helperText={errors.description?.message}
+                                disabled={isViewing}
+                            />
+                        )}
+                    />
+                </Grid>
+                {!isCreating && can(PERMISSIONS.ROLE_MANAGE_INACTIVE) && (
+                    <Grid size={12}>
+                        <Controller
+                            name="isActive"
+                            control={control}
+                            render={({ field }) => (
+                                <FormControlLabel
+                                    control={<Switch {...field} checked={field.value} />}
+                                    label="Active"
+                                    disabled={isViewing}
+                                />
+                            )}
+                        />
                     </Grid>
+                )}
+            </Grid>
 
             <Box sx={{ mt: 3 }}>
                 <ResourceRelatedTabs tabs={tabs} />

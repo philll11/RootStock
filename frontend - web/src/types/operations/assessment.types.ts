@@ -34,9 +34,9 @@ export interface AssessmentAuditLog {
 export interface Assessment extends BaseEntity {
   name: string;
   type: AssessmentType;
-  blockId: string | { _id: string; name: string; recordId: string }; // Populated or ID
-  clientId: string | { _id: string; name: string; recordId: string }; // Populated or ID
-  varietyId: string | { _id: string; name: string; recordId: string }; // Populated or ID
+  blockId: { _id: string; name: string; recordId: string };
+  clientId: { _id: string; name: string; recordId: string };
+  varietyId: { _id: string; name: string; recordId: string };
   date: string; // ISO Date string
   status: AssessmentStatus;
   samples: AssessmentSample[];
@@ -53,6 +53,9 @@ export interface CreateAssessmentDto {
 }
 
 export interface UpdateAssessmentDto {
+  name?: string;
+  type?: AssessmentType;
+  blockId?: string;
   status?: AssessmentStatus;
   samples?: AssessmentSample[];
   changeReason?: string;

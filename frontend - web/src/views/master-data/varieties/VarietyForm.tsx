@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { debounce } from 'lodash-es';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,15 +50,22 @@ const VarietyForm = ({ mode, variety, initialValues, onSubmit, onCancel, isLoadi
         }
     });
 
+    // Keep a stable ref to the callback to avoid breaking debounce if prop changes referentially
+    const onValuesChangeRef = useRef(onValuesChange);
+    useEffect(() => {
+        onValuesChangeRef.current = onValuesChange;
+    }, [onValuesChange]);
+
+
     // Create a debounced version of the change handler
     const debouncedOnValuesChange = useMemo(
         () =>
             debounce((val: Partial<VarietyFormData>) => {
-                if (onValuesChange) {
-                    onValuesChange(val);
+                if (onValuesChangeRef.current) {
+                    onValuesChangeRef.current(val);
                 }
             }, 500),
-        [onValuesChange]
+        []
     );
 
     // Watch for changes and notify parent
@@ -99,15 +106,7 @@ const VarietyForm = ({ mode, variety, initialValues, onSubmit, onCancel, isLoadi
     }, [variety, mode, isEditing, isViewing, isCreating, reset]);
 
     const handleFormSubmit = (values: VarietyFormData) => {
-        const submissionData: any = { ...values };
-        if (isEditing && variety) {
-            submissionData.__v = variety.__v;
-        }
-        if (isCreating) {
-            delete submissionData.isActive;
-            delete submissionData.__v;
-        }
-        onSubmit(submissionData as VarietyFormData);
+        onSubmit(values);
     };
 
     const handleClear = () => {

@@ -138,7 +138,14 @@ const BlockList = ({ orchardId, orchardName }: BlockListProps) => {
         const { isActive, __v, ...createData } = values;
         await createBlock(createData);
       } else if (mode === 'edit' && selectedBlock) {
-        await updateBlock({ id: selectedBlock._id, data: { ...values, __v: selectedBlock.__v } });
+        const { orchardId, ...updateData } = values;
+        await updateBlock({
+          id: selectedBlock._id,
+          data: {
+            ...updateData,
+            __v: selectedBlock.__v
+          }
+        });
       }
       setDrawerOpen(false);
       setCreateDraft({});
@@ -200,124 +207,123 @@ const BlockList = ({ orchardId, orchardName }: BlockListProps) => {
     }
   };
 
-  const columns: GridColDef[] = useMemo(
-    () => [
-      {
-        field: 'recordId',
-        headerName: 'Record ID',
-        flex: 0.5,
-        minWidth: 100
-      },
-      {
-        field: 'name',
-        headerName: 'Name',
-        flex: 1.5,
-        minWidth: 150
-      },
-      {
-        field: 'orchardId',
-        headerName: 'Orchard',
-        flex: 1,
-        minWidth: 150,
-        renderCell: (params: GridRenderCellParams<any, Block>) => {
-          const orchardName = typeof params.row.orchardId === 'object' ? params.row.orchardId.name : 'Unknown';
-          return (
-            <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
-              <Typography variant="body2">{orchardName}</Typography>
-            </Stack>
-          );
-        }
-      },
-      {
-        field: 'varieties',
-        headerName: 'Varieties',
-        flex: 1.5,
-        sortable: false,
-        renderCell: (params: GridRenderCellParams<any, Block>) => {
-          const varieties = params.row.plantings
-            .map((p: Planting) => (typeof p.varietyId === 'object' ? p.varietyId.name : ''))
-            .filter(Boolean)
-            .join(', ');
-          return (
-            <Tooltip title={varieties}>
-              <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
-                <Typography variant="body2" noWrap>
-                  {varieties}
-                </Typography>
-              </Stack>
-            </Tooltip>
-          );
-        }
-      },
-      {
-        field: 'treeCount',
-        headerName: 'Trees',
-        width: 100,
-        align: 'right',
-        headerAlign: 'right',
-        valueGetter: (value: any, row: Block) => {
-          return row.plantings.reduce((sum: number, p: Planting) => sum + (Number(p.treeCount) || 0), 0);
-        }
-      },
-      {
-        field: 'isActive',
-        headerName: 'Status',
-        width: 120,
-        renderCell: (params: GridRenderCellParams) => getStatusChip(params.row.isActive)
-      },
-      {
-        field: 'actions',
-        headerName: 'Actions',
-        flex: 0.8,
-        minWidth: 180,
-        sortable: false,
-        filterable: false,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (params: GridRenderCellParams) => {
-          const block = params.row as Block;
-          return (
-            <>
-              {can(PERMISSIONS.BLOCK_VIEW) && (
-                <Tooltip title="View Details">
-                  <IconButton color="primary" size="small" onClick={(e) => handleViewPage(block._id, e)}>
-                    <IconEye size={18} />
-                  </IconButton>
-                </Tooltip>
-              )}
-              {can(PERMISSIONS.BLOCK_EDIT) && (
-                <>
-                  <Tooltip title="Edit">
-                    <IconButton color="secondary" size="small" onClick={(e) => handleEditPage(block._id, e)}>
-                      <IconEdit size={18} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Quick Edit">
-                    <IconButton
-                      color="warning"
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenDrawer('edit', block);
-                      }}
-                    >
-                      <IconPencil size={18} />
-                    </IconButton>
-                  </Tooltip>
-                </>
-              )}
-              {can(PERMISSIONS.BLOCK_DELETE) && (
-                <Tooltip title="Delete">
-                  <IconButton color="error" size="small" onClick={(e) => handleDeleteClick(block, e)}>
-                    <IconTrash size={18} />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </>
-          );
-        }
+  const columns: GridColDef[] = useMemo(() => [
+    {
+      field: 'recordId',
+      headerName: 'Record ID',
+      flex: 0.5,
+      minWidth: 100
+    },
+    {
+      field: 'name',
+      headerName: 'Name',
+      flex: 1.5,
+      minWidth: 150
+    },
+    {
+      field: 'orchardId',
+      headerName: 'Orchard',
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params: GridRenderCellParams<any, Block>) => {
+        const orchardName = typeof params.row.orchardId === 'object' ? params.row.orchardId.name : 'Unknown';
+        return (
+          <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
+            <Typography variant="body2">{orchardName}</Typography>
+          </Stack>
+        );
       }
-    ],
+    },
+    {
+      field: 'varieties',
+      headerName: 'Varieties',
+      flex: 1.5,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams<any, Block>) => {
+        const varieties = params.row.plantings
+          .map((p: Planting) => (typeof p.varietyId === 'object' ? p.varietyId.name : ''))
+          .filter(Boolean)
+          .join(', ');
+        return (
+          <Tooltip title={varieties}>
+            <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
+              <Typography variant="body2" noWrap>
+                {varieties}
+              </Typography>
+            </Stack>
+          </Tooltip>
+        );
+      }
+    },
+    {
+      field: 'treeCount',
+      headerName: 'Trees',
+      width: 100,
+      align: 'right',
+      headerAlign: 'right',
+      valueGetter: (value: any, row: Block) => {
+        return row.plantings.reduce((sum: number, p: Planting) => sum + (Number(p.treeCount) || 0), 0);
+      }
+    },
+    {
+      field: 'isActive',
+      headerName: 'Status',
+      width: 120,
+      renderCell: (params: GridRenderCellParams) => getStatusChip(params.row.isActive)
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      flex: 0.8,
+      minWidth: 180,
+      sortable: false,
+      filterable: false,
+      align: 'right',
+      headerAlign: 'right',
+      renderCell: (params: GridRenderCellParams) => {
+        const block = params.row as Block;
+        return (
+          <>
+            {can(PERMISSIONS.BLOCK_VIEW) && (
+              <Tooltip title="View Details">
+                <IconButton color="primary" size="small" onClick={(e) => handleViewPage(block._id, e)}>
+                  <IconEye size={18} />
+                </IconButton>
+              </Tooltip>
+            )}
+            {can(PERMISSIONS.BLOCK_EDIT) && (
+              <>
+                <Tooltip title="Edit">
+                  <IconButton color="secondary" size="small" onClick={(e) => handleEditPage(block._id, e)}>
+                    <IconEdit size={18} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Quick Edit">
+                  <IconButton
+                    color="warning"
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDrawer('edit', block);
+                    }}
+                  >
+                    <IconPencil size={18} />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+            {can(PERMISSIONS.BLOCK_DELETE) && (
+              <Tooltip title="Delete">
+                <IconButton color="error" size="small" onClick={(e) => handleDeleteClick(block, e)}>
+                  <IconTrash size={18} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </>
+        );
+      }
+    }
+  ],
     [can, handleViewPage, handleEditPage, handleDeleteClick, handleOpenDrawer]
   );
 

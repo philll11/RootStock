@@ -2,8 +2,8 @@ import { BaseEntity } from 'types/models';
 
 export interface Orchard extends BaseEntity {
     name: string;
-    clientId: string | { _id: string; name: string; recordId: string };
-    userIds: string[] | { _id: string; name: string; recordId: string; firstName: string; lastName: string }[];
+    clientId: { _id: string; name: string; recordId: string };
+    userIds: { _id: string; name: string; recordId: string; firstName: string; lastName: string }[];
 }
 
 export interface CreateOrchardDto {

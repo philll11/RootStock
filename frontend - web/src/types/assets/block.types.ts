@@ -2,14 +2,14 @@ import { BaseEntity } from 'types/models';
 
 export interface Planting {
   _id?: string; // Stable ID for audits
-  varietyId: string | { _id: string; name: string; recordId: string };
+  varietyId: { _id: string; name: string; recordId: string };
   treeCount: number;
 }
 
 export interface Block extends BaseEntity {
   name: string;
-  orchardId: string | { _id: string; name: string; recordId: string };
-  clientId: string | { _id: string; name: string; recordId: string };
+  orchardId: { _id: string; name: string; recordId: string };
+  clientId: { _id: string; name: string; recordId: string };
   plantings: Planting[];
 }
 

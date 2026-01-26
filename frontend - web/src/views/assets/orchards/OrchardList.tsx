@@ -147,10 +147,11 @@ const OrchardList = ({ clientId, clientName }: OrchardListProps) => {
         const { isActive, __v, ...createData } = values;
         await createOrchard(createData);
       } else if (mode === 'edit' && selectedOrchard) {
+        const { clientId, ...updateData } = values;
         await updateOrchard({
           id: selectedOrchard._id,
           data: {
-            ...values,
+            ...updateData,
             __v: selectedOrchard.__v
           }
         });

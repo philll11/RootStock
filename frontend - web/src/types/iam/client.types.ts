@@ -2,7 +2,7 @@ import { BaseEntity } from 'types/models';
   
 export interface Client extends BaseEntity {
     name: string;
-    subsidiaryId?: string | { _id: string; name: string; recordId: string };
+    subsidiaryId?: { _id: string; name: string; recordId: string };
     isOptimistic?: boolean;
 }
 

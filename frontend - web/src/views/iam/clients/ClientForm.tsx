@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { debounce } from 'lodash-es';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,15 +52,21 @@ const ClientForm = ({ mode, client, initialValues, onSubmit, isLoading, onCancel
     }
   });
 
+  // Keep a stable ref to the callback to avoid breaking debounce if prop changes referentially
+  const onValuesChangeRef = useRef(onValuesChange);
+  useEffect(() => {
+    onValuesChangeRef.current = onValuesChange;
+  }, [onValuesChange]);
+
   // Create a debounced version of the change handler
   const debouncedOnValuesChange = useMemo(
     () =>
       debounce((val: Partial<ClientFormData>) => {
-        if (onValuesChange) {
-          onValuesChange(val);
+        if (onValuesChangeRef.current) {
+          onValuesChangeRef.current(val);
         }
       }, 500),
-    [onValuesChange]
+    []
   );
 
   // Watch for changes and notify parent
@@ -104,15 +110,7 @@ const ClientForm = ({ mode, client, initialValues, onSubmit, isLoading, onCancel
   }, [client, mode, isEditing, isViewing, isCreating, reset]);
 
   const handleFormSubmit = (values: ClientFormData) => {
-    const submissionData: any = { ...values };
-    if (isEditing && client) {
-      submissionData.__v = client.__v;
-    }
-    if (isCreating) {
-      delete submissionData.isActive; // Server handles defaults usually, or passing it is fine
-      delete submissionData.__v;
-    }
-    onSubmit(submissionData as ClientFormData);
+    onSubmit(values);
   };
 
   const handleClear = () => {
