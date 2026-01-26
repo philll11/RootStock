@@ -78,6 +78,7 @@
     "eslint-plugin-react-hooks": "7.0.1",
     "prettier": "3.7.3",
     "prettier-eslint-cli": "8.0.1",
+    "rollup-plugin-visualizer": "6.0.5",
     "sass": "1.94.2",
     "typescript": "5.9.3",
     "typescript-eslint": "8.53.1",
