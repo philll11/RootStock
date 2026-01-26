@@ -4,11 +4,12 @@ import iam from './iam';
 import system from './system';
 import { MenuItem } from './types';
 import lists from './lists';
+import operations from './operations';
 
 // ==============================|| MENU ITEMS ||============================== //
 
 const menuItems: MenuItem = {
-  items: [dashboard, entities, lists, iam, system]
+  items: [dashboard, entities, operations, lists, iam, system]
 };
 
 export default menuItems;

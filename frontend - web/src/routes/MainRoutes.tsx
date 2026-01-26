@@ -42,6 +42,12 @@ const VarietyCreatePage = Loadable(lazy(() => import('views/master-data/varietie
 const VarietyEditPage = Loadable(lazy(() => import('views/master-data/varieties/pages/VarietyEditPage')));
 const VarietyViewPage = Loadable(lazy(() => import('views/master-data/varieties/pages/VarietyViewPage')));
 
+// operations routing
+const AssessmentList = Loadable(lazy(() => import('views/operations/AssessmentList')));
+const AssessmentCreatePage = Loadable(lazy(() => import('views/operations/pages/AssessmentCreatePage')));
+const AssessmentEditPage = Loadable(lazy(() => import('views/operations/pages/AssessmentEditPage')));
+const AssessmentViewPage = Loadable(lazy(() => import('views/operations/pages/AssessmentViewPage')));
+
 // system routing
 const SystemSettingsPage = Loadable(lazy(() => import('views/system/config/SystemSettingsPage')));
 
@@ -146,7 +152,7 @@ const MainRoutes: RouteObject = {
           element: <OrchardList />
         },
         {
-          path: 'new',
+          path: 'create',
           element: <OrchardCreatePage />
         },
         {
@@ -167,7 +173,7 @@ const MainRoutes: RouteObject = {
           element: <BlockList />
         },
         {
-          path: 'new',
+          path: 'create',
           element: <BlockCreatePage />
         },
         {
@@ -181,6 +187,27 @@ const MainRoutes: RouteObject = {
       ]
     },
     {
+      path: 'assessments',
+      children: [
+        {
+          path: '',
+          element: <AssessmentList />
+        },
+        {
+          path: 'create',
+          element: <AssessmentCreatePage />
+        },
+        {
+          path: ':id',
+          element: <AssessmentViewPage />
+        },
+        {
+          path: ':id/edit',
+          element: <AssessmentEditPage />
+        },
+      ]
+    },
+    {
       path: 'varieties',
       children: [
         {
@@ -188,7 +215,7 @@ const MainRoutes: RouteObject = {
           element: <VarietyList />
         },
         {
-          path: 'new',
+          path: 'create',
           element: <VarietyCreatePage />
         },
         {

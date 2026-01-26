@@ -1,0 +1,416 @@
+import React, { useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Box, Typography, Chip, IconButton, Tooltip, Divider, Drawer, Stack } from '@mui/material';
+import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import { IconEdit, IconTrash, IconEye, IconPlus, IconPencil, IconExternalLink } from '@tabler/icons-react';
+
+import MainCard from 'ui-component/cards/MainCard';
+import DataGridWrapper from 'ui-component/extended/DataGridWrapper';
+import ConfirmDialog from 'ui-component/extended/ConfirmDialog';
+import { useContextualNavigation } from 'hooks/useContextualNavigation';
+import { useGetAssessments, useDeleteAssessment, useCreateAssessment, useUpdateAssessment } from 'hooks/operations/useAssessments';
+import { usePermission } from 'contexts/AuthContext';
+import { PERMISSIONS } from 'constants/permissions';
+import AssessmentForm, { AssessmentFormMode } from './AssessmentForm';
+import { AssessmentFormData } from 'types/operations/assessment.schema';
+import { Assessment, Planting } from 'types/operations/assessment.types';
+import { useDiscardWarning } from 'hooks/useDiscardWarning';
+import SplitActionButton from 'ui-component/extended/SplitActionButton';
+
+const getStatusChip = (isActive?: boolean) => {
+  return isActive ? (
+    <Chip label="Active" color="success" size="small" variant="outlined" />
+  ) : (
+    <Chip label="Inactive" color="error" size="small" variant="outlined" />
+  );
+};
+const assessmentName = (assessment: Assessment | null) => (assessment ? assessment.name : 'Assessment Details');
+
+interface AssessmentListProps {
+  orchardId?: string;
+  orchardName?: string;
+}
+
+const AssessmentList = ({ orchardId, orchardName }: AssessmentListProps) => {
+  const navigate = useNavigate();
+  const { getLinkTo } = useContextualNavigation('/assessments');
+  const { can } = usePermission();
+
+  // Queries & Mutations
+  const queryParams = useMemo(() => (orchardId ? { orchardId } : undefined), [orchardId]);
+  const { data: allAssessments = [], isLoading } = useGetAssessments(queryParams);
+
+  const assessments = useMemo(() => {
+    if (!orchardId) return allAssessments;
+    return allAssessments.filter((b) => (typeof b.orchardId === 'object' ? b.orchardId._id : b.orchardId) === orchardId);
+  }, [allAssessments, orchardId]);
+
+  const { mutateAsync: deleteAssessment } = useDeleteAssessment();
+  const { mutateAsync: createAssessment, isPending: isCreating } = useCreateAssessment();
+  const { mutateAsync: updateAssessment, isPending: isUpdating } = useUpdateAssessment();
+
+  // Drawer State
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mode, setMode] = useState<AssessmentFormMode>('create');
+  const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
+  const [createDraft, setCreateDraft] = useState<Partial<AssessmentFormData>>({});
+
+  // Dirty State for drawer
+  const [isFormDirty, setIsFormDirty] = useState(false);
+
+  // Discard Dialog
+  const { discardDialogProps, trigger } = useDiscardWarning(
+    drawerOpen && isFormDirty && mode === 'edit',
+    'You have unsaved changes. Are you sure you want to discard them?'
+  );
+
+  const handleOpenDrawer = (newMode: AssessmentFormMode, assessment: Assessment | null = null) => {
+    setMode(newMode);
+    setSelectedAssessment(assessment);
+    setIsFormDirty(false);
+
+    // If creating in embedded mode, pre-fill the orchard
+    if (newMode === 'create' && orchardId) {
+      setCreateDraft((prev) => ({ ...prev, orchardId }));
+    }
+
+    setDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = (event?: {}, reason?: 'backdropClick' | 'escapeKeyDown') => {
+    const performClose = () => {
+      setDrawerOpen(false);
+      setIsFormDirty(false);
+      setSelectedAssessment(null);
+    };
+
+    if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+      if (mode === 'edit' && isFormDirty) {
+        trigger(performClose);
+        return;
+      }
+    } else {
+      if (isFormDirty) {
+        trigger(performClose);
+        return;
+      }
+    }
+    performClose();
+  };
+
+  const handleCancelForm = () => {
+    const performCancel = () => {
+      if (isCreating) setCreateDraft({});
+      setDrawerOpen(false);
+      setIsFormDirty(false);
+      setSelectedAssessment(null);
+    };
+
+    // Explicit Cancel Button Click
+    if (isCreating) {
+      // For create, Cancel means discard draft
+      if (Object.keys(createDraft).length > 0 || isFormDirty) {
+        trigger(performCancel, 'Discard new assessment draft? This cannot be undone.');
+        return;
+      }
+    } else if (mode === 'edit') {
+      if (isFormDirty) {
+        trigger(performCancel);
+        return;
+      }
+    }
+
+    performCancel();
+  };
+
+  const handleFormValuesChange = useCallback(
+    (values: Partial<AssessmentFormData>) => {
+      if (mode === 'create') {
+        setCreateDraft((prev) => ({ ...prev, ...values }));
+      }
+    },
+    [mode]
+  );
+
+  const handleFormSubmit = async (values: AssessmentFormData) => {
+    try {
+      if (mode === 'create') {
+        const { isActive, __v, ...createData } = values;
+        await createAssessment(createData);
+      } else if (mode === 'edit' && selectedAssessment) {
+        await updateAssessment({ id: selectedAssessment._id, data: { ...values, __v: selectedAssessment.__v } });
+      }
+      setDrawerOpen(false);
+      setCreateDraft({});
+      setIsFormDirty(false);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // --- Actions ---
+  const handleCreatePage = () => {
+    navigate(getLinkTo('/assessments/new'), {
+      state: orchardId ? {
+        parent: {
+          title: orchardName || 'Orchard',
+          to: `/orchards/${orchardId}`
+        }
+      } : undefined
+    });
+  };
+  const handleViewPage = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(getLinkTo(`/assessments/${id}`), {
+      state: orchardId ? {
+        parent: {
+          title: orchardName || 'Orchard',
+          to: `/orchards/${orchardId}`
+        }
+      } : undefined
+    });
+  };
+  const handleEditPage = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(getLinkTo(`/assessments/${id}/edit`), {
+      state: orchardId ? {
+        parent: {
+          title: orchardName || 'Orchard',
+          to: `/orchards/${orchardId}`
+        }
+      } : undefined
+    });
+  };
+
+  // Delete State
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assessmentToDelete, setAssessmentToDelete] = useState<Assessment | null>(null);
+
+  const handleDeleteClick = (assessment: Assessment, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setAssessmentToDelete(assessment);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (assessmentToDelete) {
+      await deleteAssessment(assessmentToDelete._id);
+      setDeleteDialogOpen(false);
+      setAssessmentToDelete(null);
+    }
+  };
+
+  const columns: GridColDef[] = useMemo(
+    () => [
+      {
+        field: 'recordId',
+        headerName: 'Record ID',
+        flex: 0.5,
+        minWidth: 100
+      },
+      {
+        field: 'name',
+        headerName: 'Name',
+        flex: 1.5,
+        minWidth: 150
+      },
+      {
+        field: 'orchardId',
+        headerName: 'Orchard',
+        flex: 1,
+        minWidth: 150,
+        renderCell: (params: GridRenderCellParams<any, Assessment>) => {
+          const orchardName = typeof params.row.orchardId === 'object' ? params.row.orchardId.name : 'Unknown';
+          return (
+            <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
+              <Typography variant="body2">{orchardName}</Typography>
+            </Stack>
+          );
+        }
+      },
+      {
+        field: 'varieties',
+        headerName: 'Varieties',
+        flex: 1.5,
+        sortable: false,
+        renderCell: (params: GridRenderCellParams<any, Assessment>) => {
+          const varieties = params.row.plantings
+            .map((p: Planting) => (typeof p.varietyId === 'object' ? p.varietyId.name : ''))
+            .filter(Boolean)
+            .join(', ');
+          return (
+            <Tooltip title={varieties}>
+              <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
+                <Typography variant="body2" noWrap>
+                  {varieties}
+                </Typography>
+              </Stack>
+            </Tooltip>
+          );
+        }
+      },
+      {
+        field: 'treeCount',
+        headerName: 'Trees',
+        width: 100,
+        align: 'right',
+        headerAlign: 'right',
+        valueGetter: (value: any, row: Assessment) => {
+          return row.plantings.reduce((sum: number, p: Planting) => sum + (Number(p.treeCount) || 0), 0);
+        }
+      },
+      {
+        field: 'isActive',
+        headerName: 'Status',
+        width: 120,
+        renderCell: (params: GridRenderCellParams) => getStatusChip(params.row.isActive)
+      },
+      {
+        field: 'actions',
+        headerName: 'Actions',
+        flex: 0.8,
+        minWidth: 180,
+        sortable: false,
+        filterable: false,
+        align: 'right',
+        headerAlign: 'right',
+        renderCell: (params: GridRenderCellParams) => {
+          const assessment = params.row as Assessment;
+          return (
+            <>
+              {can(PERMISSIONS.BLOCK_VIEW) && (
+                <Tooltip title="View Details">
+                  <IconButton color="primary" size="small" onClick={(e) => handleViewPage(assessment._id, e)}>
+                    <IconEye size={18} />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {can(PERMISSIONS.BLOCK_EDIT) && (
+                <>
+                  <Tooltip title="Edit">
+                    <IconButton color="secondary" size="small" onClick={(e) => handleEditPage(assessment._id, e)}>
+                      <IconEdit size={18} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Quick Edit">
+                    <IconButton
+                      color="warning"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDrawer('edit', assessment);
+                      }}
+                    >
+                      <IconPencil size={18} />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
+              {can(PERMISSIONS.BLOCK_DELETE) && (
+                <Tooltip title="Delete">
+                  <IconButton color="error" size="small" onClick={(e) => handleDeleteClick(assessment, e)}>
+                    <IconTrash size={18} />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </>
+          );
+        }
+      }
+    ],
+    [can, handleViewPage, handleEditPage, handleDeleteClick, handleOpenDrawer]
+  );
+
+  return (
+    <MainCard
+      title="Assessments"
+      secondary={
+        can(PERMISSIONS.BLOCK_CREATE) && (
+          <SplitActionButton
+            primaryLabel="Create Assessment"
+            primaryStartIcon={<IconPlus size={18} />}
+            primaryAction={() => handleOpenDrawer('create')}
+            options={[
+              {
+                label: 'Create in New Page',
+                icon: <IconExternalLink size={18} />,
+                onClick: handleCreatePage
+              }
+            ]}
+          />
+        )
+      }
+    >
+      <DataGridWrapper
+        rows={assessments}
+        columns={columns}
+        loading={isLoading}
+        onRowClick={(params) => can(PERMISSIONS.BLOCK_VIEW) && handleViewPage(params.row._id)}
+        getRowId={(row) => row._id}
+      />
+
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={handleCloseDrawer}
+        slotProps={{ paper: { sx: { width: { xs: '100%', sm: 500, md: 600 } } } }}
+      >
+        <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h4">
+              {mode === 'create' ? 'New Assessment' : mode === 'edit' ? 'Edit Assessment' : assessmentName(selectedAssessment)}
+            </Typography>
+            {mode === 'view' && selectedAssessment && (
+              <Stack direction="row" spacing={1}>
+                {can(PERMISSIONS.BLOCK_EDIT) && (
+                  <Tooltip title="Edit">
+                    <IconButton size="small" onClick={() => setMode('edit')} color="primary">
+                      <IconEdit size={18} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {can(PERMISSIONS.BLOCK_DELETE) && (
+                  <Tooltip title="Delete">
+                    <IconButton size="small" onClick={(e) => handleDeleteClick(selectedAssessment, e)} color="error">
+                      <IconTrash size={18} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Stack>
+            )}
+          </Box>
+
+          <Divider sx={{ mb: 3 }} />
+
+          <AssessmentForm
+            mode={mode}
+            assessment={selectedAssessment}
+            initialValues={mode === 'create' ? createDraft : undefined}
+            onSubmit={handleFormSubmit}
+            onCancel={handleCancelForm}
+            isLoading={isCreating || isUpdating}
+            onDirtyChange={setIsFormDirty}
+            onValuesChange={handleFormValuesChange}
+          />
+        </Box>
+      </Drawer>
+
+      {/* Discard Warning Dialog */}
+      <ConfirmDialog {...discardDialogProps} />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete Assessment"
+        content={`Are you sure you want to delete ${assessmentName(selectedAssessment)}? This action cannot be undone.`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteDialogOpen(false)}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        confirmColor="error"
+      />
+    </MainCard>
+  );
+};
+
+export default AssessmentList;
