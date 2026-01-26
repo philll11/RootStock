@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -18,7 +18,7 @@ import IconButton from '@mui/material/IconButton';
 // project imports
 import AnimateButton from 'ui-component/extended/AnimateButton';
 import { resetPassword } from 'api/iam/auth';
-import { resetPasswordSchema, ResetPasswordRequest } from 'types/iam/auth.schema';
+import { resetPasswordSchema } from 'types/iam/auth.schema';
 
 // assets
 import Visibility from '@mui/icons-material/Visibility';
@@ -32,7 +32,7 @@ export default function AuthResetPassword() {
   const [resetError, setResetError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // const token = searchParams.get('token');
 
   const {
@@ -49,16 +49,16 @@ export default function AuthResetPassword() {
 
   const onSubmit = async (data: { password: string; confirmPassword: string }) => {
     if (!token) {
-        setResetError('Invalid or missing reset token.');
-        return;
+      setResetError('Invalid or missing reset token.');
+      return;
     }
 
     try {
       setResetError(null);
       await resetPassword({
-          token,
-          password: data.password,
-          confirmPassword: data.confirmPassword
+        token,
+        password: data.password,
+        confirmPassword: data.confirmPassword
       });
       navigate('/pages/login', { replace: true, state: { message: 'Password reset successful. Please login.' } });
     } catch (err: any) {
@@ -72,11 +72,11 @@ export default function AuthResetPassword() {
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => event.preventDefault();
 
   if (!token) {
-       return (
-        <Box sx={{ mt: 3 }}>
-            <Alert severity="error">Missing reset token in URL.</Alert>
-        </Box>
-       );
+    return (
+      <Box sx={{ mt: 3 }}>
+        <Alert severity="error">Missing reset token in URL.</Alert>
+      </Box>
+    );
   }
 
   return (
