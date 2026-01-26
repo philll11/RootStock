@@ -11,7 +11,6 @@ export function initAuth() {
     // On Session Expired (Refresh failed)
     // The auth store will be cleared by the interceptor, triggering the useAuthSession listener
     // But we can also force a navigation here if needed, though the listener in _layout should handle it.
-    console.log('Session expired, redirecting to login...');
     router.replace('/login');
   });
 }

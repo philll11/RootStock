@@ -141,19 +141,14 @@ const OrchardList = ({ clientId, clientName }: OrchardListProps) => {
   );
 
   // Form Submit Handler
-  const handleFormSubmit = async (values: OrchardFormData) => {
+  const handleFormSubmit = async (values: any) => {
     try {
       if (mode === 'create') {
-        const { isActive, __v, ...createData } = values;
-        await createOrchard(createData);
+        await createOrchard(values);
       } else if (mode === 'edit' && selectedOrchard) {
-        const { clientId, ...updateData } = values;
         await updateOrchard({
           id: selectedOrchard._id,
-          data: {
-            ...updateData,
-            __v: selectedOrchard.__v
-          }
+          data: values
         });
       }
       setDrawerOpen(false);
@@ -166,7 +161,7 @@ const OrchardList = ({ clientId, clientName }: OrchardListProps) => {
 
   // --- Actions ---
   const handleCreatePage = () => {
-    navigate(getLinkTo('/orchards/new'), {
+    navigate(getLinkTo('/orchards/create'), {
       state: clientId ? {
         parent: {
           title: clientName || 'Client',

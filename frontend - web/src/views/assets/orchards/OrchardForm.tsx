@@ -34,7 +34,7 @@ interface OrchardFormProps {
     mode: OrchardFormMode;
     orchard?: Orchard | null;
     initialValues?: Partial<OrchardFormData>;
-    onSubmit: (values: OrchardFormData) => void;
+    onSubmit: (values: any) => void;
     isLoading?: boolean;
     onCancel: () => void;
     onDirtyChange?: (isDirty: boolean) => void;
@@ -138,7 +138,18 @@ const OrchardForm = ({
     }, [orchard, mode, isEditing, isViewing, isCreating, reset]);
 
     const handleFormSubmit = (values: OrchardFormData) => {
-        onSubmit(values);
+        if (mode === 'create') {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { isActive, __v, ...createData } = values;
+            onSubmit(createData);
+        } else if (mode === 'edit') {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { clientId, ...updateData } = values;
+            onSubmit({
+                ...updateData,
+                __v: orchard?.__v
+            });
+        }
     };
 
     const handleClear = () => {

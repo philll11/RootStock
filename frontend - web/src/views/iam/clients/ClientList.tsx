@@ -136,15 +136,13 @@ const ClientList = () => {
 
 
     // Form Submission (Drawer)
-    const handleFormSubmit = async (values: ClientFormData) => {
+    const handleFormSubmit = async (values: any) => {
         try {
             if (isCreating) {
-                const { isActive, __v, ...createData } = values;
-                await createClient(createData);
+                await createClient(values);
                 setCreateDraft({}); // Clear draft on success
             } else if (mode === 'edit' && selectedClient) {
-                const { subsidiaryId, ...updateData } = values;
-                await updateClient({ id: selectedClient._id, data: { ...updateData, __v: selectedClient.__v } });
+                await updateClient({ id: selectedClient._id, data: values });
             }
             setDrawerOpen(false);
             setCreateDraft({});

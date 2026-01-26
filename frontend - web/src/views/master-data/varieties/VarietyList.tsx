@@ -121,13 +121,12 @@ const VarietyList = () => {
   );
 
   // Form Submission (Drawer)
-  const handleFormSubmit = async (values: VarietyFormData) => {
+  const handleFormSubmit = async (values: any) => {
     try {
       if (mode === 'create') {
-        const { isActive, __v, ...createData } = values;
-        await createVariety(createData);
+        await createVariety(values);
       } else if (mode === 'edit' && selectedVariety) {
-        await updateVariety({ id: selectedVariety._id, data: { ...values, __v: selectedVariety.__v } });
+        await updateVariety({ id: selectedVariety._id, data: values });
       }
       setDrawerOpen(false);
       setCreateDraft({});
@@ -138,7 +137,7 @@ const VarietyList = () => {
   };
 
   // --- Actions ---
-  const handleCreatePage = () => navigate(getLinkTo('/varieties/new'));
+  const handleCreatePage = () => navigate(getLinkTo('/varieties/create'));
   const handleViewPage = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     navigate(getLinkTo(`/varieties/${id}`));

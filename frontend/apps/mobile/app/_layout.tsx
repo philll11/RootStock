@@ -30,8 +30,8 @@ onlineManager.setOnline(false);
 // If we don't do this, the default listener will detect "Internet Reachable" 
 // and immediately flip the switch to true, causing a concurrent flush race condition.
 onlineManager.setEventListener((setOnline) => {
-   // No-op. We will call setOnline() manually in our useEffect.
-   return () => {};
+  // No-op. We will call setOnline() manually in our useEffect.
+  return () => { };
 });
 
 // Keep the splash screen visible while we fetch resources
@@ -47,10 +47,10 @@ const queryClient = new QueryClient({
         // Safety Net: Retry 404s caused by missing "Horizontal" dependencies (Varieties)
         // or "Vertical" dependencies (Clients/Orchards) created in parallel scopes.
         const status = (error as any)?.response?.status;
-        
+
         // Axios stores request payload in error.config.data (usually JSON string)
         const dataStr = (error as any)?.config?.data;
-        const hasDependency = typeof dataStr === 'string' && 
+        const hasDependency = typeof dataStr === 'string' &&
           (dataStr.includes('"varietyId"') || dataStr.includes('"clientId"') || dataStr.includes('"orchardId"'));
 
         if (status === 404 && hasDependency) {
@@ -115,59 +115,56 @@ function RootLayoutNav() {
     if (isRestoring) return;
 
     const handleNetworkChange = async (state: any) => {
-       const hasConnection = !!state.isConnected;
-       const hasInternet = !!state.isInternetReachable;
-       
-       // Strict check: Must have connection AND (internet reachable OR unknown, but usually reachable)
-       const isPhysicallyOnline = hasConnection && (state.isInternetReachable === null || hasInternet);
+      const hasConnection = !!state.isConnected;
+      const hasInternet = !!state.isInternetReachable;
 
-       // Case 1: Unauthenticated
-       // Just reflect the physical state so login requests (mutations) can proceed.
-       // We do not need to orchestrate sync for a user who isn't logged in.
-       if (!isAuthenticated) {
-          onlineManager.setOnline(isPhysicallyOnline);
-          return;
-       }
+      // Strict check: Must have connection AND (internet reachable OR unknown, but usually reachable)
+      const isPhysicallyOnline = hasConnection && (state.isInternetReachable === null || hasInternet);
 
-       // Case 2: Authenticated but Offline
-       if (!isPhysicallyOnline) {
-         onlineManager.setOnline(false);
-         return;
-       }
-       
-       // Case 3: Authenticated and Physically Online -> Check API Reachability
-       const canReachApi = await checkApiReachability();
-       if (!canReachApi) {
-          onlineManager.setOnline(false);
-          return;
-       }
+      // Case 1: Unauthenticated
+      // Just reflect the physical state so login requests (mutations) can proceed.
+      // We do not need to orchestrate sync for a user who isn't logged in.
+      if (!isAuthenticated) {
+        onlineManager.setOnline(isPhysicallyOnline);
+        return;
+      }
 
-       // Case 4: Fully Online -> Orchestrate Sync
-       // Check if we have paused mutations pending.
-       const mutationCache = queryClient.getMutationCache();
-       const pausedCount = mutationCache
-          .getAll()
-          .filter(m => m.state.isPaused).length;
+      // Case 2: Authenticated but Offline
+      if (!isPhysicallyOnline) {
+        onlineManager.setOnline(false);
+        return;
+      }
 
-       if (pausedCount > 0) {
-          console.log('[NetworkManager] Online with paused mutations. Triggering Manual Sync.');
-          // Keep OnlineManager FALSE to prevent race and auto-resume.
-          // Trigger syncAll manually and wait for it to complete.
-          await syncAll();
-          
-          // Once sync is done (managed serially), we can safely go online for queries
-          console.log('[NetworkManager] Sync complete. Enabling QueryClient.');
-          // Force a final check to ensure we didn't drift
-          if(await checkApiReachability()) {
-             onlineManager.setOnline(true);
-          }
-       } else {
-          console.log('[NetworkManager] Online with no pending work. Enabling QueryClient.');
-          // Only set online if we aren't already (to avoid re-renders or loops)
-          if (!onlineManager.isOnline()) {
-             onlineManager.setOnline(true);
-          }
-       }
+      // Case 3: Authenticated and Physically Online -> Check API Reachability
+      const canReachApi = await checkApiReachability();
+      if (!canReachApi) {
+        onlineManager.setOnline(false);
+        return;
+      }
+
+      // Case 4: Fully Online -> Orchestrate Sync
+      // Check if we have paused mutations pending.
+      const mutationCache = queryClient.getMutationCache();
+      const pausedCount = mutationCache
+        .getAll()
+        .filter(m => m.state.isPaused).length;
+
+      if (pausedCount > 0) {
+        // Keep OnlineManager FALSE to prevent race and auto-resume.
+        // Trigger syncAll manually and wait for it to complete.
+        await syncAll();
+
+        // Once sync is done (managed serially), we can safely go online for queries
+        // Force a final check to ensure we didn't drift
+        if (await checkApiReachability()) {
+          onlineManager.setOnline(true);
+        }
+      } else {
+        // Only set online if we aren't already (to avoid re-renders or loops)
+        if (!onlineManager.isOnline()) {
+          onlineManager.setOnline(true);
+        }
+      }
     };
 
     const unsubscribe = NetInfo.addEventListener(handleNetworkChange);

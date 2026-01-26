@@ -31,8 +31,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { mutateAsync: login } = useLogin();
     const { mutateAsync: logout } = useLogout();
 
-    console.log('[AuthProvider]', { isAuthenticated, isLoading, user });
-
     const can = useCallback((permission: string) => {
         if (!user || !user.roleId || !user.roleId.permissions) return false;
         return user.roleId.permissions.includes(permission);
@@ -43,13 +41,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     return (
-        <AuthContext.Provider value={{ 
-            isAuthenticated, 
-            user, 
-            login, 
-            logout, 
-            can, 
-            isLoading 
+        <AuthContext.Provider value={{
+            isAuthenticated,
+            user,
+            login,
+            logout,
+            can,
+            isLoading
         }}>
             {children}
         </AuthContext.Provider>

@@ -22,7 +22,7 @@ interface ClientFormProps {
   mode: ClientFormMode;
   client?: Client | null;
   initialValues?: Partial<ClientFormData>;
-  onSubmit: (values: ClientFormData) => void;
+  onSubmit: (values: any) => void;
   isLoading: boolean;
   onCancel: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
@@ -110,7 +110,16 @@ const ClientForm = ({ mode, client, initialValues, onSubmit, isLoading, onCancel
   }, [client, mode, isEditing, isViewing, isCreating, reset]);
 
   const handleFormSubmit = (values: ClientFormData) => {
-    onSubmit(values);
+    if (mode === 'create') {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { isActive, __v, ...createData } = values;
+      onSubmit(createData);
+    } else if (mode === 'edit') {
+      onSubmit({
+        ...values,
+        __v: client?.__v
+      });
+    }
   };
 
   const handleClear = () => {

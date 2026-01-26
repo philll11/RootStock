@@ -9,7 +9,7 @@ export default function OutlinedInput(theme: any, borderRadius: any, outlinedFil
           borderRadius: `${borderRadius}px`,
 
           '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: theme.vars.palette.grey[400]
+            borderColor: theme.vars.palette.divider
           },
 
           '&:hover $notchedOutline': {

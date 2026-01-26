@@ -134,19 +134,14 @@ const AssessmentList = ({ blockId, blockName }: AssessmentListProps) => {
     [mode]
   );
 
-  const handleFormSubmit = async (values: AssessmentFormData) => {
+  const handleFormSubmit = async (values: any) => {
     try {
       if (mode === 'create') {
-        const { isActive, __v, ...createData } = values;
-        await createAssessment(createData);
+        await createAssessment(values);
       } else if (mode === 'edit' && selectedAssessment) {
-        const { blockId, ...updateData } = values;
         await updateAssessment({
           id: selectedAssessment._id,
-          data: {
-            ...updateData,
-            __v: selectedAssessment.__v
-          }
+          data: values
         });
       }
       setDrawerOpen(false); // Direct close on success, no need for complex checks
@@ -160,7 +155,7 @@ const AssessmentList = ({ blockId, blockName }: AssessmentListProps) => {
 
   // --- Actions ---
   const handleCreatePage = () => {
-    navigate(getLinkTo('/assessments/new'), {
+    navigate(getLinkTo('/assessments/create'), {
       state: blockId ? {
         parent: {
           title: blockName || 'Block',
@@ -238,20 +233,6 @@ const AssessmentList = ({ blockId, blockName }: AssessmentListProps) => {
       headerName: 'Block',
       flex: 1.5,
       minWidth: 150
-    },
-    {
-      field: 'orchardId',
-      headerName: 'Orchard',
-      flex: 1,
-      minWidth: 150,
-      renderCell: (params: GridRenderCellParams<any, Assessment>) => {
-        const orchardName = typeof params.row.orchardId === 'object' ? params.row.orchardId.name : 'Unknown';
-        return (
-          <Stack direction="row" alignItems="center" sx={{ height: '100%' }}>
-            <Typography variant="body2">{orchardName}</Typography>
-          </Stack>
-        );
-      }
     },
     { field: 'type', headerName: 'Type', flex: 0.8, minWidth: 100 },
     {

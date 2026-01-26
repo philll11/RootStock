@@ -6,7 +6,7 @@ export default function Tabs(theme: any) {
       styleOverrides: {
         flexContainer: {
           borderBottom: '1px solid',
-          borderColor: theme.vars.palette.grey[200]
+          borderColor: theme.vars.palette.divider
         }
       }
     }

@@ -152,14 +152,13 @@ const RoleList = () => {
         }
     }, [mode]);
 
-    const handleFormSubmit = async (values: RoleFormData) => {
+    const handleFormSubmit = async (values: any) => {
         try {
             if (mode === 'create') {
-                const { isActive, __v, ...createData } = values;
-                await createRole(createData);
+                await createRole(values);
                 setCreateDraft({}); // Clear draft on success
             } else if (mode === 'edit' && selectedRole) {
-                await updateRole({ id: selectedRole._id, data: { ...values, __v: selectedRole.__v } });
+                await updateRole({ id: selectedRole._id, data: values });
             }
             // Success closes drawer
             setDrawerOpen(false);

@@ -48,7 +48,7 @@ interface RoleFormProps {
     mode: RoleFormMode;
     role?: Role | null;
     initialValues?: Partial<RoleFormData>;
-    onSubmit: (values: RoleFormData) => void;
+    onSubmit: (values: any) => void;
     isLoading: boolean;
     onCancel: () => void;
     onDirtyChange?: (isDirty: boolean) => void;
@@ -276,7 +276,16 @@ const RoleForm = ({
     }, [role, mode, isEditing, isViewing, isCreating, reset]);
 
     const handleFormSubmit = (values: RoleFormData) => {
-        onSubmit(values);
+        if (mode === 'create') {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { isActive, __v, ...createData } = values;
+            onSubmit(createData);
+        } else if (mode === 'edit') {
+            onSubmit({
+                ...values,
+                __v: role?.__v
+            });
+        }
     };
 
     const handleClear = () => {

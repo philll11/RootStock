@@ -17,8 +17,6 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
         password: credentials.password
     };
 
-    console.log('[API] login payload:', payload);
-
     // The backend sets the HttpOnly cookie automatically
     const response = await axiosServices.post<AuthResponse>(ENDPOINTS.LOGIN, payload, {
         headers: {
@@ -33,10 +31,8 @@ export const logout = async (): Promise<void> => {
 };
 
 export const getProfile = async (): Promise<User> => {
-    console.log('[API] getProfile called');
     try {
         const response = await axiosServices.get<User>(ENDPOINTS.PROFILE);
-        console.log('[API] getProfile success:', response.status, response.data);
         return response.data;
     } catch (error) {
         console.error('[API] getProfile failed:', error);

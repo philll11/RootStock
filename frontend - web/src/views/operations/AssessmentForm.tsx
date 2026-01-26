@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { debounce } from 'lodash-es';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
     TextField,
@@ -17,7 +17,6 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Stack,
     Box
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -41,7 +40,7 @@ interface AssessmentFormProps {
     mode: AssessmentFormMode;
     assessment?: Assessment | null;
     initialValues?: Partial<AssessmentFormData>;
-    onSubmit: (values: AssessmentFormData) => void;
+    onSubmit: (values: any) => void;
     isLoading?: boolean;
     onCancel: () => void;
     onDirtyChange?: (isDirty: boolean) => void;
@@ -95,7 +94,7 @@ const AssessmentForm = ({
     });
 
     const watchedValues = watch();
-    const watchedSamples = watch('samples');
+    const watchedSamples = useWatch({ control, name: 'samples' });
 
     // Keep a stable ref to the callback to avoid breaking debounce if prop changes referentially
     const onValuesChangeRef = useRef(onValuesChange);
@@ -159,7 +158,18 @@ const AssessmentForm = ({
 
     // Handle Submit Wrapper (Standard Pattern)
     const handleFormSubmit = (values: AssessmentFormData) => {
-        onSubmit(values);
+        if (mode === 'create') {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { isActive, __v, status, changeReason, ...createData } = values;
+            onSubmit(createData);
+        } else if (mode === 'edit') {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { blockId, ...updateData } = values;
+            onSubmit({
+                ...updateData,
+                __v: assessment?.__v
+            });
+        }
     };
 
     // Calculate Projected Summary
@@ -214,10 +224,33 @@ const AssessmentForm = ({
     return (
         <form onSubmit={handleSubmit(handleFormSubmit)}>
             <Grid container spacing={3}>
-                {/* Context Section */}
+                {/* Details Section */}
                 <Grid size={12}>
-                    <SubCard title="Context">
+                    <SubCard title="Details">
                         <Grid container spacing={2}>
+                            <Grid size={12}>
+                                <Controller
+                                    name="type"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Autocomplete
+                                            options={Object.values(AssessmentType)}
+                                            value={field.value}
+                                            onChange={(_, newValue) => field.onChange(newValue as AssessmentType)}
+                                            disableClearable
+                                            disabled={isFormLocked}
+                                            renderInput={(params) => (
+                                                <TextField
+                                                    {...params}
+                                                    label="Type"
+                                                    error={!!errors.type}
+                                                    helperText={errors.type?.message}
+                                                />
+                                            )}
+                                        />
+                                    )}
+                                />
+                            </Grid>
                             <Grid size={12}>
                                 <Controller
                                     name="name"
@@ -279,29 +312,6 @@ const AssessmentForm = ({
                                     )}
                                 />
                             </Grid>
-                            <Grid size={12}>
-                                <Controller
-                                    name="type"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <Autocomplete
-                                            options={Object.values(AssessmentType)}
-                                            value={field.value}
-                                            onChange={(_, newValue) => field.onChange(newValue as AssessmentType)}
-                                            disableClearable
-                                            disabled={isFormLocked}
-                                            renderInput={(params) => (
-                                                <TextField
-                                                    {...params}
-                                                    label="Type"
-                                                    error={!!errors.type}
-                                                    helperText={errors.type?.message}
-                                                />
-                                            )}
-                                        />
-                                    )}
-                                />
-                            </Grid>
                         </Grid>
                     </SubCard>
                 </Grid>
@@ -333,39 +343,34 @@ const AssessmentForm = ({
                 <Grid size={12}>
                     <Grid container spacing={2}>
                         <Grid size={12}>
-                            <SubCard title="Saved Summary (Server)">
-                                {assessment?.summary ? (
-                                    <Stack spacing={1}>
-                                        <Typography variant="body2">Total Samples: {assessment.summary.totalSamples}</Typography>
-                                        <Typography variant="body2">Total Fruit: {assessment.summary.totalFruit}</Typography>
-                                        <Typography variant="body2">Total Damaged: {assessment.summary.totalDamaged}</Typography>
-                                        <Typography
-                                            variant="subtitle1"
-                                            color={assessment.summary.averageDamagePercentage > 0 ? 'error' : 'inherit'}
-                                        >
-                                            Damage: {assessment.summary.averageDamagePercentage.toFixed(2)}%
-                                        </Typography>
-                                    </Stack>
-                                ) : (
-                                    <Typography color="textSecondary" variant="caption">
-                                        No summary available
-                                    </Typography>
-                                )}
-                            </SubCard>
-                        </Grid>
-                        <Grid size={12}>
-                            <SubCard title="Projected Summary (Live)">
-                                <Stack spacing={1}>
-                                    <Typography variant="body2">Total Samples: {projectedSummary.totalSamples}</Typography>
-                                    <Typography variant="body2">Total Fruit: {projectedSummary.totalFruit}</Typography>
-                                    <Typography variant="body2">Total Damaged: {projectedSummary.totalDamaged}</Typography>
-                                    <Typography
-                                        variant="subtitle1"
-                                        color={projectedSummary.averageDamagePercentage > 0 ? 'error' : 'inherit'}
-                                    >
-                                        Damage: {projectedSummary.averageDamagePercentage.toFixed(2)}%
-                                    </Typography>
-                                </Stack>
+                            <SubCard title="Summary">
+                                <TableContainer component={Paper} variant="outlined">
+                                    <Table size="small">
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>Total Samples</TableCell>
+                                                <TableCell>Total Fruit</TableCell>
+                                                <TableCell>Total Damaged</TableCell>
+                                                <TableCell>Damage %</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            <TableRow>
+                                                <TableCell>{projectedSummary.totalSamples}</TableCell>
+                                                <TableCell>{projectedSummary.totalFruit}</TableCell>
+                                                <TableCell>{projectedSummary.totalDamaged}</TableCell>
+                                                <TableCell>
+                                                    <Typography
+                                                        variant="subtitle1"
+                                                        color={projectedSummary.averageDamagePercentage > 0 ? 'error' : 'inherit'}
+                                                    >
+                                                        {projectedSummary.averageDamagePercentage.toFixed(2)}%
+                                                    </Typography>
+                                                </TableCell>
+                                            </TableRow>
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
                             </SubCard>
                         </Grid>
                     </Grid>
@@ -402,25 +407,21 @@ const AssessmentForm = ({
                                     {fields.map((field, index) => (
                                         <TableRow key={field.id}>
                                             <TableCell>
-                                                <Controller
-                                                    name={`samples.${index}.rowNumber`}
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <TextField {...field} size="small" type="number" variant="standard" disabled={isFormLocked} />
-                                                    )}
-                                                />
+                                                <Typography variant="body2">{index + 1}</Typography>
                                             </TableCell>
                                             <TableCell>
                                                 <Controller
                                                     name={`samples.${index}.totalFruit`}
                                                     control={control}
-                                                    render={({ field }) => (
+                                                    render={({ field: { onChange, ...restField } }) => (
                                                         <TextField
-                                                            {...field}
+                                                            {...restField}
+                                                            onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
                                                             size="small"
                                                             type="number"
                                                             fullWidth
                                                             error={!!errors.samples?.[index]?.totalFruit}
+                                                            helperText={errors.samples?.[index]?.totalFruit?.message}
                                                             disabled={isFormLocked}
                                                         />
                                                     )}
@@ -430,13 +431,15 @@ const AssessmentForm = ({
                                                 <Controller
                                                     name={`samples.${index}.damagedFruit`}
                                                     control={control}
-                                                    render={({ field }) => (
+                                                    render={({ field: { onChange, ...restField } }) => (
                                                         <TextField
-                                                            {...field}
+                                                            {...restField}
+                                                            onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
                                                             size="small"
                                                             type="number"
                                                             fullWidth
                                                             error={!!errors.samples?.[index]?.damagedFruit}
+                                                            helperText={errors.samples?.[index]?.damagedFruit?.message}
                                                             disabled={isFormLocked}
                                                         />
                                                     )}

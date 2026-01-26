@@ -140,13 +140,12 @@ const UserList = () => {
     }, [mode]);
 
     // Form Submit Handler
-    const handleFormSubmit = async (values: UserFormData) => {
+    const handleFormSubmit = async (values: any) => {
         try {
             if (mode === 'create') {
-                const { isActive, __v, ...createData } = values;
-                await createUser(createData);
+                await createUser(values);
             } else if (mode === 'edit' && selectedUser) {
-                await updateUser({ id: selectedUser._id, data: { ...values, __v: selectedUser.__v } });
+                await updateUser({ id: selectedUser._id, data: values });
             }
             setDrawerOpen(false);
             setCreateDraft({});

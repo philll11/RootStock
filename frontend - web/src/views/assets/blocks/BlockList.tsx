@@ -132,19 +132,14 @@ const BlockList = ({ orchardId, orchardName }: BlockListProps) => {
     [mode]
   );
 
-  const handleFormSubmit = async (values: BlockFormData) => {
+  const handleFormSubmit = async (values: any) => {
     try {
       if (mode === 'create') {
-        const { isActive, __v, ...createData } = values;
-        await createBlock(createData);
+        await createBlock(values);
       } else if (mode === 'edit' && selectedBlock) {
-        const { orchardId, ...updateData } = values;
         await updateBlock({
           id: selectedBlock._id,
-          data: {
-            ...updateData,
-            __v: selectedBlock.__v
-          }
+          data: values
         });
       }
       setDrawerOpen(false);
@@ -157,7 +152,7 @@ const BlockList = ({ orchardId, orchardName }: BlockListProps) => {
 
   // --- Actions ---
   const handleCreatePage = () => {
-    navigate(getLinkTo('/blocks/new'), {
+    navigate(getLinkTo('/blocks/create'), {
       state: orchardId ? {
         parent: {
           title: orchardName || 'Orchard',

@@ -22,8 +22,6 @@ export function useAuthSession() {
 
   const isAuthenticated = !!user;
 
-  console.log('[useAuthSession]', { isAuthenticated, isLoading, error, user });
-
   return {
     user,
     isLoading,
@@ -48,7 +46,6 @@ export function useLogout() {
   return useMutation({
     mutationFn: logout,
     onSuccess: () => {
-      console.log('[useLogout] Logout successful, clearing query data...');
       // Clear profile data immediately to trigger UI update
       queryClient.setQueryData(AUTH_KEYS.profile(), null);
     }

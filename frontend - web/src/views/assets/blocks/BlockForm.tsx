@@ -25,7 +25,7 @@ interface BlockFormProps {
   mode: BlockFormMode;
   block?: Block | null;
   initialValues?: Partial<BlockFormData>;
-  onSubmit: (values: BlockFormData) => void;
+  onSubmit: (values: any) => void;
   isLoading?: boolean;
   onCancel: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
@@ -149,7 +149,16 @@ const BlockForm = ({
   }, [block, mode, isEditing, isViewing, isCreating, orchardId, reset]);
 
   const handleFormSubmit = (values: BlockFormData) => {
-    onSubmit(values);
+    if (mode === 'create') {
+      const { isActive, __v, ...createData } = values;
+      onSubmit(createData);
+    } else if (mode === 'edit') {
+      const { orchardId, ...updateData } = values;
+      onSubmit({
+        ...updateData,
+        __v: block?.__v
+      });
+    }
   };
 
   const handleClear = () => {

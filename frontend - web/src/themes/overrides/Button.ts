@@ -6,7 +6,7 @@ export default function Button(theme: any) {
       styleOverrides: {
         root: {
           '&.Mui-disabled': {
-            color: theme.vars.palette.grey[300]
+            color: theme.vars.palette.divider
           }
         },
         mark: {

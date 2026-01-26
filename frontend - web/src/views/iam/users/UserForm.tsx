@@ -43,7 +43,7 @@ interface UserFormProps {
     mode: UserFormMode;
     user?: User | null;
     initialValues?: Partial<UserFormData>;
-    onSubmit: (values: UserFormData) => void;
+    onSubmit: (values: any) => void;
     isLoading: boolean;
     onCancel: () => void;
     onDirtyChange?: (isDirty: boolean) => void;
@@ -172,7 +172,16 @@ const UserForm = ({
     }, [user, mode, isEditing, isViewing, isCreating, reset]);
 
     const handleFormSubmit = (values: UserFormData) => {
-        onSubmit(values);
+        if (mode === 'create') {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { isActive, __v, ...createData } = values;
+            onSubmit(createData);
+        } else if (mode === 'edit') {
+            onSubmit({
+                ...values,
+                __v: user?.__v
+            });
+        }
     };
 
     const handleClear = () => {

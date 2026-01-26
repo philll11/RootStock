@@ -20,7 +20,7 @@ interface VarietyFormProps {
     mode: VarietyFormMode;
     variety?: Variety | null;
     initialValues?: Partial<VarietyFormData>;
-    onSubmit: (values: VarietyFormData) => void;
+    onSubmit: (values: any) => void;
     isLoading?: boolean;
     onCancel: () => void;
     onDirtyChange?: (isDirty: boolean) => void;
@@ -106,7 +106,16 @@ const VarietyForm = ({ mode, variety, initialValues, onSubmit, onCancel, isLoadi
     }, [variety, mode, isEditing, isViewing, isCreating, reset]);
 
     const handleFormSubmit = (values: VarietyFormData) => {
-        onSubmit(values);
+        if (mode === 'create') {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { isActive, __v, ...createData } = values;
+            onSubmit(createData);
+        } else if (mode === 'edit') {
+            onSubmit({
+                ...values,
+                __v: variety?.__v
+            });
+        }
     };
 
     const handleClear = () => {
