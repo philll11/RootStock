@@ -3,9 +3,9 @@ import { View, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { withObservables } from '@nozbe/watermelondb/react';
 import { RoleForm } from '../components/RoleForm';
-import { RoleFormData } from '../../../../types/iam/role.schema';
-import { database } from '../../../../database';
-import Role from '../../../../database/models/iam/Role';
+import { RoleFormData } from '@/src/types/iam/role.schema';
+import { getDatabase } from '@/src/database';
+import Role from '@/src/database/models/iam/Role';
 
 const RoleEdit = ({ role }: { role: Role }) => {
     const router = useRouter();
@@ -18,7 +18,7 @@ const RoleEdit = ({ role }: { role: Role }) => {
     const handleSubmit = async (data: RoleFormData) => {
         setIsSaving(true);
         try {
-            await database.write(async () => {
+            await getDatabase().write(async () => {
                 await role.update((r: any) => {
                     r.name = data.name;
                     r.description = data.description;
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
 });
 
 const enhance = withObservables(['id'], ({ id }) => ({
-    role: database.collections.get<Role>('roles').findAndObserve(id),
+    role: getDatabase().collections.get<Role>('roles').findAndObserve(id),
 }));
 
 export const RoleEditScreen = enhance(RoleEdit);

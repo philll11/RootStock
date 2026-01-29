@@ -16,6 +16,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuthSession();
   const hydrate = useAuthStore((state) => state.hydrate);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
 
   useEffect(() => {
     // Hydrate auth state from secure storage on mount
@@ -29,13 +30,15 @@ export default function RootLayout() {
   }, [router, hydrate]);
 
   useEffect(() => {
-    // Hide the splash screen when the root layout is mounted
-    SplashScreen.hideAsync();
-  }, []);
+    // Hide the splash screen ONLY when hydration is complete
+    if (isHydrated) {
+      SplashScreen.hideAsync();
+    }
+  }, [isHydrated]);
 
   useEffect(() => {
     // Basic Route Protection
-    if (!isAuthLoading) {
+    if (isHydrated && !isAuthLoading) {
       const inAuthGroup = segments[0] === '(root)';
 
       if (!isAuthenticated && inAuthGroup) {
@@ -46,7 +49,12 @@ export default function RootLayout() {
         router.replace('/(root)/dashboard' as Href);
       }
     }
-  }, [isAuthenticated, segments, isAuthLoading, router]);
+  }, [isAuthenticated, segments, isAuthLoading, router, isHydrated]);
+
+  // Keep showing splash (return null) until hydrated
+  if (!isHydrated) {
+    return null;
+  }
 
   return (
     <AppThemeProvider>

@@ -2,9 +2,9 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter, Href } from 'expo-router';
 import { UserForm } from '../components/UserForm';
-import { UserFormData } from '../../../../types/iam/user.schema';
-import { database } from '../../../../database';
-import { generateUUID } from '../../../../utils/uuid';
+import { UserFormData } from '@/src/types/iam/user.schema';
+import { getDatabase } from '@/src/database';
+import { generateUUID } from '@/src/utils/uuid';
 
 export const UserCreateScreen = () => {
     const router = useRouter();
@@ -13,8 +13,8 @@ export const UserCreateScreen = () => {
     const handleSubmit = async (data: UserFormData) => {
         setIsCreating(true);
         try {
-            await database.write(async () => {
-                const newUser = await database.collections.get('users').create((user: any) => {
+            await getDatabase().write(async () => {
+                const newUser = await getDatabase().collections.get('users').create((user: any) => {
                     user.recordId = 'temp_' + generateUUID();
                     user.firstName = data.firstName;
                     user.lastName = data.lastName;

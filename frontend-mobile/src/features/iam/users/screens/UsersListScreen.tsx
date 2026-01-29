@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { List, FAB, Searchbar, Avatar } from 'react-native-paper';
 import { useRouter, Href } from 'expo-router';
 import { withObservables } from '@nozbe/watermelondb/react';
 import { Q } from '@nozbe/watermelondb';
-import { database } from '../../../../database';
-import User from '../../../../database/models/iam/User';
+import { getDatabase } from '@/src/database';
+import User from '@/src/database/models/iam/User';
+import { useSyncPull } from '@/src/core/sync/hooks/useSyncPull';
 
 const UsersList = ({ users }: { users: User[] }) => {
     const router = useRouter();
+    const { refreshing, onRefresh } = useSyncPull();
 
     const getInitials = (firstName: string, lastName: string) => {
         return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
@@ -18,6 +20,9 @@ const UsersList = ({ users }: { users: User[] }) => {
         <View style={styles.container}>
             <FlatList
                 data={users}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                     <List.Item
@@ -45,7 +50,7 @@ const UsersList = ({ users }: { users: User[] }) => {
 };
 
 const EnhancedUsersList = withObservables(['searchQuery'], ({ searchQuery }) => ({
-    users: database.collections.get<User>('users').query(
+    users: getDatabase().collections.get<User>('users').query(
         Q.where('is_deleted', false),
         Q.where('name', Q.like(`%${Q.sanitizeLikeString(searchQuery)}%`))
     ),

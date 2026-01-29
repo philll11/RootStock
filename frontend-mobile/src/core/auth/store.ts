@@ -8,6 +8,7 @@ interface AuthState {
     token: string | null;
     refreshToken: string | null;
     isAuthenticated: boolean;
+    isHydrated: boolean;
     setTokens: (token: string, refreshToken: string) => Promise<void>;
     clearTokens: () => Promise<void>;
     hydrate: () => Promise<void>;
@@ -17,6 +18,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     token: null,
     refreshToken: null,
     isAuthenticated: false,
+    isHydrated: false,
 
     setTokens: async (token: string, refreshToken: string) => {
         await SecureStorageAdapter.setItem(AUTH_TOKEN_KEY, token);
@@ -45,6 +47,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch (error) {
             console.error('Auth hydration failed', error);
             set({ token: null, refreshToken: null, isAuthenticated: false });
+        } finally {
+            set({ isHydrated: true });
         }
     },
 }));

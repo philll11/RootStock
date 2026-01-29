@@ -3,10 +3,10 @@ import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { withObservables } from '@nozbe/watermelondb/react';
 import { UserForm } from '../components/UserForm';
-import { UserFormData } from '../../../../types/iam/user.schema';
-import { UserType } from '../../../../types/iam/user.types';
-import { database } from '../../../../database';
-import User from '../../../../database/models/iam/User';
+import { UserFormData } from '@/src/types/iam/user.schema';
+import { UserType } from '@/src/types/iam/user.types';
+import { getDatabase } from '@/src/database';
+import User from '@/src/database/models/iam/User';
 
 const UserEdit = ({ user }: { user: User }) => {
     const router = useRouter();
@@ -19,7 +19,7 @@ const UserEdit = ({ user }: { user: User }) => {
     const handleSubmit = async (data: UserFormData) => {
         setIsSaving(true);
         try {
-            await database.write(async () => {
+            await getDatabase().write(async () => {
                 await user.update((u: any) => {
                     u.firstName = data.firstName;
                     u.lastName = data.lastName;
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
 });
 
 const enhance = withObservables(['id'], ({ id }) => ({
-    user: database.collections.get<User>('users').findAndObserve(id),
+    user: getDatabase().collections.get<User>('users').findAndObserve(id),
 }));
 
 export const UserEditScreen = enhance(UserEdit);

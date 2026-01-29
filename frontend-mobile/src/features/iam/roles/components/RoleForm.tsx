@@ -3,8 +3,8 @@ import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 're
 import { TextInput, Button, HelperText, SegmentedButtons, List, Checkbox, useTheme, Switch } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { roleSchema, RoleFormData } from '../../../../types/iam/role.schema';
-import { PERMISSIONS, VisibilityScope } from '../../../../constants/permissions';
+import { roleSchema, RoleFormData } from '@/src/types/iam/role.schema';
+import { PERMISSIONS, VisibilityScope } from '@/src/constants/permissions';
 
 interface RoleFormProps {
     defaultValues?: Partial<RoleFormData>;
