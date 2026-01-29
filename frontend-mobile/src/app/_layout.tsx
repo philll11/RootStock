@@ -4,8 +4,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { AppThemeProvider } from '@/src/core/theme/ThemeProvider';
 import { DrawerProvider } from '@/src/core/contexts/DrawerContext';
 import AppDrawerOverlay from '@/src/shared/components/navigation/AppDrawer';
-import { setupAuthInterceptor } from '@/src/core/auth/client';
+import { setupAuthInterceptor } from '@/src/core/auth/interceptor';
 import { useAuthSession } from '@/src/core/auth/hooks/useAuthSession';
+import { useAuthStore } from '@/src/core/auth/store';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -14,14 +15,18 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuthSession();
+  const hydrate = useAuthStore((state) => state.hydrate);
 
   useEffect(() => {
+    // Hydrate auth state from secure storage on mount
+    hydrate();
+
     // Setup Axios Interceptors
     setupAuthInterceptor(() => {
       // On session expiry (401), redirect to login
       router.replace('/login' as Href);
     });
-  }, [router]);
+  }, [router, hydrate]);
 
   useEffect(() => {
     // Hide the splash screen when the root layout is mounted
