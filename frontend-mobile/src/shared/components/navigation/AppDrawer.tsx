@@ -7,6 +7,7 @@ import Animated, { FadeIn, FadeOut, SlideInLeft, SlideOutLeft } from 'react-nati
 import { useDrawer } from '@/src/core/contexts/DrawerContext';
 import { MENU_ITEMS, MenuItem } from '@/src/core/navigation/menu-config';
 import { useSafeLogout } from '@/src/features/auth/hooks/useSafeLogout';
+import { syncData } from '@/src/core/sync/service';
 
 // Temporary Mock for Auth Context - replace with actual later
 const useAuth = () => ({
@@ -26,9 +27,22 @@ const DrawerContent = () => {
     const { closeDrawer } = useDrawer();
     const { user } = useAuth();
     const { handleLogout } = useSafeLogout();
+    const [isSyncing, setIsSyncing] = React.useState(false);
 
     // State for expanded accordions
     const [expandedId, setExpandedId] = React.useState<string | null>(null);
+
+    const handleSync = async () => {
+        if (isSyncing) return;
+        setIsSyncing(true);
+        try {
+            await syncData();
+        } catch (error) {
+            console.error('Sync failed', error);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     const handlePress = (route: string) => {
         if (route) {
@@ -102,6 +116,13 @@ const DrawerContent = () => {
             </View>
 
             <Divider />
+
+            <Drawer.Item
+                label={isSyncing ? "Syncing..." : "Sync Data"}
+                icon="sync"
+                onPress={handleSync}
+                active={isSyncing}
+            />
 
             {/* Scrollable Menu Items */}
             <View style={styles.content}>

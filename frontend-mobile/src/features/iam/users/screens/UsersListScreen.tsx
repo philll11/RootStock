@@ -4,7 +4,7 @@ import { List, FAB, Searchbar, Avatar } from 'react-native-paper';
 import { useRouter, Href } from 'expo-router';
 import { withObservables } from '@nozbe/watermelondb/react';
 import { Q } from '@nozbe/watermelondb';
-import { getDatabase } from '@/src/database';
+import { database } from '@/src/database';
 import User from '@/src/database/models/iam/User';
 import { useSyncPull } from '@/src/core/sync/hooks/useSyncPull';
 
@@ -50,7 +50,7 @@ const UsersList = ({ users }: { users: User[] }) => {
 };
 
 const EnhancedUsersList = withObservables(['searchQuery'], ({ searchQuery }) => ({
-    users: getDatabase().collections.get<User>('users').query(
+    users: database.collections.get<User>('users').query(
         Q.where('is_deleted', false),
         Q.where('name', Q.like(`%${Q.sanitizeLikeString(searchQuery)}%`))
     ),

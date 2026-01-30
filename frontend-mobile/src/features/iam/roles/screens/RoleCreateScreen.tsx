@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { useRouter, Href } from 'expo-router';
 import { RoleForm } from '../components/RoleForm';
 import { RoleFormData } from '@/src/types/iam/role.schema';
-import { getDatabase } from '@/src/database';
+import { database } from '@/src/database';
 import { generateUUID } from '@/src/utils/uuid';
 
 export const RoleCreateScreen = () => {
@@ -13,8 +13,8 @@ export const RoleCreateScreen = () => {
     const handleSubmit = async (data: RoleFormData) => {
         setIsCreating(true);
         try {
-            await getDatabase().write(async () => {
-                const newRole = await getDatabase().collections.get('roles').create((role: any) => {
+            await database.write(async () => {
+                const newRole = await database.collections.get('roles').create((role: any) => {
                     role.recordId = 'temp_' + generateUUID();
                     role.name = data.name;
                     role.description = data.description;

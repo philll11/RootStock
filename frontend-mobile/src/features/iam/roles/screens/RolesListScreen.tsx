@@ -4,7 +4,7 @@ import { List, FAB, Searchbar, ActivityIndicator, useTheme } from 'react-native-
 import { useRouter, Href } from 'expo-router';
 import { withObservables } from '@nozbe/watermelondb/react';
 import { Q } from '@nozbe/watermelondb';
-import { getDatabase } from '@/src/database';
+import { database } from '@/src/database';
 import Role from '@/src/database/models/iam/Role';
 import { PERMISSIONS } from '@/src/constants/permissions';
 import { useSyncPull } from '@/src/core/sync/hooks/useSyncPull';
@@ -44,7 +44,7 @@ const RolesList = ({ roles }: { roles: Role[] }) => {
 };
 
 const EnhancedRolesList = withObservables(['searchQuery'], ({ searchQuery }) => ({
-    roles: getDatabase().collections.get<Role>('roles').query(
+    roles: database.collections.get<Role>('roles').query(
         Q.where('is_deleted', false),
         Q.where('name', Q.like(`%${Q.sanitizeLikeString(searchQuery)}%`))
     ),

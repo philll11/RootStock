@@ -16,7 +16,7 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { withObservables } from '@nozbe/watermelondb/react';
-import { getDatabase } from '@/src/database';
+import { database } from '@/src/database';
 import { UserType } from '@/src/types/iam/user.types';
 import { userSchema, UserFormData } from '@/src/types/iam/user.schema';
 import Role from '@/src/database/models/iam/Role';
@@ -319,6 +319,6 @@ const styles = StyleSheet.create({
 });
 
 export const UserForm = withObservables([], () => ({
-    roles: getDatabase().collections.get<Role>('roles').query(),
-    clients: getDatabase().collections.get<Client>('clients').query(),
+    roles: database.collections.get<Role>('roles').query(),
+    clients: database.collections.get<Client>('clients').query(),
 }))(UserFormComponent);

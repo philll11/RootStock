@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserType } from '../../types/iam/user.types';
+import { UserType } from '@/src/types/iam/user.types';
 
 export const userSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),

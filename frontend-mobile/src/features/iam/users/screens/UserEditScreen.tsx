@@ -5,7 +5,7 @@ import { withObservables } from '@nozbe/watermelondb/react';
 import { UserForm } from '../components/UserForm';
 import { UserFormData } from '@/src/types/iam/user.schema';
 import { UserType } from '@/src/types/iam/user.types';
-import { getDatabase } from '@/src/database';
+import { database } from '@/src/database';
 import User from '@/src/database/models/iam/User';
 
 const UserEdit = ({ user }: { user: User }) => {
@@ -19,7 +19,7 @@ const UserEdit = ({ user }: { user: User }) => {
     const handleSubmit = async (data: UserFormData) => {
         setIsSaving(true);
         try {
-            await getDatabase().write(async () => {
+            await database.write(async () => {
                 await user.update((u: any) => {
                     u.firstName = data.firstName;
                     u.lastName = data.lastName;
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
 });
 
 const enhance = withObservables(['id'], ({ id }) => ({
-    user: getDatabase().collections.get<User>('users').findAndObserve(id),
+    user: database.collections.get<User>('users').findAndObserve(id),
 }));
 
 export const UserEditScreen = enhance(UserEdit);

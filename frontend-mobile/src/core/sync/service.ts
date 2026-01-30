@@ -1,10 +1,10 @@
 import { synchronize } from '@nozbe/watermelondb/sync';
-import { getDatabase } from '../../database'; // Adjust path if needed
+import { database } from '@/src/database'; // Adjust path if needed
 import { SyncApi } from './api';
 
 export async function syncData() {
     await synchronize({
-        database: getDatabase(),
+        database,
         pullChanges: async ({ lastPulledAt, schemaVersion, migration }) => {
             const response = await SyncApi.pull({ lastPulledAt, schemaVersion, migration });
 

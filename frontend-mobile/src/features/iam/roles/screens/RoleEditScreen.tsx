@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { withObservables } from '@nozbe/watermelondb/react';
 import { RoleForm } from '../components/RoleForm';
 import { RoleFormData } from '@/src/types/iam/role.schema';
-import { getDatabase } from '@/src/database';
+import { database } from '@/src/database';
 import Role from '@/src/database/models/iam/Role';
 
 const RoleEdit = ({ role }: { role: Role }) => {
@@ -18,7 +18,7 @@ const RoleEdit = ({ role }: { role: Role }) => {
     const handleSubmit = async (data: RoleFormData) => {
         setIsSaving(true);
         try {
-            await getDatabase().write(async () => {
+            await database.write(async () => {
                 await role.update((r: any) => {
                     r.name = data.name;
                     r.description = data.description;
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
 });
 
 const enhance = withObservables(['id'], ({ id }) => ({
-    role: getDatabase().collections.get<Role>('roles').findAndObserve(id),
+    role: database.collections.get<Role>('roles').findAndObserve(id),
 }));
 
 export const RoleEditScreen = enhance(RoleEdit);

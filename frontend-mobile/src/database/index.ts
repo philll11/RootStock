@@ -10,16 +10,20 @@ import Orchard from './models/assets/Orchard'
 import Block from './models/assets/Block'
 import Variety from './models/master-data/Variety'
 
+console.log('[Database] Initializing SQLiteAdapter...');
+
 const adapter = new SQLiteAdapter({
     schema,
     // (You might want to implement migration logic later)
     // migrations,
-    jsi: true, // Recommended for performance
+    jsi: true, // JSI is disabled in app.json due to RN 0.81+ New Arch incompatibility
     onSetUpError: error => {
         // Database failed to load -- offer the user to reload the app or log out
-        console.error('Database failed to load', error)
+        console.error('[Database] Failed to load', error)
     }
 })
+
+console.log('[Database] Adapter initialized');
 
 export const database = new Database({
     adapter,
