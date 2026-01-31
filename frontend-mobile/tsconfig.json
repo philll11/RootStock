@@ -1,27 +1,44 @@
-{
-  "extends": "expo/tsconfig.base",
+﻿{
   "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-native",
+    "lib": [
+      "dom",
+      "esnext"
+    ],
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
     "strict": true,
-    "experimentalDecorators": true,
+    "declaration": true,
     "emitDecoratorMetadata": true,
-    "useDefineForClassFields": false,
-    "baseUrl": "./",
+    "experimentalDecorators": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./*"
-      ],
-      "types/*": [
-        "./src/types/*"
-      ],
-      "constants/*": [
-        "./src/constants/*"
+        "./src/*"
       ]
-    }
+    },
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "babel.config.js",
+    "metro.config.js",
+    "jest.config.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

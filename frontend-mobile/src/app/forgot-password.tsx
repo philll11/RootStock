@@ -1,2 +1,2 @@
-import { ForgotPasswordScreen } from '@/src/features/auth/screens/ForgotPasswordScreen';
+import { ForgotPasswordScreen } from '@/features/iam/auth/screens';
 export default ForgotPasswordScreen;

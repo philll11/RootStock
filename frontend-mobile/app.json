@@ -1,70 +1,57 @@
 {
   "expo": {
-    "name": "frontend-mobile",
-    "slug": "frontend-mobile",
+    "name": "RootStock",
+    "slug": "rootstock",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontendmobile",
+    "scheme": "rootstock",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rootstock.mobile"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.l16phill.frontendmobile"
+      "package": "com.rootstock.mobile"
     },
     "web": {
-      "output": "static",
+      "bundler": "metro",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      "./plugins/withAndroidLintOptions.js",
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ],
-      [
-        "@morrowdigital/watermelondb-expo-plugin",
-        {
-          "disableJsi": false
+          "backgroundColor": "#ffffff"
         }
       ],
       [
         "expo-build-properties",
         {
           "android": {
-            "kotlinVersion": "2.0.20",
-            "packagingOptions": {
-              "pickFirst": [
-                "**/libc++_shared.so"
-              ]
-            }
+            "usesCleartextTraffic": true
           }
         }
-      ],
-      "expo-sqlite",
-      "expo-secure-store"
+      ]
     ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+    "extra": {
+      "eas": {
+        "projectId": "61faadd1-b32c-4573-98e8-d6b7d27694b6"
+      }
+    },
+    "owner": "sahara-software"
   }
 }
