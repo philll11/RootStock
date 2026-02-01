@@ -3,15 +3,15 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import { List, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useGetClients } from '@/features/iam/clients/data';
-import { 
-  ResourceListLayout, 
-  AppTheme, 
-  OfflineItemWrapper, 
-  OfflineStatusIcon, 
-  useEntitySyncStatus, 
-  getOfflineStatusText, 
-  useNetworkStatus 
+import {
+  ResourceListLayout,
+  OfflineItemWrapper,
+  OfflineStatusIcon,
+  useEntitySyncStatus,
+  getOfflineStatusText,
 } from '@/components';
+import { useNetworkStatus } from '@/hooks';
+import { AppTheme } from '@/theme';
 import { usePermission } from '@/features/iam/auth/data';
 import { PERMISSIONS, notify } from '@/utils';
 import { spacing } from '@/theme';
@@ -31,15 +31,15 @@ const ClientListItem = React.memo(({ item, router, theme }: { item: any; router:
             : item.code || 'Active'
         }
         left={(props) => (
-          <List.Icon 
-            {...props} 
-            icon="domain" 
+          <List.Icon
+            {...props}
+            icon="domain"
           />
         )}
         right={(props) => (
           <View style={styles.statusContainer}>
-             <OfflineStatusIcon status={syncStatus} />
-             <List.Icon {...props} icon="chevron-right" />
+            <OfflineStatusIcon status={syncStatus} />
+            <List.Icon {...props} icon="chevron-right" />
           </View>
         )}
         onPress={() =>

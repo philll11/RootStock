@@ -16,7 +16,8 @@ import {
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMobileDiscardWarning, DataEntryWizard } from '@/components';
+import { DataEntryWizard } from '@/components';
+import { useMobileDiscardWarning } from '@/hooks';
 import { AppTheme } from '@/theme';
 import { spacing } from '@/theme';
 import { DatePickerInput } from 'react-native-paper-dates';
@@ -598,4 +599,5 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
 });
+
 

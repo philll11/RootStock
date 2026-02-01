@@ -3,15 +3,15 @@ import { View, FlatList, StyleSheet } from 'react-native';
 import { List, useTheme, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useGetVarieties } from '@/features/master-data/varieties/data';
-import { 
-  ResourceListLayout, 
-  AppTheme, 
-  OfflineItemWrapper, 
-  OfflineStatusIcon, 
-  useEntitySyncStatus, 
-  getOfflineStatusText, 
-  useNetworkStatus 
+import {
+  ResourceListLayout,
+  OfflineItemWrapper,
+  OfflineStatusIcon,
+  useEntitySyncStatus,
+  getOfflineStatusText,
 } from '@/components';
+import { useNetworkStatus } from '@/hooks';
+import { AppTheme } from '@/theme';
 import { usePermission } from '@/features/iam/auth/data';
 import { PERMISSIONS, notify } from '@/utils';
 import { spacing } from '@/theme';
@@ -26,7 +26,7 @@ const VarietyListItem = React.memo(({ item, router, theme }: { item: any; router
         title={item.name}
         titleStyle={isOptimistic ? { fontStyle: 'italic' } : undefined}
         description={
-         isOptimistic
+          isOptimistic
             ? getOfflineStatusText(syncStatus)
             : item.recordId
         }
@@ -37,7 +37,7 @@ const VarietyListItem = React.memo(({ item, router, theme }: { item: any; router
           />
         )}
         right={(props) => (
-           <View style={styles.statusContainer}>
+          <View style={styles.statusContainer}>
             <OfflineStatusIcon status={syncStatus} />
             {!item.isActive && !isOptimistic && (
               <Text
@@ -77,7 +77,7 @@ export const VarietiesListScreen = () => {
     await refetch();
   };
 
-  const filteredVarieties = varieties?.filter(v => 
+  const filteredVarieties = varieties?.filter(v =>
     v.name.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 

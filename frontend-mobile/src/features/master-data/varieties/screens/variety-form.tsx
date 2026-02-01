@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { varietySchema, VarietyFormData } from '@/features/master-data/varieties/data';
 import { PERMISSIONS } from '@/utils';
 import { spacing } from '@/theme';
-import { useMobileDiscardWarning } from '@/components';
+import { useMobileDiscardWarning } from '@/hooks';
 import { AppTheme } from '@/theme';
 import { usePermission } from '@/features/iam/auth/data';
 
@@ -104,4 +104,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
 });
+
 

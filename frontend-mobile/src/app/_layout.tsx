@@ -1,11 +1,12 @@
-import { useEffect, useCallback, useRef } from 'react';
+﻿import { useEffect, useCallback, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, onlineManager, useIsRestoring } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { ThemeProvider, DrawerProvider, NotificationProvider, useNetworkStatus } from '@/components';
+import { ThemeProvider, DrawerProvider, NotificationProvider } from '@/components';
+import { useNetworkStatus } from '@/hooks';
 import { AppDrawer } from '@/components/AppDrawer';
 import { useAuthSession } from '@/features/iam/auth/data';
 import { useSyncOfflineData } from '@/features/system/sync/data';
@@ -249,3 +250,4 @@ export default function RootLayout() {
     </PersistQueryClientProvider>
   );
 }
+

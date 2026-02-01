@@ -1,3 +1,3 @@
-export * from './lib/orchard.types';
-export * from './lib/use-orchards';
-export * from './lib/orchard.schema';
+export * from './orchard.types';
+export * from './use-orchards';
+export * from './orchard.schema';

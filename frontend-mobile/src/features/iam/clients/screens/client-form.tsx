@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PERMISSIONS } from '@/utils';
 import { spacing } from '@/theme';
-import { useMobileDiscardWarning } from '@/components';
+import { useMobileDiscardWarning } from '@/hooks';
 import { AppTheme } from '@/theme';
 import { usePermission } from '@/features/iam/auth/data';
 import { ClientFormData, clientSchema } from '@/features/iam/clients/data';
@@ -105,4 +105,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
 });
+
 

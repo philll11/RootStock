@@ -6,15 +6,15 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGetBlocks } from '@/features/assets/blocks/data';
 import { usePermission } from '@/features/iam/auth/data';
 import { PERMISSIONS } from '@/utils';
-import { 
-  ResourceListLayout, 
-  AppTheme, 
-  OfflineItemWrapper, 
-  OfflineStatusIcon, 
-  useEntitySyncStatus, 
-  getOfflineStatusText, 
-  useNetworkStatus 
+import {
+  ResourceListLayout,
+  OfflineItemWrapper,
+  OfflineStatusIcon,
+  useEntitySyncStatus,
+  getOfflineStatusText,
 } from '@/components';
+import { useNetworkStatus } from '@/hooks';
+import { AppTheme } from '@/theme';
 import { spacing } from '@/theme';
 import { notify } from '@/utils';
 

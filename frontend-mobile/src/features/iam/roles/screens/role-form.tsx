@@ -5,9 +5,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { RoleFormData, roleSchema } from '@/features/iam/roles/data';
 import { PERMISSIONS, VisibilityScope } from '@/utils';
-import { spacing } from '@/theme';
-import { useMobileDiscardWarning } from '@/components';
-import { AppTheme } from '@/theme';
+import { spacing, AppTheme } from '@/theme';
+import { useMobileDiscardWarning } from '@/hooks';
 import { usePermission } from '@/features/iam/auth/data';
 
 interface RoleFormProps {
@@ -153,11 +152,11 @@ export const RoleForm = ({ defaultValues, onSubmit, isSubmitting, isEditMode }: 
         {Object.entries(groupedPermissions).map(([resource, permissions]) => {
           const allSelected = permissions.every((p) => selectedPermissions.includes(p));
           const someSelected = permissions.some((p) => selectedPermissions.includes(p));
-          
+
           return (
-            <List.Accordion 
-              key={resource} 
-              title={resource} 
+            <List.Accordion
+              key={resource}
+              title={resource}
               id={resource}
               left={() => (
                 <Checkbox

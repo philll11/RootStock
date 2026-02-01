@@ -19,7 +19,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { UserType, userSchema, UserFormData } from '@/features/iam/users/data';
 import { useGetClients } from '@/features/iam/clients/data';
 import { useGetRoles } from '@/features/iam/roles/data';
-import { useMobileDiscardWarning } from '@/components';
+import { useMobileDiscardWarning } from '@/hooks';
 import { AppTheme } from '@/theme';
 import { usePermission } from '@/features/iam/auth/data';
 import { PERMISSIONS } from '@/utils';
@@ -403,4 +403,5 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 });
+
 

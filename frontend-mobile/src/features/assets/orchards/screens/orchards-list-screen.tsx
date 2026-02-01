@@ -6,22 +6,22 @@ import { useRouter } from 'expo-router';
 import { useGetOrchards, Orchard } from '@/features/assets/orchards/data';
 import { usePermission } from '@/features/iam/auth/data';
 import { PERMISSIONS, notify } from '@/utils';
-import { 
-  ResourceListLayout, 
-  AppTheme, 
-  OfflineItemWrapper, 
-  OfflineStatusIcon, 
-  useEntitySyncStatus, 
-  getOfflineStatusText, 
-  useNetworkStatus 
+import {
+  ResourceListLayout,
+  OfflineItemWrapper,
+  OfflineStatusIcon,
+  useEntitySyncStatus,
+  getOfflineStatusText,
 } from '@/components';
+import { useNetworkStatus } from '@/hooks';
+import { AppTheme } from '@/theme';
 import { spacing } from '@/theme';
 
 const OrchardListItem = React.memo(({ item, router, theme, handlePress }: { item: any; router: any; theme: AppTheme; handlePress: (item: any) => void }) => {
   const syncStatus = useEntitySyncStatus(item);
   const isOptimistic = syncStatus !== 'synced';
   const clientName = typeof item.clientId === 'object' ? item.clientId.name : 'Unknown Client';
-  
+
   return (
     <OfflineItemWrapper status={syncStatus}>
       <List.Item

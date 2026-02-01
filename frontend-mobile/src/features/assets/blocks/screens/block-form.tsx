@@ -21,7 +21,7 @@ import {
   blockSchema,
   BlockFormData,
 } from '@/features/assets/blocks/data';
-import { useMobileDiscardWarning } from '@/components';
+import { useMobileDiscardWarning } from '@/hooks';
 import { AppTheme } from '@/theme';
 import { usePermission } from '@/features/iam/auth/data';
 import { PERMISSIONS } from '@/utils';
@@ -474,4 +474,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
 

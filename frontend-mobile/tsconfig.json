@@ -1,4 +1,4 @@
-﻿{
+{
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "jsx": "react-native",
@@ -19,6 +19,75 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@rootstock/shared/api-client": [
+        "src/api/index.ts"
+      ],
+      "@rootstock/shared/util": [
+        "src/utils/index.ts"
+      ],
+      "@rootstock/ui/mobile": [
+        "src/components/index.ts"
+      ],
+      "@rootstock/ui/theme": [
+        "src/theme/index.ts"
+      ],
+      "@rootstock/iam/auth/auth-data-access": [
+        "src/features/iam/auth/data/index.ts"
+      ],
+      "@rootstock/iam/auth/auth-feature-mobile": [
+        "src/features/iam/auth/screens/index.ts"
+      ],
+      "@rootstock/iam/users/users-data-access": [
+        "src/features/iam/users/data/index.ts"
+      ],
+      "@rootstock/iam/users/users-feature-mobile": [
+        "src/features/iam/users/screens/index.ts"
+      ],
+      "@rootstock/iam/clients/clients-data-access": [
+        "src/features/iam/clients/data/index.ts"
+      ],
+      "@rootstock/iam/clients/clients-feature-mobile": [
+        "src/features/iam/clients/screens/index.ts"
+      ],
+      "@rootstock/iam/roles/roles-data-access": [
+        "src/features/iam/roles/data/index.ts"
+      ],
+      "@rootstock/iam/roles/roles-feature-mobile": [
+        "src/features/iam/roles/screens/index.ts"
+      ],
+      "@rootstock/assets/orchards/orchards-data-access": [
+        "src/features/assets/orchards/data/index.ts"
+      ],
+      "@rootstock/assets/orchards/orchards-feature-mobile": [
+        "src/features/assets/orchards/screens/index.ts"
+      ],
+      "@rootstock/master-data/varieties/varieties-data-access": [
+        "src/features/master-data/varieties/data/index.ts"
+      ],
+      "@rootstock/master-data/varieties/varieties-feature-mobile": [
+        "src/features/master-data/varieties/screens/index.ts"
+      ],
+      "@rootstock/assets/blocks/blocks-data-access": [
+        "src/features/assets/blocks/data/index.ts"
+      ],
+      "@rootstock/assets/blocks/blocks-feature-mobile": [
+        "src/features/assets/blocks/screens/index.ts"
+      ],
+      "@rootstock/system/sync/sync-data-access": [
+        "src/features/system/sync/data/index.ts"
+      ],
+      "@rootstock/operations/assessments/assessments-data-access": [
+        "src/features/operations/assessments/data/index.ts"
+      ],
+      "@rootstock/operations/assessments/assessments-feature-mobile": [
+        "src/features/operations/assessments/screens/index.ts"
+      ],
+      "@rootstock/system/config/system-config-data-access": [
+        "src/features/system/config/data/index.ts"
+      ],
+      "@rootstock/system/audit/audit-data-access": [
+        "src/features/system/audit/data/index.ts"
       ]
     },
     "types": [
@@ -29,9 +98,7 @@
     "**/*.ts",
     "**/*.tsx",
     "**/*.js",
-    "**/*.jsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "**/*.jsx"
   ],
   "exclude": [
     "node_modules",
@@ -40,5 +107,6 @@
     "jest.config.ts",
     "**/*.test.ts",
     "**/*.spec.ts"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }
