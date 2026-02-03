@@ -10,7 +10,7 @@ import {
 import { notify, PERMISSIONS } from '@/utils';
 import { usePermission } from '@/features/iam/auth/data';
 import { v4 as uuid } from 'uuid';
-import { patchDependencyId } from '@/features/system/sync/data';
+import { patchDependencyId } from '@/features/system/sync/data/sync-utils';
 
 export const ORCHARDS_KEYS = {
   all: ['orchards'] as const,
@@ -204,7 +204,7 @@ export function useDeleteOrchard() {
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ORCHARDS_KEYS.all });
-      return { };
+      return {};
     },
     onSuccess: () => {
       notify.success('The orchard has been removed.', 'Orchard Deleted');

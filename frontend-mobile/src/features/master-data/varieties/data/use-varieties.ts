@@ -4,7 +4,7 @@ import { Variety, CreateVarietyDto, UpdateVarietyDto } from './variety.types';
 import { notify, PERMISSIONS } from '@/utils';
 import { usePermission } from '@/features/iam/auth/data';
 import { v4 as uuid } from 'uuid';
-import { patchDependencyId } from '@/features/system/sync/data';
+import { patchDependencyId } from '@/features/system/sync/data/sync-utils';
 
 export const VARIETIES_KEYS = {
   all: ['varieties'] as const,
@@ -200,7 +200,7 @@ export function useDeleteVariety() {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: VARIETIES_KEYS.all });
 
-      return { };
+      return {};
     },
     onSuccess: () => {
       notify.success('The variety has been successfully deleted.', 'Variety Deleted');

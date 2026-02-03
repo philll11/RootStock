@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, TouchableWithoutFeedback, ScrollView, Platform, Alert } from 'react-native';
 import { Drawer, useTheme, Text, Avatar, Divider, List } from 'react-native-paper';
-import { useDrawer } from '@/components';
+import { useDrawer } from '@/components/DrawerContext';
 import { AppTheme } from '@/theme/mobile-theme';
 import { useNetworkStatus } from '@/hooks';
 import { layout, zIndex, transitions, spacing } from '@/theme';

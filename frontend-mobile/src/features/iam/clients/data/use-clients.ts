@@ -8,7 +8,7 @@ import {
 } from './client.types';
 import { notify, PERMISSIONS } from '@/utils';
 import { usePermission } from '@/features/iam/auth/data';
-import { patchDependencyId } from '@/features/system/sync/data';
+import { patchDependencyId } from '@/features/system/sync/data/sync-utils';
 
 export const CLIENTS_KEYS = {
   all: ['clients'] as const,

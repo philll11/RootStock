@@ -1,7 +1,7 @@
 // frontend/libs/ui/mobile/src/lib/mobile-theme.ts
 import { MD3LightTheme, MD3DarkTheme, MD3Theme } from 'react-native-paper';
-import { palette, lightColors, darkColors } from '@/theme';
-import { typography, spacing, radius } from '@/theme';
+import { palette, lightColors, darkColors } from '@/theme/palette';
+import { typography, spacing, radius } from '@/theme/typography';
 
 // Map our tokens to React Native Paper's MD3 Theme
 // https://callstack.github.io/react-native-paper/docs/guides/theming
@@ -37,13 +37,13 @@ export const mobileLightTheme: AppTheme = {
     onPrimary: palette.neutral[0],
     primaryContainer: lightColors.brand.secondary,
     onPrimaryContainer: palette.brand[900],
-    
+
     background: lightColors.background.page,
     surface: lightColors.background.card,
     onSurface: lightColors.text.primary,
-    
+
     error: palette.error.light,
-    
+
     // Add more mappings as needed
   },
   customColors: {
@@ -67,11 +67,11 @@ export const mobileDarkTheme: AppTheme = {
     onPrimary: palette.brand[900],
     primaryContainer: darkColors.brand.secondary,
     onPrimaryContainer: palette.brand[100],
-    
+
     background: darkColors.background.page,
     surface: darkColors.background.card,
     onSurface: darkColors.text.primary,
-    
+
     error: palette.error.dark,
   },
   customColors: {

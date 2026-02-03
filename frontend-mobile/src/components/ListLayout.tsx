@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Appbar, FAB, Searchbar, ActivityIndicator, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDrawer } from '@/components';
+import { useDrawer } from '@/components/DrawerContext';
 import { spacing } from '@/theme';
 import { AppTheme } from '@/theme/mobile-theme';
 import { SyncIndicator } from './SyncIndicator';
@@ -63,14 +63,14 @@ export const ListLayout = ({
         )}
 
         {isLoading ? (
-          <ScrollView 
+          <ScrollView
             contentContainerStyle={styles.centerContainer}
             refreshControl={onRefresh ? <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} /> : undefined}
           >
             <ActivityIndicator animating={true} size="large" />
           </ScrollView>
         ) : isEmpty ? (
-          <ScrollView 
+          <ScrollView
             contentContainerStyle={styles.centerContainer}
             refreshControl={onRefresh ? <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} /> : undefined}
           >
@@ -87,10 +87,10 @@ export const ListLayout = ({
         <FAB
           icon="plus"
           style={[
-            styles.fab, 
-            { 
+            styles.fab,
+            {
               backgroundColor: theme.colors.primary,
-              bottom: spacing.md + insets.bottom 
+              bottom: spacing.md + insets.bottom
             }
           ]}
           color={theme.colors.onPrimary}
