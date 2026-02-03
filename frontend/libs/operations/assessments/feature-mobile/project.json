@@ -1,9 +1,0 @@
-{
-  "name": "assessments-feature-mobile",
-  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/operations/assessments/feature-mobile/src",
-  "projectType": "library",
-  "tags": [],
-  "// targets": "to see all targets run: nx show project assessments-feature-mobile --web",
-  "targets": {}
-}

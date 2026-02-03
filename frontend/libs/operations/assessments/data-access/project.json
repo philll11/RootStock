@@ -1,9 +1,0 @@
-{
-  "name": "assessments-data-access",
-  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/operations/assessments/data-access/src",
-  "projectType": "library",
-  "tags": [],
-  "// targets": "to see all targets run: nx show project assessments-data-access --web",
-  "targets": {}
-}

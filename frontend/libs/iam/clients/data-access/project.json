@@ -1,9 +1,0 @@
-{
-  "name": "clients-data-access",
-  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/iam/clients/data-access/src",
-  "projectType": "library",
-  "tags": [],
-  "// targets": "to see all targets run: nx show project clients-data-access --web",
-  "targets": {}
-}
