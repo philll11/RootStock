@@ -13,7 +13,7 @@ const icons = {
 
 const entities: NavItem = {
     id: 'entities',
-    title: 'Entities',
+    title: 'Management',
     type: 'group',
     children: [
         {

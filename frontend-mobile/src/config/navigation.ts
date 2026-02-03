@@ -17,7 +17,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     permission: null,
   },
   {
-    label: 'Horticulture Management',
+    label: 'Management',
     screen: '',
     icon: 'tree',
     children: [
@@ -68,7 +68,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     ]
   },
   {
-    label: 'System Management',
+    label: 'System',
     screen: '',
     icon: 'cog',
     children: [
